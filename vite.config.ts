@@ -51,12 +51,10 @@
     },
     build: {
       target: 'esnext',
-      outDir: 'dist',
+      outDir: 'build',
     },
     server: {
       port: 3000,
       open: true,
-      host: true,
-      allowedHosts: ["3b57865b926f.ngrok-free.app"],
     },
   });
