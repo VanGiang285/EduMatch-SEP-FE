@@ -1,16 +1,39 @@
 import { useState } from "react";
+import { LandingPage } from "./components/LandingPage";
 import { LoginPage } from "./components/LoginPage";
 import { RegisterPage } from "./components/RegisterPage";
+import { Navbar } from "./components/Navbar";
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'login' | 'register'>('login');
+  const [currentPage, setCurrentPage] = useState<'landing' | 'login' | 'register'>('landing');
 
-  const switchToRegister = () => setCurrentPage('register');
-  const switchToLogin = () => setCurrentPage('login');
+  const navigateToLanding = () => setCurrentPage('landing');
+  const navigateToLogin = () => setCurrentPage('login');
+  const navigateToRegister = () => setCurrentPage('register');
 
-  if (currentPage === 'register') {
-    return <RegisterPage onSwitchToLogin={switchToLogin} />;
-  }
-
-  return <LoginPage onSwitchToRegister={switchToRegister} />;
+  return (
+    <>
+      <Navbar
+        onNavigateToLogin={navigateToLogin}
+        onNavigateToRegister={navigateToRegister}
+        onNavigateToHome={navigateToLanding}
+        currentPage={currentPage}
+      />
+      
+      {currentPage === 'landing' && (
+        <LandingPage
+          onNavigateToLogin={navigateToLogin}
+          onNavigateToRegister={navigateToRegister}
+        />
+      )}
+      
+      {currentPage === 'login' && (
+        <LoginPage onSwitchToRegister={navigateToRegister} />
+      )}
+      
+      {currentPage === 'register' && (
+        <RegisterPage onSwitchToLogin={navigateToLogin} />
+      )}
+    </>
+  );
 }

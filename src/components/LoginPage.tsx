@@ -15,7 +15,7 @@ export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
   const [rememberMe, setRememberMe] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-2 sm:p-4 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-2 sm:p-4 lg:p-8 pt-20">
       <div className="w-full max-w-6xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden lg:grid lg:grid-cols-2">
         {/* Phần bên trái - Hình ảnh và caption */}
         <div className="relative hidden lg:flex lg:flex-col lg:justify-end overflow-hidden">
