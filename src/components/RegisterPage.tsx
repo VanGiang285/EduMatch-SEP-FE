@@ -16,7 +16,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   const [agreeTerms, setAgreeTerms] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-2 sm:p-4 lg:p-8 pt-20">
+    <div className="min-h-screen bg-[#F2E5BF] flex items-center justify-center p-2 sm:p-4 lg:p-8 pt-20">
       <div className="w-full max-w-6xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden lg:grid lg:grid-cols-2">
         {/* Phần bên trái - Hình ảnh và caption */}
         <div className="relative hidden lg:flex lg:flex-col lg:justify-end overflow-hidden">
@@ -60,7 +60,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                   id="fullName"
                   type="text"
                   placeholder="Nhập họ và tên của bạn"
-                  className="h-9 sm:h-10 lg:h-12 border-gray-300 rounded-lg bg-gray-50 text-sm sm:text-base"
+                  className="h-9 sm:h-10 lg:h-12 border border-[#257180]/30 rounded-lg bg-white text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
                 />
               </div>
 
@@ -71,7 +71,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                   id="email"
                   type="email"
                   placeholder="Nhập email của bạn"
-                  className="h-9 sm:h-10 lg:h-12 border-gray-300 rounded-lg bg-gray-50 text-sm sm:text-base"
+                  className="h-9 sm:h-10 lg:h-12 border border-[#257180]/30 rounded-lg bg-white text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
                 />
               </div>
 
@@ -83,7 +83,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Tạo mật khẩu mạnh"
-                    className="h-9 sm:h-10 lg:h-12 border-gray-300 rounded-lg bg-gray-50 pr-10 text-sm sm:text-base"
+                    className="h-9 sm:h-10 lg:h-12 border border-[#257180]/30 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
                   />
                   <button
                     type="button"
@@ -103,7 +103,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Nhập lại mật khẩu"
-                    className="h-9 sm:h-10 lg:h-12 border-gray-300 rounded-lg bg-gray-50 pr-10 text-sm sm:text-base"
+                    className="h-9 sm:h-10 lg:h-12 border border-[#257180]/30 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
                   />
                   <button
                     type="button"
@@ -153,7 +153,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
               <Button
                 type="submit"
                 disabled={!agreeTerms}
-                className="w-full h-9 sm:h-10 lg:h-12 bg-black hover:bg-gray-800 disabled:bg-gray-400 text-white rounded-lg font-medium text-sm sm:text-base"
+                className="w-full h-9 sm:h-10 lg:h-12 bg-[#257180] hover:bg-[#1e5a66] disabled:bg-gray-400 text-white rounded-lg font-medium text-sm sm:text-base shadow-sm hover:shadow-md transition-all"
               >
                 Tạo tài khoản - Bắt đầu học ngay
               </Button>

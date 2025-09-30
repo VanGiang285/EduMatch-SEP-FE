@@ -1,8 +1,32 @@
+"use client";
+
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Avatar } from "./ui/avatar";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { CheckCircle, Star, Users, BookOpen, Clock, Award, Play, TrendingUp, Heart, Zap, Globe, Shield } from "lucide-react";
+import { 
+  CheckCircle, 
+  Star, 
+  Users, 
+  Clock, 
+  ArrowRight,
+  Sparkles,
+  TrendingUp,
+  Shield,
+  Zap,
+  Target,
+  Play,
+  Brain,
+  Rocket,
+  Heart,
+  Lightbulb,
+  MessageCircle,
+  Video,
+  BookOpen,
+  Award,
+  Globe,
+  ChevronRight
+} from "lucide-react";
 
 interface LandingPageProps {
   onNavigateToLogin: () => void;
@@ -11,394 +35,481 @@ interface LandingPageProps {
 
 export function LandingPage({ onNavigateToLogin, onNavigateToRegister }: LandingPageProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 overflow-hidden">
-      {/* Floating background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-200 to-purple-200 rounded-full opacity-30 blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-indigo-200 to-pink-200 rounded-full opacity-30 blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-purple-200 to-blue-200 rounded-full opacity-20 blur-3xl animate-pulse delay-500"></div>
-        
-        {/* Floating shapes */}
-        <div className="absolute top-20 left-10 w-6 h-6 bg-blue-400 rounded-full animate-bounce delay-300"></div>
-        <div className="absolute top-40 right-20 w-4 h-4 bg-purple-400 rounded-full animate-bounce delay-700"></div>
-        <div className="absolute bottom-32 left-20 w-5 h-5 bg-indigo-400 rounded-full animate-bounce delay-1000"></div>
-        <div className="absolute bottom-20 right-40 w-3 h-3 bg-pink-400 rounded-full animate-bounce delay-500"></div>
-      </div>
-
-      {/* Hero Section */}
-      <section className="relative pt-20 pb-16 lg:pt-32 lg:pb-24">
+    <div className="min-h-screen">
+      {/* Hero Section - #257180 Background */}
+      <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-[#257180] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
-            {/* Left content */}
-            <div className="mb-12 lg:mb-0 relative z-10">
-              <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 mb-6 shadow-lg">
-                <Zap className="h-4 w-4 text-yellow-500" />
-                <span className="text-sm font-medium text-gray-700">Miễn phí 7 ngày đầu tiên</span>
+          <div className="text-center mb-16">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-3 mb-8">
+              <Sparkles className="h-4 w-4 text-[#FD8B51]" />
+              <span className="text-sm font-medium text-white">Miễn phí 7 ngày đầu tiên</span>
               </div>
               
-              <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight tracking-tight">
-                Học tập thông minh với{" "}
-                <span className="relative">
-                  <span className="text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text animate-pulse">
-                    EduMatch
-                  </span>
-                  <div className="absolute -bottom-2 left-0 right-0 h-3 bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 rounded-full opacity-30"></div>
-                </span>
+            {/* Main Heading */}
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-8 leading-tight tracking-tight">
+              Học tập thông minh<br />
+              <span className="text-[#FD8B51]">Tương lai rộng mở</span>
               </h1>
               
-              <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-lg">
-                Kết nối với <span className="font-semibold text-blue-600">10,000+ gia sư chuyên nghiệp</span>. 
-                Học 1-kèm-1 trực tuyến với phương pháp cá nhân hóa, giúp bạn đạt mục tiêu nhanh chóng.
+            <p className="text-lg lg:text-xl text-white/90 max-w-3xl mx-auto mb-12 leading-relaxed">
+              Kết nối với 10,000+ gia sư chuyên nghiệp. Học 1-kèm-1 với AI cá nhân hóa, đạt mục tiêu nhanh hơn 3 lần.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
                 <Button
                   onClick={onNavigateToRegister}
                   size="lg"
-                  className="group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-6 text-lg rounded-2xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                className="group bg-[#FD8B51] hover:bg-[#CB6040] text-white px-8 py-6 text-lg rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
                 >
-                  <Play className="h-5 w-5 mr-2 group-hover:animate-bounce" />
-                  Bắt đầu học ngay - Miễn phí
+                Bắt đầu ngay - Miễn phí
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={onNavigateToLogin}
                   size="lg"
-                  className="border-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50 text-gray-700 hover:text-blue-700 px-8 py-6 text-lg rounded-2xl font-semibold transition-all duration-300"
+                className="group border-2 border-white/30 hover:border-white bg-white/10 hover:bg-white/20 text-white px-8 py-6 text-lg rounded-xl font-semibold transition-all backdrop-blur-sm"
                 >
-                  Đăng nhập
+                <Play className="mr-2 h-5 w-5" />
+                Xem demo
                 </Button>
               </div>
 
-              {/* Stats with animation */}
-              <div className="grid grid-cols-3 gap-6 p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600 mb-1">10K+</div>
-                  <div className="text-sm text-gray-600">Gia sư</div>
-                </div>
-                <div className="text-center border-x border-gray-200">
-                  <div className="text-2xl font-bold text-purple-600 mb-1">50+</div>
-                  <div className="text-sm text-gray-600">Môn học</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-pink-600 mb-1">24/7</div>
-                  <div className="text-sm text-gray-600">Hỗ trợ</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right content - Interactive hero image */}
-            <div className="relative">
-              <div className="relative bg-gradient-to-br from-blue-100 to-purple-100 rounded-3xl p-8 shadow-2xl transform rotate-2 hover:rotate-0 transition-transform duration-300">
-                <div className="bg-white rounded-2xl overflow-hidden shadow-xl">
-                  <ImageWithFallback
-                    src="https://images.unsplash.com/photo-1586388750948-16833a41ee95?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvbmxpbmUlMjB0dXRvcmluZyUyMHRlYWNoZXIlMjBzdHVkZW50fGVufDF8fHx8MTc1ODg5NTM0NXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                    alt="Online tutoring session"
-                    className="w-full h-96 object-cover"
-                  />
-                </div>
-              </div>
-              
-              {/* Floating cards */}
-              <div className="absolute -top-6 -left-6 bg-white rounded-2xl shadow-xl p-4 animate-bounce delay-300">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold">+25% điểm số</div>
-                    <div className="text-xs text-gray-500">sau 1 tháng</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl shadow-xl p-4 animate-bounce delay-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="flex text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-current" />
-                    ))}
-                  </div>
-                  <span className="text-sm font-medium">4.9/5</span>
-                </div>
-                <p className="text-sm text-gray-600 max-w-xs">
-                  "Gia sư giúp tôi cải thiện từ 6.5 lên 8.5 chỉ sau 3 tháng!"
-                </p>
-                <p className="text-xs text-gray-400 mt-1">- Minh Anh, lớp 11</p>
-              </div>
+            {/* Stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+              <Card className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/20 transition-all">
+                <div className="text-3xl font-bold text-white mb-2">10K+</div>
+                <div className="text-sm text-white/80 font-medium">Gia sư chất lượng</div>
+              </Card>
+              <Card className="p-6 bg-[#FD8B51] border-0 rounded-xl hover:bg-[#CB6040] transition-all">
+                <div className="text-3xl font-bold text-white mb-2">95%</div>
+                <div className="text-sm text-white/90 font-medium">Hài lòng</div>
+              </Card>
+              <Card className="p-6 bg-[#CB6040] border-0 rounded-xl hover:bg-[#FD8B51] transition-all">
+                <div className="text-3xl font-bold text-white mb-2">50+</div>
+                <div className="text-sm text-white/90 font-medium">Môn học</div>
+              </Card>
+              <Card className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/20 transition-all">
+                <div className="text-3xl font-bold text-white mb-2">24/7</div>
+                <div className="text-sm text-white/80 font-medium">Hỗ trợ</div>
+              </Card>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Slider */}
-      <section className="py-16 bg-white/30 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Học viên nói gì về EduMatch?
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="p-6 rounded-3xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-blue-50 to-indigo-50">
-              <div className="flex items-center gap-4 mb-4">
-                <Avatar className="w-12 h-12">
-                  <ImageWithFallback
-                    src="https://images.unsplash.com/photo-1758525866412-252944c7812e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaXZlcnNlJTIwc3R1ZGVudHMlMjBsZWFybmluZyUyMG9ubGluZSUyMGhhcHB5fGVufDF8fHx8MTc1ODg5NTYwNnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                    alt="Student"
-                    className="w-full h-full object-cover"
-                  />
-                </Avatar>
-                <div>
-                  <div className="font-semibold text-gray-900">Nguyễn Minh An</div>
-                  <div className="text-sm text-gray-600">Học sinh lớp 12</div>
-                </div>
-              </div>
-              <div className="flex text-yellow-400 mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-current" />
-                ))}
-              </div>
-              <p className="text-gray-700 leading-relaxed">
-                "Thầy gia sư rất tận tâm và phương pháp dạy phù hợp với em. Điểm Toán của em đã tăng từ 6 lên 9 trong 2 tháng!"
-              </p>
-            </Card>
-
-            <Card className="p-6 rounded-3xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-purple-50 to-pink-50">
-              <div className="flex items-center gap-4 mb-4">
-                <Avatar className="w-12 h-12">
-                  <ImageWithFallback
-                    src="https://images.unsplash.com/photo-1594256347468-5cd43df8fbaf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx5b3VuZyUyMHRlYWNoZXIlMjB0dXRvciUyMHNtaWxpbmclMjBwb3J0cmFpdHxlbnwxfHx8fDE3NTg4OTU2MDl8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                    alt="Teacher"
-                    className="w-full h-full object-cover"
-                  />
-                </Avatar>
-                <div>
-                  <div className="font-semibold text-gray-900">Trần Thu Hà</div>
-                  <div className="text-sm text-gray-600">Gia sư Tiếng Anh</div>
-                </div>
-              </div>
-              <div className="flex text-yellow-400 mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-current" />
-                ))}
-              </div>
-              <p className="text-gray-700 leading-relaxed">
-                "EduMatch giúp tôi kết nối với nhiều học sinh. Nền tảng rất dễ sử dụng và hỗ trợ tuyệt vời!"
-              </p>
-            </Card>
-
-            <Card className="p-6 rounded-3xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-green-50 to-teal-50">
-              <div className="flex items-center gap-4 mb-4">
-                <Avatar className="w-12 h-12">
-                  <ImageWithFallback
-                    src="https://images.unsplash.com/photo-1716337563114-365568c4db60?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHVkZW50cyUyMGNlbGVicmF0aW5nJTIwc3VjY2VzcyUyMGFjaGlldmVtZW50fGVufDF8fHx8MTc1ODg5NTYxM3ww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                    alt="Parent"
-                    className="w-full h-full object-cover"
-                  />
-                </Avatar>
-                <div>
-                  <div className="font-semibold text-gray-900">Lê Văn Nam</div>
-                  <div className="text-sm text-gray-600">Phụ huynh</div>
-                </div>
-              </div>
-              <div className="flex text-yellow-400 mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-current" />
-                ))}
-              </div>
-              <p className="text-gray-700 leading-relaxed">
-                "Con tôi rất thích học với gia sư qua EduMatch. Tiến bộ rõ rệt và tự tin hơn rất nhiều!"
-              </p>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section với thiết kế mới */}
-      <section className="py-16 lg:py-24">
+      {/* Why Choose Us Section - #F2E5BF Background */}
+      <section className="py-16 lg:py-24 bg-[#F2E5BF]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full px-6 py-3 mb-6">
-              <Heart className="h-5 w-5 text-pink-500" />
-              <span className="font-semibold text-gray-700">Tại sao chọn EduMatch?</span>
+            <div className="inline-flex items-center gap-2 bg-white border border-[#257180]/20 rounded-full px-4 py-2 mb-6">
+              <Star className="h-4 w-4 text-[#FD8B51]" />
+              <span className="text-sm font-medium text-[#257180]">Tại sao chọn chúng tôi</span>
             </div>
-            <h2 className="text-3xl lg:text-5xl font-bold text-gray-900 mb-6">
-              Nền tảng học tập{" "}
-              <span className="text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text">
-                thông minh nhất
-              </span>
+            <h2 className="text-3xl lg:text-4xl font-bold text-[#257180] mb-6">
+              Tìm gia sư phù hợp nhất cho bạn
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Công nghệ AI kết hợp với phương pháp giảng dạy hiện đại, mang đến trải nghiệm học tập tuyệt vời.
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Hàng nghìn gia sư chuyên nghiệp sẵn sàng dạy kèm 1-1 các môn học từ cấp 1 đến đại học
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="group p-8 rounded-3xl border-0 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                <Users className="h-8 w-8 text-white" />
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Card 1 */}
+            <Card className="p-6 bg-white border border-[#257180]/20 rounded-xl shadow-sm hover:shadow-md transition-all text-center">
+              <div className="w-16 h-16 bg-[#FD8B51] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Brain className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Gia sư chất lượng cao</h3>
-              <p className="text-gray-700 leading-relaxed">
-                100% gia sư được kiểm định kỹ lưỡng với bằng cấp chuyên môn và kinh nghiệm giảng dạy xuất sắc.
-              </p>
+              <h3 className="text-lg font-semibold text-[#257180] mb-2">Gia sư chuyên nghiệp</h3>
+              <p className="text-gray-600 text-sm">100% gia sư được kiểm định kỹ lưỡng và có kinh nghiệm</p>
             </Card>
 
-            <Card className="group p-8 rounded-3xl border-0 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                <BookOpen className="h-8 w-8 text-white" />
+            {/* Card 2 */}
+            <Card className="p-6 bg-white border border-[#FD8B51]/30 rounded-xl shadow-sm hover:shadow-md transition-all text-center">
+              <div className="w-16 h-16 bg-[#CB6040] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Target className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">AI cá nhân hóa</h3>
-              <p className="text-gray-700 leading-relaxed">
-                Thuật toán AI phân tích và tạo lộ trình học tập riêng biệt cho từng học viên dựa trên năng lực.
-              </p>
+              <h3 className="text-lg font-semibold text-[#257180] mb-2">Học 1-kèm-1</h3>
+              <p className="text-gray-600 text-sm">Tập trung hoàn toàn vào nhu cầu và tiến độ của bạn</p>
             </Card>
 
-            <Card className="group p-8 rounded-3xl border-0 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                <Clock className="h-8 w-8 text-white" />
+            {/* Card 3 */}
+            <Card className="p-6 bg-white border border-[#CB6040]/30 rounded-xl shadow-sm hover:shadow-md transition-all text-center">
+              <div className="w-16 h-16 bg-[#257180] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <TrendingUp className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Linh hoạt 24/7</h3>
-              <p className="text-gray-700 leading-relaxed">
-                Học mọi lúc, mọi nơi với lịch học linh hoạt. Hỗ trợ khách hàng 24/7 không giới hạn.
-              </p>
+              <h3 className="text-lg font-semibold text-[#257180] mb-2">Linh hoạt thời gian</h3>
+              <p className="text-gray-600 text-sm">Đặt lịch học theo thời gian rảnh của bạn</p>
             </Card>
 
-            <Card className="group p-8 rounded-3xl border-0 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200">
-              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                <Award className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Cam kết kết quả</h3>
-              <p className="text-gray-700 leading-relaxed">
-                Đảm bảo cải thiện điểm số hoặc hoàn tiền 100%. Cam kết chất lượng với hàng nghìn review 5 sao.
-              </p>
-            </Card>
-
-            <Card className="group p-8 rounded-3xl border-0 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 bg-gradient-to-br from-teal-50 to-teal-100 hover:from-teal-100 hover:to-teal-200">
-              <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                <Globe className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Công nghệ hiện đại</h3>
-              <p className="text-gray-700 leading-relaxed">
-                Lớp học ảo với bảng tương tác, chia sẻ màn hình, ghi âm và AI phân tích tiến độ.
-              </p>
-            </Card>
-
-            <Card className="group p-8 rounded-3xl border-0 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 bg-gradient-to-br from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200">
-              <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+            {/* Card 4 */}
+            <Card className="p-6 bg-white border border-[#257180]/20 rounded-xl shadow-sm hover:shadow-md transition-all text-center">
+              <div className="w-16 h-16 bg-[#FD8B51] rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Shield className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">An toàn & bảo mật</h3>
-              <p className="text-gray-700 leading-relaxed">
-                Dữ liệu được mã hóa 256-bit SSL. Thanh toán an toàn và thông tin cá nhân được bảo vệ tuyệt đối.
-              </p>
+              <h3 className="text-lg font-semibold text-[#257180] mb-2">Đa dạng môn học</h3>
+              <p className="text-gray-600 text-sm">Từ Toán, Lý, Hóa đến Tiếng Anh, Văn học</p>
             </Card>
           </div>
         </div>
       </section>
 
-      {/* CTA Section với thiết kế gradient */}
-      <section className="py-16 lg:py-24 relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600"></div>
-        <div className="absolute inset-0 bg-black/20"></div>
-        
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 lg:p-12 border border-white/20">
-            <h2 className="text-3xl lg:text-5xl font-bold text-white mb-6">
-              Sẵn sàng thay đổi tương lai?
+      {/* Services Section - White Background */}
+      <section id="services" className="py-16 lg:py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-[#F2E5BF] border border-[#257180]/20 rounded-full px-4 py-2 mb-6">
+              <BookOpen className="h-4 w-4 text-[#FD8B51]" />
+              <span className="text-sm font-medium text-[#257180]">Dịch vụ của chúng tôi</span>
+            </div>
+            <h2 className="text-3xl lg:text-4xl font-bold text-[#257180] mb-6">
+              Gia sư chuyên nghiệp cho mọi nhu cầu
             </h2>
-            <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed">
-              Hàng nghìn học viên đã thành công với EduMatch. Đến lượt bạn tỏa sáng!
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Đội ngũ gia sư được tuyển chọn kỹ lưỡng, có kinh nghiệm và chuyên môn cao trong từng lĩnh vực
             </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-              <Button
-                onClick={onNavigateToRegister}
-                size="lg"
-                className="bg-white hover:bg-gray-100 text-gray-900 px-8 py-6 text-lg rounded-2xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-              >
-                <Zap className="h-5 w-5 mr-2 text-yellow-500" />
-                Dùng thử miễn phí 7 ngày
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-2 border-white/30 hover:border-white text-white hover:bg-white/10 px-8 py-6 text-lg rounded-2xl font-semibold transition-all duration-300"
-              >
-                Xem demo
-              </Button>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Service 1 */}
+            <Card className="p-8 bg-[#F2E5BF] border border-[#257180]/20 rounded-2xl shadow-sm hover:shadow-lg transition-all text-center">
+              <div className="w-20 h-20 bg-[#FD8B51] rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <Users className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-[#257180] mb-4">Gia sư Khoa học Tự nhiên</h3>
+              <p className="text-gray-600 mb-6 leading-relaxed">
+                Toán, Lý, Hóa, Sinh với phương pháp giảng dạy hiện đại, dễ hiểu và hiệu quả
+              </p>
+              <div className="space-y-2 text-sm text-gray-500">
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#FD8B51]" />
+                  <span>Toán học từ cơ bản đến nâng cao</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#FD8B51]" />
+                  <span>Vật lý, Hóa học, Sinh học</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#FD8B51]" />
+                  <span>Luyện thi chuyên, Olympic</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* Service 2 */}
+            <Card className="p-8 bg-white border-2 border-[#FD8B51] rounded-2xl shadow-sm hover:shadow-lg transition-all text-center relative">
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                <div className="bg-[#FD8B51] text-white px-4 py-1 rounded-full text-sm font-semibold">
+                  Phổ biến nhất
+                </div>
+              </div>
+              <div className="w-20 h-20 bg-[#CB6040] rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <Video className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-[#257180] mb-4">Gia sư Khoa học Xã hội</h3>
+              <p className="text-gray-600 mb-6 leading-relaxed">
+                Văn học, Lịch sử, Địa lý, GDCD với cách tiếp cận thú vị và dễ nhớ
+              </p>
+              <div className="space-y-2 text-sm text-gray-500">
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#FD8B51]" />
+                  <span>Văn học và Tiếng Việt</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#FD8B51]" />
+                  <span>Lịch sử, Địa lý, GDCD</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#FD8B51]" />
+                  <span>Kỹ năng viết và thuyết trình</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* Service 3 */}
+            <Card className="p-8 bg-[#F2E5BF] border border-[#CB6040]/30 rounded-2xl shadow-sm hover:shadow-lg transition-all text-center">
+              <div className="w-20 h-20 bg-[#257180] rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <Award className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-[#257180] mb-4">Gia sư Ngoại ngữ</h3>
+              <p className="text-gray-600 mb-6 leading-relaxed">
+                Tiếng Anh, Tiếng Trung, Tiếng Nhật với giáo viên bản ngữ và chuyên nghiệp
+              </p>
+              <div className="space-y-2 text-sm text-gray-500">
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#FD8B51]" />
+                  <span>Tiếng Anh: IELTS, TOEIC, TOEFL</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#FD8B51]" />
+                  <span>Tiếng Trung, Tiếng Nhật</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#FD8B51]" />
+                  <span>Giao tiếp thực tế</span>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Success Stories - #F2E5BF Background */}
+      <section id="success-stories" className="py-16 lg:py-24 bg-[#F2E5BF]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-white border border-[#257180]/20 rounded-full px-4 py-2 mb-6">
+              <Heart className="h-4 w-4 text-[#FD8B51]" />
+              <span className="text-sm font-medium text-[#257180]">Câu chuyện thành công</span>
+            </div>
+            <h2 className="text-3xl lg:text-4xl font-bold text-[#257180] mb-6">
+              Học viên nói gì về EduMatch?
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Hàng nghìn học viên đã đạt được mục tiêu và thay đổi cuộc đời nhờ EduMatch
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Left - Video/Image */}
+            <div className="relative">
+              <Card className="relative p-6 bg-white border border-[#257180]/20 shadow-lg rounded-2xl overflow-hidden">
+                <ImageWithFallback
+                  src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&h=400&fit=crop"
+                  alt="Happy students"
+                  className="w-full h-80 object-cover rounded-xl"
+                />
+                {/* Play button overlay */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-16 h-16 bg-[#FD8B51] rounded-full flex items-center justify-center shadow-lg hover:bg-[#CB6040] transition-colors cursor-pointer">
+                    <Play className="h-6 w-6 text-white ml-1" />
+                  </div>
+                </div>
+              </Card>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-8 text-white/80">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-400" />
-                <span>Không cần thẻ tín dụng</span>
+            {/* Right - Testimonials */}
+            <div className="space-y-6">
+              {/* Testimonial 1 */}
+              <Card className="p-6 bg-white border border-[#257180]/20 rounded-xl shadow-sm">
+                <div className="flex items-start gap-4">
+                  <Avatar className="w-12 h-12 border-2 border-[#F2E5BF]">
+                    <ImageWithFallback
+                      src="https://images.unsplash.com/photo-1758525866412-252944c7812e?w=100&h=100&fit=crop"
+                      alt="Student"
+                      className="w-full h-full object-cover"
+                    />
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="font-semibold text-[#257180]">Minh An</div>
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="h-3 w-3 fill-current" />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-gray-600 text-sm leading-relaxed mb-3">
+                      &ldquo;Điểm Toán tăng từ 6 lên 9 chỉ sau 2 tháng! Thầy dạy rất tận tâm và phương pháp rất hiệu quả.&rdquo;
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-[#FD8B51] font-medium">
+                      <TrendingUp className="h-3 w-3" />
+                      <span>+50% điểm số</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Testimonial 2 */}
+              <Card className="p-6 bg-white border border-[#FD8B51]/30 rounded-xl shadow-sm">
+                <div className="flex items-start gap-4">
+                  <Avatar className="w-12 h-12 border-2 border-[#F2E5BF]">
+                    <ImageWithFallback
+                      src="https://images.unsplash.com/photo-1594256347468-5cd43df8fbaf?w=100&h=100&fit=crop"
+                      alt="Teacher"
+                      className="w-full h-full object-cover"
+                    />
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="font-semibold text-[#257180]">Thu Hà</div>
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="h-3 w-3 fill-current" />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-gray-600 text-sm leading-relaxed mb-3">
+                      &ldquo;Nền tảng dễ sử dụng, học sinh đông, thu nhập ổn định. Đội ngũ support rất tốt!&rdquo;
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-[#CB6040] font-medium">
+                      <Users className="h-3 w-3" />
+                      <span>100+ học viên</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Testimonial 3 */}
+              <Card className="p-6 bg-white border border-[#CB6040]/30 rounded-xl shadow-sm">
+                <div className="flex items-start gap-4">
+                  <Avatar className="w-12 h-12 border-2 border-[#F2E5BF]">
+                    <ImageWithFallback
+                      src="https://images.unsplash.com/photo-1716337563114-365568c4db60?w=100&h=100&fit=crop"
+                      alt="Parent"
+                      className="w-full h-full object-cover"
+                    />
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="font-semibold text-[#257180]">Văn Nam</div>
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="h-3 w-3 fill-current" />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-gray-600 text-sm leading-relaxed mb-3">
+                      &ldquo;Con tôi tiến bộ rõ rệt và tự tin hơn nhiều. Nền tảng đáng tin cậy cho phụ huynh!&rdquo;
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-[#FD8B51] font-medium">
+                      <Heart className="h-3 w-3" />
+                      <span>Rất hài lòng</span>
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-400" />
-                <span>Hủy bất cứ lúc nào</span>
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-400" />
-                <span>Hỗ trợ 24/7</span>
               </div>
+              </Card>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16">
+      {/* Process Section - White Background */}
+      <section className="py-16 lg:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div className="col-span-2">
-              <h3 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                EduMatch
-              </h3>
-              <p className="text-gray-400 mb-6 max-w-md">
-                Nền tảng kết nối gia sư và học viên hàng đầu Việt Nam. Học tập thông minh, tương lai rộng mở.
-              </p>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center cursor-pointer transition-colors">
-                  <span className="text-sm font-bold">f</span>
-                </div>
-                <div className="w-10 h-10 bg-blue-400 hover:bg-blue-500 rounded-full flex items-center justify-center cursor-pointer transition-colors">
-                  <span className="text-sm font-bold">t</span>
-                </div>
-                <div className="w-10 h-10 bg-pink-600 hover:bg-pink-700 rounded-full flex items-center justify-center cursor-pointer transition-colors">
-                  <span className="text-sm font-bold">ig</span>
-                </div>
-              </div>
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-[#F2E5BF] border border-[#257180]/20 rounded-full px-4 py-2 mb-6">
+              <Lightbulb className="h-4 w-4 text-[#FD8B51]" />
+              <span className="text-sm font-medium text-[#257180]">Quy trình đơn giản</span>
             </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">Dành cho học viên</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Tìm gia sư</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Đánh giá gia sư</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Hỗ trợ học tập</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">Dành cho gia sư</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Trở thành gia sư</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Quản lý lớp học</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Thu nhập</a></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="border-t border-gray-800 pt-8 text-center">
-            <p className="text-gray-400">
-              © 2025 EduMatch. Tất cả quyền được bảo lưu. Made with ❤️ in Vietnam.
+            <h2 className="text-3xl lg:text-4xl font-bold text-[#257180] mb-6">
+              Tìm gia sư chỉ trong 3 bước
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Quy trình đơn giản giúp bạn tìm gia sư phù hợp và đặt lịch học ngay
             </p>
           </div>
+
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Step 1 */}
+            <div className="text-center">
+              <div className="relative mb-8">
+                <div className="w-24 h-24 bg-[#FD8B51] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center">
+                    <span className="text-2xl font-bold text-[#FD8B51]">1</span>
+                </div>
+                </div>
+                {/* Arrow */}
+                <div className="hidden lg:block absolute top-12 -right-4">
+                  <ChevronRight className="h-8 w-8 text-[#257180]/30" />
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-[#257180] mb-4">Tìm gia sư</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Tìm kiếm gia sư theo môn học, cấp độ và thời gian phù hợp với bạn.
+              </p>
+            </div>
+            
+            {/* Step 2 */}
+            <div className="text-center">
+              <div className="relative mb-8">
+                <div className="w-24 h-24 bg-[#CB6040] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center">
+                    <span className="text-2xl font-bold text-[#CB6040]">2</span>
+                  </div>
+                </div>
+                {/* Arrow */}
+                <div className="hidden lg:block absolute top-12 -right-4">
+                  <ChevronRight className="h-8 w-8 text-[#257180]/30" />
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-[#257180] mb-4">Đặt lịch học</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Chọn thời gian phù hợp và đặt lịch học trực tuyến với gia sư đã chọn.
+              </p>
+            </div>
+            
+            {/* Step 3 */}
+            <div className="text-center">
+              <div className="relative mb-8">
+                <div className="w-24 h-24 bg-[#257180] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center">
+                    <span className="text-2xl font-bold text-[#257180]">3</span>
+                  </div>
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-[#257180] mb-4">Học 1-kèm-1</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Bắt đầu buổi học trực tuyến với gia sư, tập trung hoàn toàn vào nhu cầu của bạn.
+              </p>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="text-center mt-12">
+            <Button
+              onClick={onNavigateToRegister}
+              size="lg"
+              className="bg-[#FD8B51] hover:bg-[#CB6040] text-white px-8 py-4 text-lg rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+            >
+              Bắt đầu ngay - Miễn phí
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
         </div>
-      </footer>
+      </section>
+
+      {/* CTA Section - #257180 Background */}
+      <section className="py-20 lg:py-32 relative overflow-hidden bg-[#257180]">
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <Zap className="h-16 w-16 mx-auto mb-8 text-[#FD8B51]" />
+          
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
+            Sẵn sàng tìm gia sư<br />phù hợp nhất?
+          </h2>
+          
+          <p className="text-lg lg:text-xl text-white/90 mb-12 max-w-3xl mx-auto leading-relaxed">
+            Tham gia cùng 10,000+ học viên đã tìm được gia sư lý tưởng. Bắt đầu học tập hiệu quả ngay hôm nay!
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-6 justify-center mb-12">
+            <Button
+              onClick={onNavigateToRegister}
+              size="lg"
+              className="group bg-[#FD8B51] hover:bg-[#CB6040] text-white px-10 py-6 text-lg rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+            >
+              Tìm gia sư ngay - Miễn phí
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            </Button>
+                </div>
+
+          <div className="flex flex-wrap justify-center gap-8 text-white/90">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-[#FD8B51]" />
+              <span className="text-base">Không cần thẻ tín dụng</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-[#FD8B51]" />
+              <span className="text-base">Hủy bất cứ lúc nào</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-[#FD8B51]" />
+              <span className="text-base">Hỗ trợ 24/7</span>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
