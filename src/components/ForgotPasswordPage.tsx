@@ -1,6 +1,6 @@
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { Button } from "./ui/basic/button";
+import { Input } from "./ui/form/input";
+import { Label } from "./ui/form/label";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Mail, ArrowLeft, CheckCircle, Clock, Shield, AlertCircle } from "lucide-react";
 import { useState } from "react";

@@ -1,7 +1,7 @@
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Checkbox } from "./ui/checkbox";
+import { Button } from "./ui/basic/button";
+import { Input } from "./ui/form/input";
+import { Label } from "./ui/form/label";
+import { Checkbox } from "./ui/form/checkbox";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { TermsAndPrivacyModal } from "./TermsAndPrivacyModal";
 import { Eye, EyeOff } from "lucide-react";

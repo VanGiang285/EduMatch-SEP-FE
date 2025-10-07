@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
+import { Button } from "./ui/basic/button";
+import { Input } from "./ui/form/input";
 import { Send, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin, Youtube } from "lucide-react";
 
 export function Footer() {

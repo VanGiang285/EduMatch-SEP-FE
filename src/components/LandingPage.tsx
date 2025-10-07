@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "./ui/button";
-import { Card } from "./ui/card";
-import { Avatar } from "./ui/avatar";
+import { Button } from "./ui/basic/button";
+import { Card } from "./ui/layout/card";
+import { Avatar } from "./ui/basic/avatar";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { 
   CheckCircle, 
