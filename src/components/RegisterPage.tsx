@@ -3,6 +3,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { TermsAndPrivacyModal } from "./TermsAndPrivacyModal";
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 
@@ -42,75 +43,75 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
         <div className="flex flex-col justify-start lg:justify-center py-4 sm:py-6 lg:py-12 px-4 sm:px-6 lg:px-16 min-h-screen lg:min-h-0 overflow-y-auto">
           <div className="mx-auto w-full max-w-md">
             {/* Header */}
-            <div className="mb-4 sm:mb-6 lg:mb-8">
-              <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-black mb-2 sm:mb-3 lg:mb-4 leading-tight tracking-tight">
+            <div className="mb-6 sm:mb-8">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-3 sm:mb-4 leading-tight tracking-tight">
                 TẠO TÀI KHOẢN<br />
                 HỌC TẬP NGAY HÔM NAY
               </h1>
-              <p className="text-gray-600 text-xs sm:text-sm lg:text-base leading-relaxed">
+              <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
                 Gia nhập cộng đồng học viên và trải nghiệm phương pháp học tập hiệu quả.
               </p>
             </div>
 
-            <form className="space-y-3 sm:space-y-4 lg:space-y-6">
+            <form className="space-y-4 sm:space-y-5 lg:space-y-6">
               {/* Họ và tên */}
-              <div className="space-y-1 sm:space-y-1.5 lg:space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="fullName" className="text-black text-sm sm:text-base">Họ và tên</Label>
                 <Input
                   id="fullName"
                   type="text"
                   placeholder="Nhập họ và tên của bạn"
-                  className="h-9 sm:h-10 lg:h-12 border border-[#257180]/30 rounded-lg bg-white text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
+                  className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
                 />
               </div>
 
               {/* Email Input */}
-              <div className="space-y-1 sm:space-y-1.5 lg:space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="email" className="text-black text-sm sm:text-base">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="Nhập email của bạn"
-                  className="h-9 sm:h-10 lg:h-12 border border-[#257180]/30 rounded-lg bg-white text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
+                  className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
                 />
               </div>
 
               {/* Password Input */}
-              <div className="space-y-1 sm:space-y-1.5 lg:space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="password" className="text-black text-sm sm:text-base">Mật khẩu</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Tạo mật khẩu mạnh"
-                    className="h-9 sm:h-10 lg:h-12 border border-[#257180]/30 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
+                    className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2 sm:top-2.5 lg:top-3 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-2.5 sm:top-3 lg:top-3 text-gray-400 hover:text-gray-600"
                   >
-                    {showPassword ? <EyeOff className="h-3.5 w-3.5 sm:h-4 sm:w-4 lg:h-5 lg:w-5" /> : <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />}
+                    {showPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
                   </button>
                 </div>
               </div>
 
               {/* Confirm Password Input */}
-              <div className="space-y-1 sm:space-y-1.5 lg:space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="confirmPassword" className="text-black text-sm sm:text-base">Xác nhận mật khẩu</Label>
                 <div className="relative">
                   <Input
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Nhập lại mật khẩu"
-                    className="h-9 sm:h-10 lg:h-12 border border-[#257180]/30 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
+                    className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-2 sm:top-2.5 lg:top-3 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-2.5 sm:top-3 lg:top-3 text-gray-400 hover:text-gray-600"
                   >
-                    {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5 sm:h-4 sm:w-4 lg:h-5 lg:w-5" /> : <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />}
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
                   </button>
                 </div>
               </div>
@@ -139,13 +140,17 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                 />
                 <Label htmlFor="terms" className="text-xs sm:text-sm text-gray-600 leading-relaxed">
                   Tôi đồng ý với{" "}
-                  <a href="#" className="text-black underline hover:text-gray-800">
-                    Điều khoản sử dụng
-                  </a>{" "}
+                  <TermsAndPrivacyModal type="terms">
+                    <button type="button" className="text-black underline hover:text-gray-800">
+                      Điều khoản sử dụng
+                    </button>
+                  </TermsAndPrivacyModal>{" "}
                   và{" "}
-                  <a href="#" className="text-black underline hover:text-gray-800">
-                    Chính sách bảo mật
-                  </a>
+                  <TermsAndPrivacyModal type="privacy">
+                    <button type="button" className="text-black underline hover:text-gray-800">
+                      Chính sách bảo mật
+                    </button>
+                  </TermsAndPrivacyModal>
                 </Label>
               </div>
 
@@ -153,13 +158,13 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
               <Button
                 type="submit"
                 disabled={!agreeTerms}
-                className="w-full h-9 sm:h-10 lg:h-12 bg-[#257180] hover:bg-[#1e5a66] disabled:bg-gray-400 text-white rounded-lg font-medium text-sm sm:text-base shadow-sm hover:shadow-md transition-all"
+                className="w-full h-10 sm:h-11 lg:h-12 bg-[#257180] hover:bg-[#1e5a66] disabled:bg-gray-400 text-white rounded-lg font-medium text-sm sm:text-base shadow-sm hover:shadow-md transition-all"
               >
                 Tạo tài khoản - Bắt đầu học ngay
               </Button>
 
               {/* Divider */}
-              <div className="relative my-3 sm:my-4 lg:my-6">
+              <div className="relative my-4 sm:my-5 lg:my-6">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-300" />
                 </div>
@@ -172,7 +177,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full h-9 sm:h-10 lg:h-12 border-gray-300 hover:bg-gray-50 rounded-lg text-sm sm:text-base"
+                className="w-full h-10 sm:h-11 lg:h-12 border-gray-300 hover:bg-gray-50 rounded-lg text-sm sm:text-base"
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

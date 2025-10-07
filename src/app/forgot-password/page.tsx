@@ -1,10 +1,10 @@
 "use client";
 
-import { LoginPage } from "@/components/LoginPage";
+import { ForgotPasswordPage } from "@/components/ForgotPasswordPage";
 import { Navbar } from "@/components/Navbar";
 import { useRouter } from "next/navigation";
 
-export default function Login() {
+export default function ForgotPassword() {
   const router = useRouter();
 
   return (
@@ -15,10 +15,7 @@ export default function Login() {
         onNavigateToHome={() => router.push('/')}
         currentPage="login"
       />
-      <LoginPage 
-        onSwitchToRegister={() => router.push('/register')} 
-        onForgotPassword={() => router.push('/forgot-password')}
-      />
+      <ForgotPasswordPage onBackToLogin={() => router.push('/login')} />
     </>
   );
 }

@@ -8,9 +8,10 @@ import { useState } from "react";
 
 interface LoginPageProps {
   onSwitchToRegister: () => void;
+  onForgotPassword?: () => void;
 }
 
-export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
+export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -110,12 +111,13 @@ export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
                     Ghi nhớ đăng nhập
                   </Label>
                 </div>
-                <a
-                  href="#"
+                <button
+                  type="button"
+                  onClick={onForgotPassword}
                   className="text-xs sm:text-sm text-gray-600 hover:text-gray-800"
                 >
                   Quên mật khẩu?
-                </a>
+                </button>
               </div>
 
               {/* Login Button */}
