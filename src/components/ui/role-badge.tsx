@@ -38,8 +38,17 @@ export function RoleBadge({ role, className, children }: RoleBadgeProps) {
   
   return (
     <Badge
-      variant={config.variant}
-      className={cn("flex items-center gap-1.5", className)}
+      variant="secondary" 
+      className={cn(
+        "flex items-center gap-1.5",
+        {
+          "bg-blue-100 text-blue-800": role === "learner",
+          "bg-green-100 text-green-800": role === "tutor",
+          "bg-yellow-100 text-yellow-800": role === "business-admin",
+          "bg-red-100 text-red-800": role === "system-admin",
+        },
+        className
+      )}
     >
       <span className="text-xs">{config.icon}</span>
       {children || config.label}
