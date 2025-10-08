@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { LandingPage } from "@/components/LandingPage";
-import { Navbar } from "@/components/Navbar";
+import { LandingPage } from "@/components/landing/LandingPage";
+import { PageWrapper } from "@/components/common/PageWrapper";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
@@ -12,18 +11,11 @@ export default function Home() {
   const navigateToRegister = () => router.push('/register');
 
   return (
-    <>
-      <Navbar
-        onNavigateToLogin={navigateToLogin}
-        onNavigateToRegister={navigateToRegister}
-        onNavigateToHome={() => router.push('/')}
-        onNavigateToBecomeTutor={() => router.push('/become-tutor')}
-        currentPage="landing"
-      />
+    <PageWrapper currentPage="landing">
       <LandingPage
         onNavigateToLogin={navigateToLogin}
         onNavigateToRegister={navigateToRegister}
       />
-    </>
+    </PageWrapper>
   );
 }

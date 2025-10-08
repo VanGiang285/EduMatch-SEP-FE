@@ -1,9 +1,9 @@
 "use client";
 
-import { Button } from "./ui/basic/button";
-import { Card } from "./ui/layout/card";
-import { Avatar } from "./ui/basic/avatar";
-import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { Button } from "../ui/basic/button";
+import { Card } from "../ui/layout/card";
+import { Avatar } from "../ui/basic/avatar";
+import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { 
   CheckCircle, 
   Star, 

@@ -1,22 +1,12 @@
 "use client";
 
-import { BecomeTutorPage } from "@/components/BecomeTutorPage";
-import { Navbar } from "@/components/Navbar";
-import { useRouter } from "next/navigation";
+import { BecomeTutorPage } from "@/components/become-tutor/BecomeTutorPage";
+import { PageWrapper } from "@/components/common/PageWrapper";
 
 export default function BecomeTutor() {
-  const router = useRouter();
-
   return (
-    <>
-      <Navbar
-        onNavigateToLogin={() => router.push('/login')}
-        onNavigateToRegister={() => router.push('/register')}
-        onNavigateToHome={() => router.push('/')}
-        onNavigateToBecomeTutor={() => router.push('/become-tutor')}
-        currentPage="become-tutor"
-      />
+    <PageWrapper currentPage="become-tutor">
       <BecomeTutorPage />
-    </>
+    </PageWrapper>
   );
 }

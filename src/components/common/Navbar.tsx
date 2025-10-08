@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "./ui/basic/button";
+import { Button } from "../ui/basic/button";
 import { Menu, X, Search, BookOpen, GraduationCap } from "lucide-react";
 import { useState } from "react";
 

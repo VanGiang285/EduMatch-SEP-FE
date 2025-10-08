@@ -1,19 +1,20 @@
-import { Button } from "./ui/basic/button";
-import { Input } from "./ui/form/input";
-import { Label } from "./ui/form/label";
-import { Checkbox } from "./ui/form/checkbox";
-import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { Button } from "../ui/basic/button";
+import { Input } from "../ui/form/input";
+import { Label } from "../ui/form/label";
+import { Checkbox } from "../ui/form/checkbox";
+import { ImageWithFallback } from "../figma/ImageWithFallback";
+import { TermsAndPrivacyModal } from "../common/TermsAndPrivacyModal";
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 
-interface LoginPageProps {
-  onSwitchToRegister: () => void;
-  onForgotPassword?: () => void;
+interface RegisterPageProps {
+  onSwitchToLogin: () => void;
 }
 
-export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPageProps) {
+export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#F2E5BF] flex items-center justify-center p-2 sm:p-4 lg:p-8 pt-20">
@@ -21,38 +22,49 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
         {/* Phần bên trái - Hình ảnh và caption */}
         <div className="relative hidden lg:flex lg:flex-col lg:justify-end overflow-hidden">
           <ImageWithFallback
-            src="https://images.unsplash.com/photo-1647539761535-e55f1c25e02a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHVkeSUyMGxlYXJuaW5nJTIwZWR1Y2F0aW9uJTIwbW9kZXJufGVufDF8fHx8MTc1ODcyMDE5Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-            alt="Modern education and learning"
+            src="https://images.unsplash.com/photo-1727790632675-204d26c2326c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHVkZW50JTIwc3R1ZHlpbmclMjBib29rcyUyMGVkdWNhdGlvbnxlbnwxfHx8fDE3NTg3NzgyMTh8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
+            alt="Student studying with books"
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
           
           <div className="relative z-10 p-12 pb-16">
             <h2 className="text-4xl font-bold text-white mb-6 leading-tight">
-              HỌC TẬP THÔNG MINH,<br />
-              THÀNH CÔNG BỀN VỮNG
+              BƯỚC ĐẦU TIÊN<br />
+              HƯỚNG TỚI THÀNH CÔNG
             </h2>
             <p className="text-lg text-white/90 leading-relaxed">
-              Mỗi bước tiến trong học tập đều là một chiến thắng. Hãy để gia sư dẫn lối cho hành trình tri thức của bạn.
+              Tạo tài khoản và bắt đầu hành trình học tập cùng các gia sư hàng đầu. Tri thức là chìa khóa mở ra tương lai.
             </p>
           </div>
         </div>
 
-        {/* Phần bên phải - Form đăng nhập */}
-        <div className="flex flex-col justify-center py-6 sm:py-8 lg:py-12 px-4 sm:px-6 lg:px-16 min-h-screen lg:min-h-0">
+        {/* Phần bên phải - Form đăng ký */}
+        <div className="flex flex-col justify-start lg:justify-center py-4 sm:py-6 lg:py-12 px-4 sm:px-6 lg:px-16 min-h-screen lg:min-h-0 overflow-y-auto">
           <div className="mx-auto w-full max-w-md">
             {/* Header */}
             <div className="mb-6 sm:mb-8">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-3 sm:mb-4 leading-tight tracking-tight">
-                CÙNG GIA SƯ MỞ RA<br />
-                CƠ HỘI HỌC TẬP MỚI
+                TẠO TÀI KHOẢN<br />
+                HỌC TẬP NGAY HÔM NAY
               </h1>
               <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
-                Sẵn sàng bước vào hành trình học tập tiếp theo? Đăng nhập ngay và để gia sư đưa bạn đến đích.
+                Gia nhập cộng đồng học viên và trải nghiệm phương pháp học tập hiệu quả.
               </p>
             </div>
 
             <form className="space-y-4 sm:space-y-5 lg:space-y-6">
+              {/* Họ và tên */}
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="fullName" className="text-black text-sm sm:text-base">Họ và tên</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="Nhập họ và tên của bạn"
+                  className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
+                />
+              </div>
+
               {/* Email Input */}
               <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="email" className="text-black text-sm sm:text-base">Email</Label>
@@ -71,7 +83,7 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Nhập mật khẩu"
+                    placeholder="Tạo mật khẩu mạnh"
                     className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
                   />
                   <button
@@ -84,48 +96,71 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
                 </div>
               </div>
 
-              {/* New user link */}
+              {/* Confirm Password Input */}
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="confirmPassword" className="text-black text-sm sm:text-base">Xác nhận mật khẩu</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Nhập lại mật khẩu"
+                    className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-2.5 sm:top-3 lg:top-3 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Already have account link */}
               <div className="text-left">
                 <p className="text-xs sm:text-sm text-gray-600">
-                  Người dùng mới?{" "}
+                  Đã có tài khoản?{" "}
                   <button 
                     type="button"
-                    onClick={onSwitchToRegister}
+                    onClick={onSwitchToLogin}
                     className="text-black underline hover:text-gray-800"
                   >
-                    Tạo tài khoản
+                    Đăng nhập ngay
                   </button>
                 </p>
               </div>
 
-              {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="remember"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                    className="border-gray-400"
-                  />
-                  <Label htmlFor="remember" className="text-xs sm:text-sm text-gray-600">
-                    Ghi nhớ đăng nhập
-                  </Label>
-                </div>
-                <button
-                  type="button"
-                  onClick={onForgotPassword}
-                  className="text-xs sm:text-sm text-gray-600 hover:text-gray-800"
-                >
-                  Quên mật khẩu?
-                </button>
+              {/* Terms and Conditions */}
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="terms"
+                  checked={agreeTerms}
+                  onCheckedChange={(checked) => setAgreeTerms(checked as boolean)}
+                  className="border-gray-400 mt-0.5 sm:mt-1"
+                />
+                <Label htmlFor="terms" className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                  Tôi đồng ý với{" "}
+                  <TermsAndPrivacyModal type="terms">
+                    <button type="button" className="text-black underline hover:text-gray-800">
+                      Điều khoản sử dụng
+                    </button>
+                  </TermsAndPrivacyModal>{" "}
+                  và{" "}
+                  <TermsAndPrivacyModal type="privacy">
+                    <button type="button" className="text-black underline hover:text-gray-800">
+                      Chính sách bảo mật
+                    </button>
+                  </TermsAndPrivacyModal>
+                </Label>
               </div>
 
-              {/* Login Button */}
+              {/* Register Button */}
               <Button
                 type="submit"
-                className="w-full h-10 sm:h-11 lg:h-12 bg-[#257180] hover:bg-[#1e5a66] text-white rounded-lg font-medium text-sm sm:text-base shadow-sm hover:shadow-md transition-all"
+                disabled={!agreeTerms}
+                className="w-full h-10 sm:h-11 lg:h-12 bg-[#257180] hover:bg-[#1e5a66] disabled:bg-gray-400 text-white rounded-lg font-medium text-sm sm:text-base shadow-sm hover:shadow-md transition-all"
               >
-                Đăng nhập - Bắt đầu học ngay
+                Tạo tài khoản - Bắt đầu học ngay
               </Button>
 
               {/* Divider */}
@@ -138,7 +173,7 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
                 </div>
               </div>
 
-              {/* Google Login */}
+              {/* Google Register */}
               <Button
                 type="button"
                 variant="outline"
@@ -150,7 +185,7 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                Đăng nhập với Google
+                Đăng ký với Google
               </Button>
             </form>
           </div>

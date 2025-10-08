@@ -5,9 +5,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "./ui/feedback/dialog";
-import { Button } from "./ui/basic/button";
-import { ScrollArea } from "./ui/layout/scroll-area";
+} from "../ui/feedback/dialog";
+import { Button } from "../ui/basic/button";
+import { ScrollArea } from "../ui/layout/scroll-area";
 import { Shield, FileText, CheckCircle } from "lucide-react";
 
 interface TermsAndPrivacyModalProps {
