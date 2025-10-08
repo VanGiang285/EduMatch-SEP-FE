@@ -13,6 +13,7 @@ export default function ForgotPassword() {
         onNavigateToLogin={() => router.push('/login')}
         onNavigateToRegister={() => router.push('/register')}
         onNavigateToHome={() => router.push('/')}
+        onNavigateToBecomeTutor={() => router.push('/become-tutor')}
         currentPage="login"
       />
       <ForgotPasswordPage onBackToLogin={() => router.push('/login')} />

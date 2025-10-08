@@ -13,6 +13,7 @@ export default function Login() {
         onNavigateToLogin={() => router.push('/login')}
         onNavigateToRegister={() => router.push('/register')}
         onNavigateToHome={() => router.push('/')}
+        onNavigateToBecomeTutor={() => router.push('/become-tutor')}
         currentPage="login"
       />
       <LoginPage 

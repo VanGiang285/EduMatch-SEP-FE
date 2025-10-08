@@ -17,6 +17,7 @@ export default function Home() {
         onNavigateToLogin={navigateToLogin}
         onNavigateToRegister={navigateToRegister}
         onNavigateToHome={() => router.push('/')}
+        onNavigateToBecomeTutor={() => router.push('/become-tutor')}
         currentPage="landing"
       />
       <LandingPage

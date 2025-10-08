@@ -8,10 +8,11 @@ interface NavbarProps {
   onNavigateToLogin: () => void;
   onNavigateToRegister: () => void;
   onNavigateToHome: () => void;
+  onNavigateToBecomeTutor?: () => void;
   currentPage: string;
 }
 
-export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, currentPage }: NavbarProps) {
+export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, currentPage }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -45,13 +46,13 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               <BookOpen className="w-4 h-4" />
               Danh sách lớp học
             </a>
-            <a 
-              href="#become-tutor" 
+            <button 
+              onClick={onNavigateToBecomeTutor}
               className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
             >
               <GraduationCap className="w-4 h-4" />
               Trở thành gia sư
-            </a>
+            </button>
           </div>
 
           {/* Auth Buttons - Desktop */}
@@ -107,13 +108,13 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               <BookOpen className="w-4 h-4" />
               Danh sách lớp học
             </a>
-            <a 
-              href="#become-tutor" 
-              className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
+            <button 
+              onClick={onNavigateToBecomeTutor}
+              className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
             >
               <GraduationCap className="w-4 h-4" />
               Trở thành gia sư
-            </a>
+            </button>
             
             <div className="pt-4 space-y-2 border-t border-white/20">
               {currentPage !== 'login' && (
