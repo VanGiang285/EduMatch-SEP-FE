@@ -105,3 +105,6 @@ dist
 # Temporary folders
 tmp/
 temp/
+
+# Design mockups (not tracked)
+Tutor Learning Platform Mockups/
