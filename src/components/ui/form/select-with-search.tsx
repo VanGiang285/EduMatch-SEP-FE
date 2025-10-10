@@ -119,8 +119,9 @@ export function SelectWithSearch({
                       ...child.props,
                       className: cn(
                         child.props.className,
-                        isSelected && "bg-[#F2E5BF] text-[#257180]"
+                        isSelected && "text-[#257180]"
                       ),
+                      onClick: () => handleValueChange(child.props.value),
                       children: (
                         <>
                           <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
