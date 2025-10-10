@@ -8,7 +8,6 @@ import {
   CheckCircle, 
   Star, 
   Users, 
-  Clock, 
   ArrowRight,
   Sparkles,
   TrendingUp,
@@ -17,14 +16,11 @@ import {
   Target,
   Play,
   Brain,
-  Rocket,
   Heart,
   Lightbulb,
-  MessageCircle,
   Video,
   BookOpen,
   Award,
-  Globe,
   ChevronRight
 } from "lucide-react";
 
@@ -33,7 +29,7 @@ interface LandingPageProps {
   onNavigateToRegister: () => void;
 }
 
-export function LandingPage({ onNavigateToLogin, onNavigateToRegister }: LandingPageProps) {
+export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
   return (
     <div className="min-h-screen">
       {/* Hero Section - #257180 Background */}

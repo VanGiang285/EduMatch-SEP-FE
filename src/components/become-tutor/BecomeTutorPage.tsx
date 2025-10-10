@@ -6,28 +6,21 @@ import { Button } from "../ui/basic/button";
 import { Input } from "../ui/form/input";
 import { Label } from "../ui/form/label";
 import { Textarea } from "../ui/form/textarea";
-import { Badge } from "../ui/basic/badge";
 import { Progress } from "../ui/feedback/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/form/select";
 import { SelectWithSearch, SelectWithSearchItem } from "../ui/form/select-with-search";
 import { Checkbox } from "../ui/form/checkbox";
 import { RadioGroup, RadioGroupItem } from "../ui/form/radio-group";
+import { DatePicker } from "../ui/form/date-picker";
 import { 
   Upload, 
   FileText, 
   DollarSign, 
-  Users, 
-  BookOpen, 
-  Star, 
   Check, 
   ChevronRight, 
   ChevronLeft,
-  Globe, 
   Video, 
-  Clock, 
   Award,
   Camera,
-  Calendar,
   MapPin,
   User,
   Mail,
@@ -36,7 +29,6 @@ import {
   Youtube,
   Plus,
   Trash2,
-  X,
   GraduationCap
 } from "lucide-react";
 import { vietnamProvinces, getDistrictsByProvince } from "@/data/vietnam-locations";
@@ -488,12 +480,12 @@ export function BecomeTutorPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="birthDate" className="text-[#257180]">Ngày sinh <span className="text-red-500">*</span></Label>
-                        <Input
-                          id="birthDate"
-                          type="date"
-                          className="border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                        <DatePicker
                           value={formData.introduction.birthDate}
-                          onChange={(e) => updateFormData('introduction', { birthDate: e.target.value })}
+                          onChange={(value) => updateFormData('introduction', { birthDate: value })}
+                          placeholder="DD/MM/YYYY"
+                          className="border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                          maxDate={new Date()}
                         />
                       </div>
 
@@ -569,7 +561,7 @@ export function BecomeTutorPage() {
                     <div className="space-y-4">
                       <Label className="text-[#257180]">Bạn có chứng chỉ liên quan đến môn học không?</Label>
                       <RadioGroup 
-                        value={formData.certifications.hasCertification?.toString()} 
+                        value={formData.certifications.hasCertification?.toString() || null} 
                         onValueChange={(value) => updateFormData('certifications', { hasCertification: value === 'true' })}
                       >
                         <div className="flex items-center space-x-2">
@@ -696,7 +688,7 @@ export function BecomeTutorPage() {
                     <div className="space-y-4">
                       <Label className="text-[#257180]">Bạn có bằng cấp giáo dục không?</Label>
                       <RadioGroup 
-                        value={formData.education.hasEducation?.toString()} 
+                        value={formData.education.hasEducation?.toString() || null} 
                         onValueChange={(value) => updateFormData('education', { hasEducation: value === 'true' })}
                       >
                         <div className="flex items-center space-x-2">
@@ -1099,15 +1091,17 @@ export function BecomeTutorPage() {
 
                 {/* Navigation Buttons */}
                 <div className="flex justify-between pt-8 border-t border-gray-200">
-                  <Button 
-                    variant="outline" 
-                    onClick={handlePrevious}
-                    disabled={currentStep === 1}
-                    className="border-[#257180]/30 text-[#257180] hover:bg-[#F2E5BF]"
-                  >
-                    <ChevronLeft className="w-4 h-4 mr-2" />
-                    Quay lại
-                  </Button>
+                  {currentStep > 1 && (
+                    <Button 
+                      variant="outline" 
+                      onClick={handlePrevious}
+                      className="border-[#257180]/30 text-[#257180] hover:bg-[#F2E5BF]"
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-2" />
+                      Quay lại
+                    </Button>
+                  )}
+                  {currentStep === 1 && <div></div>}
                   
                   {currentStep < 8 ? (
                     <Button 

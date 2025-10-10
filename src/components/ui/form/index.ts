@@ -1,6 +1,7 @@
 export * from './calendar';
 export * from './checkbox';
 export * from './command';
+export * from './date-picker';
 export * from './form';
 export * from './input';
 export * from './input-otp';

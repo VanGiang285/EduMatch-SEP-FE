@@ -278,10 +278,8 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
               Nếu bạn có câu hỏi về chính sách bảo mật này hoặc muốn thực hiện quyền của mình, vui lòng liên hệ:
             </p>
             <div className="space-y-2 text-sm">
-              <p><strong>Email bảo mật:</strong> privacy@edumatch.com</p>
-              <p><strong>Hotline:</strong> 1900-xxxx</p>
-              <p><strong>Địa chỉ:</strong> 123 Đường ABC, Quận XYZ, TP.HCM</p>
-              <p><strong>Thời gian:</strong> 8:00 - 22:00 (Thứ 2 - Chủ nhật)</p>
+              <p><strong>Email bảo mật:</strong> vangiang@edumatch.com</p>
+              <p><strong>Hotline:</strong> 0966470396</p>
             </div>
           </div>
         </section>

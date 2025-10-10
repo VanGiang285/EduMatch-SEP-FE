@@ -150,8 +150,6 @@ export function SelectWithSearch({
 export function SelectWithSearchContent({
   className,
   children,
-  searchPlaceholder,
-  onSearchChange,
 }: SelectWithSearchContentProps) {
   return (
     <div className={cn("relative", className)}>

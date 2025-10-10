@@ -1,150 +1,175 @@
-export interface Tutor {
-  id: string;
-  name: string;
-  email: string;
-  subjects: string[];
-  rating: number;
-  experience: number;
-  bio: string;
-  avatar?: string;
-}
-
-export interface CreateTutorData {
-  name: string;
-  email: string;
-  subjects: string[];
-  bio: string;
-  experience: number;
-}
-
-export interface TutorsResponse {
-  success: boolean;
-  tutors?: Tutor[];
-  error?: string;
-}
+import { apiClient, replaceUrlParams } from '@/lib/api';
+import { API_ENDPOINTS } from '@/constants';
+import { 
+  GetTutorsRequest,
+  TutorsResponse,
+  TutorResponse,
+  CreateTutorRequest,
+  UpdateTutorRequest,
+  ApiResponse,
+  PaginatedApiResponse
+} from '@/types/api';
+import { Tutor, TutorProfile } from '@/types';
 
 export class TutorService {
-  private static baseUrl = '/api/tutors';
-
-  static async getAllTutors(): Promise<TutorsResponse> {
-    try {
-      const response = await fetch(`${this.baseUrl}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        return { success: false, error: data.error || 'Failed to fetch tutors' };
-      }
-
-      return { success: true, tutors: data.tutors || [] };
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Network error' 
-      };
-    }
+  static async getTutors(params?: GetTutorsRequest): Promise<PaginatedApiResponse<Tutor>> {
+    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.LIST, params)
+      .then(res => ({
+        ...res,
+        data: res.data?.tutors?.map(tutor => ({
+          ...tutor,
+          createdAt: new Date(tutor.createdAt),
+          updatedAt: new Date(tutor.updatedAt)
+        })),
+        pagination: res.data?.pagination
+      }));
   }
 
-  static async getTutorById(id: string): Promise<{ success: boolean; tutor?: Tutor; error?: string }> {
-    try {
-      const response = await fetch(`${this.baseUrl}/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        return { success: false, error: data.error || 'Failed to fetch tutor' };
-      }
-
-      return { success: true, tutor: data.tutor };
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Network error' 
-      };
-    }
+  static async getTutorById(id: string): Promise<ApiResponse<TutorProfile>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.TUTORS.DETAIL, { id });
+    return apiClient.get<TutorResponse>(endpoint)
+      .then(res => ({
+        ...res,
+        data: res.data?.tutor ? {
+          ...res.data.tutor,
+          createdAt: new Date(res.data.tutor.createdAt),
+          updatedAt: new Date(res.data.tutor.updatedAt),
+          user: {} as any,
+          reviews: [],
+          bookings: [],
+          isActive: res.data.tutor.isActive,
+          totalEarnings: 0,
+          responseTime: 0
+        } : undefined
+      }));
   }
 
-  static async createTutor(tutorData: CreateTutorData): Promise<{ success: boolean; tutor?: Tutor; error?: string }> {
-    try {
-      const response = await fetch(`${this.baseUrl}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(tutorData),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        return { success: false, error: data.error || 'Failed to create tutor' };
-      }
-
-      return { success: true, tutor: data.tutor };
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Network error' 
-      };
-    }
+  static async searchTutors(params: GetTutorsRequest): Promise<PaginatedApiResponse<Tutor>> {
+    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.SEARCH, params)
+      .then(res => ({
+        ...res,
+        data: res.data?.tutors?.map(tutor => ({
+          ...tutor,
+          createdAt: new Date(tutor.createdAt),
+          updatedAt: new Date(tutor.updatedAt)
+        })),
+        pagination: res.data?.pagination
+      }));
   }
 
-  static async updateTutor(id: string, tutorData: Partial<CreateTutorData>): Promise<{ success: boolean; tutor?: Tutor; error?: string }> {
-    try {
-      const response = await fetch(`${this.baseUrl}/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(tutorData),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        return { success: false, error: data.error || 'Failed to update tutor' };
-      }
-
-      return { success: true, tutor: data.tutor };
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Network error' 
-      };
-    }
+  static async createTutor(tutorData: CreateTutorRequest): Promise<ApiResponse<Tutor>> {
+    return apiClient.post<TutorResponse>(API_ENDPOINTS.TUTORS.CREATE, tutorData)
+      .then(res => ({
+        ...res,
+        data: res.data?.tutor ? {
+          ...res.data.tutor,
+          createdAt: new Date(res.data.tutor.createdAt),
+          updatedAt: new Date(res.data.tutor.updatedAt)
+        } : undefined
+      }));
   }
 
-  static async deleteTutor(id: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      const response = await fetch(`${this.baseUrl}/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+  static async updateTutor(id: string, tutorData: UpdateTutorRequest): Promise<ApiResponse<Tutor>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.TUTORS.UPDATE, { id });
+    return apiClient.put<TutorResponse>(endpoint, tutorData)
+      .then(res => ({
+        ...res,
+        data: res.data?.tutor ? {
+          ...res.data.tutor,
+          createdAt: new Date(res.data.tutor.createdAt),
+          updatedAt: new Date(res.data.tutor.updatedAt)
+        } : undefined
+      }));
+  }
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        return { success: false, error: data.error || 'Failed to delete tutor' };
-      }
+  static async deleteTutor(id: string): Promise<ApiResponse<void>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.TUTORS.DELETE, { id });
+    return apiClient.delete<void>(endpoint);
+  }
 
-      return { success: true };
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Network error' 
-      };
-    }
+  static async getTutorAvailability(id: string): Promise<ApiResponse<any[]>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.TUTORS.AVAILABILITY, { id });
+    return apiClient.get<any[]>(endpoint);
+  }
+
+  static async updateTutorAvailability(id: string, availability: any[]): Promise<ApiResponse<any[]>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.TUTORS.AVAILABILITY, { id });
+    return apiClient.put<any[]>(endpoint, { availability });
+  }
+
+  static async getFeaturedTutors(limit = 6): Promise<PaginatedApiResponse<Tutor>> {
+    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.LIST, { 
+      featured: true, 
+      limit 
+    }).then(res => ({
+      ...res,
+      data: res.data?.tutors?.map(tutor => ({
+        ...tutor,
+        createdAt: new Date(tutor.createdAt),
+        updatedAt: new Date(tutor.updatedAt)
+      })),
+      pagination: res.data?.pagination
+    }));
+  }
+
+  static async getTutorsBySubject(subject: string, params?: GetTutorsRequest): Promise<PaginatedApiResponse<Tutor>> {
+    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.LIST, { 
+      ...params, 
+      subjects: [subject] 
+    }).then(res => ({
+      ...res,
+      data: res.data?.tutors?.map(tutor => ({
+        ...tutor,
+        createdAt: new Date(tutor.createdAt),
+        updatedAt: new Date(tutor.updatedAt)
+      })),
+      pagination: res.data?.pagination
+    }));
+  }
+
+  static async getTutorsByLocation(location: string, params?: GetTutorsRequest): Promise<PaginatedApiResponse<Tutor>> {
+    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.LIST, { 
+      ...params, 
+      location 
+    }).then(res => ({
+      ...res,
+      data: res.data?.tutors?.map(tutor => ({
+        ...tutor,
+        createdAt: new Date(tutor.createdAt),
+        updatedAt: new Date(tutor.updatedAt)
+      })),
+      pagination: res.data?.pagination
+    }));
+  }
+
+  static async getTutorsByRating(minRating: number, params?: GetTutorsRequest): Promise<PaginatedApiResponse<Tutor>> {
+    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.LIST, { 
+      ...params, 
+      minRating 
+    }).then(res => ({
+      ...res,
+      data: res.data?.tutors?.map(tutor => ({
+        ...tutor,
+        createdAt: new Date(tutor.createdAt),
+        updatedAt: new Date(tutor.updatedAt)
+      })),
+      pagination: res.data?.pagination
+    }));
+  }
+
+  static async getTutorsByPriceRange(minPrice: number, maxPrice: number, params?: GetTutorsRequest): Promise<PaginatedApiResponse<Tutor>> {
+    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.LIST, { 
+      ...params, 
+      minHourlyRate: minPrice,
+      maxHourlyRate: maxPrice
+    }).then(res => ({
+      ...res,
+      data: res.data?.tutors?.map(tutor => ({
+        ...tutor,
+        createdAt: new Date(tutor.createdAt),
+        updatedAt: new Date(tutor.updatedAt)
+      })),
+      pagination: res.data?.pagination
+    }));
   }
 }

@@ -1,103 +1,76 @@
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export interface RegisterData {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  firstName: string;
-  lastName: string;
-}
-
-export interface AuthResponse {
-  success: boolean;
-  token?: string;
-  user?: any;
-  error?: string;
-}
+import { apiClient } from '@/lib/api';
+import { API_ENDPOINTS, STORAGE_KEYS } from '@/constants';
+import { 
+  LoginRequest, 
+  LoginResponse, 
+  RegisterRequest, 
+  RegisterResponse,
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
+  ResetPasswordRequest,
+  ResetPasswordResponse,
+  ApiResponse
+} from '@/types/api';
+import { User } from '@/types';
 
 export class AuthService {
-  private static baseUrl = '/api/auth';
+  static async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
+    return apiClient.post<LoginResponse>(API_ENDPOINTS.AUTH.LOGIN, credentials);
+  }
 
-  static async login(credentials: LoginCredentials): Promise<AuthResponse> {
+  static async register(userData: RegisterRequest): Promise<ApiResponse<RegisterResponse>> {
+    return apiClient.post<RegisterResponse>(API_ENDPOINTS.AUTH.REGISTER, userData);
+  }
+
+  static async logout(): Promise<ApiResponse<void>> {
+    return apiClient.post<void>(API_ENDPOINTS.AUTH.LOGOUT);
+  }
+
+  static async refreshToken(): Promise<ApiResponse<LoginResponse>> {
+    return apiClient.post<LoginResponse>(API_ENDPOINTS.AUTH.REFRESH);
+  }
+
+  static async forgotPassword(data: ForgotPasswordRequest): Promise<ApiResponse<ForgotPasswordResponse>> {
+    return apiClient.post<ForgotPasswordResponse>(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, data);
+  }
+
+  static async resetPassword(data: ResetPasswordRequest): Promise<ApiResponse<ResetPasswordResponse>> {
+    return apiClient.post<ResetPasswordResponse>(API_ENDPOINTS.AUTH.RESET_PASSWORD, data);
+  }
+
+  static async verifyEmail(token: string): Promise<ApiResponse<void>> {
+    return apiClient.post<void>(API_ENDPOINTS.AUTH.VERIFY_EMAIL, { token });
+  }
+
+  static async getCurrentUser(): Promise<ApiResponse<User>> {
+    return apiClient.get<User>(API_ENDPOINTS.USERS.PROFILE);
+  }
+
+  static isAuthenticated(): boolean {
+    if (typeof window === 'undefined') return false;
+    return !!localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+  }
+
+  static getStoredUser(): User | null {
+    if (typeof window === 'undefined') return null;
     try {
-      const response = await fetch(`${this.baseUrl}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        return { success: false, error: data.error || 'Login failed' };
-      }
-
-      return { success: true, ...data };
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Network error' 
-      };
+      const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+      return userData ? JSON.parse(userData) : null;
+    } catch {
+      return null;
     }
   }
 
-  static async register(userData: RegisterData): Promise<AuthResponse> {
-    try {
-      const response = await fetch(`${this.baseUrl}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        return { success: false, error: data.error || 'Registration failed' };
-      }
-
-      return { success: true, ...data };
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Network error' 
-      };
-    }
+  static storeUserData(user: User, token: string): void {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
   }
 
-  static async forgotPassword(email: string): Promise<AuthResponse> {
-    try {
-      const response = await fetch(`${this.baseUrl}/forgot-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        return { success: false, error: data.error || 'Password reset failed' };
-      }
-
-      return { success: true, ...data };
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Network error' 
-      };
-    }
-  }
-
-  static async logout(): Promise<void> {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  static clearStoredData(): void {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+    localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
   }
 }
