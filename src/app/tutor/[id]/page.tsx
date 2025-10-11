@@ -7,7 +7,7 @@ interface TutorDetailPageProps {
   };
 }
 
-export default function TutorDetailPage({ params }: TutorDetailPageProps) {
+export default function TutorDetailPage({}: TutorDetailPageProps) {
   return (
     <PageWrapper currentPage="tutor-detail">
       <TutorDetailProfilePage />

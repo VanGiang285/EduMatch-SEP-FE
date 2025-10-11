@@ -134,7 +134,7 @@ export function useAsyncSubmit<T = any>(
     async (data: any) => {
       return await asyncState.execute(data);
     },
-    [asyncState.execute]
+    [asyncState]
   );
 
   return {
@@ -158,14 +158,14 @@ export function useAsyncFetch<T = any>(
     (...args: any[]) => {
       return asyncState.execute(...args);
     },
-    [asyncState.execute]
+    [asyncState]
   );
 
   useEffect(() => {
     if (deps.length > 0) {
       refetch();
     }
-  }, deps);
+  }, [deps, refetch]);
 
   return {
     ...asyncState,

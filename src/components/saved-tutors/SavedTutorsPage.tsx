@@ -6,6 +6,7 @@ import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
 import { Badge } from '../ui/basic/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/basic/avatar';
+import { FormatService } from '@/lib/format';
 import { 
   Star, 
   Heart, 
@@ -215,15 +216,15 @@ export function SavedTutorsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-16">
+    <div className="min-h-screen bg-[#F2E5BF] pt-16">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white border-b border-[#257180]/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="mb-2">
-            <h1 className="text-gray-900">
-              Gia sư đã lưu
+            <h1 className="text-black text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 leading-tight tracking-tight">
+              GIA SƯ ĐÃ LƯU
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
               Bạn đã lưu {actualSavedTutors.length} gia sư
             </p>
           </div>
@@ -257,8 +258,8 @@ export function SavedTutorsPage() {
                       key={tutor.tutorId}
                       className={`cursor-pointer transition-all duration-200 ${
                         hoveredTutor === tutor.tutorId 
-                          ? 'border-gray-900 shadow-lg bg-white' 
-                          : 'hover:border-gray-400 hover:shadow-md'
+                          ? 'border-[#FD8B51] shadow-lg bg-white' 
+                          : 'hover:border-[#257180]/40 hover:shadow-md bg-white'
                       }`}
                       onMouseEnter={() => setHoveredTutor(tutor.tutorId)}
                       onClick={() => handleViewTutorProfile(tutor.tutorId)}
@@ -292,11 +293,11 @@ export function SavedTutorsPage() {
                             <div className="flex items-start justify-between mb-3">
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-3">
-                                  <h2 className="text-gray-900 text-2xl font-semibold">
+                                  <h2 className="text-black text-2xl font-bold">
                                     {tutor.userName}
                                   </h2>
                                   {tutor.videoIntroUrl && (
-                                    <Badge variant="outline" className="text-xs px-2 py-0.5">
+                                    <Badge variant="outline" className="text-xs px-2 py-0.5 border-[#FD8B51] text-[#FD8B51]">
                                       <Video className="w-3 h-3 mr-1" />
                                       Video
                                     </Badge>
@@ -305,9 +306,9 @@ export function SavedTutorsPage() {
                                 
                                 <div className="flex items-center gap-3">
                                   <div className="flex items-center gap-1.5">
-                                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                    <span className="text-sm text-gray-900">{tutor.rating}</span>
-                                    <span className="text-sm text-gray-500">({tutor.reviewCount} đánh giá)</span>
+                                    <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
+                                    <span className="text-sm text-black font-medium">{tutor.rating}</span>
+                                    <span className="text-sm text-gray-600">({tutor.reviewCount} đánh giá)</span>
                                   </div>
                                   <Separator orientation="vertical" className="h-4" />
                                   <span className="text-sm text-gray-600">{tutor.completedLessons} buổi học</span>
@@ -329,12 +330,12 @@ export function SavedTutorsPage() {
                             {/* Subjects */}
                             <div className="flex flex-wrap gap-2">
                               {tutor.subjects.map((subject, idx) => (
-                                <Badge key={idx} variant="secondary" className="text-sm px-3 py-1">
+                                <Badge key={idx} variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-black border-[#257180]/20">
                                   {subject}
                                 </Badge>
                               ))}
                               {tutor.specializations.slice(0, 2).map((spec, idx) => (
-                                <Badge key={idx} variant="outline" className="text-xs px-2 py-0.5">
+                                <Badge key={idx} variant="outline" className="text-xs px-2 py-0.5 border-[#FD8B51] text-[#FD8B51]">
                                   {spec}
                                 </Badge>
                               ))}
@@ -369,11 +370,11 @@ export function SavedTutorsPage() {
                         </div>
 
                         {/* Row 4: Price & Actions */}
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between pt-4 border-t border-[#257180]/20">
                           <div>
                             <div className="flex items-baseline gap-2">
-                              <span className="text-3xl text-gray-900">
-                                {tutor.hourlyRate.toLocaleString()}₫
+                              <span className="text-3xl text-black font-bold">
+                                {FormatService.formatVND(tutor.hourlyRate)}
                               </span>
                               <span className="text-base text-gray-600">/giờ</span>
                             </div>
@@ -383,6 +384,7 @@ export function SavedTutorsPage() {
                             <Button 
                               variant="outline" 
                               size="lg"
+                              className="border-black text-black hover:bg-black hover:text-white"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 // TODO: Open message modal or redirect to messaging
@@ -394,6 +396,7 @@ export function SavedTutorsPage() {
                             </Button>
                             <Button 
                               size="lg"
+                              className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 // TODO: Open booking modal or redirect to booking
@@ -467,82 +470,76 @@ export function SavedTutorsPage() {
           </div>
 
           {/* Right Side - Video Preview (Simple & Sticky) */}
-          {actualSavedTutors.length > 0 && currentTutor && (
-            <div className="hidden lg:block lg:col-span-4">
-              <div className="sticky top-8">
-                {/* Video Card */}
-                <Card className="overflow-hidden">
-                  <CardContent className="p-0">
-                    {/* Video Section */}
-                    <div className="relative bg-gradient-to-br from-gray-800 to-gray-900 aspect-[4/3]">
-                      {currentTutor.videoIntroUrl ? (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="text-center">
-                            <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-4 mx-auto hover:bg-white/30 hover:scale-110 transition-all cursor-pointer">
-                              <Play className="w-10 h-10 text-white ml-1" />
-                            </div>
-                            <p className="text-white">Xem video giới thiệu</p>
-                            <p className="text-white/80 text-sm mt-2">{currentTutor.userName}</p>
+          <div className="hidden lg:block lg:col-span-4">
+            <div className="sticky-video-preview">
+              {/* Video Card */}
+              <Card className="overflow-hidden bg-white border-[#257180]/20 shadow-lg">
+                <CardContent className="p-0">
+                  {/* Video Section */}
+                  <div className="relative bg-gradient-to-br from-[#257180] to-[#1e5a66] aspect-[4/3]">
+                    {currentTutor ? (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="w-20 h-20 rounded-full bg-[#FD8B51]/20 backdrop-blur-sm flex items-center justify-center mb-4 mx-auto hover:bg-[#FD8B51]/30 hover:scale-110 transition-all cursor-pointer">
+                            <Play className="w-10 h-10 text-white ml-1" />
                           </div>
+                          <p className="text-white font-bold">Xem video giới thiệu</p>
+                          <p className="text-white/80 text-sm sm:text-base mt-2">{currentTutor.userName}</p>
                         </div>
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="text-center">
-                            <Avatar className="w-32 h-32 mx-auto mb-3 border-4 border-white/20">
-                              <AvatarImage src={currentTutor.avatarUrl || undefined} className="object-cover" />
-                              <AvatarFallback className="text-3xl">
-                                {currentTutor.userName.split(' ').slice(-2).map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <p className="text-white">{currentTutor.userName}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Buttons Only */}
-                    <div className="p-6">
-                      <div className="space-y-3">
-                        <Button 
-                          variant="outline" 
-                          className="w-full" 
-                          size="lg"
-                          onClick={() => {
-                            // TODO: Open booking calendar modal
-                            console.log('Open booking calendar for tutor:', currentTutor?.tutorId);
-                          }}
-                        >
-                          <Calendar className="w-4 h-4 mr-2" />
-                          Đặt lịch học
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="w-full" 
-                          size="lg"
-                          onClick={() => {
-                            // TODO: Open tutor schedule modal
-                            console.log('View tutor schedule:', currentTutor?.tutorId);
-                          }}
-                        >
-                          <Clock className="w-4 h-4 mr-2" />
-                          Xem lịch dạy của gia sư
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="w-full" 
-                          size="lg"
-                          onClick={() => currentTutor && handleViewTutorProfile(currentTutor.tutorId)}
-                        >
-                          <Send className="w-4 h-4 mr-2" />
-                          Xem hồ sơ đầy đủ
-                        </Button>
                       </div>
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center text-white/80">
+                          <div className="w-20 h-20 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
+                            <Heart className="w-8 h-8" />
+                          </div>
+                          <p className="text-sm sm:text-base">Chọn gia sư để xem thông tin</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons Only - Không trùng với tutor card */}
+                  <div className="p-6">
+                    <div className="space-y-3">
+                      <Button 
+                        variant="outline" 
+                        className="w-full border-black text-black hover:bg-black hover:text-white" 
+                        size="lg"
+                        onClick={() => {
+                          // TODO: Open booking calendar modal
+                          console.log('Open booking calendar for tutor:', currentTutor?.tutorId);
+                        }}
+                      >
+                        <Calendar className="w-4 h-4 mr-2" />
+                        Đặt lịch học
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full border-[#FD8B51] text-[#FD8B51] hover:bg-[#FD8B51] hover:text-white" 
+                        size="lg"
+                        onClick={() => {
+                          // TODO: Open tutor schedule modal
+                          console.log('View tutor schedule:', currentTutor?.tutorId);
+                        }}
+                      >
+                        <Clock className="w-4 h-4 mr-2" />
+                        Xem lịch dạy của gia sư
+                      </Button>
+                      <Button 
+                        className="w-full bg-[#FD8B51] hover:bg-[#CB6040] text-white" 
+                        size="lg"
+                        onClick={() => currentTutor && handleViewTutorProfile(currentTutor.tutorId)}
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        Xem hồ sơ đầy đủ
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

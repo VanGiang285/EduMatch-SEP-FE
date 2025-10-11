@@ -21,8 +21,8 @@ import {
   Send
 } from 'lucide-react';
 import { SelectWithSearch, SelectWithSearchItem } from '../ui/form/select-with-search';
-import { Slider } from '../ui/form/slider';
 import { Separator } from '../ui/layout/separator';
+import { FormatService } from '@/lib/format';
 import {
   Pagination,
   PaginationContent,
@@ -274,10 +274,9 @@ export function FindTutorPage() {
 
   return (
     <div className="min-h-screen bg-[#F2E5BF] pt-16">
-      {/* Top Section with Search and Filters */}
+      {/* Title Section */}
       <div className="bg-white border-b border-[#257180]/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Title */}
           <div className="mb-6">
             <h1 className="text-black text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 leading-tight tracking-tight">
               TÌM GIA SƯ TRỰC TUYẾN
@@ -286,117 +285,133 @@ export function FindTutorPage() {
               Kết nối với hơn 1,000+ gia sư chuyên nghiệp
             </p>
           </div>
+        </div>
+      </div>
 
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#257180]" />
+      {/* Sticky Search and Filters Section */}
+      <div className="bg-white border-b border-[#257180]/20 sticky top-16 z-40 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          {/* Search, Filters and Price Range in One Row */}
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end w-full">
+            {/* Search Bar - Compact */}
+            <div className="relative w-full lg:w-[280px] flex-shrink-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#257180]" />
               <Input
-                placeholder="Tìm theo tên gia sư..."
+                placeholder="Tìm gia sư..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 text-base border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                className="pl-10 h-10 text-sm border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
               />
             </div>
-          </div>
 
-          {/* Horizontal Filters */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <SelectWithSearch 
-              value={selectedSubject} 
-              onValueChange={setSelectedSubject}
-              placeholder="Môn học"
-              className="w-full min-w-[140px]"
-            >
-              <SelectWithSearchItem value="all">Tất cả môn học</SelectWithSearchItem>
-              {subjects.map((subject) => (
-                <SelectWithSearchItem key={subject.id} value={subject.id.toString()}>
-                  {subject.subjectName}
-                </SelectWithSearchItem>
-              ))}
-            </SelectWithSearch>
+            {/* Filters - Match main content area width */}
+            <div className="flex flex-wrap lg:flex-nowrap gap-3 flex-1">
+              <SelectWithSearch 
+                value={selectedSubject} 
+                onValueChange={setSelectedSubject}
+                placeholder="Môn học"
+                className="w-full lg:w-[160px] flex-shrink-0"
+              >
+                <SelectWithSearchItem value="all">Tất cả môn học</SelectWithSearchItem>
+                {subjects.map((subject) => (
+                  <SelectWithSearchItem key={subject.id} value={subject.id.toString()}>
+                    {subject.subjectName}
+                  </SelectWithSearchItem>
+                ))}
+              </SelectWithSearch>
 
-            <SelectWithSearch 
-              value={selectedCity} 
-              onValueChange={setSelectedCity}
-              placeholder="Thành phố"
-              className="w-full min-w-[140px]"
-            >
-              <SelectWithSearchItem value="all">Tất cả thành phố</SelectWithSearchItem>
-              {provinces.map((province) => (
-                <SelectWithSearchItem key={province.id} value={province.id.toString()}>
-                  {province.name}
-                </SelectWithSearchItem>
-              ))}
-            </SelectWithSearch>
+              <SelectWithSearch 
+                value={selectedCity} 
+                onValueChange={setSelectedCity}
+                placeholder="Thành phố"
+                className="w-full lg:w-[160px] flex-shrink-0"
+              >
+                <SelectWithSearchItem value="all">Tất cả thành phố</SelectWithSearchItem>
+                {provinces.map((province) => (
+                  <SelectWithSearchItem key={province.id} value={province.id.toString()}>
+                    {province.name}
+                  </SelectWithSearchItem>
+                ))}
+              </SelectWithSearch>
 
-            <SelectWithSearch 
-              value="all"
-              placeholder="Đánh giá"
-              className="w-full min-w-[140px]"
-            >
-              <SelectWithSearchItem value="all">Tất cả đánh giá</SelectWithSearchItem>
-              <SelectWithSearchItem value="4.5">4.5⭐ trở lên</SelectWithSearchItem>
-              <SelectWithSearchItem value="4.0">4.0⭐ trở lên</SelectWithSearchItem>
-              <SelectWithSearchItem value="3.5">3.5⭐ trở lên</SelectWithSearchItem>
-            </SelectWithSearch>
+              <SelectWithSearch 
+                value="all"
+                placeholder="Đánh giá"
+                className="w-full lg:w-[160px] flex-shrink-0"
+              >
+                <SelectWithSearchItem value="all">Tất cả đánh giá</SelectWithSearchItem>
+                <SelectWithSearchItem value="4.5">4.5⭐ trở lên</SelectWithSearchItem>
+                <SelectWithSearchItem value="4.0">4.0⭐ trở lên</SelectWithSearchItem>
+                <SelectWithSearchItem value="3.5">3.5⭐ trở lên</SelectWithSearchItem>
+              </SelectWithSearch>
 
-            <SelectWithSearch 
-              value="all"
-              placeholder="Hình thức"
-              className="w-full min-w-[140px]"
-            >
-              <SelectWithSearchItem value="all">Tất cả hình thức</SelectWithSearchItem>
-              <SelectWithSearchItem value="online">Trực tuyến</SelectWithSearchItem>
-              <SelectWithSearchItem value="offline">Tại nhà</SelectWithSearchItem>
-            </SelectWithSearch>
+              <SelectWithSearch 
+                value={(() => {
+                  const [min, max] = priceRange;
+                  if (min === 50000 && max === 500000) return 'all';
+                  if (min === 50000 && max === 100000) return '50000-100000';
+                  if (min === 100000 && max === 150000) return '100000-150000';
+                  if (min === 150000 && max === 200000) return '150000-200000';
+                  if (min === 200000 && max === 250000) return '200000-250000';
+                  if (min === 250000 && max === 300000) return '250000-300000';
+                  if (min === 300000 && max === 500000) return '300000-500000';
+                  return 'custom';
+                })()}
+                onValueChange={(value) => {
+                  if (value === 'all') {
+                    setPriceRange([50000, 500000]);
+                  } else if (value === 'custom') {
+                    // Keep current range for custom values
+                    return;
+                  } else {
+                    const [min, max] = value.split('-').map(Number);
+                    setPriceRange([min, max]);
+                  }
+                }}
+                placeholder="Mức giá"
+                className="w-full lg:w-[160px] flex-shrink-0"
+              >
+                <SelectWithSearchItem value="all">Tất cả mức giá</SelectWithSearchItem>
+                <SelectWithSearchItem value="50000-100000">Dưới 100k/giờ</SelectWithSearchItem>
+                <SelectWithSearchItem value="100000-150000">100k - 150k/giờ</SelectWithSearchItem>
+                <SelectWithSearchItem value="150000-200000">150k - 200k/giờ</SelectWithSearchItem>
+                <SelectWithSearchItem value="200000-250000">200k - 250k/giờ</SelectWithSearchItem>
+                <SelectWithSearchItem value="250000-300000">250k - 300k/giờ</SelectWithSearchItem>
+                <SelectWithSearchItem value="300000-500000">Trên 300k/giờ</SelectWithSearchItem>
+                {(() => {
+                  const [min, max] = priceRange;
+                  const isCustom = !(
+                    (min === 50000 && max === 500000) ||
+                    (min === 50000 && max === 100000) ||
+                    (min === 100000 && max === 150000) ||
+                    (min === 150000 && max === 200000) ||
+                    (min === 200000 && max === 250000) ||
+                    (min === 250000 && max === 300000) ||
+                    (min === 300000 && max === 500000)
+                  );
+                  
+                  if (isCustom) {
+                    return (
+                      <SelectWithSearchItem value="custom">
+                        {FormatService.formatVND(min)} - {FormatService.formatVND(max)}
+                      </SelectWithSearchItem>
+                    );
+                  }
+                  return null;
+                })()}
+              </SelectWithSearch>
 
-            <SelectWithSearch 
-              value="all"
-              placeholder="Giới tính"
-              className="w-full min-w-[140px]"
-            >
-              <SelectWithSearchItem value="all">Tất cả giới tính</SelectWithSearchItem>
-              <SelectWithSearchItem value="male">Nam</SelectWithSearchItem>
-              <SelectWithSearchItem value="female">Nữ</SelectWithSearchItem>
-            </SelectWithSearch>
-
-            <SelectWithSearch 
-              value="recommended"
-              placeholder="Sắp xếp"
-              className="w-full min-w-[140px]"
-            >
-              <SelectWithSearchItem value="recommended">Đề xuất</SelectWithSearchItem>
-              <SelectWithSearchItem value="rating">Đánh giá cao</SelectWithSearchItem>
-              <SelectWithSearchItem value="price-low">Giá thấp - cao</SelectWithSearchItem>
-              <SelectWithSearchItem value="price-high">Giá cao - thấp</SelectWithSearchItem>
-              <SelectWithSearchItem value="experience">Kinh nghiệm</SelectWithSearchItem>
-            </SelectWithSearch>
-          </div>
-
-          {/* Price Range Filter */}
-          <div className="mt-6 pt-6 border-t border-[#257180]/20">
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-black text-sm sm:text-base">
-                Mức giá (₫/giờ)
-              </label>
-              <div className="text-sm font-semibold text-[#257180] bg-[#F2E5BF] px-3 py-1 rounded-md">
-                {priceRange[0].toLocaleString()}₫ - {priceRange[1].toLocaleString()}₫
-              </div>
-            </div>
-            <div className="px-2">
-              <Slider
-                value={priceRange}
-                onValueChange={setPriceRange}
-                min={50000}
-                max={500000}
-                step={10000}
-                className="w-full slider-track"
-              />
-            </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-2">
-              <span>50,000₫</span>
-              <span>500,000₫</span>
+              <SelectWithSearch 
+                value="recommended"
+                placeholder="Sắp xếp"
+                className="w-full lg:w-[160px] flex-shrink-0"
+              >
+                <SelectWithSearchItem value="recommended">Đề xuất</SelectWithSearchItem>
+                <SelectWithSearchItem value="rating">Đánh giá cao</SelectWithSearchItem>
+                <SelectWithSearchItem value="price-low">Giá thấp - cao</SelectWithSearchItem>
+                <SelectWithSearchItem value="price-high">Giá cao - thấp</SelectWithSearchItem>
+                <SelectWithSearchItem value="experience">Kinh nghiệm</SelectWithSearchItem>
+              </SelectWithSearch>
             </div>
           </div>
         </div>
@@ -521,7 +536,7 @@ export function FindTutorPage() {
                     <div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-3xl text-black font-bold">
-                          {tutor.hourlyRate.toLocaleString()}₫
+                          {FormatService.formatVND(tutor.hourlyRate)}
                         </span>
                         <span className="text-base text-gray-600">/giờ</span>
                       </div>
@@ -615,7 +630,7 @@ export function FindTutorPage() {
 
           {/* Right Side - Video Preview (Simple & Sticky) */}
           <div className="hidden lg:block lg:col-span-4">
-            <div className="sticky-video-preview">
+            <div className="sticky top-[calc(4rem+4rem+1rem)] z-30">
               {/* Video Card */}
               <Card className="overflow-hidden bg-white border-[#257180]/20 shadow-lg">
                 <CardContent className="p-0">

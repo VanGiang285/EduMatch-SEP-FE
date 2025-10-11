@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "../ui/basic/button";
-import { Menu, X, Search, BookOpen, GraduationCap } from "lucide-react";
+import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart } from "lucide-react";
 import { useState } from "react";
 
 interface NavbarProps {
@@ -10,10 +10,13 @@ interface NavbarProps {
   onNavigateToHome: () => void;
   onNavigateToBecomeTutor?: () => void;
   onNavigateToFindTutor?: () => void;
+  onNavigateToMessages?: () => void;
+  onNavigateToNotifications?: () => void;
+  onNavigateToFavorites?: () => void;
   currentPage: string;
 }
 
-export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, currentPage }: NavbarProps) {
+export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, onNavigateToMessages, onNavigateToNotifications, onNavigateToFavorites, currentPage }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -56,25 +59,55 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
             </button>
           </div>
 
-          {/* Auth Buttons - Desktop */}
-          <div className="hidden lg:flex items-center space-x-3">
-            {currentPage !== 'login' && (
-              <Button
-                variant="ghost"
-                onClick={onNavigateToLogin}
-                className="text-white hover:text-[#FD8B51] hover:bg-white/10 font-medium px-4"
+          {/* Right side icons and auth buttons */}
+          <div className="hidden lg:flex items-center space-x-2">
+            {/* Action Icons */}
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={onNavigateToMessages}
+                className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                title="Tin nhắn"
               >
-                Đăng nhập
-              </Button>
-            )}
-            {currentPage !== 'register' && (
-              <Button
-                onClick={onNavigateToRegister}
-                className="bg-[#FD8B51] hover:bg-[#CB6040] text-white px-4 py-2 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all"
+                <MessageCircle className="w-5 h-5" />
+              </button>
+              
+              <button
+                onClick={onNavigateToNotifications}
+                className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                title="Thông báo"
               >
-                Đăng ký ngay
-              </Button>
-            )}
+                <Bell className="w-5 h-5" />
+              </button>
+              
+              <button
+                onClick={onNavigateToFavorites}
+                className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                title="Gia sư đã thích"
+              >
+                <Heart className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Auth Buttons */}
+            <div className="flex items-center space-x-3 ml-4">
+              {currentPage !== 'login' && (
+                <Button
+                  variant="ghost"
+                  onClick={onNavigateToLogin}
+                  className="text-white hover:text-[#FD8B51] hover:bg-white/10 font-medium px-4"
+                >
+                  Đăng nhập
+                </Button>
+              )}
+              {currentPage !== 'register' && (
+                <Button
+                  onClick={onNavigateToRegister}
+                  className="bg-[#FD8B51] hover:bg-[#CB6040] text-white px-4 py-2 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all"
+                >
+                  Đăng ký ngay
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Mobile menu button */}
@@ -116,6 +149,35 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               <GraduationCap className="w-4 h-4" />
               Trở thành gia sư
             </button>
+            
+            {/* Mobile Action Icons */}
+            <div className="pt-4 space-y-2 border-t border-white/20">
+              <div className="flex items-center justify-center space-x-4">
+                <button
+                  onClick={onNavigateToMessages}
+                  className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span className="text-sm">Tin nhắn</span>
+                </button>
+                
+                <button
+                  onClick={onNavigateToNotifications}
+                  className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <Bell className="w-4 h-4" />
+                  <span className="text-sm">Thông báo</span>
+                </button>
+                
+                <button
+                  onClick={onNavigateToFavorites}
+                  className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <Heart className="w-4 h-4" />
+                  <span className="text-sm">Yêu thích</span>
+                </button>
+              </div>
+            </div>
             
             <div className="pt-4 space-y-2 border-t border-white/20">
               {currentPage !== 'login' && (

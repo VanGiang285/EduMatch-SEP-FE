@@ -29,7 +29,7 @@ export default function TestNavigation() {
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
               <p className="text-blue-800">
                 <strong>Hướng dẫn:</strong> Sử dụng navbar ở trên để điều hướng giữa các trang. 
-                Tất cả các trang đều có navbar với link "Tìm gia sư" hoạt động.
+                Tất cả các trang đều có navbar với link &quot;Tìm gia sư&quot; hoạt động.
               </p>
             </div>
           </div>

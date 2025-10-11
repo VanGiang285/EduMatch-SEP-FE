@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/navigation/tabs'
 import { Calendar } from '../ui/form/calendar';
 import { Separator } from '../ui/layout/separator';
 import { Star, Heart, MapPin, Clock, BookOpen, Calendar as CalendarIcon, MessageCircle, Video, Shield, Award, Users, TrendingUp, Globe, CheckCircle2, Play, ArrowLeft } from 'lucide-react';
+import { FormatService } from '@/lib/format';
 
 // ========== TYPE DEFINITIONS ==========
 
@@ -708,7 +709,7 @@ export function TutorDetailProfilePage() {
                     <div>
                       <span className="text-gray-600 text-sm">Học phí</span>
                       <div className="mt-2">
-                        <span className="text-3xl text-black">{tutor.hourlyRate.toLocaleString()}₫</span>
+                        <span className="text-3xl text-black">{FormatService.formatVND(tutor.hourlyRate)}</span>
                         <span className="text-base text-gray-600">/giờ</span>
                       </div>
                     </div>

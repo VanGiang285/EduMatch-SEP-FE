@@ -63,6 +63,26 @@ export class FormatService {
     }
   }
 
+  // Format tiền tệ với đuôi ₫ theo kiểu Việt Nam
+  static formatVND(amount: number): string {
+    try {
+      return `${amount.toLocaleString('vi-VN')}₫`;
+    } catch (error) {
+      console.error('VND formatting error:', error);
+      return `${amount.toLocaleString()}₫`;
+    }
+  }
+
+  // Format tiền tệ với đuôi ₫ và đơn vị
+  static formatVNDWithUnit(amount: number, unit = 'giờ'): string {
+    try {
+      return `${amount.toLocaleString('vi-VN')}₫/${unit}`;
+    } catch (error) {
+      console.error('VND with unit formatting error:', error);
+      return `${amount.toLocaleString()}₫/${unit}`;
+    }
+  }
+
   static formatNumber(number: number): string {
     try {
       return new Intl.NumberFormat('vi-VN').format(number);
