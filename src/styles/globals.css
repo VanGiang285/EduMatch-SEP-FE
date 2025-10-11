@@ -191,4 +191,93 @@
 
 html {
   font-size: var(--font-size);
+  /* Prevent navbar shift when scrollbar appears */
+  overflow-y: scroll;
+}
+
+/* Utility classes for the new components */
+@layer utilities {
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
+
+/* Custom slider styles for better visibility */
+@layer components {
+  .slider-track {
+    background-color: #e5e7eb !important;
+  }
+  
+  .slider-range {
+    background-color: #257180 !important;
+  }
+  
+  .slider-thumb {
+    background-color: #257180 !important;
+    border: 2px solid #ffffff !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  .slider-thumb:hover {
+    background-color: #1e5a66 !important;
+    transform: scale(1.1) !important;
+  }
+}
+
+/* Sticky video preview styles for Find Tutor page */
+@layer components {
+  /* Ensure sticky positioning works properly */
+  .sticky-video-preview {
+    position: sticky;
+    top: 5rem; /* 20 * 0.25rem = 5rem */
+    z-index: 10;
+    /* Ensure it doesn't interfere with other elements */
+    isolation: isolate;
+  }
+  
+  /* Smooth scrolling for the sticky container */
+  .sticky-video-preview {
+    scroll-behavior: smooth;
+  }
+  
+  /* Ensure the sticky element has proper height constraints */
+  .sticky-video-preview {
+    max-height: calc(100vh - 6rem);
+    overflow-y: auto;
+  }
+  
+  /* Custom scrollbar for the sticky container */
+  .sticky-video-preview::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .sticky-video-preview::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .sticky-video-preview::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+  }
+  
+  .sticky-video-preview::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+  }
 }

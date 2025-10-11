@@ -9,10 +9,11 @@ interface NavbarProps {
   onNavigateToRegister: () => void;
   onNavigateToHome: () => void;
   onNavigateToBecomeTutor?: () => void;
+  onNavigateToFindTutor?: () => void;
   currentPage: string;
 }
 
-export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, currentPage }: NavbarProps) {
+export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, currentPage }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -32,13 +33,13 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-1">
-            <a 
-              href="#find-tutor" 
+            <button 
+              onClick={onNavigateToFindTutor}
               className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
             >
               <Search className="w-4 h-4" />
               Tìm gia sư
-            </a>
+            </button>
             <a 
               href="#classes" 
               className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
@@ -94,13 +95,13 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
       {mobileMenuOpen && (
         <div className="lg:hidden bg-[#257180] border-t border-white/20">
           <div className="px-4 py-4 space-y-2">
-            <a 
-              href="#find-tutor" 
-              className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
+            <button 
+              onClick={onNavigateToFindTutor}
+              className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
             >
               <Search className="w-4 h-4" />
               Tìm gia sư
-            </a>
+            </button>
             <a 
               href="#classes" 
               className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
