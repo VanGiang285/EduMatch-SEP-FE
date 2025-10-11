@@ -12,7 +12,6 @@ import { Separator } from '../ui/layout/separator';
 import { Star, Heart, MapPin, Clock, BookOpen, Calendar as CalendarIcon, MessageCircle, Video, Shield, Award, Users, TrendingUp, Globe, CheckCircle2, Play, ArrowLeft } from 'lucide-react';
 import { FormatService } from '@/lib/format';
 
-// ========== TYPE DEFINITIONS ==========
 
 interface TutorDetailData {
   tutorId: number;
@@ -80,7 +79,6 @@ export function TutorDetailProfilePage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
 
-  // ========== MOCK DATA ==========
   
   const tutor: TutorDetailData = {
     tutorId: 1,
@@ -235,7 +233,6 @@ export function TutorDetailProfilePage() {
     }
   ];
 
-  // Format date helper
   const formatDate = (date: Date) => {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());

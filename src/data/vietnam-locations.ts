@@ -1,4 +1,3 @@
-// Dữ liệu tỉnh thành và quận huyện Việt Nam (cập nhật 2024)
 export interface District {
   code: string;
   name: string;
@@ -835,7 +834,6 @@ export const vietnamProvinces: Province[] = [
   }
 ];
 
-// Helper functions
 export const getProvinces = () => vietnamProvinces.map(province => ({
   code: province.code,
   name: province.name,

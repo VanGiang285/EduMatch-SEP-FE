@@ -37,7 +37,6 @@ import { FormatService } from "@/lib/format";
 export function BecomeTutorPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    // Step 1: Giới thiệu
     introduction: {
       firstName: '',
       lastName: '',
@@ -48,12 +47,10 @@ export function BecomeTutorPage() {
       birthDate: '',
       phone: ''
     },
-    // Step 2: Ảnh
     photo: {
       profileImage: null as File | null,
       hasImage: false
     },
-    // Step 3: Chứng nhận
     certifications: {
       hasCertification: null as boolean | null,
       items: [] as Array<{
@@ -63,7 +60,6 @@ export function BecomeTutorPage() {
         certificationFile: null | File;
       }>
     },
-    // Step 4: Giáo dục
     education: {
       hasEducation: null as boolean | null,
       items: [] as Array<{
@@ -74,37 +70,31 @@ export function BecomeTutorPage() {
         degreeFile: null | File;
       }>
     },
-    // Step 5: Mô tả
     description: {
       introduction: '',
       teachingExperience: '',
       attractiveTitle: ''
     },
-    // Step 6: Video
     video: {
       videoFile: null as File | null,
       youtubeLink: '',
       hasVideo: false
     },
-    // Step 7: Thời gian khả dụng
     availability: {
       schedule: {} as Record<string, string[]>
     },
-    // Step 8: Giá cả
     pricing: {
       hourlyRate: '',
       description: ''
     }
   });
 
-  // Current certification being added
   const [currentCertification, setCurrentCertification] = useState({
     subject: '',
     certificationName: '',
     certificationFile: null as null | File
   });
 
-  // Current education being added
   const [currentEducation, setCurrentEducation] = useState({
     university: '',
     degree: '',
@@ -136,7 +126,6 @@ export function BecomeTutorPage() {
     'Marketing', 'Quản trị kinh doanh', 'Kế toán', 'Tài chính', 'Ngân hàng'
   ];
 
-  // Get available districts based on selected province
   const availableDistricts = formData.introduction.province 
     ? getDistrictsByProvince(formData.introduction.province)
     : [];
@@ -205,7 +194,6 @@ export function BecomeTutorPage() {
     }));
   };
 
-  // Add certification
   const addCertification = () => {
     if (!currentCertification.subject || !currentCertification.certificationName) {
       alert('Vui lòng điền đầy đủ thông tin môn học và tên chứng nhận');
@@ -225,7 +213,6 @@ export function BecomeTutorPage() {
       }
     }));
 
-    // Reset form
     setCurrentCertification({
       subject: '',
       certificationName: '',
@@ -233,7 +220,6 @@ export function BecomeTutorPage() {
     });
   };
 
-  // Remove certification
   const removeCertification = (id: string) => {
     setFormData(prev => ({
       ...prev,
@@ -244,7 +230,6 @@ export function BecomeTutorPage() {
     }));
   };
 
-  // Add education
   const addEducation = () => {
     if (!currentEducation.university || !currentEducation.degree || !currentEducation.duration) {
       alert('Vui lòng điền đầy đủ thông tin trường, bằng cấp và thời hạn');
@@ -264,7 +249,6 @@ export function BecomeTutorPage() {
       }
     }));
 
-    // Reset form
     setCurrentEducation({
       university: '',
       degree: '',
@@ -273,7 +257,6 @@ export function BecomeTutorPage() {
     });
   };
 
-  // Remove education
   const removeEducation = (id: string) => {
     setFormData(prev => ({
       ...prev,
@@ -284,7 +267,6 @@ export function BecomeTutorPage() {
     }));
   };
 
-  // Handle subject selection
   const handleSubjectChange = (subject: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
@@ -297,7 +279,6 @@ export function BecomeTutorPage() {
     }));
   };
 
-  // Handle province change
   const handleProvinceChange = (provinceCode: string) => {
     setFormData(prev => ({
       ...prev,
@@ -324,7 +305,6 @@ export function BecomeTutorPage() {
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           
-          {/* Sidebar - Progress */}
           <div className="lg:col-span-1 space-y-6">
             <Card className="bg-white border border-[#257180]/20">
               <CardHeader>
@@ -357,12 +337,10 @@ export function BecomeTutorPage() {
             </Card>
           </div>
 
-          {/* Main Content */}
           <div className="lg:col-span-3">
             <Card className="shadow-lg bg-white border border-[#257180]/20">
               <CardContent className="p-8">
                 
-                {/* Step 1: Giới thiệu */}
                 {currentStep === 1 && (
                   <div className="space-y-6">
                     <div>
@@ -507,7 +485,6 @@ export function BecomeTutorPage() {
                   </div>
                 )}
 
-                {/* Step 2: Ảnh */}
                 {currentStep === 2 && (
                   <div className="space-y-6">
                     <div>
@@ -551,7 +528,6 @@ export function BecomeTutorPage() {
                   </div>
                 )}
 
-                {/* Step 3: Chứng nhận */}
                 {currentStep === 3 && (
                   <div className="space-y-6">
                     <div>
@@ -578,7 +554,6 @@ export function BecomeTutorPage() {
 
                     {formData.certifications.hasCertification && (
                       <div className="space-y-6">
-                        {/* List of added certifications */}
                         {formData.certifications.items.length > 0 && (
                           <div className="space-y-3">
                             <Label className="text-black text-sm sm:text-base">Chứng chỉ đã thêm ({formData.certifications.items.length})</Label>
@@ -614,7 +589,6 @@ export function BecomeTutorPage() {
                           </div>
                         )}
 
-                        {/* Add new certification form */}
                         <div className="space-y-4 p-6 border border-[#257180]/20 rounded-lg bg-white">
                           <div className="space-y-2">
                             <Label htmlFor="cert-subject" className="text-black text-sm sm:text-base">Môn học <span className="text-red-500">*</span></Label>
@@ -678,7 +652,6 @@ export function BecomeTutorPage() {
                   </div>
                 )}
 
-                {/* Step 4: Giáo dục */}
                 {currentStep === 4 && (
                   <div className="space-y-6">
                     <div>

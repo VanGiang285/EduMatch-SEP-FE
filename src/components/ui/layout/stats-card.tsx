@@ -58,7 +58,6 @@ export function StatsCard({
   );
 }
 
-// Role-based stats card
 interface RoleStatsCardProps extends Omit<StatsCardProps, 'className'> {
   role: "learner" | "tutor" | "business-admin" | "system-admin";
 }

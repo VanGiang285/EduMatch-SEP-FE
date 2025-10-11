@@ -38,7 +38,6 @@ export function SelectWithSearch({
   const [searchValue, setSearchValue] = React.useState("");
   const [filteredChildren, setFilteredChildren] = React.useState(children);
 
-  // Filter children based on search
   React.useEffect(() => {
     if (!searchValue) {
       setFilteredChildren(children);

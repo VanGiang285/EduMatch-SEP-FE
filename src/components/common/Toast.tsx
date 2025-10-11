@@ -114,7 +114,6 @@ export function Toast({
   );
 }
 
-// Toast container component
 interface ToastContainerProps {
   toasts: ToastProps[];
   onClose: (id: string) => void;

@@ -30,7 +30,6 @@ import {
   PaginationPrevious,
 } from '../ui/navigation/pagination';
 
-// ========== TYPE DEFINITIONS ==========
 
 interface TutorCardData {
   tutorId: number;
@@ -63,7 +62,6 @@ export function SavedTutorsPage() {
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set([1, 3, 4, 2, 5])); // All saved tutors are favorited
   const tutorsPerPage = 6;
 
-  // ========== MOCK DATA ==========
   
   const savedTutors: TutorCardData[] = [
     {
@@ -183,10 +181,8 @@ export function SavedTutorsPage() {
     },
   ];
 
-  // Filter saved tutors based on favorite state
   const actualSavedTutors = savedTutors.filter(tutor => favoriteTutors.has(tutor.tutorId));
   
-  // Pagination logic
   const totalPages = Math.ceil(actualSavedTutors.length / tutorsPerPage);
   const indexOfLastTutor = currentPage * tutorsPerPage;
   const indexOfFirstTutor = indexOfLastTutor - tutorsPerPage;
@@ -200,11 +196,9 @@ export function SavedTutorsPage() {
       const newFavorites = new Set(prev);
       if (newFavorites.has(tutorId)) {
         newFavorites.delete(tutorId);
-        // In production: DELETE FROM favorites WHERE tutorId = ? AND userEmail = currentUser.email
         console.log('Remove from favorites:', tutorId);
       } else {
         newFavorites.add(tutorId);
-        // In production: INSERT INTO favorites (tutorId, userEmail) VALUES (?, ?)
         console.log('Add to favorites:', tutorId);
       }
       return newFavorites;
@@ -387,7 +381,6 @@ export function SavedTutorsPage() {
                               className="border-black text-black hover:bg-black hover:text-white"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // TODO: Open message modal or redirect to messaging
                                 console.log('Open message with tutor:', tutor.tutorId);
                               }}
                             >
@@ -399,7 +392,6 @@ export function SavedTutorsPage() {
                               className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // TODO: Open booking modal or redirect to booking
                                 console.log('Book trial lesson with tutor:', tutor.tutorId);
                               }}
                             >
@@ -507,7 +499,6 @@ export function SavedTutorsPage() {
                         className="w-full border-black text-black hover:bg-black hover:text-white" 
                         size="lg"
                         onClick={() => {
-                          // TODO: Open booking calendar modal
                           console.log('Open booking calendar for tutor:', currentTutor?.tutorId);
                         }}
                       >
@@ -519,7 +510,6 @@ export function SavedTutorsPage() {
                         className="w-full border-[#FD8B51] text-[#FD8B51] hover:bg-[#FD8B51] hover:text-white" 
                         size="lg"
                         onClick={() => {
-                          // TODO: Open tutor schedule modal
                           console.log('View tutor schedule:', currentTutor?.tutorId);
                         }}
                       >

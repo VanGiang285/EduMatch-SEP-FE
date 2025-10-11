@@ -32,7 +32,6 @@ export function DatePicker({
   const [isOpen, setIsOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState("");
 
-  // Convert internal format (YYYY-MM-DD) to Vietnamese display format (DD/MM/YYYY)
   const formatToVietnamese = (dateString: string) => {
     if (!dateString) return "";
     try {
@@ -46,11 +45,9 @@ export function DatePicker({
     return "";
   };
 
-  // Convert Vietnamese format (DD/MM/YYYY) to internal format (YYYY-MM-DD)
   const parseFromVietnamese = (dateString: string) => {
     if (!dateString) return "";
     try {
-      // Try to parse DD/MM/YYYY format
       const date = parse(dateString, "dd/MM/yyyy", new Date(), { locale: vi });
       if (isValid(date)) {
         return format(date, "yyyy-MM-dd");
@@ -61,7 +58,6 @@ export function DatePicker({
     return "";
   };
 
-  // Update input value when prop value changes
   React.useEffect(() => {
     if (value) {
       setInputValue(formatToVietnamese(value));
@@ -70,10 +66,8 @@ export function DatePicker({
     }
   }, [value]);
 
-  // Parse date from string for calendar
   const selectedDate = value ? new Date(value) : undefined;
 
-  // Handle date selection from calendar
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
       const dateString = format(date, "yyyy-MM-dd");
@@ -83,12 +77,10 @@ export function DatePicker({
     }
   };
 
-  // Handle manual input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputVal = e.target.value;
     setInputValue(inputVal);
     
-    // Validate Vietnamese date format (DD/MM/YYYY)
     const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
     if (dateRegex.test(inputVal)) {
       const internalFormat = parseFromVietnamese(inputVal);
@@ -98,7 +90,6 @@ export function DatePicker({
     }
   };
 
-  // Handle input blur - validate and format
   const handleInputBlur = () => {
     if (inputValue) {
       const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
@@ -110,7 +101,6 @@ export function DatePicker({
           onChange?.(internalFormat);
         }
       } else {
-        // Reset to previous valid value if invalid
         if (value) {
           setInputValue(formatToVietnamese(value));
         } else {
@@ -131,7 +121,6 @@ export function DatePicker({
         disabled={disabled}
         className={cn("pl-10", className)}
         onFocus={() => {
-          // Allow keyboard input by not opening calendar on focus
         }}
       />
       

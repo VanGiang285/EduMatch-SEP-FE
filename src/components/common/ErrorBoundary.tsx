@@ -55,7 +55,6 @@ export class ErrorBoundary extends Component<Props, ErrorBoundaryState> {
   }
 }
 
-// Default error fallback component
 interface ErrorFallbackProps {
   error: any;
   resetError: () => void;
@@ -121,7 +120,6 @@ function DefaultErrorFallback({ error, resetError }: ErrorFallbackProps) {
   );
 }
 
-// Hook for error handling in functional components
 export const useErrorHandler = () => {
   const handleError = (error: any, context?: string) => {
     const appError = ErrorHandler.handleApiError(error);

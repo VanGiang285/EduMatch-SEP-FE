@@ -23,7 +23,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#257180] border-b border-white/20 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
           <button
             onClick={onNavigateToHome}
             className="flex items-center space-x-2 group"
@@ -34,7 +33,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
             <span className="text-xl font-bold text-white tracking-tight">EduMatch</span>
           </button>
 
-          {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-1">
             <button 
               onClick={onNavigateToFindTutor}
@@ -59,9 +57,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
             </button>
           </div>
 
-          {/* Right side icons and auth buttons */}
           <div className="hidden lg:flex items-center space-x-2">
-            {/* Action Icons */}
             <div className="flex items-center space-x-1">
               <button
                 onClick={onNavigateToMessages}
@@ -88,7 +84,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               </button>
             </div>
 
-            {/* Auth Buttons */}
             <div className="flex items-center space-x-3 ml-4">
               {currentPage !== 'login' && (
                 <Button
@@ -110,7 +105,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
             </div>
           </div>
 
-          {/* Mobile menu button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="lg:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
@@ -124,7 +118,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-[#257180] border-t border-white/20">
           <div className="px-4 py-4 space-y-2">
@@ -150,7 +143,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               Trở thành gia sư
             </button>
             
-            {/* Mobile Action Icons */}
             <div className="pt-4 space-y-2 border-t border-white/20">
               <div className="flex items-center justify-center space-x-4">
                 <button

@@ -10,7 +10,6 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // EduMatch Color Palette
         teal: {
           DEFAULT: '#257180',
           50: '#f0f9fa',

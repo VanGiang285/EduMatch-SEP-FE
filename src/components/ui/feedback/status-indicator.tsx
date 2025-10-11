@@ -48,7 +48,6 @@ export function StatusIndicator({
   );
 }
 
-// Status card component
 export function StatusCard({ 
   status, 
   title, 

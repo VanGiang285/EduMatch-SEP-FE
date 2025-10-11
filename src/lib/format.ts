@@ -63,7 +63,6 @@ export class FormatService {
     }
   }
 
-  // Format tiền tệ với đuôi ₫ theo kiểu Việt Nam
   static formatVND(amount: number): string {
     try {
       return `${amount.toLocaleString('vi-VN')}₫`;
@@ -73,7 +72,6 @@ export class FormatService {
     }
   }
 
-  // Format tiền tệ với đuôi ₫ và đơn vị
   static formatVNDWithUnit(amount: number, unit = 'giờ'): string {
     try {
       return `${amount.toLocaleString('vi-VN')}₫/${unit}`;
@@ -111,10 +109,10 @@ export class FormatService {
     return text
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
       .trim();
   }
 

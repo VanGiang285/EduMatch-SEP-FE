@@ -59,12 +59,11 @@ export const VALIDATION_RULES = {
     },
   },
   FILE: {
-    MAX_SIZE: 5 * 1024 * 1024, // 5MB
+    MAX_SIZE: 5 * 1024 * 1024,
     ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
   },
 } as const;
 
-// Validation messages
 export const VALIDATION_MESSAGES = {
   USER: {
     EMAIL_REQUIRED: 'Email là bắt buộc',

@@ -33,7 +33,6 @@ import {
   PaginationPrevious,
 } from '../ui/navigation/pagination';
 
-// ========== TYPE DEFINITIONS ==========
 
 interface TutorCardData {
   tutorId: number;
@@ -80,7 +79,6 @@ export function FindTutorPage() {
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set([1, 3])); // Mock: tutors 1 and 3 are favorited
   const tutorsPerPage = 6;
 
-  // ========== MOCK DATA ==========
   
   const subjects: Subject[] = [
     { id: 1, subjectName: 'Toán học' },
@@ -240,14 +238,12 @@ export function FindTutorPage() {
     },
   ];
 
-  // Filter tutors based on search query
   const filteredTutors = tutors.filter(tutor => {
     const matchesSearch = searchQuery.trim() === '' || 
       tutor.userName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredTutors.length / tutorsPerPage);
   const indexOfLastTutor = currentPage * tutorsPerPage;
   const indexOfFirstTutor = indexOfLastTutor - tutorsPerPage;
@@ -361,7 +357,6 @@ export function FindTutorPage() {
                   if (value === 'all') {
                     setPriceRange([50000, 500000]);
                   } else if (value === 'custom') {
-                    // Keep current range for custom values
                     return;
                   } else {
                     const [min, max] = value.split('-').map(Number);
@@ -549,7 +544,6 @@ export function FindTutorPage() {
                         className="border-black text-black hover:bg-black hover:text-white"
                         onClick={(e) => {
                           e.stopPropagation();
-                          // TODO: Open message modal or redirect to messaging
                           console.log('Open message with tutor:', tutor.tutorId);
                         }}
                       >
@@ -561,7 +555,6 @@ export function FindTutorPage() {
                         className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
                         onClick={(e) => {
                           e.stopPropagation();
-                          // TODO: Open booking modal or redirect to booking
                           console.log('Book trial lesson with tutor:', tutor.tutorId);
                         }}
                       >
@@ -587,7 +580,6 @@ export function FindTutorPage() {
                   
                   {[...Array(totalPages)].map((_, index) => {
                     const pageNumber = index + 1;
-                    // Show first page, last page, current page, and pages around current
                     if (
                       pageNumber === 1 ||
                       pageNumber === totalPages ||
@@ -666,7 +658,6 @@ export function FindTutorPage() {
                         className="w-full border-black text-black hover:bg-black hover:text-white" 
                         size="lg"
                         onClick={() => {
-                          // TODO: Open booking calendar modal
                           console.log('Open booking calendar for tutor:', currentTutor?.tutorId);
                         }}
                       >
@@ -678,7 +669,6 @@ export function FindTutorPage() {
                         className="w-full border-[#FD8B51] text-[#FD8B51] hover:bg-[#FD8B51] hover:text-white" 
                         size="lg"
                         onClick={() => {
-                          // TODO: Open tutor schedule modal
                           console.log('View tutor schedule:', currentTutor?.tutorId);
                         }}
                       >

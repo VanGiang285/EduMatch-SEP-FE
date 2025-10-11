@@ -52,7 +52,6 @@ export function ResponsiveGrid({
   );
 }
 
-// Container component following design system
 export function Container({ 
   children, 
   className,
@@ -78,7 +77,6 @@ export function Container({
   );
 }
 
-// Stack component for vertical spacing
 export function Stack({ 
   children, 
   className,

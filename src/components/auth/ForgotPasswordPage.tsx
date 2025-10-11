@@ -18,7 +18,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
       setIsSubmitted(true);
@@ -48,10 +47,8 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
             </div>
           </div>
 
-          {/* Phần bên phải - Nội dung thành công */}
           <div className="flex flex-col justify-center py-6 sm:py-8 lg:py-12 px-4 sm:px-6 lg:px-16 min-h-screen lg:min-h-0">
             <div className="mx-auto w-full max-w-md">
-              {/* Success Icon */}
               <div className="text-center mb-6 sm:mb-8">
                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
                   <CheckCircle className="h-10 w-10 text-green-600" />
@@ -64,7 +61,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                 </p>
               </div>
 
-              {/* Instructions */}
               <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-start gap-3">
@@ -94,7 +90,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="space-y-3">
                 <Button
                   onClick={() => setIsSubmitted(false)}
@@ -121,7 +116,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
   return (
     <div className="min-h-screen bg-[#F2E5BF] flex items-center justify-center p-2 sm:p-4 lg:p-8 pt-20">
       <div className="w-full max-w-6xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden lg:grid lg:grid-cols-2">
-        {/* Phần bên trái - Hình ảnh và caption */}
         <div className="relative hidden lg:flex lg:flex-col lg:justify-end overflow-hidden">
           <ImageWithFallback
             src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHVkZW50JTIwdGVhY2hlciUyMGxlYXJuaW5nJTIwZWR1Y2F0aW9ufGVufDF8fHx8MTc1ODc3ODIxOHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
@@ -141,10 +135,8 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
           </div>
         </div>
 
-        {/* Phần bên phải - Form */}
         <div className="flex flex-col justify-center py-6 sm:py-8 lg:py-12 px-4 sm:px-6 lg:px-16 min-h-screen lg:min-h-0">
           <div className="mx-auto w-full max-w-md">
-            {/* Header */}
             <div className="mb-6 sm:mb-8">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-3 sm:mb-4 leading-tight tracking-tight">
                 ĐẶT LẠI MẬT KHẨU<br />
@@ -155,9 +147,7 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
               </p>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6">
-              {/* Email Input */}
               <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="email" className="text-black text-sm sm:text-base">Email</Label>
                 <div className="relative">
@@ -174,7 +164,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                 </div>
               </div>
 
-              {/* Info Card */}
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-start gap-3">
                   <Clock className="h-5 w-5 text-blue-600 mt-0.5" />
@@ -187,7 +176,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                 </div>
               </div>
 
-              {/* Submit Button */}
               <Button
                 type="submit"
                 disabled={isLoading}
@@ -203,7 +191,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                 )}
               </Button>
 
-              {/* Back to Login */}
               <div className="text-center">
                 <button
                   type="button"
@@ -216,7 +203,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
               </div>
             </form>
 
-            {/* Security Notice */}
             <div className="mt-6 sm:mt-8 p-4 bg-gray-50 rounded-lg">
               <div className="flex items-start gap-3">
                 <Shield className="h-5 w-5 text-gray-600 mt-0.5" />

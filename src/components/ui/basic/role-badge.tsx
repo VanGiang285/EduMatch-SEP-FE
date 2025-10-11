@@ -56,7 +56,6 @@ export function RoleBadge({ role, className, children }: RoleBadgeProps) {
   );
 }
 
-// Utility function to get role colors
 export function getRoleColors(role: UserRole) {
   const colorMap = {
     learner: {
@@ -84,7 +83,6 @@ export function getRoleColors(role: UserRole) {
   return colorMap[role];
 }
 
-// Utility function to get role-based card styling
 export function getRoleCardClass(role: UserRole) {
   const colors = getRoleColors(role);
   return cn(
