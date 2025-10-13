@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/layout/card";
 import { Button } from "../ui/basic/button";
@@ -33,7 +32,6 @@ import {
 } from "lucide-react";
 import { vietnamProvinces, getDistrictsByProvince } from "@/data/vietnam-locations";
 import { FormatService } from "@/lib/format";
-
 export function BecomeTutorPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -88,20 +86,17 @@ export function BecomeTutorPage() {
       description: ''
     }
   });
-
   const [currentCertification, setCurrentCertification] = useState({
     subject: '',
     certificationName: '',
     certificationFile: null as null | File
   });
-
   const [currentEducation, setCurrentEducation] = useState({
     university: '',
     degree: '',
     duration: '',
     degreeFile: null as null | File
   });
-
   const steps = [
     { id: 1, title: 'Giới thiệu', description: 'Thông tin cá nhân' },
     { id: 2, title: 'Ảnh', description: 'Ảnh đại diện' },
@@ -112,7 +107,6 @@ export function BecomeTutorPage() {
     { id: 7, title: 'Thời gian', description: 'Lịch khả dụng' },
     { id: 8, title: 'Giá cả', description: 'Mức học phí' }
   ];
-
   const subjects = [
     'Toán học', 'Vật lý', 'Hóa học', 'Sinh học', 'Tiếng Anh', 'Tiếng Pháp',
     'Văn học', 'Lịch sử', 'Địa lý', 'Tin học', 'Lập trình', 'Kinh tế',
@@ -125,11 +119,9 @@ export function BecomeTutorPage() {
     'Y học', 'Dược học', 'Kiến trúc', 'Xây dựng', 'Cơ khí', 'Điện tử',
     'Marketing', 'Quản trị kinh doanh', 'Kế toán', 'Tài chính', 'Ngân hàng'
   ];
-
   const availableDistricts = formData.introduction.province 
     ? getDistrictsByProvince(formData.introduction.province)
     : [];
-
   const certificationTypes = [
     'TOEFL', 'IELTS', 'TOEIC', 'Chứng chỉ Tin học', 'Bằng cử nhân', 'Bằng thạc sĩ',
     'Chứng chỉ giảng dạy', 'Chứng chỉ khác', 'TOEFL iBT', 'TOEFL PBT', 'IELTS Academic',
@@ -142,7 +134,6 @@ export function BecomeTutorPage() {
     'Chứng chỉ AWS', 'Chứng chỉ Cisco', 'Chứng chỉ CompTIA', 'Chứng chỉ PMP',
     'Chứng chỉ CFA', 'Chứng chỉ CPA', 'Chứng chỉ ACCA', 'Chứng chỉ FRM'
   ];
-
   const degrees = [
     'Cử nhân', 'Kỹ sư', 'Thạc sĩ', 'Tiến sĩ', 'Cao đẳng', 'Trung cấp',
     'Cử nhân Khoa học', 'Cử nhân Nghệ thuật', 'Cử nhân Kinh tế', 'Cử nhân Luật',
@@ -153,13 +144,11 @@ export function BecomeTutorPage() {
     'Cao đẳng Kỹ thuật', 'Cao đẳng Nghề', 'Cao đẳng Sư phạm', 'Cao đẳng Y tế',
     'Trung cấp Kỹ thuật', 'Trung cấp Nghề', 'Trung cấp Sư phạm', 'Trung cấp Y tế'
   ];
-
   const timeSlots = [
     '6:00-7:00', '7:00-8:00', '8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-12:00',
     '12:00-13:00', '13:00-14:00', '14:00-15:00', '15:00-16:00', '16:00-17:00', '17:00-18:00',
     '18:00-19:00', '19:00-20:00', '20:00-21:00', '21:00-22:00'
   ];
-
   const weekDays = [
     { key: 'monday', label: 'Thứ 2' },
     { key: 'tuesday', label: 'Thứ 3' },
@@ -169,42 +158,35 @@ export function BecomeTutorPage() {
     { key: 'saturday', label: 'Thứ 7' },
     { key: 'sunday', label: 'Chủ nhật' }
   ];
-
   const handleNext = () => {
     if (currentStep < 8) {
       setCurrentStep(currentStep + 1);
     }
   };
-
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
-
   const handleSubmit = () => {
     console.log('Tutor application submitted:', formData);
     alert('Đăng ký thành công! Chúng tôi sẽ xem xét hồ sơ của bạn trong vòng 24-48 giờ.');
   };
-
   const updateFormData = (step: string, data: any) => {
     setFormData(prev => ({
       ...prev,
       [step]: { ...prev[step as keyof typeof prev], ...data }
     }));
   };
-
   const addCertification = () => {
     if (!currentCertification.subject || !currentCertification.certificationName) {
       alert('Vui lòng điền đầy đủ thông tin môn học và tên chứng nhận');
       return;
     }
-
     const newCert = {
       id: Date.now().toString(),
       ...currentCertification
     };
-
     setFormData(prev => ({
       ...prev,
       certifications: {
@@ -212,14 +194,12 @@ export function BecomeTutorPage() {
         items: [...prev.certifications.items, newCert]
       }
     }));
-
     setCurrentCertification({
       subject: '',
       certificationName: '',
       certificationFile: null
     });
   };
-
   const removeCertification = (id: string) => {
     setFormData(prev => ({
       ...prev,
@@ -229,18 +209,15 @@ export function BecomeTutorPage() {
       }
     }));
   };
-
   const addEducation = () => {
     if (!currentEducation.university || !currentEducation.degree || !currentEducation.duration) {
       alert('Vui lòng điền đầy đủ thông tin trường, bằng cấp và thời hạn');
       return;
     }
-
     const newEdu = {
       id: Date.now().toString(),
       ...currentEducation
     };
-
     setFormData(prev => ({
       ...prev,
       education: {
@@ -248,7 +225,6 @@ export function BecomeTutorPage() {
         items: [...prev.education.items, newEdu]
       }
     }));
-
     setCurrentEducation({
       university: '',
       degree: '',
@@ -256,7 +232,6 @@ export function BecomeTutorPage() {
       degreeFile: null
     });
   };
-
   const removeEducation = (id: string) => {
     setFormData(prev => ({
       ...prev,
@@ -266,7 +241,6 @@ export function BecomeTutorPage() {
       }
     }));
   };
-
   const handleSubjectChange = (subject: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
@@ -278,7 +252,6 @@ export function BecomeTutorPage() {
       }
     }));
   };
-
   const handleProvinceChange = (provinceCode: string) => {
     setFormData(prev => ({
       ...prev,
@@ -289,7 +262,6 @@ export function BecomeTutorPage() {
       }
     }));
   };
-
   return (
     <div className="min-h-screen bg-[#F2E5BF] pt-16">
       {/* Header */}
@@ -301,10 +273,8 @@ export function BecomeTutorPage() {
           </div>
         </div>
       </div>
-
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
           <div className="lg:col-span-1 space-y-6">
             <Card className="bg-white border border-[#257180]/20">
               <CardHeader>
@@ -313,7 +283,6 @@ export function BecomeTutorPage() {
               <CardContent className="space-y-4">
                 <Progress value={(currentStep / 8) * 100} className="w-full" />
                 <p className="text-sm text-gray-600">Bước {currentStep} / 8</p>
-                
                 <div className="space-y-2">
                   {steps.map((step) => (
                     <div key={step.id} className={`flex items-center gap-3 text-sm ${ 
@@ -336,18 +305,15 @@ export function BecomeTutorPage() {
               </CardContent>
             </Card>
           </div>
-
           <div className="lg:col-span-3">
             <Card className="shadow-lg bg-white border border-[#257180]/20">
               <CardContent className="p-8">
-                
                 {currentStep === 1 && (
                   <div className="space-y-6">
                     <div>
                       <h2 className="text-2xl font-bold text-black mb-2">Giới thiệu</h2>
                       <p className="text-gray-600">Vui lòng cung cấp thông tin cá nhân của bạn</p>
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="firstName" className="text-black text-sm sm:text-base">Tên <span className="text-red-500">*</span></Label>
@@ -362,7 +328,6 @@ export function BecomeTutorPage() {
                           />
                         </div>
                       </div>
-
                       <div className="space-y-2">
                         <Label htmlFor="lastName" className="text-black text-sm sm:text-base">Họ và tên đệm <span className="text-red-500">*</span></Label>
                         <Input
@@ -374,7 +339,6 @@ export function BecomeTutorPage() {
                         />
                       </div>
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="email" className="text-black text-sm sm:text-base">Email <span className="text-red-500">*</span></Label>
                       <div className="relative">
@@ -389,7 +353,6 @@ export function BecomeTutorPage() {
                         />
                       </div>
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="province" className="text-black text-sm sm:text-base">Tỉnh/Thành phố <span className="text-red-500">*</span></Label>
@@ -413,7 +376,6 @@ export function BecomeTutorPage() {
                           </SelectWithSearch>
                         </div>
                       </div>
-
                       <div className="space-y-2">
                         <Label htmlFor="district" className="text-black text-sm sm:text-base">Quận/Huyện <span className="text-red-500">*</span></Label>
                         <div className="relative">
@@ -438,7 +400,6 @@ export function BecomeTutorPage() {
                         </div>
                       </div>
                     </div>
-
                     <div className="space-y-2">
                       <Label className="text-black text-sm sm:text-base">Môn học <span className="text-red-500">*</span></Label>
                       <p className="text-sm text-gray-600">Chọn các môn học bạn có thể dạy</p>
@@ -455,7 +416,6 @@ export function BecomeTutorPage() {
                         ))}
                       </div>
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="birthDate" className="text-black text-sm sm:text-base">Ngày sinh <span className="text-red-500">*</span></Label>
@@ -467,7 +427,6 @@ export function BecomeTutorPage() {
                           maxDate={new Date()}
                         />
                       </div>
-
                       <div className="space-y-2">
                         <Label htmlFor="phone" className="text-black text-sm sm:text-base">Số điện thoại (Tùy chọn)</Label>
                         <div className="relative">
@@ -484,14 +443,12 @@ export function BecomeTutorPage() {
                     </div>
                   </div>
                 )}
-
                 {currentStep === 2 && (
                   <div className="space-y-6">
                     <div>
                       <h2 className="text-2xl font-bold text-black mb-2">Ảnh đại diện</h2>
                       <p className="text-gray-600">Tải lên ảnh đại diện chuyên nghiệp để thu hút học viên</p>
                     </div>
-
                     <div className="flex flex-col items-center space-y-6">
                       <div className="w-40 h-40 bg-gray-100 rounded-full flex items-center justify-center border-4 border-dashed border-gray-300">
                         {formData.photo.hasImage ? (
@@ -502,7 +459,6 @@ export function BecomeTutorPage() {
                           <Camera className="w-16 h-16 text-gray-400" />
                         )}
                       </div>
-
                       <div className="text-center">
                         <Button className="mb-4 bg-[#FD8B51] hover:bg-[#CB6040]">
                           <Upload className="w-4 h-4 mr-2" />
@@ -515,7 +471,6 @@ export function BecomeTutorPage() {
                         </div>
                       </div>
                     </div>
-
                     <div className="bg-[#F2E5BF] p-4 rounded-lg border border-[#257180]/20">
                       <h4 className="font-medium text-black mb-2">Mẹo chụp ảnh tốt</h4>
                       <div className="text-sm text-black space-y-1">
@@ -527,14 +482,12 @@ export function BecomeTutorPage() {
                     </div>
                   </div>
                 )}
-
                 {currentStep === 3 && (
                   <div className="space-y-6">
                     <div>
                       <h2 className="text-2xl font-bold text-black mb-2">Chứng nhận</h2>
                       <p className="text-gray-600">Thông tin về các chứng chỉ liên quan đến môn học</p>
                     </div>
-
                     <div className="space-y-4">
                       <Label className="text-black text-sm sm:text-base">Bạn có chứng chỉ liên quan đến môn học không?</Label>
                       <RadioGroup 
@@ -551,7 +504,6 @@ export function BecomeTutorPage() {
                         </div>
                       </RadioGroup>
                     </div>
-
                     {formData.certifications.hasCertification && (
                       <div className="space-y-6">
                         {formData.certifications.items.length > 0 && (
@@ -588,7 +540,6 @@ export function BecomeTutorPage() {
                             ))}
                           </div>
                         )}
-
                         <div className="space-y-4 p-6 border border-[#257180]/20 rounded-lg bg-white">
                           <div className="space-y-2">
                             <Label htmlFor="cert-subject" className="text-black text-sm sm:text-base">Môn học <span className="text-red-500">*</span></Label>
@@ -609,7 +560,6 @@ export function BecomeTutorPage() {
                               ))}
                             </SelectWithSearch>
                           </div>
-
                           <div className="space-y-2">
                             <Label htmlFor="cert-name" className="text-black text-sm sm:text-base">Tên chứng nhận <span className="text-red-500">*</span></Label>
                             <SelectWithSearch
@@ -629,7 +579,6 @@ export function BecomeTutorPage() {
                               ))}
                             </SelectWithSearch>
                           </div>
-
                           <div className="space-y-2">
                             <Label className="text-black text-sm sm:text-base">Tải lên chứng nhận của bạn (Tùy chọn)</Label>
                             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 cursor-pointer bg-gray-50">
@@ -638,7 +587,6 @@ export function BecomeTutorPage() {
                               <p className="text-xs text-gray-500">JPG, PNG, PDF. Tối đa 10MB</p>
                             </div>
                           </div>
-
                           <Button 
                             onClick={addCertification}
                             className="bg-[#FD8B51] hover:bg-[#CB6040]"
@@ -651,14 +599,12 @@ export function BecomeTutorPage() {
                     )}
                   </div>
                 )}
-
                 {currentStep === 4 && (
                   <div className="space-y-6">
                     <div>
                       <h2 className="text-2xl font-bold text-black mb-2">Giáo dục</h2>
                       <p className="text-gray-600">Thông tin về trình độ học vấn và bằng cấp</p>
                     </div>
-
                     <div className="space-y-4">
                       <Label className="text-black text-sm sm:text-base">Bạn có bằng cấp giáo dục không?</Label>
                       <RadioGroup 
@@ -675,7 +621,6 @@ export function BecomeTutorPage() {
                         </div>
                       </RadioGroup>
                     </div>
-
                     {formData.education.hasEducation && (
                       <div className="space-y-6">
                         {/* List of added education */}
@@ -718,7 +663,6 @@ export function BecomeTutorPage() {
                             ))}
                           </div>
                         )}
-
                         {/* Add new education form */}
                         <div className="space-y-4 p-6 border border-[#257180]/20 rounded-lg bg-white">
                           <div className="space-y-2">
@@ -731,7 +675,6 @@ export function BecomeTutorPage() {
                               onChange={(e) => setCurrentEducation(prev => ({ ...prev, university: e.target.value }))}
                             />
                           </div>
-
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="degree" className="text-black text-sm sm:text-base">Bằng cấp <span className="text-red-500">*</span></Label>
@@ -752,7 +695,6 @@ export function BecomeTutorPage() {
                                 ))}
                               </SelectWithSearch>
                             </div>
-
                             <div className="space-y-2">
                               <Label htmlFor="duration" className="text-black text-sm sm:text-base">Thời hạn (năm) <span className="text-red-500">*</span></Label>
                               <Input
@@ -764,7 +706,6 @@ export function BecomeTutorPage() {
                               />
                             </div>
                           </div>
-
                           <div className="space-y-2">
                             <Label className="text-black text-sm sm:text-base">Tải lên bằng cấp của bạn (Tùy chọn)</Label>
                             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 cursor-pointer bg-gray-50">
@@ -773,7 +714,6 @@ export function BecomeTutorPage() {
                               <p className="text-xs text-gray-500">JPG, PNG, PDF. Tối đa 10MB</p>
                             </div>
                           </div>
-
                           <Button 
                             onClick={addEducation}
                             className="bg-[#FD8B51] hover:bg-[#CB6040]"
@@ -786,7 +726,6 @@ export function BecomeTutorPage() {
                     )}
                   </div>
                 )}
-
                 {/* Step 5: Mô tả */}
                 {currentStep === 5 && (
                   <div className="space-y-6">
@@ -794,7 +733,6 @@ export function BecomeTutorPage() {
                       <h2 className="text-2xl font-bold text-black mb-2">Mô tả</h2>
                       <p className="text-gray-600">Giới thiệu bản thân và kinh nghiệm giảng dạy</p>
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="attractive-title" className="text-black text-sm sm:text-base">Viết 1 tiêu đề hấp dẫn</Label>
                       <Input
@@ -806,7 +744,6 @@ export function BecomeTutorPage() {
                       />
                       <p className="text-xs text-gray-500">Tiêu đề sẽ hiển thị đầu tiên trong hồ sơ gia sư</p>
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="introduction" className="text-black text-sm sm:text-base">Giới thiệu bản thân</Label>
                       <Textarea
@@ -818,7 +755,6 @@ export function BecomeTutorPage() {
                       />
                       <p className="text-xs text-gray-500">Tối thiểu 100 ký tự</p>
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="teaching-experience" className="text-black text-sm sm:text-base">Kinh nghiệm giảng dạy</Label>
                       <Textarea
@@ -830,7 +766,6 @@ export function BecomeTutorPage() {
                       />
                       <p className="text-xs text-gray-500">Chia sẻ phương pháp và kinh nghiệm giảng dạy</p>
                     </div>
-
                     <div className="bg-[#F2E5BF] p-4 rounded-lg border border-[#257180]/20">
                       <h4 className="font-medium text-black mb-2">Mẹo viết mô tả tốt</h4>
                       <div className="text-sm text-black space-y-1">
@@ -842,7 +777,6 @@ export function BecomeTutorPage() {
                     </div>
                   </div>
                 )}
-
                 {/* Step 6: Video */}
                 {currentStep === 6 && (
                   <div className="space-y-6">
@@ -850,7 +784,6 @@ export function BecomeTutorPage() {
                       <h2 className="text-2xl font-bold text-black mb-2">Video giới thiệu</h2>
                       <p className="text-gray-600">Tạo video giới thiệu để thu hút học viên</p>
                     </div>
-
                     <div className="space-y-6">
                       {/* Video Preview */}
                       <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
@@ -866,7 +799,6 @@ export function BecomeTutorPage() {
                           </div>
                         )}
                       </div>
-
                       {/* Upload Video */}
                       <div className="space-y-4">
                         <div className="space-y-2">
@@ -877,13 +809,11 @@ export function BecomeTutorPage() {
                             <p className="text-xs text-gray-500">MP4, MOV, AVI. Tối đa 100MB, dài không quá 5 phút</p>
                           </div>
                         </div>
-
                         <div className="flex items-center gap-4">
                           <div className="flex-1 h-px bg-gray-200"></div>
                           <span className="text-gray-500 text-sm">HOẶC</span>
                           <div className="flex-1 h-px bg-gray-200"></div>
                         </div>
-
                         <div className="space-y-2">
                           <Label htmlFor="youtube-link" className="text-black text-sm sm:text-base">Đường dẫn YouTube</Label>
                           <div className="relative">
@@ -899,7 +829,6 @@ export function BecomeTutorPage() {
                         </div>
                       </div>
                     </div>
-
                     <div className="bg-[#F2E5BF] p-4 rounded-lg border border-[#257180]/20">
                       <h4 className="font-medium text-black mb-2">Gợi ý quay video</h4>
                       <div className="text-sm text-black space-y-1">
@@ -912,7 +841,6 @@ export function BecomeTutorPage() {
                     </div>
                   </div>
                 )}
-
                 {/* Step 7: Thời gian khả dụng */}
                 {currentStep === 7 && (
                   <div className="space-y-6">
@@ -920,10 +848,8 @@ export function BecomeTutorPage() {
                       <h2 className="text-2xl font-bold text-black mb-2">Thời gian khả dụng</h2>
                       <p className="text-gray-600">Thiết lập lịch dạy trong tuần</p>
                     </div>
-
                     <div className="space-y-4">
                       <Label className="text-black text-sm sm:text-base">Chọn thời gian bạn có thể dạy (chọn tối thiểu 5 khung giờ)</Label>
-                      
                       <div className="overflow-x-auto">
                         <div className="min-w-full">
                           {/* Header */}
@@ -935,7 +861,6 @@ export function BecomeTutorPage() {
                               </div>
                             ))}
                           </div>
-
                           {/* Time Slots */}
                           {timeSlots.map((timeSlot) => (
                             <div key={timeSlot} className="grid grid-cols-8 gap-2 mb-1">
@@ -955,7 +880,6 @@ export function BecomeTutorPage() {
                         </div>
                       </div>
                     </div>
-
                     <div className="bg-[#F2E5BF] p-4 rounded-lg border border-[#257180]/20">
                       <h4 className="font-medium text-black mb-2">Lưu ý về lịch dạy</h4>
                       <div className="text-sm text-black space-y-1">
@@ -967,7 +891,6 @@ export function BecomeTutorPage() {
                     </div>
                   </div>
                 )}
-
                 {/* Step 8: Giá cả */}
                 {currentStep === 8 && (
                   <div className="space-y-6">
@@ -975,7 +898,6 @@ export function BecomeTutorPage() {
                       <h2 className="text-2xl font-bold text-black mb-2">Giá cả</h2>
                       <p className="text-gray-600">Thiết lập mức học phí cho mỗi buổi học</p>
                     </div>
-
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="hourly-rate" className="text-black text-sm sm:text-base">Giá cho mỗi 1 tiếng/1 slot học (VND)</Label>
@@ -995,7 +917,6 @@ export function BecomeTutorPage() {
                           Giá trung bình: {FormatService.formatVNDWithUnit(150000)} - {FormatService.formatVNDWithUnit(300000)}
                         </p>
                       </div>
-
                       <div className="space-y-2">
                         <Label htmlFor="price-description" className="text-black text-sm sm:text-base">Mô tả về giá (tùy chọn)</Label>
                         <Textarea
@@ -1007,7 +928,6 @@ export function BecomeTutorPage() {
                         />
                       </div>
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="bg-[#F2E5BF] p-4 rounded-lg text-center border border-[#257180]/20">
                         <div className="text-2xl font-bold text-black">{FormatService.formatVND(150000)}-{FormatService.formatVND(200000)}</div>
@@ -1022,7 +942,6 @@ export function BecomeTutorPage() {
                         <div className="text-sm text-[#CB6040]">Chuyên gia</div>
                       </div>
                     </div>
-
                     <div className="bg-[#F2E5BF] p-4 rounded-lg border border-[#257180]/20">
                       <h4 className="font-medium text-black mb-2">Lưu ý về giá cả</h4>
                       <div className="text-sm text-black space-y-1">
@@ -1032,7 +951,6 @@ export function BecomeTutorPage() {
                         <div>• Học viên có thể đặt buổi học thử với giá ưu đãi</div>
                       </div>
                     </div>
-
                     {/* Summary */}
                     <div className="bg-white p-6 rounded-lg border border-[#257180]/20">
                       <h4 className="font-medium text-black mb-4">Tóm tắt đăng ký</h4>
@@ -1062,7 +980,6 @@ export function BecomeTutorPage() {
                     </div>
                   </div>
                 )}
-
                 {/* Navigation Buttons */}
                 <div className="flex justify-between pt-8 border-t border-gray-200">
                   {currentStep > 1 && (
@@ -1076,7 +993,6 @@ export function BecomeTutorPage() {
                     </Button>
                   )}
                   {currentStep === 1 && <div></div>}
-                  
                   {currentStep < 8 ? (
                     <Button 
                       onClick={handleNext}
@@ -1102,4 +1018,4 @@ export function BecomeTutorPage() {
       </div>
     </div>
   );
-}
+}

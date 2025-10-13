@@ -1,4 +1,3 @@
-
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 export const MIN_PASSWORD_LENGTH = 8;
@@ -9,7 +8,6 @@ export const MIN_BIO_LENGTH = 100;
 export const MAX_BIO_LENGTH = 1000;
 export const MIN_HOURLY_RATE = 50000;
 export const MAX_HOURLY_RATE = 1000000;
-
 export const VALIDATION_RULES = {
   USER: {
     EMAIL: {
@@ -63,7 +61,6 @@ export const VALIDATION_RULES = {
     ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
   },
 } as const;
-
 export const VALIDATION_MESSAGES = {
   USER: {
     EMAIL_REQUIRED: 'Email là bắt buộc',

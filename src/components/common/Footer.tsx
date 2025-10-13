@@ -1,9 +1,7 @@
 "use client";
-
 import { Button } from "../ui/basic/button";
 import { Input } from "../ui/form/input";
 import { Send, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin, Youtube } from "lucide-react";
-
 export function Footer() {
   return (
     <footer className="bg-[#257180] text-white">
@@ -29,7 +27,6 @@ export function Footer() {
           </div>
         </div>
       </div>
-
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
@@ -62,7 +59,6 @@ export function Footer() {
               </a>
             </div>
           </div>
-
           {/* For Students */}
           <div>
             <h4 className="font-semibold text-lg mb-4">Dành cho học viên</h4>
@@ -74,7 +70,6 @@ export function Footer() {
               <li><a href="#" className="hover:text-[#F2E5BF] transition-colors">Chứng chỉ</a></li>
             </ul>
           </div>
-
           {/* For Tutors */}
           <div>
             <h4 className="font-semibold text-lg mb-4">Dành cho gia sư</h4>
@@ -86,7 +81,6 @@ export function Footer() {
               <li><a href="#" className="hover:text-[#F2E5BF] transition-colors">Đào tạo</a></li>
             </ul>
           </div>
-
           {/* Support */}
           <div>
             <h4 className="font-semibold text-lg mb-4">Hỗ trợ</h4>
@@ -99,7 +93,6 @@ export function Footer() {
             </ul>
           </div>
         </div>
-
         {/* Contact Info */}
         <div className="mt-12 pt-8 border-t border-white/20">
           <div className="grid md:grid-cols-3 gap-6">
@@ -136,7 +129,6 @@ export function Footer() {
             </div>
           </div>
         </div>
-
         {/* Copyright */}
         <div className="mt-8 pt-8 border-t border-white/20 text-center">
           <p className="text-white/60">
@@ -146,4 +138,4 @@ export function Footer() {
       </div>
     </footer>
   );
-}
+}

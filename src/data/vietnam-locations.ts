@@ -3,14 +3,12 @@ export interface District {
   name: string;
   type: string;
 }
-
 export interface Province {
   code: string;
   name: string;
   type: string;
   districts: District[];
 }
-
 export const vietnamProvinces: Province[] = [
   {
     code: "01",
@@ -833,24 +831,20 @@ export const vietnamProvinces: Province[] = [
     ]
   }
 ];
-
 export const getProvinces = () => vietnamProvinces.map(province => ({
   code: province.code,
   name: province.name,
   type: province.type
 }));
-
 export const getDistrictsByProvince = (provinceCode: string) => {
   const province = vietnamProvinces.find(p => p.code === provinceCode);
   return province ? province.districts : [];
 };
-
 export const getProvinceByCode = (provinceCode: string) => {
   return vietnamProvinces.find(p => p.code === provinceCode);
 };
-
 export const getDistrictByCode = (provinceCode: string, districtCode: string) => {
   const province = getProvinceByCode(provinceCode);
   if (!province) return null;
   return province.districts.find(d => d.code === districtCode);
-};
+};

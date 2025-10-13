@@ -2,7 +2,6 @@ import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { cn } from "../utils";
 import { LucideIcon } from "lucide-react";
-
 interface StatsCardProps {
   title: string;
   value: string | number;
@@ -14,7 +13,6 @@ interface StatsCardProps {
   };
   className?: string;
 }
-
 export function StatsCard({ 
   title, 
   value, 
@@ -57,11 +55,9 @@ export function StatsCard({
     </Card>
   );
 }
-
 interface RoleStatsCardProps extends Omit<StatsCardProps, 'className'> {
   role: "learner" | "tutor" | "business-admin" | "system-admin";
 }
-
 export function RoleStatsCard({ role, ...props }: RoleStatsCardProps) {
   const roleColors = {
     learner: "border-l-4 border-l-learner-primary",
@@ -69,13 +65,10 @@ export function RoleStatsCard({ role, ...props }: RoleStatsCardProps) {
     "business-admin": "border-l-4 border-l-business-admin-primary",
     "system-admin": "border-l-4 border-l-system-admin-primary",
   };
-
   return (
     <StatsCard 
       {...props}
       className={roleColors[role]}
     />
   );
-}
-
-
+}

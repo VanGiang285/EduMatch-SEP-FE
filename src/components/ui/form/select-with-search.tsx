@@ -1,9 +1,7 @@
 "use client";
-
 import * as React from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { cn } from "../utils";
-
 interface SelectWithSearchProps {
   value?: string;
   onValueChange?: (value: string) => void;
@@ -12,20 +10,17 @@ interface SelectWithSearchProps {
   className?: string;
   children: React.ReactNode;
 }
-
 interface SelectWithSearchContentProps {
   className?: string;
   children: React.ReactNode;
   searchPlaceholder?: string;
   onSearchChange?: (value: string) => void;
 }
-
 interface SelectWithSearchItemProps {
   value: string;
   children: React.ReactNode;
   className?: string;
 }
-
 export function SelectWithSearch({
   value,
   onValueChange,
@@ -37,13 +32,11 @@ export function SelectWithSearch({
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
   const [filteredChildren, setFilteredChildren] = React.useState(children);
-
   React.useEffect(() => {
     if (!searchValue) {
       setFilteredChildren(children);
       return;
     }
-
     const filtered = React.Children.toArray(children).filter((child) => {
       if (React.isValidElement(child) && child.props.children) {
         const text = child.props.children.toString().toLowerCase();
@@ -51,24 +44,19 @@ export function SelectWithSearch({
       }
       return true;
     });
-
     setFilteredChildren(filtered);
   }, [searchValue, children]);
-
   const handleValueChange = (newValue: string) => {
     onValueChange?.(newValue);
     setIsOpen(false);
     setSearchValue("");
   };
-
   const selectedItem = React.Children.toArray(children).find(
     (child) => React.isValidElement(child) && child.props.value === value
   );
-
   const displayValue = React.isValidElement(selectedItem) 
     ? selectedItem.props.children 
     : placeholder;
-
   return (
     <div className="relative">
       <button
@@ -85,7 +73,6 @@ export function SelectWithSearch({
         </span>
         <ChevronDown className="h-4 w-4 opacity-50" />
       </button>
-
       {isOpen && (
         <>
           <div 
@@ -107,7 +94,6 @@ export function SelectWithSearch({
                 />
               </div>
             </div>
-
             {/* Options List */}
             <div className="max-h-48 overflow-y-auto">
               {React.Children.count(filteredChildren) > 0 ? (
@@ -145,7 +131,6 @@ export function SelectWithSearch({
     </div>
   );
 }
-
 export function SelectWithSearchContent({
   className,
   children,
@@ -156,7 +141,6 @@ export function SelectWithSearchContent({
     </div>
   );
 }
-
 export function SelectWithSearchItem({
   value,
   children,
@@ -177,4 +161,4 @@ export function SelectWithSearchItem({
       {children}
     </div>
   );
-}
+}

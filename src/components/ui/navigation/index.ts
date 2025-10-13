@@ -4,4 +4,4 @@ export * from './dropdown-menu';
 export * from './menubar';
 export * from './navigation-menu';
 export * from './pagination';
-export * from './tabs';
+export * from './tabs';

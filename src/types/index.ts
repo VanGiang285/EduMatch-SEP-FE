@@ -1,5 +1,4 @@
 export type UserRole = 'student' | 'tutor' | 'admin';
-
 export interface User {
   id: string;
   email: string;
@@ -9,14 +8,12 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
 }
-
 export interface UserProfile extends User {
   phone?: string;
   dateOfBirth?: Date;
   address?: string;
   bio?: string;
 }
-
 export interface Tutor {
   id: string;
   userId: string;
@@ -33,13 +30,11 @@ export interface Tutor {
   createdAt: Date;
   updatedAt: Date;
 }
-
 export interface TutorProfile extends Tutor {
   user: User;
   reviews: Review[];
   bookings: Booking[];
 }
-
 export interface CreateTutorData {
   userId: string;
   subjects: string[];
@@ -50,7 +45,6 @@ export interface CreateTutorData {
   certifications: string[];
   availability: Omit<Availability, 'id'>[];
 }
-
 export interface Availability {
   id: string;
   tutorId: string;
@@ -60,9 +54,7 @@ export interface Availability {
   createdAt: Date;
   updatedAt: Date;
 }
-
 export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
-
 export interface Booking {
   id: string;
   studentId: string;
@@ -76,13 +68,11 @@ export interface Booking {
   createdAt: Date;
   updatedAt: Date;
 }
-
 export interface BookingWithDetails extends Booking {
   student: User;
   tutor: User;
   reviews: Review[];
 }
-
 export interface CreateBookingData {
   tutorId: string;
   subject: string;
@@ -90,7 +80,6 @@ export interface CreateBookingData {
   endTime: Date;
   notes?: string;
 }
-
 export interface Review {
   id: string;
   bookingId: string;
@@ -100,26 +89,22 @@ export interface Review {
   comment: string;
   createdAt: Date;
 }
-
 export interface ReviewWithDetails extends Review {
   student: User;
   tutor: User;
   booking: Booking;
 }
-
 export interface CreateReviewData {
   bookingId: string;
   rating: number;
   comment: string;
 }
-
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
   message?: string;
 }
-
 export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   pagination: {
     page: number;
@@ -128,13 +113,11 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
     totalPages: number;
   };
 }
-
 export interface LoginFormData {
   email: string;
   password: string;
   rememberMe?: boolean;
 }
-
 export interface RegisterFormData {
   name: string;
   email: string;
@@ -142,17 +125,14 @@ export interface RegisterFormData {
   confirmPassword: string;
   agreeTerms: boolean;
 }
-
 export interface ForgotPasswordFormData {
   email: string;
 }
-
 export interface ResetPasswordFormData {
   token: string;
   password: string;
   confirmPassword: string;
 }
-
 export interface TutorSearchFilters {
   subjects?: string[];
   minRating?: number;
@@ -165,7 +145,6 @@ export interface TutorSearchFilters {
     endTime: string;
   };
 }
-
 export interface SearchParams {
   query?: string;
   page?: number;
@@ -173,45 +152,38 @@ export interface SearchParams {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
-
 export interface AppError {
   code: string;
   message: string;
   details?: any;
 }
-
 export interface ValidationError {
   field: string;
   message: string;
 }
-
 export interface SelectOption {
   value: string;
   label: string;
   disabled?: boolean;
 }
-
 export interface TableColumn<T = any> {
   key: keyof T;
   title: string;
   sortable?: boolean;
   render?: (value: any, record: T) => React.ReactNode;
 }
-
 export interface Subject {
   id: string;
   name: string;
   category: string;
   level: string[];
 }
-
 export interface Location {
   code: string;
   name: string;
   type: string;
   districts?: Location[];
 }
-
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
 export type DeepPartial<T> = {

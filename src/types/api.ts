@@ -2,7 +2,6 @@ export class ApiError extends Error {
   status: number;
   code?: string;
   details?: any;
-
   constructor({ status, message, code, details }: {
     status: number;
     message: string;
@@ -16,9 +15,7 @@ export class ApiError extends Error {
     this.details = details;
   }
 }
-
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-
 export interface RequestConfig {
   method?: HttpMethod;
   headers?: HeadersInit;
@@ -27,14 +24,12 @@ export interface RequestConfig {
   cache?: RequestCache;
   next?: NextFetchRequestConfig;
 }
-
 export interface ApiResponse<T = any> {
   success: boolean;
   data: T | undefined;
   error: ApiError | undefined;
   message: string | undefined;
 }
-
 export interface PaginatedApiResponse<T> extends ApiResponse<T[]> {
   pagination: {
     total: number;
@@ -42,57 +37,63 @@ export interface PaginatedApiResponse<T> extends ApiResponse<T[]> {
     limit: number;
   } | undefined;
 }
-
 export interface LoginRequest {
   email: string;
   password: string;
   rememberMe?: boolean;
 }
-
 export interface LoginResponse {
-  token: string;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    role: 'student' | 'tutor' | 'admin';
-  };
+  accessToken: string;
+  accessTokenExpiresAt: string;
+  tokenType: string;
+  message: string;
 }
-
 export interface RegisterRequest {
-  name: string;
   email: string;
   password: string;
-  confirmPassword: string;
 }
-
 export interface RegisterResponse {
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    role: 'student' | 'tutor' | 'admin';
-  };
+  message: string;
 }
-
 export interface ForgotPasswordRequest {
   email: string;
 }
-
 export interface ForgotPasswordResponse {
   message: string;
 }
-
 export interface ResetPasswordRequest {
   token: string;
   password: string;
   confirmPassword: string;
 }
-
 export interface ResetPasswordResponse {
   message: string;
 }
-
+export interface GoogleLoginRequest {
+  idToken: string;
+}
+export interface GoogleLoginResponse {
+  accessToken: string;
+  accessTokenExpiresAt: string;
+}
+export interface VerifyEmailRequest {
+  token: string;
+}
+export interface VerifyEmailResponse {
+  message: string;
+}
+export interface ResendVerificationRequest {
+  email: string;
+}
+export interface ResendVerificationResponse {
+  message: string;
+}
+export interface CurrentUserResponse {
+  email: string;
+  name: string;
+  roleId: string;
+  loginProvider: string;
+}
 export interface GetTutorsRequest {
   page?: number;
   limit?: number;
@@ -105,7 +106,6 @@ export interface GetTutorsRequest {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
-
 export interface TutorResponse {
   tutor: {
     id: string;
@@ -124,7 +124,6 @@ export interface TutorResponse {
     updatedAt: string;
   };
 }
-
 export interface TutorsResponse {
   tutors: TutorResponse['tutor'][];
   pagination?: {
@@ -133,7 +132,6 @@ export interface TutorsResponse {
     limit: number;
   };
 }
-
 export interface CreateTutorRequest {
   subjects: string[];
   hourlyRate: number;
@@ -147,9 +145,7 @@ export interface CreateTutorRequest {
     endTime: string;
   }>;
 }
-
 export interface UpdateTutorRequest extends Partial<CreateTutorRequest> {}
-
 export interface GetBookingsRequest {
   page?: number;
   limit?: number;
@@ -159,7 +155,6 @@ export interface GetBookingsRequest {
   startDate?: string;
   endDate?: string;
 }
-
 export interface BookingResponse {
   booking: {
     id: string;
@@ -175,7 +170,6 @@ export interface BookingResponse {
     updatedAt: string;
   };
 }
-
 export interface BookingsResponse {
   bookings: BookingResponse['booking'][];
   pagination?: {
@@ -184,7 +178,6 @@ export interface BookingsResponse {
     limit: number;
   };
 }
-
 export interface CreateBookingRequest {
   tutorId: string;
   subject: string;
@@ -192,12 +185,10 @@ export interface CreateBookingRequest {
   endTime: string;
   notes?: string;
 }
-
 export interface UpdateBookingRequest {
   status?: string;
   notes?: string;
 }
-
 export interface GetReviewsRequest {
   page?: number;
   limit?: number;
@@ -205,7 +196,6 @@ export interface GetReviewsRequest {
   studentId?: string;
   bookingId?: string;
 }
-
 export interface ReviewResponse {
   review: {
     id: string;
@@ -218,7 +208,6 @@ export interface ReviewResponse {
     updatedAt: string;
   };
 }
-
 export interface ReviewsResponse {
   reviews: ReviewResponse['review'][];
   pagination?: {
@@ -227,22 +216,18 @@ export interface ReviewsResponse {
     limit: number;
   };
 }
-
 export interface CreateReviewRequest {
   bookingId: string;
   rating: number;
   comment: string;
 }
-
 export interface UpdateReviewRequest {
   rating?: number;
   comment?: string;
 }
-
 export interface GetUserProfileResponse {
   userProfile: any;
 }
-
 export interface UserResponse {
   user: {
     id: string;
@@ -252,11 +237,9 @@ export interface UserResponse {
     avatar?: string;
   };
 }
-
 export interface UsersResponse {
   users: UserResponse['user'][];
 }
-
 export interface UpdateUserProfileRequest {
   name?: string;
   phone?: string;
@@ -265,17 +248,14 @@ export interface UpdateUserProfileRequest {
   bio?: string;
   avatar?: string;
 }
-
 export interface UpdateUserProfileResponse {
   userProfile: any;
 }
-
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
 }
-
 export interface ChangePasswordResponse {
   message: string;
 }

@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/layout/card';
@@ -11,8 +10,6 @@ import { Calendar } from '../ui/form/calendar';
 import { Separator } from '../ui/layout/separator';
 import { Star, Heart, MapPin, Clock, BookOpen, Calendar as CalendarIcon, MessageCircle, Video, Shield, Award, Users, TrendingUp, Globe, CheckCircle2, Play, ArrowLeft } from 'lucide-react';
 import { FormatService } from '@/lib/format';
-
-
 interface TutorDetailData {
   tutorId: number;
   userEmail: string;
@@ -39,7 +36,6 @@ interface TutorDetailData {
   memberSince: string;
   specializations: string[];
 }
-
 interface TutorEducation {
   id: number;
   tutorId: number;
@@ -49,7 +45,6 @@ interface TutorEducation {
   certificateUrl: string | null;
   verified: boolean;
 }
-
 interface TutorCertificate {
   id: number;
   tutorId: number;
@@ -60,7 +55,6 @@ interface TutorCertificate {
   certificateUrl: string | null;
   verified: boolean;
 }
-
 interface Review {
   id: number;
   studentName: string;
@@ -71,15 +65,11 @@ interface Review {
   subjectName: string;
   lessonsCompleted: number;
 }
-
-
 export function TutorDetailProfilePage() {
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-
-  
   const tutor: TutorDetailData = {
     tutorId: 1,
     userEmail: 'nguyenthimaianh@gmail.com',
@@ -156,7 +146,6 @@ export function TutorDetailProfilePage() {
     memberSince: 'Tháng 3, 2019',
     specializations: ['THPT', 'Luyện thi Đại học', 'Toán chuyên'],
   };
-
   const reviews: Review[] = [
     {
       id: 1,
@@ -199,7 +188,6 @@ export function TutorDetailProfilePage() {
       lessonsCompleted: 25,
     },
   ];
-
   const timeSlots = [
     { 
       day: 'Thứ Hai, 13/01',
@@ -232,18 +220,15 @@ export function TutorDetailProfilePage() {
       ]
     }
   ];
-
   const formatDate = (date: Date) => {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
     if (diffDays < 7) return `${diffDays} ngày trước`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} tuần trước`;
     if (diffDays < 365) return `${Math.floor(diffDays / 30)} tháng trước`;
     return `${Math.floor(diffDays / 365)} năm trước`;
   };
-
   return (
     <div className="min-h-screen bg-[#F2E5BF] pt-16">
       {/* Header */}
@@ -260,13 +245,10 @@ export function TutorDetailProfilePage() {
           </Button>
         </div>
       </div>
-
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
           {/* Main Content - Left 2 columns */}
           <div className="lg:col-span-2 space-y-6">
-            
             {/* Profile Header */}
             <Card className="bg-white border-[#257180]/20">
               <CardContent className="p-6">
@@ -282,7 +264,6 @@ export function TutorDetailProfilePage() {
                       </div>
                     )}
                   </div>
-                  
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-3">
                       <div>
@@ -298,7 +279,6 @@ export function TutorDetailProfilePage() {
                           <span className="text-gray-400">•</span>
                           <span className="text-sm text-gray-600">{tutor.totalStudents} học viên</span>
                         </div>
-                        
                         <div className="flex flex-wrap gap-2 mb-3">
                           {tutor.isVerified && (
                             <Badge variant="default" className="bg-[#F2E5BF] text-black border-[#257180]/20">
@@ -316,7 +296,6 @@ export function TutorDetailProfilePage() {
                           )}
                         </div>
                       </div>
-                      
                       <Button
                         variant="ghost"
                         size="sm"
@@ -326,7 +305,6 @@ export function TutorDetailProfilePage() {
                         <Heart className={`w-6 h-6 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
                       </Button>
                     </div>
-
                     {/* Quick Info */}
                     <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                       <div className="flex items-center gap-2 text-gray-600">
@@ -350,7 +328,6 @@ export function TutorDetailProfilePage() {
                 </div>
               </CardContent>
             </Card>
-
             {/* Video Introduction */}
             {tutor.videoIntroUrl && (
               <Card className="bg-white border-[#257180]/20">
@@ -375,7 +352,6 @@ export function TutorDetailProfilePage() {
                 </CardContent>
               </Card>
             )}
-
             {/* Main Tabs */}
             <Tabs defaultValue="about" className="space-y-6">
               <TabsList className="grid w-full grid-cols-3 bg-[#F2E5BF] border-[#257180]/20">
@@ -383,7 +359,6 @@ export function TutorDetailProfilePage() {
                 <TabsTrigger value="reviews" className="data-[state=active]:bg-black data-[state=active]:text-white text-black">Đánh giá ({tutor.reviewCount})</TabsTrigger>
                 <TabsTrigger value="availability" className="data-[state=active]:bg-black data-[state=active]:text-white text-black">Lịch trống</TabsTrigger>
               </TabsList>
-              
               {/* About Tab */}
               <TabsContent value="about" className="space-y-6">
                 <Card className="bg-white border-[#257180]/20">
@@ -394,9 +369,7 @@ export function TutorDetailProfilePage() {
                     <div>
                       <p className="text-gray-700 leading-relaxed whitespace-pre-line">{tutor.bio}</p>
                     </div>
-
                     <Separator />
-
                     <div>
                       <h3 className="text-black mb-3 font-bold">Kinh nghiệm giảng dạy</h3>
                       <p className="text-gray-700 leading-relaxed">
@@ -428,9 +401,7 @@ export function TutorDetailProfilePage() {
                         Tôi đã giúp hơn {tutor.totalStudents} học sinh cải thiện điểm số và đạt được mục tiêu học tập của họ.
                       </p>
                     </div>
-
                     <Separator />
-
                     <div>
                       <h3 className="text-black mb-3 font-bold">Thành tích nổi bật</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -452,9 +423,7 @@ export function TutorDetailProfilePage() {
                         </div>
                       </div>
                     </div>
-
                     <Separator />
-
                     <div>
                       <h3 className="text-black mb-3 font-bold">Hình thức dạy học</h3>
                       <div className="flex flex-wrap gap-2">
@@ -467,7 +436,6 @@ export function TutorDetailProfilePage() {
                     </div>
                   </CardContent>
                 </Card>
-
                 {/* Resume/CV Section */}
                 <Card className="bg-white border-[#257180]/20">
                   <CardHeader>
@@ -499,11 +467,9 @@ export function TutorDetailProfilePage() {
                             ))}
                           </div>
                         </div>
-
                         <Separator />
                       </>
                     )}
-
                     {/* Certificates */}
                     {tutor.certificates.length > 0 && (
                       <div>
@@ -537,7 +503,6 @@ export function TutorDetailProfilePage() {
                     )}
                   </CardContent>
                 </Card>
-
                 {/* Subjects */}
                 <Card className="bg-white border-[#257180]/20">
                   <CardHeader>
@@ -553,7 +518,6 @@ export function TutorDetailProfilePage() {
                     </div>
                   </CardContent>
                 </Card>
-
                 {/* Specializations */}
                 {tutor.specializations.length > 0 && (
                   <Card className="bg-white border-[#257180]/20">
@@ -572,7 +536,6 @@ export function TutorDetailProfilePage() {
                   </Card>
                 )}
               </TabsContent>
-              
               {/* Reviews Tab */}
               <TabsContent value="reviews" className="space-y-6">
                 <Card className="bg-white border-[#257180]/20">
@@ -595,7 +558,6 @@ export function TutorDetailProfilePage() {
                               <AvatarImage src={review.studentAvatar || undefined} />
                               <AvatarFallback className="bg-[#F2E5BF] text-[#257180]">{review.studentName.split(' ').slice(0,2).map(n => n[0]).join('')}</AvatarFallback>
                             </Avatar>
-                            
                             <div className="flex-1">
                               <div className="flex items-start justify-between mb-2">
                                 <div>
@@ -613,19 +575,16 @@ export function TutorDetailProfilePage() {
                                   </div>
                                 </div>
                               </div>
-                              
                               <div className="flex items-center gap-2 mb-2">
                                 <Badge variant="secondary" className="text-xs bg-[#F2E5BF] text-black border-[#257180]/20">{review.subjectName}</Badge>
                                 <span className="text-xs text-gray-500">{review.lessonsCompleted} buổi học</span>
                               </div>
-                              
                               <p className="text-gray-700 leading-relaxed">{review.comment}</p>
                             </div>
                           </div>
                         </div>
                       ))}
                     </div>
-                    
                     {reviews.length < tutor.reviewCount && (
                       <div className="text-center mt-6">
                         <Button variant="outline" className="border-black text-black hover:bg-black hover:text-white">Xem tất cả {tutor.reviewCount} đánh giá</Button>
@@ -634,7 +593,6 @@ export function TutorDetailProfilePage() {
                   </CardContent>
                 </Card>
               </TabsContent>
-
               {/* Availability Tab */}
               <TabsContent value="availability" className="space-y-6">
                 <Card className="bg-white border-[#257180]/20">
@@ -663,7 +621,6 @@ export function TutorDetailProfilePage() {
                         </div>
                       ))}
                     </div>
-
                     {selectedTimeSlot && (
                       <div className="mt-6 p-4 bg-[#F2E5BF] rounded-lg border border-[#257180]/20">
                         <p className="text-sm text-gray-700 mb-3">
@@ -677,7 +634,6 @@ export function TutorDetailProfilePage() {
                     )}
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white border-[#257180]/20">
                   <CardHeader>
                     <CardTitle className="font-bold text-black">Chọn ngày khác</CardTitle>
@@ -694,11 +650,9 @@ export function TutorDetailProfilePage() {
               </TabsContent>
             </Tabs>
           </div>
-
           {/* Sidebar - Right column */}
           <div className="lg:col-span-1">
             <div className="sticky top-6 space-y-6">
-              
               {/* Pricing Card */}
               <Card className="border-2 border-[#257180]/20 bg-white">
                 <CardContent className="p-6">
@@ -711,7 +665,6 @@ export function TutorDetailProfilePage() {
                       </div>
                     </div>
                   </div>
-                  
                   <div className="space-y-3">
                     <Button className="w-full bg-[#FD8B51] hover:bg-[#CB6040] text-white" size="lg">
                       <CalendarIcon className="w-4 h-4 mr-2" />
@@ -728,7 +681,6 @@ export function TutorDetailProfilePage() {
                   </div>
                 </CardContent>
               </Card>
-
               {/* Quick Stats */}
               <Card className="bg-white border-[#257180]/20">
                 <CardHeader>
@@ -755,7 +707,6 @@ export function TutorDetailProfilePage() {
                   </div>
                 </CardContent>
               </Card>
-
               {/* Report */}
               <Button variant="ghost" className="w-full text-gray-600 hover:text-black hover:bg-[#F2E5BF]">
                 Báo cáo gia sư này

@@ -1,15 +1,12 @@
 "use client";
-
 import * as React from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format, parse, isValid } from "date-fns";
 import { vi } from "date-fns/locale";
-
 import { cn } from "@/lib/utils";
 import { Calendar } from "./calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../feedback/popover";
 import { Input } from "./input";
-
 export interface DatePickerProps {
   value?: string;
   onChange?: (value: string) => void;
@@ -19,7 +16,6 @@ export interface DatePickerProps {
   minDate?: Date;
   maxDate?: Date;
 }
-
 export function DatePicker({
   value,
   onChange,
@@ -31,7 +27,6 @@ export function DatePicker({
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState("");
-
   const formatToVietnamese = (dateString: string) => {
     if (!dateString) return "";
     try {
@@ -44,7 +39,6 @@ export function DatePicker({
     }
     return "";
   };
-
   const parseFromVietnamese = (dateString: string) => {
     if (!dateString) return "";
     try {
@@ -57,7 +51,6 @@ export function DatePicker({
     }
     return "";
   };
-
   React.useEffect(() => {
     if (value) {
       setInputValue(formatToVietnamese(value));
@@ -65,9 +58,7 @@ export function DatePicker({
       setInputValue("");
     }
   }, [value]);
-
   const selectedDate = value ? new Date(value) : undefined;
-
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
       const dateString = format(date, "yyyy-MM-dd");
@@ -76,11 +67,9 @@ export function DatePicker({
       setIsOpen(false);
     }
   };
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputVal = e.target.value;
     setInputValue(inputVal);
-    
     const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
     if (dateRegex.test(inputVal)) {
       const internalFormat = parseFromVietnamese(inputVal);
@@ -89,7 +78,6 @@ export function DatePicker({
       }
     }
   };
-
   const handleInputBlur = () => {
     if (inputValue) {
       const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
@@ -109,7 +97,6 @@ export function DatePicker({
       }
     }
   };
-
   return (
     <div className="relative">
       <Input
@@ -123,7 +110,6 @@ export function DatePicker({
         onFocus={() => {
         }}
       />
-      
       {/* Calendar picker button - single icon on the left */}
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
@@ -178,4 +164,4 @@ export function DatePicker({
       </Popover>
     </div>
   );
-}
+}

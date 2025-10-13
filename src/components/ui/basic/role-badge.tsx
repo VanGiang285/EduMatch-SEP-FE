@@ -1,15 +1,12 @@
 import * as React from "react";
 import { Badge } from "./badge";
 import { cn } from "../utils";
-
 export type UserRole = "learner" | "tutor" | "business-admin" | "system-admin";
-
 interface RoleBadgeProps {
   role: UserRole;
   className?: string;
   children?: React.ReactNode;
 }
-
 const roleConfig = {
   learner: {
     label: "Học viên",
@@ -32,10 +29,8 @@ const roleConfig = {
     icon: "👨‍💻",
   },
 };
-
 export function RoleBadge({ role, className, children }: RoleBadgeProps) {
   const config = roleConfig[role];
-  
   return (
     <Badge
       variant="secondary" 
@@ -55,7 +50,6 @@ export function RoleBadge({ role, className, children }: RoleBadgeProps) {
     </Badge>
   );
 }
-
 export function getRoleColors(role: UserRole) {
   const colorMap = {
     learner: {
@@ -79,10 +73,8 @@ export function getRoleColors(role: UserRole) {
       border: "border-system-admin-primary",
     },
   };
-  
   return colorMap[role];
 }
-
 export function getRoleCardClass(role: UserRole) {
   const colors = getRoleColors(role);
   return cn(
@@ -90,6 +82,4 @@ export function getRoleCardClass(role: UserRole) {
     colors.border,
     "hover:shadow-lg transition-all"
   );
-}
-
-
+}

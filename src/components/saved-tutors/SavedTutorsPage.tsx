@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '../ui/layout/card';
@@ -29,8 +28,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../ui/navigation/pagination';
-
-
 interface TutorCardData {
   tutorId: number;
   userEmail: string;
@@ -54,15 +51,12 @@ interface TutorCardData {
   isVerified: boolean;
   specializations: string[];
 }
-
 export function SavedTutorsPage() {
   const router = useRouter();
   const [hoveredTutor, setHoveredTutor] = useState<number | null>(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set([1, 3, 4, 2, 5])); // All saved tutors are favorited
   const tutorsPerPage = 6;
-
-  
   const savedTutors: TutorCardData[] = [
     {
       tutorId: 1,
@@ -180,16 +174,12 @@ export function SavedTutorsPage() {
       specializations: ['Làm văn', 'Nghị luận xã hội'],
     },
   ];
-
   const actualSavedTutors = savedTutors.filter(tutor => favoriteTutors.has(tutor.tutorId));
-  
   const totalPages = Math.ceil(actualSavedTutors.length / tutorsPerPage);
   const indexOfLastTutor = currentPage * tutorsPerPage;
   const indexOfFirstTutor = indexOfLastTutor - tutorsPerPage;
   const currentTutors = actualSavedTutors.slice(indexOfFirstTutor, indexOfLastTutor);
-
   const currentTutor = currentTutors.find(t => t.tutorId === hoveredTutor) || currentTutors[0];
-
   const handleToggleFavorite = (tutorId: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
     setFavoriteTutors(prev => {
@@ -204,11 +194,9 @@ export function SavedTutorsPage() {
       return newFavorites;
     });
   };
-
   const handleViewTutorProfile = (tutorId: number) => {
     router.push(`/tutor/${tutorId}`);
   };
-
   return (
     <div className="min-h-screen bg-[#F2E5BF] pt-16">
       {/* Header */}
@@ -224,11 +212,9 @@ export function SavedTutorsPage() {
           </div>
         </div>
       </div>
-
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
           {/* Left Side - Tutor List (Detailed) */}
           <div className="lg:col-span-8">
             {actualSavedTutors.length === 0 ? (
@@ -270,7 +256,6 @@ export function SavedTutorsPage() {
                                   {tutor.userName.split(' ').slice(-2).map(n => n[0]).join('')}
                                 </AvatarFallback>
                               </Avatar>
-                              
                               {/* Video Play Indicator */}
                               {tutor.videoIntroUrl && (
                                 <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -281,7 +266,6 @@ export function SavedTutorsPage() {
                               )}
                             </div>
                           </div>
-
                           {/* Name, Info & Subjects */}
                           <div className="flex-1 min-w-0 flex flex-col">
                             <div className="flex items-start justify-between mb-3">
@@ -297,7 +281,6 @@ export function SavedTutorsPage() {
                                     </Badge>
                                   )}
                                 </div>
-                                
                                 <div className="flex items-center gap-3">
                                   <div className="flex items-center gap-1.5">
                                     <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
@@ -310,7 +293,6 @@ export function SavedTutorsPage() {
                                   <span className="text-sm text-gray-600">{tutor.teachingExp}</span>
                                 </div>
                               </div>
-
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
@@ -320,7 +302,6 @@ export function SavedTutorsPage() {
                                 <Heart className={`w-5 h-5 ${favoriteTutors.has(tutor.tutorId) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
                               </Button>
                             </div>
-
                             {/* Subjects */}
                             <div className="flex flex-wrap gap-2">
                               {tutor.subjects.map((subject, idx) => (
@@ -336,14 +317,12 @@ export function SavedTutorsPage() {
                             </div>
                           </div>
                         </div>
-
                         {/* Row 2: Bio */}
                         <div className="mb-4">
                           <p className="text-sm text-gray-600 line-clamp-2">
                             {tutor.bio}
                           </p>
                         </div>
-
                         {/* Row 3: Location + Teaching Mode + Education */}
                         <div className="flex flex-wrap gap-4 mb-4 text-sm text-gray-600">
                           <div className="flex items-center gap-1.5">
@@ -362,7 +341,6 @@ export function SavedTutorsPage() {
                             </>
                           )}
                         </div>
-
                         {/* Row 4: Price & Actions */}
                         <div className="flex items-center justify-between pt-4 border-t border-[#257180]/20">
                           <div>
@@ -373,7 +351,6 @@ export function SavedTutorsPage() {
                               <span className="text-base text-gray-600">/giờ</span>
                             </div>
                           </div>
-
                           <div className="flex gap-2">
                             <Button 
                               variant="outline" 
@@ -403,7 +380,6 @@ export function SavedTutorsPage() {
                     </Card>
                   ))}
                 </div>
-
                 {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="mt-8">
@@ -415,7 +391,6 @@ export function SavedTutorsPage() {
                             className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                           />
                         </PaginationItem>
-                        
                         {[...Array(totalPages)].map((_, index) => {
                           const pageNumber = index + 1;
                           if (
@@ -446,7 +421,6 @@ export function SavedTutorsPage() {
                           }
                           return null;
                         })}
-                        
                         <PaginationItem>
                           <PaginationNext 
                             onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
@@ -460,7 +434,6 @@ export function SavedTutorsPage() {
               </>
             )}
           </div>
-
           {/* Right Side - Video Preview (Simple & Sticky) */}
           <div className="hidden lg:block lg:col-span-4">
             <div className="sticky-video-preview">
@@ -490,7 +463,6 @@ export function SavedTutorsPage() {
                       </div>
                     )}
                   </div>
-
                   {/* Action Buttons Only - Không trùng với tutor card */}
                   <div className="p-6">
                     <div className="space-y-3">
@@ -534,4 +506,4 @@ export function SavedTutorsPage() {
       </div>
     </div>
   );
-}
+}

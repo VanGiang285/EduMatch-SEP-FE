@@ -3,7 +3,6 @@ export interface LoginFormData {
   password: string;
   rememberMe: boolean;
 }
-
 export interface RegisterFormData {
   name: string;
   email: string;
@@ -11,22 +10,18 @@ export interface RegisterFormData {
   confirmPassword: string;
   agreeTerms: boolean;
 }
-
 export interface ForgotPasswordFormData {
   email: string;
 }
-
 export interface ResetPasswordFormData {
   token: string;
   password: string;
   confirmPassword: string;
 }
-
 export interface BecomeTutorFormData {
   subjects: string[];
   hourlyRate: number;
   bio: string;
-  
   experience: number;
   education: string;
   certifications: Array<{
@@ -35,25 +30,21 @@ export interface BecomeTutorFormData {
     issuer: string;
     date: string;
   }>;
-  
   availability: Array<{
     id: string;
     dayOfWeek: number;
     startTime: string;
     endTime: string;
   }>;
-  
   location: {
     province: string;
     district: string;
   };
   phone: string;
-  
   teachingMethod: string;
   specializations: string[];
   languages: string[];
 }
-
 export interface TutorProfileFormData {
   subjects: string[];
   hourlyRate: number;
@@ -63,7 +54,6 @@ export interface TutorProfileFormData {
   certifications: string[];
   isActive: boolean;
 }
-
 export interface BookingFormData {
   tutorId: string;
   subject: string;
@@ -71,7 +61,6 @@ export interface BookingFormData {
   endTime: Date;
   notes?: string;
 }
-
 export interface BookingSearchFormData {
   subject?: string;
   location?: string;
@@ -84,13 +73,11 @@ export interface BookingSearchFormData {
     endTime: string;
   };
 }
-
 export interface ReviewFormData {
   bookingId: string;
   rating: number;
   comment: string;
 }
-
 export interface UserProfileFormData {
   name: string;
   email: string;
@@ -100,13 +87,11 @@ export interface UserProfileFormData {
   bio?: string;
   avatar?: File;
 }
-
 export interface ChangePasswordFormData {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
 }
-
 export interface TutorSearchFormData {
   query?: string;
   subjects?: string[];
@@ -117,12 +102,10 @@ export interface TutorSearchFormData {
   sortBy?: 'rating' | 'price' | 'experience' | 'name';
   sortOrder?: 'asc' | 'desc';
 }
-
 export interface FormFieldError {
   field: string;
   message: string;
 }
-
 export interface FormState<T = any> {
   data: T;
   errors: FormFieldError[];
@@ -130,7 +113,6 @@ export interface FormState<T = any> {
   isValid: boolean;
   isDirty: boolean;
 }
-
 export interface FormStep {
   id: string;
   title: string;
@@ -139,7 +121,6 @@ export interface FormStep {
   isActive: boolean;
   isValid: boolean;
 }
-
 export interface MultiStepFormState<T = any> {
   currentStep: number;
   steps: FormStep[];
@@ -147,7 +128,6 @@ export interface MultiStepFormState<T = any> {
   errors: FormFieldError[];
   isSubmitting: boolean;
 }
-
 export type FormFieldType = 
   | 'text' 
   | 'email' 
@@ -164,7 +144,6 @@ export type FormFieldType =
   | 'checkbox' 
   | 'radio' 
   | 'file';
-
 export interface FormFieldConfig {
   name: string;
   type: FormFieldType;
@@ -181,4 +160,4 @@ export interface FormFieldConfig {
     pattern?: string;
     custom?: (value: any) => string | null;
   };
-}
+}

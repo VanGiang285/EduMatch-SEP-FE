@@ -16,20 +16,17 @@ export const ROUTES = {
   PRIVACY: '/privacy',
   TERMS: '/terms',
 } as const;
-
 export const USER_ROLES = {
   STUDENT: 'student',
   TUTOR: 'tutor',
   ADMIN: 'admin',
 } as const;
-
 export const BOOKING_STATUS = {
   PENDING: 'pending',
   CONFIRMED: 'confirmed',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
 } as const;
-
 export const SUBJECTS = {
   MATH: 'Toán học',
   PHYSICS: 'Vật lý',
@@ -44,14 +41,12 @@ export const SUBJECTS = {
   CIVICS: 'GDCD',
   COMPUTER_SCIENCE: 'Tin học',
 } as const;
-
 export const SUBJECT_CATEGORIES = {
   NATURAL_SCIENCES: 'Khoa học Tự nhiên',
   SOCIAL_SCIENCES: 'Khoa học Xã hội',
   LANGUAGES: 'Ngoại ngữ',
   TEST_PREP: 'Luyện thi',
 } as const;
-
 export const SUBJECT_LEVELS = {
   ELEMENTARY: 'Tiểu học',
   MIDDLE_SCHOOL: 'THCS',
@@ -59,16 +54,18 @@ export const SUBJECT_LEVELS = {
   UNIVERSITY: 'Đại học',
   ADULT: 'Người lớn',
 } as const;
-
 export const API_ENDPOINTS = {
   AUTH: {
-    LOGIN: '/api/auth/login',
-    REGISTER: '/api/auth/register',
-    LOGOUT: '/api/auth/logout',
-    REFRESH: '/api/auth/refresh',
+    LOGIN: '/api/User/login',
+    REGISTER: '/api/User/register',
+    LOGOUT: '/api/User/logout',
+    REFRESH: '/api/User/refresh-token',
     FORGOT_PASSWORD: '/api/auth/forgot-password',
     RESET_PASSWORD: '/api/auth/reset-password',
-    VERIFY_EMAIL: '/api/auth/verify-email',
+    VERIFY_EMAIL: '/api/User/verify-email',
+    RESEND_VERIFY: '/api/User/resend-verify',
+    GOOGLE_LOGIN: '/api/User/signIn-google',
+    GET_CURRENT_USER: '/api/User/me',
   },
   TUTORS: {
     LIST: '/api/tutors',
@@ -96,7 +93,7 @@ export const API_ENDPOINTS = {
     DELETE: '/api/reviews/:id',
   },
   USERS: {
-    PROFILE: '/api/users/profile',
+    PROFILE: '/api/User/me',
     UPDATE: '/api/users/profile',
     CHANGE_PASSWORD: '/api/users/change-password',
     UPLOAD_AVATAR: '/api/users/upload-avatar',
@@ -106,14 +103,12 @@ export const API_ENDPOINTS = {
     DOCUMENT: '/api/upload/document',
   },
 } as const;
-
 export const PAGINATION = {
   DEFAULT_PAGE: 1,
   DEFAULT_LIMIT: 10,
   MAX_LIMIT: 100,
   PAGE_SIZE_OPTIONS: [10, 20, 50, 100],
 } as const;
-
 export const VALIDATION = {
   EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   PHONE_REGEX: /^(\+84|84|0)[1-9][0-9]{8,9}$/,
@@ -124,13 +119,11 @@ export const VALIDATION = {
   BIO_MAX_LENGTH: 1000,
   COMMENT_MAX_LENGTH: 500,
 } as const;
-
 export const RATING = {
   MIN: 1,
   MAX: 5,
   DEFAULT: 0,
 } as const;
-
 export const TIME = {
   DAYS_OF_WEEK: [
     'Chủ nhật',
@@ -155,21 +148,18 @@ export const TIME = {
     DEFAULT: 60, // minutes
   },
 } as const;
-
 export const PRICING = {
   MIN_HOURLY_RATE: 50000, // VND
   MAX_HOURLY_RATE: 2000000, // VND
   DEFAULT_HOURLY_RATE: 200000, // VND
   CURRENCY: 'VND',
 } as const;
-
 export const FILE_UPLOAD = {
   MAX_SIZE: 5 * 1024 * 1024, // 5MB
   ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
   ALLOWED_DOCUMENT_TYPES: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
   AVATAR_MAX_SIZE: 2 * 1024 * 1024, // 2MB
 } as const;
-
 export const ERROR_CODES = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   AUTHENTICATION_ERROR: 'AUTHENTICATION_ERROR',
@@ -180,7 +170,6 @@ export const ERROR_CODES = {
   NETWORK_ERROR: 'NETWORK_ERROR',
   TIMEOUT_ERROR: 'TIMEOUT_ERROR',
 } as const;
-
 export const SUCCESS_MESSAGES = {
   LOGIN_SUCCESS: 'Đăng nhập thành công',
   REGISTER_SUCCESS: 'Đăng ký thành công',
@@ -192,7 +181,6 @@ export const SUCCESS_MESSAGES = {
   REVIEW_CREATED: 'Đánh giá thành công',
   TUTOR_PROFILE_CREATED: 'Tạo hồ sơ gia sư thành công',
 } as const;
-
 export const ERROR_MESSAGES = {
   INVALID_CREDENTIALS: 'Email hoặc mật khẩu không đúng',
   EMAIL_ALREADY_EXISTS: 'Email đã được sử dụng',
@@ -207,7 +195,6 @@ export const ERROR_MESSAGES = {
   NOT_FOUND: 'Không tìm thấy dữ liệu',
   CONFLICT: 'Dữ liệu bị xung đột',
 } as const;
-
 export const STORAGE_KEYS = {
   AUTH_TOKEN: 'auth_token',
   REFRESH_TOKEN: 'refresh_token',
@@ -216,16 +203,14 @@ export const STORAGE_KEYS = {
   LANGUAGE: 'language',
   REMEMBER_ME: 'remember_me',
 } as const;
-
 export const APP_CONFIG = {
-  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api',
+  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api',
   APP_NAME: 'EduMatch',
   DEFAULT_LOCALE: 'vi-VN',
   DEFAULT_CURRENCY: 'VND',
   MAX_FILE_SIZE_MB: 10,
   MAX_VIDEO_DURATION_MIN: 5,
 } as const;
-
 export const QUERY_KEYS = {
   AUTH: {
     USER: ['auth', 'user'],

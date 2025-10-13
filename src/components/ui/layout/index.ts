@@ -10,4 +10,4 @@ export * from './scroll-area';
 export * from './separator';
 export * from './sidebar';
 export * from './stats-card';
-export * from './table';
+export * from './table';

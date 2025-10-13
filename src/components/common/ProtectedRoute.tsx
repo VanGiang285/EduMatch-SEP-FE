@@ -1,18 +1,15 @@
 "use client";
-
 import { ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { LoadingSpinner } from '@/components/ui/feedback/loading-spinner';
-
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredRole?: 'student' | 'tutor' | 'admin';
   fallback?: ReactNode;
   redirectTo?: string;
 }
-
 export function ProtectedRoute({ 
   children, 
   requiredRole, 
@@ -21,21 +18,18 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, loading, isAuthenticated } = useAuth();
   const router = useRouter();
-
   useEffect(() => {
     if (!loading) {
       if (!isAuthenticated) {
         router.push(redirectTo);
         return;
       }
-
       if (requiredRole && user?.role !== requiredRole) {
         router.push('/unauthorized');
         return;
       }
     }
   }, [user, loading, isAuthenticated, requiredRole, router, redirectTo]);
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -43,7 +37,6 @@ export function ProtectedRoute({
       </div>
     );
   }
-
   if (!isAuthenticated) {
     return fallback || (
       <div className="min-h-screen flex items-center justify-center">
@@ -58,7 +51,6 @@ export function ProtectedRoute({
       </div>
     );
   }
-
   if (requiredRole && user?.role !== requiredRole) {
     return fallback || (
       <div className="min-h-screen flex items-center justify-center">
@@ -73,6 +65,5 @@ export function ProtectedRoute({
       </div>
     );
   }
-
   return <>{children}</>;
-}
+}

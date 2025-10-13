@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '../ui/layout/card';
@@ -32,8 +31,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../ui/navigation/pagination';
-
-
 interface TutorCardData {
   tutorId: number;
   userEmail: string;
@@ -57,17 +54,14 @@ interface TutorCardData {
   isVerified: boolean;
   specializations: string[];
 }
-
 interface Subject {
   id: number;
   subjectName: string;
 }
-
 interface Province {
   id: number;
   name: string;
 }
-
 export function FindTutorPage() {
   const router = useRouter();
   const [priceRange, setPriceRange] = useState([50000, 500000]);
@@ -78,8 +72,6 @@ export function FindTutorPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set([1, 3])); // Mock: tutors 1 and 3 are favorited
   const tutorsPerPage = 6;
-
-  
   const subjects: Subject[] = [
     { id: 1, subjectName: 'Toán học' },
     { id: 2, subjectName: 'Tiếng Anh' },
@@ -88,7 +80,6 @@ export function FindTutorPage() {
     { id: 5, subjectName: 'Sinh học' },
     { id: 6, subjectName: 'Ngữ văn' },
   ];
-
   const provinces: Province[] = [
     { id: 1, name: 'Hà Nội' },
     { id: 2, name: 'TP. Hồ Chí Minh' },
@@ -96,7 +87,6 @@ export function FindTutorPage() {
     { id: 4, name: 'Hải Phòng' },
     { id: 5, name: 'Cần Thơ' },
   ];
-
   const tutors: TutorCardData[] = [
     {
       tutorId: 1,
@@ -237,24 +227,19 @@ export function FindTutorPage() {
       specializations: ['Di truyền học', 'Sinh thái học'],
     },
   ];
-
   const filteredTutors = tutors.filter(tutor => {
     const matchesSearch = searchQuery.trim() === '' || 
       tutor.userName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
-
   const totalPages = Math.ceil(filteredTutors.length / tutorsPerPage);
   const indexOfLastTutor = currentPage * tutorsPerPage;
   const indexOfFirstTutor = indexOfLastTutor - tutorsPerPage;
   const currentTutors = filteredTutors.slice(indexOfFirstTutor, indexOfLastTutor);
-
   const currentTutor = currentTutors.find(t => t.tutorId === hoveredTutor) || currentTutors[0];
-
   const handleViewTutorProfile = (tutorId: number) => {
     router.push(`/tutor/${tutorId}`);
   };
-
   const handleToggleFavorite = (tutorId: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
     setFavoriteTutors(prev => {
@@ -267,7 +252,6 @@ export function FindTutorPage() {
       return newFavorites;
     });
   };
-
   return (
     <div className="min-h-screen bg-[#F2E5BF] pt-16">
       {/* Title Section */}
@@ -283,7 +267,6 @@ export function FindTutorPage() {
           </div>
         </div>
       </div>
-
       {/* Sticky Search and Filters Section */}
       <div className="bg-white border-b border-[#257180]/20 sticky top-16 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -299,7 +282,6 @@ export function FindTutorPage() {
                 className="pl-10 h-10 text-sm border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
               />
             </div>
-
             {/* Filters - Match main content area width */}
             <div className="flex flex-wrap lg:flex-nowrap gap-3 flex-1">
               <SelectWithSearch 
@@ -315,7 +297,6 @@ export function FindTutorPage() {
                   </SelectWithSearchItem>
                 ))}
               </SelectWithSearch>
-
               <SelectWithSearch 
                 value={selectedCity} 
                 onValueChange={setSelectedCity}
@@ -329,7 +310,6 @@ export function FindTutorPage() {
                   </SelectWithSearchItem>
                 ))}
               </SelectWithSearch>
-
               <SelectWithSearch 
                 value="all"
                 placeholder="Đánh giá"
@@ -340,7 +320,6 @@ export function FindTutorPage() {
                 <SelectWithSearchItem value="4.0">4.0⭐ trở lên</SelectWithSearchItem>
                 <SelectWithSearchItem value="3.5">3.5⭐ trở lên</SelectWithSearchItem>
               </SelectWithSearch>
-
               <SelectWithSearch 
                 value={(() => {
                   const [min, max] = priceRange;
@@ -384,7 +363,6 @@ export function FindTutorPage() {
                     (min === 250000 && max === 300000) ||
                     (min === 300000 && max === 500000)
                   );
-                  
                   if (isCustom) {
                     return (
                       <SelectWithSearchItem value="custom">
@@ -395,7 +373,6 @@ export function FindTutorPage() {
                   return null;
                 })()}
               </SelectWithSearch>
-
               <SelectWithSearch 
                 value="recommended"
                 placeholder="Sắp xếp"
@@ -411,11 +388,9 @@ export function FindTutorPage() {
           </div>
         </div>
       </div>
-
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
           {/* Left Side - Tutor List (Detailed) */}
           <div className="lg:col-span-8">
             <div className="space-y-6">
@@ -444,7 +419,6 @@ export function FindTutorPage() {
                         </Avatar>
                       </div>
                     </div>
-
                     {/* Name, Info & Subjects */}
                     <div className="flex-1 min-w-0 flex flex-col">
                       <div className="flex items-start justify-between mb-3">
@@ -460,7 +434,6 @@ export function FindTutorPage() {
                               </Badge>
                             )}
                           </div>
-                          
                           <div className="flex items-center gap-3">
                             <div className="flex items-center gap-1.5">
                               <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
@@ -473,7 +446,6 @@ export function FindTutorPage() {
                             <span className="text-sm text-gray-600">{tutor.teachingExp}</span>
                           </div>
                         </div>
-
                         <Button 
                           variant="ghost" 
                           size="sm" 
@@ -483,7 +455,6 @@ export function FindTutorPage() {
                           <Heart className={`w-5 h-5 ${favoriteTutors.has(tutor.tutorId) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
                         </Button>
                       </div>
-
                       {/* Subjects */}
                       <div className="flex flex-wrap gap-2">
                         {tutor.subjects.map((subject, idx) => (
@@ -499,14 +470,12 @@ export function FindTutorPage() {
                       </div>
                     </div>
                   </div>
-
                   {/* Row 2: Bio */}
                   <div className="mb-4">
                     <p className="text-sm text-gray-600 line-clamp-2">
                       {tutor.bio}
                     </p>
                   </div>
-
                   {/* Row 3: Location + Teaching Mode + Education */}
                   <div className="flex flex-wrap gap-4 mb-4 text-sm text-gray-600">
                     <div className="flex items-center gap-1.5">
@@ -525,7 +494,6 @@ export function FindTutorPage() {
                       </>
                     )}
                   </div>
-
                   {/* Row 4: Price & Actions */}
                   <div className="flex items-center justify-between pt-4 border-t border-[#257180]/20">
                     <div>
@@ -536,7 +504,6 @@ export function FindTutorPage() {
                         <span className="text-base text-gray-600">/giờ</span>
                       </div>
                     </div>
-
                     <div className="flex gap-2">
                       <Button 
                         variant="outline" 
@@ -566,7 +533,6 @@ export function FindTutorPage() {
               </Card>
             ))}
             </div>
-
             {/* Pagination */}
             <div className="mt-8">
               <Pagination>
@@ -577,7 +543,6 @@ export function FindTutorPage() {
                       className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
                   </PaginationItem>
-                  
                   {[...Array(totalPages)].map((_, index) => {
                     const pageNumber = index + 1;
                     if (
@@ -608,7 +573,6 @@ export function FindTutorPage() {
                     }
                     return null;
                   })}
-                  
                   <PaginationItem>
                     <PaginationNext 
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
@@ -619,7 +583,6 @@ export function FindTutorPage() {
               </Pagination>
             </div>
           </div>
-
           {/* Right Side - Video Preview (Simple & Sticky) */}
           <div className="hidden lg:block lg:col-span-4">
             <div className="sticky top-[calc(4rem+4rem+1rem)] z-30">
@@ -649,7 +612,6 @@ export function FindTutorPage() {
                       </div>
                     )}
                   </div>
-
                   {/* Action Buttons Only - Không trùng với tutor card */}
                   <div className="p-6">
                     <div className="space-y-3">

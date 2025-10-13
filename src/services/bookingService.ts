@@ -10,7 +10,6 @@ import {
   PaginatedApiResponse
 } from '@/types/api';
 import { Booking, BookingWithDetails } from '@/types';
-
 export class BookingService {
   static async getBookings(params?: GetBookingsRequest): Promise<PaginatedApiResponse<Booking>> {
     return apiClient.get<BookingsResponse>(API_ENDPOINTS.BOOKINGS.LIST, params)
@@ -26,7 +25,6 @@ export class BookingService {
         pagination: res.data?.pagination
       }));
   }
-
   static async getBookingById(id: string): Promise<ApiResponse<BookingWithDetails>> {
     const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.DETAIL, { id });
     return apiClient.get<BookingResponse>(endpoint)
@@ -44,7 +42,6 @@ export class BookingService {
         } : undefined
       }));
   }
-
   static async createBooking(bookingData: CreateBookingRequest): Promise<ApiResponse<Booking>> {
     return apiClient.post<BookingResponse>(API_ENDPOINTS.BOOKINGS.CREATE, bookingData)
       .then(res => ({
@@ -58,7 +55,6 @@ export class BookingService {
         } : undefined
       }));
   }
-
   static async updateBooking(id: string, bookingData: UpdateBookingRequest): Promise<ApiResponse<Booking>> {
     const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.UPDATE, { id });
     return apiClient.put<BookingResponse>(endpoint, bookingData)
@@ -73,22 +69,18 @@ export class BookingService {
         } : undefined
       }));
   }
-
   static async cancelBooking(id: string): Promise<ApiResponse<void>> {
     const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.CANCEL, { id });
     return apiClient.post<void>(endpoint);
   }
-
   static async confirmBooking(id: string): Promise<ApiResponse<void>> {
     const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.CONFIRM, { id });
     return apiClient.post<void>(endpoint);
   }
-
   static async deleteBooking(id: string): Promise<ApiResponse<void>> {
     const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.DELETE, { id });
     return apiClient.delete<void>(endpoint);
   }
-
   static async getUserBookings(userId: string, params?: GetBookingsRequest): Promise<PaginatedApiResponse<Booking>> {
     return apiClient.get<BookingsResponse>(API_ENDPOINTS.BOOKINGS.LIST, { 
       ...params, 
@@ -105,7 +97,6 @@ export class BookingService {
       pagination: res.data?.pagination
     }));
   }
-
   static async getTutorBookings(tutorId: string, params?: GetBookingsRequest): Promise<PaginatedApiResponse<Booking>> {
     return apiClient.get<BookingsResponse>(API_ENDPOINTS.BOOKINGS.LIST, { 
       ...params, 
@@ -122,7 +113,6 @@ export class BookingService {
       pagination: res.data?.pagination
     }));
   }
-
   static async getBookingsByStatus(status: string, params?: GetBookingsRequest): Promise<PaginatedApiResponse<Booking>> {
     return apiClient.get<BookingsResponse>(API_ENDPOINTS.BOOKINGS.LIST, { 
       ...params, 
@@ -139,7 +129,6 @@ export class BookingService {
       pagination: res.data?.pagination
     }));
   }
-
   static async getBookingsByDateRange(
     startDate: string, 
     endDate: string, 
@@ -161,7 +150,6 @@ export class BookingService {
       pagination: res.data?.pagination
     }));
   }
-
   static async getUpcomingBookings(params?: GetBookingsRequest): Promise<PaginatedApiResponse<Booking>> {
     const now = new Date().toISOString();
     return apiClient.get<BookingsResponse>(API_ENDPOINTS.BOOKINGS.LIST, { 
@@ -180,7 +168,6 @@ export class BookingService {
       pagination: res.data?.pagination
     }));
   }
-
   static async getPastBookings(params?: GetBookingsRequest): Promise<PaginatedApiResponse<Booking>> {
     const now = new Date().toISOString();
     return apiClient.get<BookingsResponse>(API_ENDPOINTS.BOOKINGS.LIST, { 
@@ -199,4 +186,4 @@ export class BookingService {
       pagination: res.data?.pagination
     }));
   }
-}
+}

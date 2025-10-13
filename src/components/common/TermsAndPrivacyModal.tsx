@@ -9,19 +9,15 @@ import {
 import { Button } from "../ui/basic/button";
 import { ScrollArea } from "../ui/layout/scroll-area";
 import { Shield, FileText, CheckCircle } from "lucide-react";
-
 interface TermsAndPrivacyModalProps {
   type: "terms" | "privacy";
   children: React.ReactNode;
 }
-
 export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-
   const isTerms = type === "terms";
   const title = isTerms ? "Điều khoản sử dụng" : "Chính sách bảo mật";
   const icon = isTerms ? <FileText className="h-5 w-5" /> : <Shield className="h-5 w-5" />;
-
   const termsContent = (
     <div className="space-y-8">
       <div className="text-center bg-gradient-to-r from-[#257180]/5 to-[#FD8B51]/5 p-6 rounded-xl border border-[#257180]/10">
@@ -32,7 +28,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
         <p className="text-gray-600 text-base">Nền tảng kết nối học viên và gia sư</p>
         {/* <p className="text-gray-500 text-sm mt-2">Cập nhật lần cuối: {new Date().toLocaleDateString('vi-VN')}</p> */}
       </div>
-
       <div className="space-y-6 text-gray-700 leading-relaxed">
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
@@ -44,7 +39,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
             Nếu bạn không đồng ý với bất kỳ phần nào của các điều khoản này, vui lòng không sử dụng dịch vụ của chúng tôi.
           </p>
         </section>
-
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
             <span className="w-6 h-6 bg-[#257180] text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
@@ -64,7 +58,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
             </ul>
           </div>
         </section>
-
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
             <span className="w-6 h-6 bg-[#257180] text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
@@ -84,7 +77,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
             </div>
           </div>
         </section>
-
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
             <span className="w-6 h-6 bg-[#257180] text-white rounded-full flex items-center justify-center text-sm font-bold">4</span>
@@ -95,7 +87,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
             Bạn không được sao chép, phân phối hoặc sử dụng bất kỳ nội dung nào mà không có sự đồng ý bằng văn bản.
           </p>
         </section>
-
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
             <span className="w-6 h-6 bg-[#257180] text-white rounded-full flex items-center justify-center text-sm font-bold">5</span>
@@ -105,7 +96,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
             Chúng tôi không chịu trách nhiệm cho bất kỳ thiệt hại trực tiếp, gián tiếp, ngẫu nhiên hoặc hậu quả nào phát sinh từ việc sử dụng dịch vụ của chúng tôi.
           </p>
         </section>
-
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
             <span className="w-6 h-6 bg-[#257180] text-white rounded-full flex items-center justify-center text-sm font-bold">6</span>
@@ -115,7 +105,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
             Chúng tôi có quyền thay đổi các điều khoản này bất cứ lúc nào. Việc tiếp tục sử dụng dịch vụ sau khi có thay đổi được coi là bạn đã chấp nhận các điều khoản mới.
           </p>
         </section>
-
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
             <span className="w-6 h-6 bg-[#257180] text-white rounded-full flex items-center justify-center text-sm font-bold">7</span>
@@ -133,7 +122,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
       </div>
     </div>
   );
-
   const privacyContent = (
     <div className="space-y-8">
       <div className="text-center bg-gradient-to-r from-[#257180]/5 to-[#FD8B51]/5 p-6 rounded-xl border border-[#257180]/10">
@@ -144,7 +132,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
         <p className="text-gray-600 text-base">Bảo vệ thông tin cá nhân của bạn</p>
         {/* <p className="text-gray-500 text-sm mt-2">Cập nhật lần cuối: {new Date().toLocaleDateString('vi-VN')}</p> */}
       </div>
-
       <div className="space-y-6 text-gray-700 leading-relaxed">
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
@@ -172,7 +159,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
             </div>
           </div>
         </section>
-
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
             <span className="w-6 h-6 bg-[#257180] text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
@@ -190,7 +176,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
             </ul>
           </div>
         </section>
-
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
             <span className="w-6 h-6 bg-[#257180] text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
@@ -210,7 +195,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
             </ul>
           </div>
         </section>
-
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
             <span className="w-6 h-6 bg-[#257180] text-white rounded-full flex items-center justify-center text-sm font-bold">4</span>
@@ -231,7 +215,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
             </ul>
           </div>
         </section>
-
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
             <span className="w-6 h-6 bg-[#257180] text-white rounded-full flex items-center justify-center text-sm font-bold">5</span>
@@ -249,7 +232,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
             </ul>
           </div>
         </section>
-
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
             <span className="w-6 h-6 bg-[#257180] text-white rounded-full flex items-center justify-center text-sm font-bold">6</span>
@@ -267,7 +249,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
             </ul>
           </div>
         </section>
-
         <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
             <span className="w-6 h-6 bg-[#257180] text-white rounded-full flex items-center justify-center text-sm font-bold">7</span>
@@ -286,7 +267,6 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
       </div>
     </div>
   );
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -319,4 +299,4 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
       </DialogContent>
     </Dialog>
   );
-}
+}

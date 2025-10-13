@@ -1,5 +1,4 @@
 "use client";
-
 import { Button } from "../ui/basic/button";
 import { Card } from "../ui/layout/card";
 import { Avatar } from "../ui/basic/avatar";
@@ -23,12 +22,10 @@ import {
   Award,
   ChevronRight
 } from "lucide-react";
-
 interface LandingPageProps {
   onNavigateToLogin: () => void;
   onNavigateToRegister: () => void;
 }
-
 export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
   return (
     <div className="min-h-screen">
@@ -41,17 +38,14 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
               <Sparkles className="h-4 w-4 text-[#FD8B51]" />
               <span className="text-sm font-medium text-white">Miễn phí 7 ngày đầu tiên</span>
               </div>
-              
             {/* Main Heading */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-8 leading-tight tracking-tight">
               Học tập thông minh<br />
               <span className="text-[#FD8B51]">Tương lai rộng mở</span>
               </h1>
-              
             <p className="text-lg lg:text-xl text-white/90 max-w-3xl mx-auto mb-12 leading-relaxed">
               Kết nối với 10,000+ gia sư chuyên nghiệp. Học 1-kèm-1 với AI cá nhân hóa, đạt mục tiêu nhanh hơn 3 lần.
               </p>
-
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
                 <Button
@@ -71,7 +65,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
                 Xem demo
                 </Button>
               </div>
-
             {/* Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
               <Card className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/20 transition-all">
@@ -94,7 +87,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
           </div>
         </div>
       </section>
-
       {/* Why Choose Us Section - #F2E5BF Background */}
       <section className="py-16 lg:py-24 bg-[#F2E5BF]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -110,7 +102,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
               Hàng nghìn gia sư chuyên nghiệp sẵn sàng dạy kèm 1-1 các môn học từ cấp 1 đến đại học
             </p>
           </div>
-
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Card 1 */}
             <Card className="p-6 bg-white border border-[#257180]/20 rounded-xl shadow-sm hover:shadow-md transition-all text-center">
@@ -120,7 +111,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
               <h3 className="text-lg font-semibold text-[#257180] mb-2">Gia sư chuyên nghiệp</h3>
               <p className="text-gray-600 text-sm">100% gia sư được kiểm định kỹ lưỡng và có kinh nghiệm</p>
             </Card>
-
             {/* Card 2 */}
             <Card className="p-6 bg-white border border-[#FD8B51]/30 rounded-xl shadow-sm hover:shadow-md transition-all text-center">
               <div className="w-16 h-16 bg-[#CB6040] rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -129,7 +119,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
               <h3 className="text-lg font-semibold text-[#257180] mb-2">Học 1-kèm-1</h3>
               <p className="text-gray-600 text-sm">Tập trung hoàn toàn vào nhu cầu và tiến độ của bạn</p>
             </Card>
-
             {/* Card 3 */}
             <Card className="p-6 bg-white border border-[#CB6040]/30 rounded-xl shadow-sm hover:shadow-md transition-all text-center">
               <div className="w-16 h-16 bg-[#257180] rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -138,7 +127,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
               <h3 className="text-lg font-semibold text-[#257180] mb-2">Linh hoạt thời gian</h3>
               <p className="text-gray-600 text-sm">Đặt lịch học theo thời gian rảnh của bạn</p>
             </Card>
-
             {/* Card 4 */}
             <Card className="p-6 bg-white border border-[#257180]/20 rounded-xl shadow-sm hover:shadow-md transition-all text-center">
               <div className="w-16 h-16 bg-[#FD8B51] rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -150,7 +138,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
           </div>
         </div>
       </section>
-
       {/* Services Section - White Background */}
       <section id="services" className="py-16 lg:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -166,7 +153,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
               Đội ngũ gia sư được tuyển chọn kỹ lưỡng, có kinh nghiệm và chuyên môn cao trong từng lĩnh vực
             </p>
           </div>
-
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Service 1 */}
             <Card className="p-8 bg-[#F2E5BF] border border-[#257180]/20 rounded-2xl shadow-sm hover:shadow-lg transition-all text-center">
@@ -192,7 +178,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
                 </div>
               </div>
             </Card>
-
             {/* Service 2 */}
             <Card className="p-8 bg-white border-2 border-[#FD8B51] rounded-2xl shadow-sm hover:shadow-lg transition-all text-center relative">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
@@ -222,7 +207,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
                 </div>
               </div>
             </Card>
-
             {/* Service 3 */}
             <Card className="p-8 bg-[#F2E5BF] border border-[#CB6040]/30 rounded-2xl shadow-sm hover:shadow-lg transition-all text-center">
               <div className="w-20 h-20 bg-[#257180] rounded-3xl flex items-center justify-center mx-auto mb-6">
@@ -250,7 +234,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
           </div>
         </div>
       </section>
-
       {/* Success Stories - #F2E5BF Background */}
       <section id="success-stories" className="py-16 lg:py-24 bg-[#F2E5BF]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -266,7 +249,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
               Hàng nghìn học viên đã đạt được mục tiêu và thay đổi cuộc đời nhờ EduMatch
             </p>
           </div>
-
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left - Video/Image */}
             <div className="relative">
@@ -284,7 +266,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
                 </div>
               </Card>
             </div>
-
             {/* Right - Testimonials */}
             <div className="space-y-6">
               {/* Testimonial 1 */}
@@ -316,7 +297,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
                   </div>
                 </div>
               </Card>
-
               {/* Testimonial 2 */}
               <Card className="p-6 bg-white border border-[#FD8B51]/30 rounded-xl shadow-sm">
                 <div className="flex items-start gap-4">
@@ -346,7 +326,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
                   </div>
                 </div>
               </Card>
-
               {/* Testimonial 3 */}
               <Card className="p-6 bg-white border border-[#CB6040]/30 rounded-xl shadow-sm">
                 <div className="flex items-start gap-4">
@@ -380,7 +359,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
           </div>
         </div>
       </section>
-
       {/* Process Section - White Background */}
       <section className="py-16 lg:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -396,7 +374,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
               Quy trình đơn giản giúp bạn tìm gia sư phù hợp và đặt lịch học ngay
             </p>
           </div>
-
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Step 1 */}
             <div className="text-center">
@@ -416,7 +393,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
                 Tìm kiếm gia sư theo môn học, cấp độ và thời gian phù hợp với bạn.
               </p>
             </div>
-            
             {/* Step 2 */}
             <div className="text-center">
               <div className="relative mb-8">
@@ -435,7 +411,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
                 Chọn thời gian phù hợp và đặt lịch học trực tuyến với gia sư đã chọn.
               </p>
             </div>
-            
             {/* Step 3 */}
             <div className="text-center">
               <div className="relative mb-8">
@@ -451,7 +426,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
               </p>
             </div>
           </div>
-
           {/* CTA */}
           <div className="text-center mt-12">
             <Button
@@ -465,20 +439,16 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
           </div>
         </div>
       </section>
-
       {/* CTA Section - #257180 Background */}
       <section className="py-20 lg:py-32 relative overflow-hidden bg-[#257180]">
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Zap className="h-16 w-16 mx-auto mb-8 text-[#FD8B51]" />
-          
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
             Sẵn sàng tìm gia sư<br />phù hợp nhất?
           </h2>
-          
           <p className="text-lg lg:text-xl text-white/90 mb-12 max-w-3xl mx-auto leading-relaxed">
             Tham gia cùng 10,000+ học viên đã tìm được gia sư lý tưởng. Bắt đầu học tập hiệu quả ngay hôm nay!
           </p>
-
           <div className="flex flex-col sm:flex-row gap-6 justify-center mb-12">
             <Button
               onClick={onNavigateToRegister}
@@ -489,7 +459,6 @@ export function LandingPage({ onNavigateToRegister }: LandingPageProps) {
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
                 </div>
-
           <div className="flex flex-wrap justify-center gap-8 text-white/90">
             <div className="flex items-center gap-3">
               <CheckCircle className="h-5 w-5 text-[#FD8B51]" />

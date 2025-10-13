@@ -1,20 +1,16 @@
 "use client";
-
 import React, { Component, ReactNode } from 'react';
 import { ErrorHandler, ErrorBoundaryProps, ErrorBoundaryState } from '@/lib/error-handler';
 import { Button } from '@/components/ui/basic/button';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-
 interface Props extends ErrorBoundaryProps {
   children: ReactNode;
 }
-
 export class ErrorBoundary extends Component<Props, ErrorBoundaryState> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
   }
-
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     const appError = ErrorHandler.handleApiError(error);
     return {
@@ -22,20 +18,16 @@ export class ErrorBoundary extends Component<Props, ErrorBoundaryState> {
       error: appError,
     };
   }
-
   componentDidCatch(error: Error) {
     const appError = ErrorHandler.handleApiError(error);
     ErrorHandler.logError(error, 'ErrorBoundary');
-    
     if (this.props.onError) {
       this.props.onError(appError);
     }
   }
-
   resetError = () => {
     this.setState({ hasError: false });
   };
-
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
@@ -47,23 +39,18 @@ export class ErrorBoundary extends Component<Props, ErrorBoundaryState> {
           />
         );
       }
-
       return <DefaultErrorFallback error={this.state.error!} resetError={this.resetError} />;
     }
-
     return this.props.children;
   }
 }
-
 interface ErrorFallbackProps {
   error: any;
   resetError: () => void;
 }
-
 function DefaultErrorFallback({ error, resetError }: ErrorFallbackProps) {
   const message = ErrorHandler.getUserFriendlyMessage(error);
   const severity = ErrorHandler.getErrorSeverity(error);
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
@@ -77,15 +64,12 @@ function DefaultErrorFallback({ error, resetError }: ErrorFallbackProps) {
             }`} 
           />
         </div>
-        
         <h1 className="text-xl font-semibold text-gray-900 mb-2">
           Đã xảy ra lỗi
         </h1>
-        
         <p className="text-gray-600 mb-6">
           {message}
         </p>
-        
         <div className="space-y-3">
           <Button
             onClick={resetError}
@@ -95,7 +79,6 @@ function DefaultErrorFallback({ error, resetError }: ErrorFallbackProps) {
             <RefreshCw className="h-4 w-4 mr-2" />
             Thử lại
           </Button>
-          
           <Button
             onClick={() => window.location.reload()}
             variant="outline"
@@ -104,7 +87,6 @@ function DefaultErrorFallback({ error, resetError }: ErrorFallbackProps) {
             Tải lại trang
           </Button>
         </div>
-        
         {process.env.NODE_ENV === 'development' && (
           <details className="mt-4 text-left">
             <summary className="cursor-pointer text-sm text-gray-500">
@@ -119,20 +101,17 @@ function DefaultErrorFallback({ error, resetError }: ErrorFallbackProps) {
     </div>
   );
 }
-
 export const useErrorHandler = () => {
   const handleError = (error: any, context?: string) => {
     const appError = ErrorHandler.handleApiError(error);
     ErrorHandler.logError(error, context);
     return appError;
   };
-
   const getUserFriendlyMessage = (error: any) => {
     return ErrorHandler.getUserFriendlyMessage(error);
   };
-
   return {
     handleError,
     getUserFriendlyMessage,
   };
-};
+};

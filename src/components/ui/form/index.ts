@@ -12,4 +12,4 @@ export * from './slider';
 export * from './switch';
 export * from './textarea';
 export * from './toggle';
-export * from './toggle-group';
+export * from './toggle-group';

@@ -1,6 +1,5 @@
 import * as React from "react";
 import { cn } from "../utils";
-
 interface ResponsiveGridProps {
   children: React.ReactNode;
   className?: string;
@@ -13,13 +12,11 @@ interface ResponsiveGridProps {
   };
   gap?: "sm" | "md" | "lg";
 }
-
 const gapClasses = {
   sm: "gap-2",
   md: "gap-4", 
   lg: "gap-6",
 };
-
 const colClasses = {
   1: "grid-cols-1",
   2: "grid-cols-2",
@@ -28,7 +25,6 @@ const colClasses = {
   5: "grid-cols-5",
   6: "grid-cols-6",
 };
-
 export function ResponsiveGrid({ 
   children, 
   className, 
@@ -44,14 +40,12 @@ export function ResponsiveGrid({
     cols.lg && `lg:${colClasses[cols.lg as keyof typeof colClasses]}`,
     cols.xl && `xl:${colClasses[cols.xl as keyof typeof colClasses]}`,
   ].filter(Boolean);
-
   return (
     <div className={cn(gridClasses, className)}>
       {children}
     </div>
   );
 }
-
 export function Container({ 
   children, 
   className,
@@ -69,14 +63,12 @@ export function Container({
     "2xl": "max-w-2xl",
     "7xl": "max-w-7xl",
   };
-
   return (
     <div className={cn("mx-auto px-4 sm:px-6 lg:px-8", sizeClasses[size], className)}>
       {children}
     </div>
   );
 }
-
 export function Stack({ 
   children, 
   className,
@@ -91,12 +83,9 @@ export function Stack({
     md: "space-y-4",
     lg: "space-y-6",
   };
-
   return (
     <div className={cn("flex flex-col", spacingClasses[spacing], className)}>
       {children}
     </div>
   );
-}
-
-
+}

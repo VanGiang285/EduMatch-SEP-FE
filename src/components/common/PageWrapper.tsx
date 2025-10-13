@@ -1,17 +1,13 @@
 "use client";
-
 import { ReactNode } from "react";
 import { Navbar } from "./Navbar";
 import { useRouter } from "next/navigation";
-
 interface PageWrapperProps {
   children: ReactNode;
   currentPage: string;
 }
-
 export function PageWrapper({ children, currentPage }: PageWrapperProps) {
   const router = useRouter();
-
   return (
     <>
       <Navbar
@@ -28,4 +24,4 @@ export function PageWrapper({ children, currentPage }: PageWrapperProps) {
       {children}
     </>
   );
-}
+}

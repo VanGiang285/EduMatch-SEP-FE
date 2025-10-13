@@ -1,9 +1,7 @@
 "use client";
-
 import { Button } from "../ui/basic/button";
 import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart } from "lucide-react";
 import { useState } from "react";
-
 interface NavbarProps {
   onNavigateToLogin: () => void;
   onNavigateToRegister: () => void;
@@ -15,10 +13,8 @@ interface NavbarProps {
   onNavigateToFavorites?: () => void;
   currentPage: string;
 }
-
 export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, onNavigateToMessages, onNavigateToNotifications, onNavigateToFavorites, currentPage }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#257180] border-b border-white/20 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -32,7 +28,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
             </div>
             <span className="text-xl font-bold text-white tracking-tight">EduMatch</span>
           </button>
-
           <div className="hidden lg:flex items-center space-x-1">
             <button 
               onClick={onNavigateToFindTutor}
@@ -56,7 +51,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               Trở thành gia sư
             </button>
           </div>
-
           <div className="hidden lg:flex items-center space-x-2">
             <div className="flex items-center space-x-1">
               <button
@@ -66,7 +60,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               >
                 <MessageCircle className="w-5 h-5" />
               </button>
-              
               <button
                 onClick={onNavigateToNotifications}
                 className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
@@ -74,7 +67,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               >
                 <Bell className="w-5 h-5" />
               </button>
-              
               <button
                 onClick={onNavigateToFavorites}
                 className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
@@ -83,7 +75,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                 <Heart className="w-5 h-5" />
               </button>
             </div>
-
             <div className="flex items-center space-x-3 ml-4">
               {currentPage !== 'login' && (
                 <Button
@@ -104,7 +95,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               )}
             </div>
           </div>
-
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="lg:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
@@ -117,7 +107,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
           </button>
         </div>
       </div>
-
       {mobileMenuOpen && (
         <div className="lg:hidden bg-[#257180] border-t border-white/20">
           <div className="px-4 py-4 space-y-2">
@@ -142,7 +131,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               <GraduationCap className="w-4 h-4" />
               Trở thành gia sư
             </button>
-            
             <div className="pt-4 space-y-2 border-t border-white/20">
               <div className="flex items-center justify-center space-x-4">
                 <button
@@ -152,7 +140,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                   <MessageCircle className="w-4 h-4" />
                   <span className="text-sm">Tin nhắn</span>
                 </button>
-                
                 <button
                   onClick={onNavigateToNotifications}
                   className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
@@ -160,7 +147,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                   <Bell className="w-4 h-4" />
                   <span className="text-sm">Thông báo</span>
                 </button>
-                
                 <button
                   onClick={onNavigateToFavorites}
                   className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
@@ -170,7 +156,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                 </button>
               </div>
             </div>
-            
             <div className="pt-4 space-y-2 border-t border-white/20">
               {currentPage !== 'login' && (
                 <Button

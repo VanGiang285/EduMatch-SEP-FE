@@ -5,4 +5,4 @@ export const auth = {
   },
   register: async () => {
   }
-};
+};

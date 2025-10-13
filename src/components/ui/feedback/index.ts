@@ -10,4 +10,4 @@ export * from './sheet';
 export * from './skeleton';
 export * from './sonner';
 export * from './status-indicator';
-export * from './tooltip';
+export * from './tooltip';

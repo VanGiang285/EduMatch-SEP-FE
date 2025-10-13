@@ -4,26 +4,21 @@ import { Label } from "../ui/form/label";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { Mail, ArrowLeft, CheckCircle, Clock, Shield, AlertCircle } from "lucide-react";
 import { useState } from "react";
-
 interface ForgotPasswordPageProps {
   onBackToLogin: () => void;
 }
-
 export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
     setTimeout(() => {
       setIsLoading(false);
       setIsSubmitted(true);
     }, 2000);
   };
-
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-[#F2E5BF] flex items-center justify-center p-2 sm:p-4 lg:p-8 pt-20">
@@ -35,7 +30,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
               className="absolute inset-0 w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-            
             <div className="relative z-10 p-12 pb-16">
               <h2 className="text-4xl font-bold text-white mb-6 leading-tight">
                 EMAIL ĐÃ ĐƯỢC GỬI!<br />
@@ -46,7 +40,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
               </p>
             </div>
           </div>
-
           <div className="flex flex-col justify-center py-6 sm:py-8 lg:py-12 px-4 sm:px-6 lg:px-16 min-h-screen lg:min-h-0">
             <div className="mx-auto w-full max-w-md">
               <div className="text-center mb-6 sm:mb-8">
@@ -60,7 +53,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                   Chúng tôi đã gửi liên kết đặt lại mật khẩu đến <span className="font-semibold text-[#257180]">{email}</span>
                 </p>
               </div>
-
               <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-start gap-3">
@@ -76,7 +68,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                     </div>
                   </div>
                 </div>
-
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
@@ -89,7 +80,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                   </div>
                 </div>
               </div>
-
               <div className="space-y-3">
                 <Button
                   onClick={() => setIsSubmitted(false)}
@@ -112,7 +102,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
       </div>
     );
   }
-
   return (
     <div className="min-h-screen bg-[#F2E5BF] flex items-center justify-center p-2 sm:p-4 lg:p-8 pt-20">
       <div className="w-full max-w-6xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden lg:grid lg:grid-cols-2">
@@ -123,7 +112,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          
           <div className="relative z-10 p-12 pb-16">
             <h2 className="text-4xl font-bold text-white mb-6 leading-tight">
               QUÊN MẬT KHẨU?<br />
@@ -134,7 +122,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
             </p>
           </div>
         </div>
-
         <div className="flex flex-col justify-center py-6 sm:py-8 lg:py-12 px-4 sm:px-6 lg:px-16 min-h-screen lg:min-h-0">
           <div className="mx-auto w-full max-w-md">
             <div className="mb-6 sm:mb-8">
@@ -146,7 +133,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                 Nhập email của bạn để nhận liên kết đặt lại mật khẩu. Chúng tôi sẽ gửi hướng dẫn chi tiết đến hộp thư của bạn.
               </p>
             </div>
-
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6">
               <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="email" className="text-black text-sm sm:text-base">Email</Label>
@@ -163,7 +149,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                   />
                 </div>
               </div>
-
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-start gap-3">
                   <Clock className="h-5 w-5 text-blue-600 mt-0.5" />
@@ -175,7 +160,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                   </div>
                 </div>
               </div>
-
               <Button
                 type="submit"
                 disabled={isLoading}
@@ -190,7 +174,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                   "Gửi liên kết đặt lại"
                 )}
               </Button>
-
               <div className="text-center">
                 <button
                   type="button"
@@ -202,7 +185,6 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                 </button>
               </div>
             </form>
-
             <div className="mt-6 sm:mt-8 p-4 bg-gray-50 rounded-lg">
               <div className="flex items-start gap-3">
                 <Shield className="h-5 w-5 text-gray-600 mt-0.5" />

@@ -1,10 +1,8 @@
 "use client";
-
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/basic/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/feedback/dialog';
 import { AlertTriangle, Info, CheckCircle, XCircle } from 'lucide-react';
-
 export interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -18,7 +16,6 @@ export interface ConfirmDialogProps {
   loading?: boolean;
   children?: ReactNode;
 }
-
 export function ConfirmDialog({
   open,
   onOpenChange,
@@ -35,7 +32,6 @@ export function ConfirmDialog({
   const handleConfirm = () => {
     onConfirm();
   };
-
   const handleCancel = () => {
     if (onCancel) {
       onCancel();
@@ -43,7 +39,6 @@ export function ConfirmDialog({
       onOpenChange(false);
     }
   };
-
   const getIcon = () => {
     switch (type) {
       case 'info':
@@ -58,7 +53,6 @@ export function ConfirmDialog({
         return <AlertTriangle className="h-6 w-6 text-yellow-500" />;
     }
   };
-
   const getConfirmButtonVariant = () => {
     switch (type) {
       case 'error':
@@ -69,7 +63,6 @@ export function ConfirmDialog({
         return 'default' as const;
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -86,13 +79,11 @@ export function ConfirmDialog({
             </DialogDescription>
           )}
         </DialogHeader>
-
         {children && (
           <div className="py-4">
             {children}
           </div>
         )}
-
         <DialogFooter className="gap-2">
           <Button
             variant="outline"
@@ -119,4 +110,4 @@ export function ConfirmDialog({
       </DialogContent>
     </Dialog>
   );
-}
+}

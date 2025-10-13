@@ -1,9 +1,7 @@
 "use client";
-
 import { useEffect, useState, useCallback } from 'react';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 export interface ToastProps {
   id: string;
   type: 'success' | 'error' | 'warning' | 'info';
@@ -12,7 +10,6 @@ export interface ToastProps {
   duration?: number;
   onClose: (id: string) => void;
 }
-
 export function Toast({ 
   id, 
   type, 
@@ -23,29 +20,24 @@ export function Toast({
 }: ToastProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
-
   const handleClose = useCallback(() => {
     setIsLeaving(true);
     setTimeout(() => {
       onClose(id);
     }, 300);
   }, [onClose, id]);
-
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 100);
     return () => clearTimeout(timer);
   }, []);
-
   useEffect(() => {
     if (duration > 0) {
       const timer = setTimeout(() => {
         handleClose();
       }, duration);
-
       return () => clearTimeout(timer);
     }
   }, [duration, handleClose]);
-
   const getIcon = () => {
     switch (type) {
       case 'success':
@@ -60,7 +52,6 @@ export function Toast({
         return <Info className="h-5 w-5 text-gray-500" />;
     }
   };
-
   const getStyles = () => {
     switch (type) {
       case 'success':
@@ -75,7 +66,6 @@ export function Toast({
         return 'bg-gray-50 border-gray-200 text-gray-800';
     }
   };
-
   return (
     <div
       className={cn(
@@ -113,12 +103,10 @@ export function Toast({
     </div>
   );
 }
-
 interface ToastContainerProps {
   toasts: ToastProps[];
   onClose: (id: string) => void;
 }
-
 export function ToastContainer({ toasts, onClose }: ToastContainerProps) {
   return (
     <div className="fixed top-0 right-0 z-50 p-4 space-y-2">
@@ -131,4 +119,4 @@ export function ToastContainer({ toasts, onClose }: ToastContainerProps) {
       ))}
     </div>
   );
-}
+}
