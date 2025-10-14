@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "../ui/basic/button";
-import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User } from "lucide-react";
+import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
@@ -13,9 +13,11 @@ interface NavbarProps {
   onNavigateToMessages?: () => void;
   onNavigateToNotifications?: () => void;
   onNavigateToFavorites?: () => void;
+  onNavigateToWallet?: () => void;
   currentPage: string;
+  walletBalance?: number;
 }
-export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, onNavigateToMessages, onNavigateToNotifications, onNavigateToFavorites, currentPage }: NavbarProps) {
+export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, onNavigateToMessages, onNavigateToNotifications, onNavigateToFavorites, onNavigateToWallet, currentPage, walletBalance = 0 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
@@ -79,30 +81,42 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               Trở thành gia sư
             </button>
           </div>
-          <div className="hidden lg:flex items-center space-x-2">
-            <div className="flex items-center space-x-1">
-              <button
-                onClick={onNavigateToMessages}
-                className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
-                title="Tin nhắn"
-              >
-                <MessageCircle className="w-5 h-5" />
-              </button>
-              <button
-                onClick={onNavigateToNotifications}
-                className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
-                title="Thông báo"
-              >
-                <Bell className="w-5 h-5" />
-              </button>
-              <button
-                onClick={onNavigateToFavorites}
-                className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
-                title="Gia sư đã thích"
-              >
-                <Heart className="w-5 h-5" />
-              </button>
-            </div>
+           <div className="hidden lg:flex items-center space-x-2">
+             <div className="flex items-center space-x-1">
+               <button
+                 onClick={onNavigateToMessages}
+                 className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                 title="Tin nhắn"
+               >
+                 <MessageCircle className="w-5 h-5" />
+               </button>
+               <button
+                 onClick={onNavigateToNotifications}
+                 className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                 title="Thông báo"
+               >
+                 <Bell className="w-5 h-5" />
+               </button>
+               <button
+                 onClick={onNavigateToFavorites}
+                 className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                 title="Gia sư đã thích"
+               >
+                 <Heart className="w-5 h-5" />
+               </button>
+               {isAuthenticated && (
+                 <button
+                   onClick={onNavigateToWallet}
+                   className="flex items-center space-x-2 px-3 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                   title="Ví tiền"
+                 >
+                   <Wallet className="w-5 h-5" />
+                   <span className="text-sm font-medium">
+                     {walletBalance.toLocaleString('vi-VN')}đ
+                   </span>
+                 </button>
+               )}
+             </div>
             <div className="flex items-center space-x-3 ml-4">
               {isAuthenticated && user ? (
                 <div className="relative" ref={userMenuRef}>
@@ -203,31 +217,42 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               <GraduationCap className="w-4 h-4" />
               Trở thành gia sư
             </button>
-            <div className="pt-4 space-y-2 border-t border-white/20">
-              <div className="flex items-center justify-center space-x-4">
-                <button
-                  onClick={onNavigateToMessages}
-                  className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span className="text-sm">Tin nhắn</span>
-                </button>
-                <button
-                  onClick={onNavigateToNotifications}
-                  className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
-                >
-                  <Bell className="w-4 h-4" />
-                  <span className="text-sm">Thông báo</span>
-                </button>
-                <button
-                  onClick={onNavigateToFavorites}
-                  className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
-                >
-                  <Heart className="w-4 h-4" />
-                  <span className="text-sm">Yêu thích</span>
-                </button>
-              </div>
-            </div>
+             <div className="pt-4 space-y-2 border-t border-white/20">
+               <div className="flex items-center justify-center space-x-4">
+                 <button
+                   onClick={onNavigateToMessages}
+                   className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                 >
+                   <MessageCircle className="w-4 h-4" />
+                   <span className="text-sm">Tin nhắn</span>
+                 </button>
+                 <button
+                   onClick={onNavigateToNotifications}
+                   className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                 >
+                   <Bell className="w-4 h-4" />
+                   <span className="text-sm">Thông báo</span>
+                 </button>
+                 <button
+                   onClick={onNavigateToFavorites}
+                   className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                 >
+                   <Heart className="w-4 h-4" />
+                   <span className="text-sm">Yêu thích</span>
+                 </button>
+               </div>
+               {isAuthenticated && (
+                 <div className="flex justify-center">
+                   <button
+                     onClick={onNavigateToWallet}
+                     className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                   >
+                     <Wallet className="w-4 h-4" />
+                     <span className="text-sm">Ví: {walletBalance.toLocaleString('vi-VN')}đ</span>
+                   </button>
+                 </div>
+               )}
+             </div>
             <div className="pt-4 space-y-2 border-t border-white/20">
               {isAuthenticated && user ? (
                 <div className="space-y-3">
