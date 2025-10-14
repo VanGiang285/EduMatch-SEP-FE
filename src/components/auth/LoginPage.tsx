@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { AuthService } from "@/services/authService";
 interface LoginPageProps {
   onSwitchToRegister: () => void;
   onForgotPassword?: () => void;
@@ -53,20 +54,36 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
       toast.success("Đăng nhập thành công!");
       router.push("/");
     } catch (error: any) {
-      // Xử lý các loại lỗi từ backend
       let errorMessage = "Đăng nhập thất bại";
       
-      if (error.message) {
-        if (error.message.includes("Invalid email") || error.message.includes("Invalid credentials")) {
+      // Xử lý error message từ nhiều nguồn khác nhau
+      const message = error?.message || error?.error || '';
+      
+      if (message) {
+        // Check các trường hợp lỗi cụ thể
+        if (message.includes("Invalid email") || 
+            message.includes("Invalid credentials") || 
+            message.includes("invalid") ||
+            message.includes("wrong password") ||
+            message.toLowerCase().includes("incorrect")) {
           errorMessage = "Email hoặc mật khẩu không chính xác";
-        } else if (error.message.includes("Email not verified")) {
-          errorMessage = "Vui lòng xác thực email trước khi đăng nhập";
-        } else if (error.message.includes("Account is deactivated")) {
+        } else if (message.includes("Email not verified") || message.includes("not verified")) {
+          try {
+            await AuthService.resendVerification(trimmedEmail);
+            errorMessage = "Vui lòng xác thực email trước khi đăng nhập. Email xác thực đã được gửi lại";
+            toast.info("Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư của bạn");
+          } catch (resendError) {
+            errorMessage = "Vui lòng xác thực email trước khi đăng nhập";
+          }
+        } else if (message.includes("Account is deactivated") || message.includes("deactivated")) {
           errorMessage = "Tài khoản đã bị vô hiệu hóa";
-        } else if (error.message.includes("Email is logged in with google")) {
+        } else if (message.includes("Email is logged in with google") || message.includes("google")) {
           errorMessage = "Email này đã được đăng ký bằng Google. Vui lòng đăng nhập bằng Google";
+        } else if (message === "An error occurred") {
+          // Nếu là generic error, cho thông báo mặc định
+          errorMessage = "Email hoặc mật khẩu không chính xác";
         } else {
-          errorMessage = error.message;
+          errorMessage = message;
         }
       }
       
