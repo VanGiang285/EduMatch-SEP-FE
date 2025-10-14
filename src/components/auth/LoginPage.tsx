@@ -19,21 +19,58 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const { login } = useAuth();
   const router = useRouter();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error("Vui lòng nhập đầy đủ thông tin");
+    setError("");
+    
+    // Check null, undefined và empty string
+    if (!email || !password || email === '' || password === '') {
+      setError("Vui lòng nhập đầy đủ email và mật khẩu");
       return;
     }
+    
+    // Check khoảng trắng bên trong (trước khi trim)
+    if (email.includes(' ') || password.includes(' ')) {
+      setError("Email và mật khẩu không được chứa khoảng trắng");
+      return;
+    }
+    
+    // Trim và check empty sau khi trim
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+    
+    if (trimmedEmail.length === 0 || trimmedPassword.length === 0) {
+      setError("Email và mật khẩu không được để trống");
+      return;
+    }
+    
     try {
       setIsLoading(true);
-      await login(email, password, rememberMe);
+      await login(trimmedEmail, trimmedPassword, rememberMe);
       toast.success("Đăng nhập thành công!");
       router.push("/");
     } catch (error: any) {
-      toast.error(error.message || "Đăng nhập thất bại");
+      // Xử lý các loại lỗi từ backend
+      let errorMessage = "Đăng nhập thất bại";
+      
+      if (error.message) {
+        if (error.message.includes("Invalid email") || error.message.includes("Invalid credentials")) {
+          errorMessage = "Email hoặc mật khẩu không chính xác";
+        } else if (error.message.includes("Email not verified")) {
+          errorMessage = "Vui lòng xác thực email trước khi đăng nhập";
+        } else if (error.message.includes("Account is deactivated")) {
+          errorMessage = "Tài khoản đã bị vô hiệu hóa";
+        } else if (error.message.includes("Email is logged in with google")) {
+          errorMessage = "Email này đã được đăng ký bằng Google. Vui lòng đăng nhập bằng Google";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +109,7 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
                 Sẵn sàng bước vào hành trình học tập tiếp theo? Đăng nhập ngay và để gia sư đưa bạn đến đích.
               </p>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6" noValidate>
               {/* Email Input */}
               <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="email" className="text-black text-sm sm:text-base">Email</Label>
@@ -83,7 +120,6 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Nhập email của bạn"
                   className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
-                  required
                 />
               </div>
               {/* Password Input */}
@@ -97,16 +133,19 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Nhập mật khẩu"
                     className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
-                    required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-2.5 sm:top-3 lg:top-3 text-gray-400 hover:text-gray-600"
+                    tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
                   </button>
                 </div>
+                {error && (
+                  <p className="text-sm text-red-600">{error}</p>
+                )}
               </div>
               {/* New user link */}
               <div className="text-left">

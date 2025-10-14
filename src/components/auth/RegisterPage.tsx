@@ -21,34 +21,94 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [passwordMatchError, setPasswordMatchError] = useState("");
   const { register } = useAuth();
   // const router = useRouter(); // Removed unused variable
+  
+  // Check password match real-time
+  const checkPasswordMatch = (pwd: string, confirmPwd: string) => {
+    if (confirmPwd.length > 0 && pwd !== confirmPwd) {
+      setPasswordMatchError("Mật khẩu xác nhận không khớp");
+    } else {
+      setPasswordMatchError("");
+    }
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || !confirmPassword) {
-      toast.error("Vui lòng nhập đầy đủ thông tin");
+    setError("");
+    setPasswordMatchError("");
+    
+    // Check null, undefined và empty string
+    if (!email || !password || !confirmPassword || email === '' || password === '' || confirmPassword === '') {
+      setError("Vui lòng nhập đầy đủ tất cả thông tin");
       return;
     }
-    if (password !== confirmPassword) {
-      toast.error("Mật khẩu xác nhận không khớp");
+    
+    // Check khoảng trắng bên trong (trước khi trim)
+    if (email.includes(' ') || password.includes(' ') || confirmPassword.includes(' ')) {
+      setError("Email và mật khẩu không được chứa khoảng trắng");
       return;
     }
-    if (password.length < 6) {
-      toast.error("Mật khẩu phải có ít nhất 6 ký tự");
+    
+    // Trim và check empty sau khi trim
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+    const trimmedConfirmPassword = confirmPassword.trim();
+    
+    if (trimmedEmail.length === 0 || trimmedPassword.length === 0 || trimmedConfirmPassword.length === 0) {
+      setError("Tất cả các trường không được để trống");
       return;
     }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError("Vui lòng nhập địa chỉ email hợp lệ");
+      return;
+    }
+    
+    // Check password length
+    if (trimmedPassword.length < 6) {
+      setError("Mật khẩu phải có ít nhất 6 ký tự");
+      return;
+    }
+    
+    // Check password match
+    if (trimmedPassword !== trimmedConfirmPassword) {
+      setError("Mật khẩu xác nhận không khớp với mật khẩu");
+      return;
+    }
+    
     if (!agreeTerms) {
-      toast.error("Vui lòng đồng ý với điều khoản sử dụng");
+      setError("Vui lòng đồng ý với điều khoản sử dụng và chính sách bảo mật");
       return;
     }
+    
     try {
       setIsLoading(true);
-      await register(email, password);
+      await register(trimmedEmail, trimmedPassword);
       toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
       // Redirect to email verification page
-      window.location.href = `/login?email=${encodeURIComponent(email)}`;
+      window.location.href = `/login?email=${encodeURIComponent(trimmedEmail)}`;
     } catch (error: any) {
-      toast.error(error.message || "Đăng ký thất bại");
+      // Xử lý các loại lỗi từ backend
+      let errorMessage = "Đăng ký thất bại";
+      
+      if (error.message) {
+        if (error.message.includes("Email already exists") || error.message.includes("already registered")) {
+          errorMessage = "Email này đã được sử dụng. Vui lòng chọn email khác hoặc đăng nhập";
+        } else if (error.message.includes("Invalid email")) {
+          errorMessage = "Địa chỉ email không hợp lệ";
+        } else if (error.message.includes("Password too weak")) {
+          errorMessage = "Mật khẩu quá yếu. Vui lòng chọn mật khẩu mạnh hơn";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -87,7 +147,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                 Gia nhập cộng đồng học viên và trải nghiệm phương pháp học tập hiệu quả.
               </p>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6" noValidate>
               {/* Email Input */}
               <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="email" className="text-black text-sm sm:text-base">Email</Label>
@@ -98,7 +158,6 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Nhập email của bạn"
                   className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
-                  required
                 />
               </div>
               {/* Password Input */}
@@ -109,16 +168,18 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      checkPasswordMatch(e.target.value, confirmPassword);
+                    }}
                     placeholder="Tạo mật khẩu mạnh (ít nhất 6 ký tự)"
                     className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
-                    required
-                    minLength={6}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-2.5 sm:top-3 lg:top-3 text-gray-400 hover:text-gray-600"
+                    tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
                   </button>
@@ -132,19 +193,25 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      checkPasswordMatch(password, e.target.value);
+                    }}
                     placeholder="Nhập lại mật khẩu"
                     className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
-                    required
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-2.5 sm:top-3 lg:top-3 text-gray-400 hover:text-gray-600"
+                    tabIndex={-1}
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
                   </button>
                 </div>
+                {(error || passwordMatchError) && (
+                  <p className="text-sm text-red-600">{error || passwordMatchError}</p>
+                )}
               </div>
               {/* Already have account link */}
               <div className="text-left">
