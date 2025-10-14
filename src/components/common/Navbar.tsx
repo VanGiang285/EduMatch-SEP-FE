@@ -1,7 +1,9 @@
 "use client";
 import { Button } from "../ui/basic/button";
-import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart } from "lucide-react";
-import { useState } from "react";
+import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import Image from "next/image";
 interface NavbarProps {
   onNavigateToLogin: () => void;
   onNavigateToRegister: () => void;
@@ -15,6 +17,32 @@ interface NavbarProps {
 }
 export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, onNavigateToMessages, onNavigateToNotifications, onNavigateToFavorites, currentPage }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setUserMenuOpen(false);
+      onNavigateToLogin();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#257180] border-b border-white/20 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -76,22 +104,66 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               </button>
             </div>
             <div className="flex items-center space-x-3 ml-4">
-              {currentPage !== 'login' && (
-                <Button
-                  variant="ghost"
-                  onClick={onNavigateToLogin}
-                  className="text-white hover:text-[#FD8B51] hover:bg-white/10 font-medium px-4"
-                >
-                  Đăng nhập
-                </Button>
-              )}
-              {currentPage !== 'register' && (
-                <Button
-                  onClick={onNavigateToRegister}
-                  className="bg-[#FD8B51] hover:bg-[#CB6040] text-white px-4 py-2 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all"
-                >
-                  Đăng ký ngay
-                </Button>
+              {isAuthenticated && user ? (
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/10 transition-all"
+                  >
+                    {user.avatar ? (
+                      <Image
+                        src={user.avatar}
+                        alt={user.name}
+                        width={32}
+                        height={32}
+                        className="rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 bg-[#FD8B51] rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                    <span className="text-white font-medium text-sm max-w-32 truncate">
+                      {user.name}
+                    </span>
+                  </button>
+                  
+                  {userMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-60 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                      </div>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-lg mx-1 my-1"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Đăng xuất</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {currentPage !== 'login' && (
+                    <Button
+                      variant="ghost"
+                      onClick={onNavigateToLogin}
+                      className="text-white hover:text-[#FD8B51] hover:bg-white/10 font-medium px-4"
+                    >
+                      Đăng nhập
+                    </Button>
+                  )}
+                  {currentPage !== 'register' && (
+                    <Button
+                      onClick={onNavigateToRegister}
+                      className="bg-[#FD8B51] hover:bg-[#CB6040] text-white px-4 py-2 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all"
+                    >
+                      Đăng ký ngay
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -157,22 +229,56 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               </div>
             </div>
             <div className="pt-4 space-y-2 border-t border-white/20">
-              {currentPage !== 'login' && (
-                <Button
-                  variant="outline"
-                  onClick={onNavigateToLogin}
-                  className="w-full border border-white/30 text-white hover:bg-white/10 font-medium"
-                >
-                  Đăng nhập
-                </Button>
-              )}
-              {currentPage !== 'register' && (
-                <Button
-                  onClick={onNavigateToRegister}
-                  className="w-full bg-[#FD8B51] hover:bg-[#CB6040] text-white font-semibold"
-                >
-                  Đăng ký ngay
-                </Button>
+              {isAuthenticated && user ? (
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3 px-4 py-3 bg-white/10 rounded-lg border border-white/20">
+                    {user.avatar ? (
+                      <Image
+                        src={user.avatar}
+                        alt={user.name}
+                        width={40}
+                        height={40}
+                        className="rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-[#FD8B51] rounded-full flex items-center justify-center">
+                        <User className="w-5 h-5 text-white" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{user.name}</p>
+                      <p className="text-xs text-white/70 truncate">{user.email}</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleLogout}
+                    variant="outline"
+                    className="w-full border border-white/30 text-white hover:bg-red-500/20 hover:text-red-300 hover:border-red-400/50 font-medium transition-all duration-200"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Đăng xuất
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {currentPage !== 'login' && (
+                    <Button
+                      variant="outline"
+                      onClick={onNavigateToLogin}
+                      className="w-full border border-white/30 text-white hover:bg-white/10 font-medium"
+                    >
+                      Đăng nhập
+                    </Button>
+                  )}
+                  {currentPage !== 'register' && (
+                    <Button
+                      onClick={onNavigateToRegister}
+                      className="w-full bg-[#FD8B51] hover:bg-[#CB6040] text-white font-semibold"
+                    >
+                      Đăng ký ngay
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>

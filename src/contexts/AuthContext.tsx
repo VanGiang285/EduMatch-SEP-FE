@@ -32,13 +32,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           try {
             const response = await AuthService.getCurrentUser();
             if (response.success && response.data) {
-              // Convert backend user data to frontend User type
               const userData: User = {
-                id: response.data.email, // Use email as ID since backend uses email as primary key
+                id: response.data.email,
                 email: response.data.email,
                 name: response.data.name || response.data.email,
                 role: response.data.roleId === '1' ? 'student' : response.data.roleId === '2' ? 'tutor' : 'admin',
-                avatar: undefined,
+                avatar: response.data.avatarUrl || undefined,
                 createdAt: new Date(),
                 updatedAt: new Date(),
               };
@@ -66,14 +65,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await AuthService.login({ email, password, rememberMe });
       if (response.success && response.data) {
         const { accessToken } = response.data;
-        // Store access token first - we'll update with user data later
         localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken);
-        // Create a temporary user object for now
         const tempUser: User = {
-          id: email, // Use email as ID temporarily
+          id: email,
           email: email,
           name: email,
-          role: 'student', // Default role
+          role: 'student',
           avatar: undefined,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -83,7 +80,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (rememberMe) {
           localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, 'true');
         }
-        // Try to get user data in background (don't block login)
         setTimeout(async () => {
           try {
             const userResponse = await AuthService.getCurrentUser();
@@ -93,7 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 email: userResponse.data.email,
                 name: userResponse.data.name || userResponse.data.email,
                 role: userResponse.data.roleId === '1' ? 'student' : userResponse.data.roleId === '2' ? 'tutor' : 'admin',
-                avatar: undefined,
+                avatar: userResponse.data.avatarUrl || undefined,
                 createdAt: new Date(),
                 updatedAt: new Date(),
               };
@@ -102,7 +98,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           } catch (error) {
             console.warn('Failed to get user details:', error);
-            // Keep the temporary user data
           }
         }, 1000);
       } else {
@@ -150,9 +145,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await AuthService.googleLogin({ idToken });
       if (response.success && response.data) {
         const { accessToken } = response.data;
-        // Store access token
         localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken);
-        // Get user data
         const userResponse = await AuthService.getCurrentUser();
         if (userResponse.success && userResponse.data) {
           const userData: User = {
@@ -160,7 +153,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             email: userResponse.data.email,
             name: userResponse.data.name || userResponse.data.email,
             role: userResponse.data.roleId === '1' ? 'student' : userResponse.data.roleId === '2' ? 'tutor' : 'admin',
-            avatar: undefined,
+            avatar: userResponse.data.avatarUrl || undefined,
             createdAt: new Date(),
             updatedAt: new Date(),
           };
@@ -214,9 +207,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await AuthService.refreshToken();
       if (response.success && response.data) {
         const { accessToken } = response.data;
-        // Store new access token
         localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken);
-        // Get updated user data
         const userResponse = await AuthService.getCurrentUser();
         if (userResponse.success && userResponse.data) {
           const userData: User = {
@@ -224,7 +215,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             email: userResponse.data.email,
             name: userResponse.data.name || userResponse.data.email,
             role: userResponse.data.roleId === '1' ? 'student' : userResponse.data.roleId === '2' ? 'tutor' : 'admin',
-            avatar: undefined,
+            avatar: userResponse.data.avatarUrl || undefined,
             createdAt: new Date(),
             updatedAt: new Date(),
           };

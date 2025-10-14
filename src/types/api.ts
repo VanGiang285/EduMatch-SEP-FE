@@ -93,6 +93,8 @@ export interface CurrentUserResponse {
   name: string;
   roleId: string;
   loginProvider: string;
+  createdAt: string;
+  avatarUrl?: string;
 }
 export interface GetTutorsRequest {
   page?: number;
