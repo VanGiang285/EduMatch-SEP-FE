@@ -24,4 +24,4 @@ export function PageWrapper({ children, currentPage }: PageWrapperProps) {
       {children}
     </>
   );
-}
+}

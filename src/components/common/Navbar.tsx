@@ -1,9 +1,10 @@
 "use client";
 import { Button } from "../ui/basic/button";
-import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet } from "lucide-react";
+import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 interface NavbarProps {
   onNavigateToLogin: () => void;
   onNavigateToRegister: () => void;
@@ -21,6 +22,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
+  const router = useRouter();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
@@ -143,18 +145,62 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                   </button>
                   
                   {userMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-60 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
                       <div className="px-4 py-3 border-b border-gray-100">
                         <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
                         <p className="text-xs text-gray-500 truncate">{user.email}</p>
                       </div>
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-lg mx-1 my-1"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>Đăng xuất</span>
-                      </button>
+                      <div className="py-1">
+                 <button
+                   onClick={() => {
+                     setUserMenuOpen(false);
+                     router.push('/profile?tab=profile');
+                   }}
+                   className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                 >
+                   <UserCircle className="w-4 h-4" />
+                   <span>Thông tin cá nhân</span>
+                 </button>
+                 <button
+                   onClick={() => {
+                     setUserMenuOpen(false);
+                     router.push('/profile?tab=wallet');
+                   }}
+                   className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                 >
+                   <Wallet className="w-4 h-4" />
+                   <span>Ví</span>
+                 </button>
+                 <button
+                   onClick={() => {
+                     setUserMenuOpen(false);
+                     router.push('/profile?tab=messages');
+                   }}
+                   className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                 >
+                   <MessageCircle className="w-4 h-4" />
+                   <span>Tin nhắn</span>
+                 </button>
+                 <button
+                   onClick={() => {
+                     setUserMenuOpen(false);
+                     router.push('/profile?tab=notifications');
+                   }}
+                   className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                 >
+                   <Bell className="w-4 h-4" />
+                   <span>Thông báo</span>
+                 </button>
+                      </div>
+                      <div className="border-t border-gray-100 mt-1 pt-1">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Đăng xuất</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -274,6 +320,48 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                       <p className="text-sm font-medium text-white truncate">{user.name}</p>
                       <p className="text-xs text-white/70 truncate">{user.email}</p>
                     </div>
+                  </div>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push('/profile?tab=profile');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                    >
+                      <UserCircle className="w-4 h-4" />
+                      <span className="text-sm">Thông tin cá nhân</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push('/profile?tab=wallet');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                    >
+                      <Wallet className="w-4 h-4" />
+                      <span className="text-sm">Ví</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push('/profile?tab=messages');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      <span className="text-sm">Tin nhắn</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push('/profile?tab=notifications');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                    >
+                      <Bell className="w-4 h-4" />
+                      <span className="text-sm">Thông báo</span>
+                    </button>
                   </div>
                   <Button
                     onClick={handleLogout}
