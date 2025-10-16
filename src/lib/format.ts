@@ -51,30 +51,45 @@ export class FormatService {
       }).format(amount);
     } catch (error) {
       console.error('Currency formatting error:', error);
+      if (amount == null || isNaN(amount)) {
+        return `0 ${currency}`;
+      }
       return `${amount.toLocaleString('vi-VN')} ${currency}`;
     }
   }
   static formatVND(amount: number): string {
     try {
+      if (amount == null || isNaN(amount)) {
+        return '0₫';
+      }
       return `${amount.toLocaleString('vi-VN')}₫`;
     } catch (error) {
       console.error('VND formatting error:', error);
-      return `${amount.toLocaleString()}₫`;
+      return '0₫';
     }
   }
   static formatVNDWithUnit(amount: number, unit = 'giờ'): string {
     try {
+      if (amount == null || isNaN(amount)) {
+        return `0₫/${unit}`;
+      }
       return `${amount.toLocaleString('vi-VN')}₫/${unit}`;
     } catch (error) {
       console.error('VND with unit formatting error:', error);
-      return `${amount.toLocaleString()}₫/${unit}`;
+      return `0₫/${unit}`;
     }
   }
   static formatNumber(number: number): string {
     try {
+      if (number == null || isNaN(number)) {
+        return '0';
+      }
       return new Intl.NumberFormat('vi-VN').format(number);
     } catch (error) {
       console.error('Number formatting error:', error);
+      if (number == null || isNaN(number)) {
+        return '0';
+      }
       return number.toString();
     }
   }
@@ -161,4 +176,4 @@ export class FormatService {
     const middle = '*'.repeat(cleaned.length - 6);
     return `${start}${middle}${end}`;
   }
-}
+}

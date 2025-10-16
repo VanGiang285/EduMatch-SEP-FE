@@ -5,15 +5,9 @@ import {
   LoginResponse, 
   RegisterRequest, 
   RegisterResponse,
-  ForgotPasswordRequest,
-  ForgotPasswordResponse,
-  ResetPasswordRequest,
-  ResetPasswordResponse,
   GoogleLoginRequest,
   GoogleLoginResponse,
-  // VerifyEmailRequest, // Removed unused type
   VerifyEmailResponse,
-  // ResendVerificationRequest, // Removed unused type
   ResendVerificationResponse,
   CurrentUserResponse,
   ApiResponse
@@ -31,12 +25,6 @@ export class AuthService {
   }
   static async refreshToken(): Promise<ApiResponse<LoginResponse>> {
     return apiClient.post<LoginResponse>(API_ENDPOINTS.AUTH.REFRESH);
-  }
-  static async forgotPassword(data: ForgotPasswordRequest): Promise<ApiResponse<ForgotPasswordResponse>> {
-    return apiClient.post<ForgotPasswordResponse>(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, data);
-  }
-  static async resetPassword(data: ResetPasswordRequest): Promise<ApiResponse<ResetPasswordResponse>> {
-    return apiClient.post<ResetPasswordResponse>(API_ENDPOINTS.AUTH.RESET_PASSWORD, data);
   }
   static async getCurrentUser(): Promise<ApiResponse<CurrentUserResponse>> {
     return apiClient.get<CurrentUserResponse>(API_ENDPOINTS.AUTH.GET_CURRENT_USER);

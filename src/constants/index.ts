@@ -56,26 +56,70 @@ export const SUBJECT_LEVELS = {
 } as const;
 export const API_ENDPOINTS = {
   AUTH: {
-    LOGIN: '/api/User/login',
-    REGISTER: '/api/User/register',
-    LOGOUT: '/api/User/logout',
-    REFRESH: '/api/User/refresh-token',
-    FORGOT_PASSWORD: '/api/auth/forgot-password',
-    RESET_PASSWORD: '/api/auth/reset-password',
-    VERIFY_EMAIL: '/api/User/verify-email',
-    RESEND_VERIFY: '/api/User/resend-verify',
-    GOOGLE_LOGIN: '/api/User/signIn-google',
-    GET_CURRENT_USER: '/api/User/me',
+    LOGIN: '/api/user/login',
+    REGISTER: '/api/user/register',
+    LOGOUT: '/api/user/logout',
+    REFRESH: '/api/user/refresh-token',
+    VERIFY_EMAIL: '/api/user/verify-email',
+    RESEND_VERIFY: '/api/user/resend-verify',
+    GOOGLE_LOGIN: '/api/user/signIn-google',
+    GET_CURRENT_USER: '/api/user/me',
   },
+  
+  USER_PROFILES: {
+    GET_BY_EMAIL: '/api/userprofiles/:email',
+    UPDATE_BY_EMAIL: '/api/userprofiles/:email',
+  },
+  
   TUTORS: {
-    LIST: '/api/tutors',
-    DETAIL: '/api/tutors/:id',
-    CREATE: '/api/tutors',
-    UPDATE: '/api/tutors/:id',
-    DELETE: '/api/tutors/:id',
-    SEARCH: '/api/tutors/search',
-    AVAILABILITY: '/api/tutors/:id/availability',
+    BECOME_TUTOR: '/api/tutors/become-tutor',
+    TEST_SEND_MAIL: '/api/tutors/test-send-mail',
   },
+  
+  MANAGE_TUTOR_PROFILES: {
+    GET_BY_ID: '/api/managetutorprofiles/:id',
+    GET_BY_EMAIL: '/api/managetutorprofiles/email/:email',
+    UPDATE_BY_EMAIL: '/api/managetutorprofiles/:email',
+  },
+  
+  FIND_TUTORS: {
+    GET_ALL: '/api/findtutor',
+    SEARCH: '/api/findtutor/search',
+  },
+  
+  ADMIN: {
+    GET_USER_BY_ROLE: '/api/admin/role/:roleId',
+    DEACTIVATE_USER: '/api/admin/users/:email/deactivate',
+    ACTIVATE_USER: '/api/admin/users/:email/activate',
+    CREATE_ADMIN: '/api/admin/create-admin',
+  },
+  
+  SUBJECTS: {
+    GET_ALL: '/api/subject/get-all-subject',
+  },
+  
+  LEVELS: {
+    GET_ALL: '/api/level/get-all-level',
+  },
+  
+  CERTIFICATES: {
+    GET_ALL_WITH_SUBJECTS: '/api/certificate/get-all-certificatetypes-with-subjects',
+  },
+  
+  EDUCATION: {
+    GET_ALL_INSTITUTIONS: '/api/education/get-all-education-institution',
+  },
+  
+  TIME_SLOTS: {
+    GET_ALL: '/api/timeslots/get-all-time-slots',
+  },
+  
+  CLOUD_MEDIA: {
+    UPLOAD: '/api/cloudmedia/upload',
+    UPLOAD_FROM_URL: '/api/cloudmedia/upload-from-url',
+    DELETE: '/api/cloudmedia/:publicId',
+  },
+  
   BOOKINGS: {
     LIST: '/api/bookings',
     DETAIL: '/api/bookings/:id',
@@ -143,22 +187,22 @@ export const TIME = {
     '21:00', '21:30', '22:00', '22:30', '23:00', '23:30',
   ],
   SESSION_DURATION: {
-    MIN: 30, // minutes
-    MAX: 180, // minutes
-    DEFAULT: 60, // minutes
+    MIN: 30,
+    MAX: 180,
+    DEFAULT: 60,
   },
 } as const;
 export const PRICING = {
-  MIN_HOURLY_RATE: 50000, // VND
-  MAX_HOURLY_RATE: 2000000, // VND
-  DEFAULT_HOURLY_RATE: 200000, // VND
+  MIN_HOURLY_RATE: 50000,
+  MAX_HOURLY_RATE: 2000000,
+  DEFAULT_HOURLY_RATE: 200000,
   CURRENCY: 'VND',
 } as const;
 export const FILE_UPLOAD = {
-  MAX_SIZE: 5 * 1024 * 1024, // 5MB
+  MAX_SIZE: 5 * 1024 * 1024,
   ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
   ALLOWED_DOCUMENT_TYPES: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-  AVATAR_MAX_SIZE: 2 * 1024 * 1024, // 2MB
+  AVATAR_MAX_SIZE: 2 * 1024 * 1024,
 } as const;
 export const ERROR_CODES = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
@@ -202,14 +246,6 @@ export const STORAGE_KEYS = {
   THEME: 'theme',
   LANGUAGE: 'language',
   REMEMBER_ME: 'remember_me',
-} as const;
-export const APP_CONFIG = {
-  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api',
-  APP_NAME: 'EduMatch',
-  DEFAULT_LOCALE: 'vi-VN',
-  DEFAULT_CURRENCY: 'VND',
-  MAX_FILE_SIZE_MB: 10,
-  MAX_VIDEO_DURATION_MIN: 5,
 } as const;
 export const QUERY_KEYS = {
   AUTH: {

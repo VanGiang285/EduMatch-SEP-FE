@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
@@ -17,7 +17,8 @@ import {
   Award,
   Clock,
   Video,
-  Send
+  Send,
+  Loader2
 } from 'lucide-react';
 import { SelectWithSearch, SelectWithSearchItem } from '../ui/form/select-with-search';
 import { Separator } from '../ui/layout/separator';
@@ -31,212 +32,87 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../ui/navigation/pagination';
-interface TutorCardData {
-  tutorId: number;
-  userEmail: string;
-  userName: string;
-  avatarUrl: string | null;
-  gender: string | null;
-  bio: string | null;
-  teachingExp: string | null;
-  videoIntroUrl: string | null;
-  teachingModes: string | null;
-  subjects: string[];
-  hourlyRate: number;
-  provinceName: string;
-  subDistrictName: string;
-  rating: number;
-  reviewCount: number;
-  completedLessons: number;
-  totalStudents: number;
-  isFavorite: boolean;
-  education: string;
-  isVerified: boolean;
-  specializations: string[];
-}
-interface Subject {
-  id: number;
-  subjectName: string;
-}
-interface Province {
-  id: number;
-  name: string;
-}
+import { useFindTutor } from '@/hooks/useFindTutor';
+import { FindTutorProfile } from '@/services/findTutorService';
 export function FindTutorPage() {
   const router = useRouter();
+  const {
+    tutors,
+    subjects,
+    levels,
+    institutions,
+    isLoadingTutors,
+    isLoadingMasterData,
+    error,
+    filters,
+    setFilters,
+    clearError,
+  } = useFindTutor();
+
   const [priceRange, setPriceRange] = useState([50000, 500000]);
-  const [hoveredTutor, setHoveredTutor] = useState<number | null>(1);
+  const [hoveredTutor, setHoveredTutor] = useState<number | null>(null);
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
+  const [selectedRating, setSelectedRating] = useState('all');
+  const [selectedPrice, setSelectedPrice] = useState('all');
+  const [selectedSort, setSelectedSort] = useState('recommended');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set([1, 3])); // Mock: tutors 1 and 3 are favorited
+  const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set());
   const tutorsPerPage = 6;
-  const subjects: Subject[] = [
-    { id: 1, subjectName: 'Toán học' },
-    { id: 2, subjectName: 'Tiếng Anh' },
-    { id: 3, subjectName: 'Vật lý' },
-    { id: 4, subjectName: 'Hóa học' },
-    { id: 5, subjectName: 'Sinh học' },
-    { id: 6, subjectName: 'Ngữ văn' },
-  ];
-  const provinces: Province[] = [
-    { id: 1, name: 'Hà Nội' },
-    { id: 2, name: 'TP. Hồ Chí Minh' },
-    { id: 3, name: 'Đà Nẵng' },
-    { id: 4, name: 'Hải Phòng' },
-    { id: 5, name: 'Cần Thơ' },
-  ];
-  const tutors: TutorCardData[] = [
-    {
-      tutorId: 1,
-      userEmail: 'nguyenthimaianh@gmail.com',
-      userName: 'Nguyễn Thị Mai Anh',
-      avatarUrl: '/placeholder-avatar-1.jpg',
-      gender: 'Nữ',
-      teachingExp: '5 năm',
-      bio: 'Chuyên gia giảng dạy Toán học với phương pháp độc đáo, giúp học sinh yêu thích môn học và đạt kết quả cao trong các kỳ thi.',
-      videoIntroUrl: '/placeholder-video-1.mp4',
-      teachingModes: 'Trực tuyến, Tại nhà',
-      subjects: ['Toán học', 'Vật lý'],
-      hourlyRate: 200000,
-      provinceName: 'Hà Nội',
-      subDistrictName: 'Cầu Giấy',
-      rating: 4.9,
-      reviewCount: 234,
-      completedLessons: 892,
-      totalStudents: 156,
-      isFavorite: true,
-      isVerified: true,
-      education: 'Thạc sĩ Toán học - ĐH Sư phạm Hà Nội',
-      specializations: ['THPT', 'Luyện thi Đại học'],
-    },
-    {
-      tutorId: 2,
-      userEmail: 'tranvanhung@gmail.com',
-      userName: 'Trần Văn Hùng',
-      avatarUrl: '/placeholder-avatar-2.jpg',
-      gender: 'Nam',
-      teachingExp: '7 năm',
-      bio: 'Giảng viên Tiếng Anh với nhiều năm kinh nghiệm. Chuyên luyện thi IELTS, TOEIC và giao tiếp thực tế cho mọi lứa tuổi.',
-      videoIntroUrl: '/placeholder-video-2.mp4',
-      teachingModes: 'Trực tuyến',
-      subjects: ['Tiếng Anh'],
-      hourlyRate: 250000,
-      provinceName: 'TP. Hồ Chí Minh',
-      subDistrictName: 'Quận 1',
-      rating: 4.8,
-      reviewCount: 189,
-      completedLessons: 756,
-      totalStudents: 123,
-      isFavorite: false,
-      isVerified: true,
-      education: 'Cử nhân Ngôn ngữ Anh - ĐH Ngoại ngữ',
-      specializations: ['IELTS', 'TOEIC', 'Giao tiếp'],
-    },
-    {
-      tutorId: 3,
-      userEmail: 'lethihuong@gmail.com',
-      userName: 'Lê Thị Hương',
-      avatarUrl: '/placeholder-avatar-3.jpg',
-      gender: 'Nữ',
-      teachingExp: '4 năm',
-      bio: 'Gia sư Vật lý tận tâm, giúp học sinh hiểu bản chất vấn đề thay vì học vẹt. Phương pháp giảng dạy sinh động, dễ hiểu.',
-      videoIntroUrl: null,
-      teachingModes: 'Trực tuyến, Tại nhà',
-      subjects: ['Vật lý', 'Toán học'],
-      hourlyRate: 180000,
-      provinceName: 'Đà Nẵng',
-      subDistrictName: 'Hải Châu',
-      rating: 4.7,
-      reviewCount: 167,
-      completedLessons: 623,
-      totalStudents: 98,
-      isFavorite: true,
-      isVerified: true,
-      education: 'Cử nhân Vật lý - ĐH Khoa học Tự nhiên',
-      specializations: ['THCS', 'THPT'],
-    },
-    {
-      tutorId: 4,
-      userEmail: 'phamminhtuan@gmail.com',
-      userName: 'Phạm Minh Tuấn',
-      avatarUrl: '/placeholder-avatar-4.jpg',
-      gender: 'Nam',
-      teachingExp: '6 năm',
-      bio: 'Chuyên gia Hóa học với kinh nghiệm dạy học sinh chuyên và luyện thi quốc gia. Phương pháp giảng dạy logic, dễ nhớ lâu.',
-      videoIntroUrl: '/placeholder-video-4.mp4',
-      teachingModes: 'Trực tuyến, Tại trung tâm',
-      subjects: ['Hóa học'],
-      hourlyRate: 220000,
-      provinceName: 'Hà Nội',
-      subDistrictName: 'Đống Đa',
-      rating: 4.9,
-      reviewCount: 201,
-      completedLessons: 734,
-      totalStudents: 134,
-      isFavorite: false,
-      isVerified: true,
-      education: 'Thạc sĩ Hóa học - ĐH Bách khoa',
-      specializations: ['Luyện thi Olympic', 'THPT chuyên'],
-    },
-    {
-      tutorId: 5,
-      userEmail: 'hoangthutrang@gmail.com',
-      userName: 'Hoàng Thu Trang',
-      avatarUrl: '/placeholder-avatar-5.jpg',
-      gender: 'Nữ',
-      teachingExp: '3 năm',
-      bio: 'Giảng viên trẻ, năng động với phong cách giảng dạy hiện đại. Chuyên môn Ngữ văn và kỹ năng viết luận, làm văn.',
-      videoIntroUrl: '/placeholder-video-5.mp4',
-      teachingModes: 'Trực tuyến',
-      subjects: ['Ngữ văn'],
-      hourlyRate: 150000,
-      provinceName: 'Hải Phòng',
-      subDistrictName: 'Lê Chân',
-      rating: 4.6,
-      reviewCount: 142,
-      completedLessons: 521,
-      totalStudents: 87,
-      isFavorite: false,
-      isVerified: false,
-      education: 'Cử nhân Ngữ văn - ĐH Sư phạm',
-      specializations: ['Làm văn', 'Nghị luận xã hội'],
-    },
-    {
-      tutorId: 6,
-      userEmail: 'ngovantung@gmail.com',
-      userName: 'Ngô Văn Tùng',
-      avatarUrl: '/placeholder-avatar-6.jpg',
-      gender: 'Nam',
-      teachingExp: '8 năm',
-      bio: 'Chuyên gia sinh học với kinh nghiệm giảng dạy lâu năm. Giúp học sinh nắm vững kiến thức và phát triển tư duy khoa học một cách toàn diện.',
-      videoIntroUrl: '/placeholder-video-6.mp4',
-      teachingModes: 'Trực tuyến',
-      subjects: ['Sinh học', 'Hóa học'],
-      hourlyRate: 170000,
-      provinceName: 'Cần Thơ',
-      subDistrictName: 'Ninh Kiều',
-      rating: 4.8,
-      reviewCount: 145,
-      completedLessons: 480,
-      totalStudents: 71,
-      isFavorite: false,
-      isVerified: true,
-      education: 'Tiến sĩ Sinh học - ĐH Quốc gia',
-      specializations: ['Di truyền học', 'Sinh thái học'],
-    },
-  ];
-  const filteredTutors = tutors.filter(tutor => {
-    const matchesSearch = searchQuery.trim() === '' || 
-      tutor.userName.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
-  const totalPages = Math.ceil(filteredTutors.length / tutorsPerPage);
+  
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedSubject, selectedCity, selectedRating, selectedPrice, selectedSort]);
+
+  useEffect(() => {
+    if (tutors.length > 0 && !hoveredTutor) {
+      setHoveredTutor(tutors[0].id);
+    }
+  }, [tutors, hoveredTutor]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const newFilters: any = {};
+      
+      if (searchQuery.trim()) {
+        newFilters.keyword = searchQuery.trim();
+      } else {
+        if (selectedSubject !== 'all') {
+          newFilters.keyword = selectedSubject;
+        }
+        
+        if (selectedRating !== 'all') {
+          newFilters.keyword = `rating:${selectedRating}`;
+        }
+        
+        if (selectedPrice !== 'all') {
+          newFilters.keyword = `price:${selectedPrice}`;
+        }
+        
+        if (selectedSort !== 'recommended') {
+          newFilters.keyword = `sort:${selectedSort}`;
+        }
+      }
+      
+      if (selectedCity !== 'all') {
+        newFilters.city = selectedCity;
+      }
+      
+      newFilters.page = 1;
+      newFilters.pageSize = 10;
+      
+      setFilters(newFilters);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, selectedSubject, selectedCity, selectedRating, selectedPrice, selectedSort, setFilters]);
+
+  const totalPages = Math.ceil(tutors.length / tutorsPerPage);
   const indexOfLastTutor = currentPage * tutorsPerPage;
   const indexOfFirstTutor = indexOfLastTutor - tutorsPerPage;
-  const currentTutors = filteredTutors.slice(indexOfFirstTutor, indexOfLastTutor);
-  const currentTutor = currentTutors.find(t => t.tutorId === hoveredTutor) || currentTutors[0];
+  const currentTutors = tutors.slice(indexOfFirstTutor, indexOfLastTutor);
+  const currentTutor = currentTutors.find(t => t.id === hoveredTutor) || currentTutors[0];
   const handleViewTutorProfile = (tutorId: number) => {
     router.push(`/tutor/${tutorId}`);
   };
@@ -289,6 +165,7 @@ export function FindTutorPage() {
                 onValueChange={setSelectedSubject}
                 placeholder="Môn học"
                 className="w-full lg:w-[160px] flex-shrink-0"
+                disabled={isLoadingMasterData}
               >
                 <SelectWithSearchItem value="all">Tất cả môn học</SelectWithSearchItem>
                 {subjects.map((subject) => (
@@ -302,16 +179,18 @@ export function FindTutorPage() {
                 onValueChange={setSelectedCity}
                 placeholder="Thành phố"
                 className="w-full lg:w-[160px] flex-shrink-0"
+                disabled={isLoadingMasterData}
               >
                 <SelectWithSearchItem value="all">Tất cả thành phố</SelectWithSearchItem>
-                {provinces.map((province) => (
-                  <SelectWithSearchItem key={province.id} value={province.id.toString()}>
-                    {province.name}
-                  </SelectWithSearchItem>
-                ))}
+                <SelectWithSearchItem value="hanoi">Hà Nội</SelectWithSearchItem>
+                <SelectWithSearchItem value="hcm">TP. Hồ Chí Minh</SelectWithSearchItem>
+                <SelectWithSearchItem value="danang">Đà Nẵng</SelectWithSearchItem>
+                <SelectWithSearchItem value="haiphong">Hải Phòng</SelectWithSearchItem>
+                <SelectWithSearchItem value="cantho">Cần Thơ</SelectWithSearchItem>
               </SelectWithSearch>
               <SelectWithSearch 
-                value="all"
+                value={selectedRating}
+                onValueChange={setSelectedRating}
                 placeholder="Đánh giá"
                 className="w-full lg:w-[160px] flex-shrink-0"
               >
@@ -321,18 +200,9 @@ export function FindTutorPage() {
                 <SelectWithSearchItem value="3.5">3.5⭐ trở lên</SelectWithSearchItem>
               </SelectWithSearch>
               <SelectWithSearch 
-                value={(() => {
-                  const [min, max] = priceRange;
-                  if (min === 50000 && max === 500000) return 'all';
-                  if (min === 50000 && max === 100000) return '50000-100000';
-                  if (min === 100000 && max === 150000) return '100000-150000';
-                  if (min === 150000 && max === 200000) return '150000-200000';
-                  if (min === 200000 && max === 250000) return '200000-250000';
-                  if (min === 250000 && max === 300000) return '250000-300000';
-                  if (min === 300000 && max === 500000) return '300000-500000';
-                  return 'custom';
-                })()}
+                value={selectedPrice}
                 onValueChange={(value) => {
+                  setSelectedPrice(value);
                   if (value === 'all') {
                     setPriceRange([50000, 500000]);
                   } else if (value === 'custom') {
@@ -374,7 +244,8 @@ export function FindTutorPage() {
                 })()}
               </SelectWithSearch>
               <SelectWithSearch 
-                value="recommended"
+                value={selectedSort}
+                onValueChange={setSelectedSort}
                 placeholder="Sắp xếp"
                 className="w-full lg:w-[160px] flex-shrink-0"
               >
@@ -393,17 +264,47 @@ export function FindTutorPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Side - Tutor List (Detailed) */}
           <div className="lg:col-span-8">
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600">{error}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2"
+                  onClick={clearError}
+                >
+                  Thử lại
+                </Button>
+              </div>
+            )}
+
+            {/* Loading State */}
+            {isLoadingTutors && (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-[#FD8B51]" />
+                <span className="ml-2 text-gray-600">Đang tải danh sách gia sư...</span>
+              </div>
+            )}
+
+            {/* Tutor List */}
+            {!isLoadingTutors && (
             <div className="space-y-6">
-              {currentTutors.map((tutor) => (
+                {currentTutors.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-gray-600">Không tìm thấy gia sư nào phù hợp với tiêu chí của bạn.</p>
+                  </div>
+                ) : (
+                  currentTutors.map((tutor) => (
               <Card 
-                key={tutor.tutorId}
+                      key={tutor.id}
                 className={`cursor-pointer transition-all duration-200 ${
-                  hoveredTutor === tutor.tutorId 
+                        hoveredTutor === tutor.id 
                     ? 'border-[#FD8B51] shadow-lg bg-white' 
                     : 'hover:border-[#257180]/40 hover:shadow-md bg-white'
                 }`}
-                onMouseEnter={() => setHoveredTutor(tutor.tutorId)}
-                onClick={() => handleViewTutorProfile(tutor.tutorId)}
+                      onMouseEnter={() => setHoveredTutor(tutor.id)}
+                      onClick={() => handleViewTutorProfile(tutor.id)}
               >
                 <CardContent className="p-6">
                   {/* Row 1: Avatar + Name + Info + Subjects */}
@@ -412,9 +313,12 @@ export function FindTutorPage() {
                     <div className="relative flex-shrink-0">
                       <div className="relative w-36 h-36 rounded-lg overflow-hidden bg-gray-100">
                         <Avatar className="w-full h-full rounded-lg">
-                          <AvatarImage src={tutor.avatarUrl || undefined} className="object-cover" />
+                          <AvatarImage src={tutor.user?.avatarUrl || undefined} className="object-cover" />
                           <AvatarFallback className="rounded-lg text-2xl">
-                            {tutor.userName.split(' ').slice(-2).map(n => n[0]).join('')}
+                            {tutor.user?.firstName && tutor.user?.lastName 
+                              ? `${tutor.user.firstName[0]}${tutor.user.lastName[0]}`
+                              : tutor.userEmail.split('@')[0].slice(0, 2).toUpperCase()
+                            }
                           </AvatarFallback>
                         </Avatar>
                       </div>
@@ -425,7 +329,10 @@ export function FindTutorPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
                             <h2 className="text-black text-2xl font-bold">
-                              {tutor.userName}
+                              {tutor.user?.firstName && tutor.user?.lastName 
+                                ? `${tutor.user.firstName} ${tutor.user.lastName}`
+                                : tutor.userEmail.split('@')[0]
+                              }
                             </h2>
                             {tutor.videoIntroUrl && (
                               <Badge variant="outline" className="text-xs px-2 py-0.5 border-[#FD8B51] text-[#FD8B51]">
@@ -437,34 +344,29 @@ export function FindTutorPage() {
                           <div className="flex items-center gap-3">
                             <div className="flex items-center gap-1.5">
                               <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
-                              <span className="text-sm text-black font-medium">{tutor.rating}</span>
-                              <span className="text-sm text-gray-600">({tutor.reviewCount} đánh giá)</span>
+                              <span className="text-sm text-black font-medium">4.5</span>
+                              <span className="text-sm text-gray-600">(0 đánh giá)</span>
                             </div>
                             <Separator orientation="vertical" className="h-4" />
-                            <span className="text-sm text-gray-600">{tutor.completedLessons} buổi học</span>
+                            <span className="text-sm text-gray-600">0 buổi học</span>
                             <Separator orientation="vertical" className="h-4" />
-                            <span className="text-sm text-gray-600">{tutor.teachingExp}</span>
+                            <span className="text-sm text-gray-600">{tutor.experience || 0} năm kinh nghiệm</span>
                           </div>
                         </div>
                         <Button 
                           variant="ghost" 
                           size="sm" 
                           className="p-2 -mt-1"
-                          onClick={(e) => handleToggleFavorite(tutor.tutorId, e)}
+                          onClick={(e) => handleToggleFavorite(tutor.id, e)}
                         >
-                          <Heart className={`w-5 h-5 ${favoriteTutors.has(tutor.tutorId) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                          <Heart className={`w-5 h-5 ${favoriteTutors.has(tutor.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
                         </Button>
                       </div>
                       {/* Subjects */}
                       <div className="flex flex-wrap gap-2">
-                        {tutor.subjects.map((subject, idx) => (
+                        {tutor.subjects?.map((subject, idx) => (
                           <Badge key={idx} variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-black border-[#257180]/20">
-                            {subject}
-                          </Badge>
-                        ))}
-                        {tutor.specializations.slice(0, 2).map((spec, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs px-2 py-0.5 border-[#FD8B51] text-[#FD8B51]">
-                            {spec}
+                            {subject.subject?.subjectName || `Subject ${subject.subjectId}`}
                           </Badge>
                         ))}
                       </div>
@@ -473,23 +375,23 @@ export function FindTutorPage() {
                   {/* Row 2: Bio */}
                   <div className="mb-4">
                     <p className="text-sm text-gray-600 line-clamp-2">
-                      {tutor.bio}
+                      {tutor.bio || 'Chưa có thông tin giới thiệu.'}
                     </p>
                   </div>
                   {/* Row 3: Location + Teaching Mode + Education */}
                   <div className="flex flex-wrap gap-4 mb-4 text-sm text-gray-600">
                     <div className="flex items-center gap-1.5">
                       <MapPin className="w-4 h-4" />
-                      <span>{tutor.subDistrictName}, {tutor.provinceName}</span>
+                      <span>Việt Nam</span>
                     </div>
                     <Separator orientation="vertical" className="h-4" />
-                    <span>{tutor.teachingModes}</span>
-                    {tutor.education && (
+                    <span>{tutor.teachingMode || 'Chưa xác định'}</span>
+                    {tutor.educations && tutor.educations.length > 0 && (
                       <>
                         <Separator orientation="vertical" className="h-4" />
                         <div className="flex items-center gap-1.5">
                           <Award className="w-4 h-4" />
-                          <span className="line-clamp-1">{tutor.education}</span>
+                          <span className="line-clamp-1">{tutor.educations[0].degree}</span>
                         </div>
                       </>
                     )}
@@ -511,7 +413,7 @@ export function FindTutorPage() {
                         className="border-black text-black hover:bg-black hover:text-white"
                         onClick={(e) => {
                           e.stopPropagation();
-                          console.log('Open message with tutor:', tutor.tutorId);
+                          console.log('Open message with tutor:', tutor.id);
                         }}
                       >
                         <MessageCircle className="w-4 h-4 mr-2" />
@@ -522,7 +424,7 @@ export function FindTutorPage() {
                         className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
                         onClick={(e) => {
                           e.stopPropagation();
-                          console.log('Book trial lesson with tutor:', tutor.tutorId);
+                          console.log('Book trial lesson with tutor:', tutor.id);
                         }}
                       >
                         Đặt buổi học thử
@@ -531,8 +433,10 @@ export function FindTutorPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+                  ))
+                )}
             </div>
+            )}
             {/* Pagination */}
             <div className="mt-8">
               <Pagination>
@@ -598,7 +502,12 @@ export function FindTutorPage() {
                             <Play className="w-10 h-10 text-white ml-1" />
                           </div>
                           <p className="text-white font-bold">Xem video giới thiệu</p>
-                          <p className="text-white/80 text-sm sm:text-base mt-2">{currentTutor.userName}</p>
+                          <p className="text-white/80 text-sm sm:text-base mt-2">
+                            {currentTutor.user?.firstName && currentTutor.user?.lastName 
+                              ? `${currentTutor.user.firstName} ${currentTutor.user.lastName}`
+                              : currentTutor.userEmail.split('@')[0]
+                            }
+                          </p>
                         </div>
                       </div>
                     ) : (
@@ -620,7 +529,7 @@ export function FindTutorPage() {
                         className="w-full border-black text-black hover:bg-black hover:text-white" 
                         size="lg"
                         onClick={() => {
-                          console.log('Open booking calendar for tutor:', currentTutor?.tutorId);
+                          console.log('Open booking calendar for tutor:', currentTutor?.id);
                         }}
                       >
                         <Calendar className="w-4 h-4 mr-2" />
@@ -631,7 +540,7 @@ export function FindTutorPage() {
                         className="w-full border-[#FD8B51] text-[#FD8B51] hover:bg-[#FD8B51] hover:text-white" 
                         size="lg"
                         onClick={() => {
-                          console.log('View tutor schedule:', currentTutor?.tutorId);
+                          console.log('View tutor schedule:', currentTutor?.id);
                         }}
                       >
                         <Clock className="w-4 h-4 mr-2" />
@@ -640,7 +549,7 @@ export function FindTutorPage() {
                       <Button 
                         className="w-full bg-[#FD8B51] hover:bg-[#CB6040] text-white" 
                         size="lg"
-                        onClick={() => currentTutor && handleViewTutorProfile(currentTutor.tutorId)}
+                        onClick={() => currentTutor && handleViewTutorProfile(currentTutor.id)}
                       >
                         <Send className="w-4 h-4 mr-2" />
                         Xem hồ sơ đầy đủ
