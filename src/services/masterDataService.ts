@@ -14,7 +14,7 @@ export interface SubjectDto {
 
 export interface LevelDto {
   id: number;
-  levelName: string;
+  name: string;
   description?: string;
   isActive: boolean;
   createdAt: string;
@@ -23,7 +23,8 @@ export interface LevelDto {
 
 export interface CertificateTypeDto {
   id: number;
-  certificateTypeName: string;
+  code: string;
+  name: string;
   description?: string;
   isActive: boolean;
   createdAt: string;
@@ -40,7 +41,8 @@ export interface CertificateTypeSubjectDto {
 
 export interface EducationInstitutionDto {
   id: number;
-  institutionName: string;
+  code: string;
+  name: string;
   institutionType: 'University' | 'College' | 'High School' | 'Other';
   address?: string;
   website?: string;

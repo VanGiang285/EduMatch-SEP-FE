@@ -95,29 +95,29 @@ export const API_ENDPOINTS = {
   },
   
   SUBJECTS: {
-    GET_ALL: '/api/subject/get-all-subject',
+    GET_ALL: '/api/Subject/get-all-subject',
   },
   
   LEVELS: {
-    GET_ALL: '/api/level/get-all-level',
+    GET_ALL: '/api/Level/get-all-level',
   },
   
   CERTIFICATES: {
-    GET_ALL_WITH_SUBJECTS: '/api/certificate/get-all-certificatetypes-with-subjects',
+    GET_ALL_WITH_SUBJECTS: '/api/Certificate/get-all-certificatetypes-with-subjects',
   },
   
   EDUCATION: {
-    GET_ALL_INSTITUTIONS: '/api/education/get-all-education-institution',
+    GET_ALL_INSTITUTIONS: '/api/Education/get-all-education-institution',
   },
   
   TIME_SLOTS: {
-    GET_ALL: '/api/timeslots/get-all-time-slots',
+    GET_ALL: '/api/TimeSlots/get-all-time-slots',
   },
   
   CLOUD_MEDIA: {
-    UPLOAD: '/api/cloudmedia/upload',
-    UPLOAD_FROM_URL: '/api/cloudmedia/upload-from-url',
-    DELETE: '/api/cloudmedia/:publicId',
+    UPLOAD: '/api/CloudMedia/upload',
+    UPLOAD_FROM_URL: '/api/CloudMedia/upload-from-url',
+    DELETE: '/api/CloudMedia/:publicId',
   },
   
   BOOKINGS: {

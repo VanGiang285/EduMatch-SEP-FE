@@ -53,17 +53,50 @@ export function FindTutorPage() {
   const [hoveredTutor, setHoveredTutor] = useState<number | null>(null);
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
-  const [selectedRating, setSelectedRating] = useState('all');
-  const [selectedPrice, setSelectedPrice] = useState('all');
+  const [selectedGender, setSelectedGender] = useState('all');
+  const [selectedTeachingMode, setSelectedTeachingMode] = useState('all');
   const [selectedSort, setSelectedSort] = useState('recommended');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set());
   const tutorsPerPage = 6;
   
+  // Client-side filtering and sorting
+  const filteredAndSortedTutors = React.useMemo(() => {
+    let filtered = [...tutors];
+
+    // Filter by subject
+    if (selectedSubject !== 'all') {
+      filtered = filtered.filter(tutor => 
+        tutor.subjects?.some(subject => subject.subjectId.toString() === selectedSubject)
+      );
+    }
+
+    // Sort tutors
+    if (selectedSort !== 'recommended') {
+      filtered.sort((a, b) => {
+        switch (selectedSort) {
+          case 'price-low':
+            return (a.subjects?.[0]?.hourlyRate || 0) - (b.subjects?.[0]?.hourlyRate || 0);
+          case 'price-high':
+            return (b.subjects?.[0]?.hourlyRate || 0) - (a.subjects?.[0]?.hourlyRate || 0);
+          case 'experience':
+            return (b.subjects?.[0]?.experience || 0) - (a.subjects?.[0]?.experience || 0);
+          case 'rating':
+            // For now, use a mock rating since we don't have rating data
+            return 0;
+          default:
+            return 0;
+        }
+      });
+    }
+
+    return filtered;
+  }, [tutors, selectedSubject, selectedSort]);
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedSubject, selectedCity, selectedRating, selectedPrice, selectedSort]);
+  }, [searchQuery, selectedSubject, selectedCity, selectedGender, selectedTeachingMode, selectedSort]);
 
   useEffect(() => {
     if (tutors.length > 0 && !hoveredTutor) {
@@ -71,32 +104,40 @@ export function FindTutorPage() {
     }
   }, [tutors, hoveredTutor]);
 
+  // Update hoveredTutor when filtered results change
+  useEffect(() => {
+    if (filteredAndSortedTutors.length > 0) {
+      const currentHoveredExists = filteredAndSortedTutors.some(t => t.id === hoveredTutor);
+      if (!currentHoveredExists) {
+        setHoveredTutor(filteredAndSortedTutors[0].id);
+      }
+    }
+  }, [filteredAndSortedTutors, hoveredTutor]);
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       const newFilters: any = {};
       
       if (searchQuery.trim()) {
         newFilters.keyword = searchQuery.trim();
-      } else {
-        if (selectedSubject !== 'all') {
-          newFilters.keyword = selectedSubject;
-        }
-        
-        if (selectedRating !== 'all') {
-          newFilters.keyword = `rating:${selectedRating}`;
-        }
-        
-        if (selectedPrice !== 'all') {
-          newFilters.keyword = `price:${selectedPrice}`;
-        }
-        
-        if (selectedSort !== 'recommended') {
-          newFilters.keyword = `sort:${selectedSort}`;
-        }
       }
       
       if (selectedCity !== 'all') {
         newFilters.city = selectedCity;
+      }
+      
+      if (selectedGender !== 'all') {
+        // Map frontend gender strings to backend enum values
+        const genderMap: { [key: string]: number } = {
+          'Male': 1,
+          'Female': 2,
+          'Other': 3
+        };
+        newFilters.gender = genderMap[selectedGender];
+      }
+      
+      if (selectedTeachingMode !== 'all') {
+        newFilters.teachingMode = selectedTeachingMode;
       }
       
       newFilters.page = 1;
@@ -106,12 +147,12 @@ export function FindTutorPage() {
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, selectedSubject, selectedCity, selectedRating, selectedPrice, selectedSort, setFilters]);
+  }, [searchQuery, selectedCity, selectedGender, selectedTeachingMode, setFilters]);
 
-  const totalPages = Math.ceil(tutors.length / tutorsPerPage);
+  const totalPages = Math.ceil(filteredAndSortedTutors.length / tutorsPerPage);
   const indexOfLastTutor = currentPage * tutorsPerPage;
   const indexOfFirstTutor = indexOfLastTutor - tutorsPerPage;
-  const currentTutors = tutors.slice(indexOfFirstTutor, indexOfLastTutor);
+  const currentTutors = filteredAndSortedTutors.slice(indexOfFirstTutor, indexOfLastTutor);
   const currentTutor = currentTutors.find(t => t.id === hoveredTutor) || currentTutors[0];
   const handleViewTutorProfile = (tutorId: number) => {
     router.push(`/tutor/${tutorId}`);
@@ -175,6 +216,17 @@ export function FindTutorPage() {
                 ))}
               </SelectWithSearch>
               <SelectWithSearch 
+                value={selectedGender} 
+                onValueChange={setSelectedGender}
+                placeholder="Giới tính"
+                className="w-full lg:w-[160px] flex-shrink-0"
+              >
+                <SelectWithSearchItem value="all">Tất cả giới tính</SelectWithSearchItem>
+                <SelectWithSearchItem value="Male">Nam</SelectWithSearchItem>
+                <SelectWithSearchItem value="Female">Nữ</SelectWithSearchItem>
+                <SelectWithSearchItem value="Other">Khác</SelectWithSearchItem>
+              </SelectWithSearch>
+              <SelectWithSearch 
                 value={selectedCity} 
                 onValueChange={setSelectedCity}
                 placeholder="Thành phố"
@@ -189,59 +241,15 @@ export function FindTutorPage() {
                 <SelectWithSearchItem value="cantho">Cần Thơ</SelectWithSearchItem>
               </SelectWithSearch>
               <SelectWithSearch 
-                value={selectedRating}
-                onValueChange={setSelectedRating}
-                placeholder="Đánh giá"
+                value={selectedTeachingMode}
+                onValueChange={setSelectedTeachingMode}
+                placeholder="Hình thức dạy"
                 className="w-full lg:w-[160px] flex-shrink-0"
               >
-                <SelectWithSearchItem value="all">Tất cả đánh giá</SelectWithSearchItem>
-                <SelectWithSearchItem value="4.5">4.5⭐ trở lên</SelectWithSearchItem>
-                <SelectWithSearchItem value="4.0">4.0⭐ trở lên</SelectWithSearchItem>
-                <SelectWithSearchItem value="3.5">3.5⭐ trở lên</SelectWithSearchItem>
-              </SelectWithSearch>
-              <SelectWithSearch 
-                value={selectedPrice}
-                onValueChange={(value) => {
-                  setSelectedPrice(value);
-                  if (value === 'all') {
-                    setPriceRange([50000, 500000]);
-                  } else if (value === 'custom') {
-                    return;
-                  } else {
-                    const [min, max] = value.split('-').map(Number);
-                    setPriceRange([min, max]);
-                  }
-                }}
-                placeholder="Mức giá"
-                className="w-full lg:w-[160px] flex-shrink-0"
-              >
-                <SelectWithSearchItem value="all">Tất cả mức giá</SelectWithSearchItem>
-                <SelectWithSearchItem value="50000-100000">Dưới 100k/giờ</SelectWithSearchItem>
-                <SelectWithSearchItem value="100000-150000">100k - 150k/giờ</SelectWithSearchItem>
-                <SelectWithSearchItem value="150000-200000">150k - 200k/giờ</SelectWithSearchItem>
-                <SelectWithSearchItem value="200000-250000">200k - 250k/giờ</SelectWithSearchItem>
-                <SelectWithSearchItem value="250000-300000">250k - 300k/giờ</SelectWithSearchItem>
-                <SelectWithSearchItem value="300000-500000">Trên 300k/giờ</SelectWithSearchItem>
-                {(() => {
-                  const [min, max] = priceRange;
-                  const isCustom = !(
-                    (min === 50000 && max === 500000) ||
-                    (min === 50000 && max === 100000) ||
-                    (min === 100000 && max === 150000) ||
-                    (min === 150000 && max === 200000) ||
-                    (min === 200000 && max === 250000) ||
-                    (min === 250000 && max === 300000) ||
-                    (min === 300000 && max === 500000)
-                  );
-                  if (isCustom) {
-                    return (
-                      <SelectWithSearchItem value="custom">
-                        {FormatService.formatVND(min)} - {FormatService.formatVND(max)}
-                      </SelectWithSearchItem>
-                    );
-                  }
-                  return null;
-                })()}
+                <SelectWithSearchItem value="all">Tất cả hình thức</SelectWithSearchItem>
+                <SelectWithSearchItem value="Online">Online</SelectWithSearchItem>
+                <SelectWithSearchItem value="Offline">Offline</SelectWithSearchItem>
+                <SelectWithSearchItem value="Both">Cả hai</SelectWithSearchItem>
               </SelectWithSearch>
               <SelectWithSearch 
                 value={selectedSort}
@@ -250,10 +258,10 @@ export function FindTutorPage() {
                 className="w-full lg:w-[160px] flex-shrink-0"
               >
                 <SelectWithSearchItem value="recommended">Đề xuất</SelectWithSearchItem>
-                <SelectWithSearchItem value="rating">Đánh giá cao</SelectWithSearchItem>
                 <SelectWithSearchItem value="price-low">Giá thấp - cao</SelectWithSearchItem>
                 <SelectWithSearchItem value="price-high">Giá cao - thấp</SelectWithSearchItem>
                 <SelectWithSearchItem value="experience">Kinh nghiệm</SelectWithSearchItem>
+                <SelectWithSearchItem value="rating">Đánh giá cao</SelectWithSearchItem>
               </SelectWithSearch>
             </div>
           </div>
@@ -313,10 +321,10 @@ export function FindTutorPage() {
                     <div className="relative flex-shrink-0">
                       <div className="relative w-36 h-36 rounded-lg overflow-hidden bg-gray-100">
                         <Avatar className="w-full h-full rounded-lg">
-                          <AvatarImage src={tutor.user?.avatarUrl || undefined} className="object-cover" />
+                          <AvatarImage src={tutor.avatarUrl || undefined} className="object-cover" />
                           <AvatarFallback className="rounded-lg text-2xl">
-                            {tutor.user?.firstName && tutor.user?.lastName 
-                              ? `${tutor.user.firstName[0]}${tutor.user.lastName[0]}`
+                            {tutor.firstName && tutor.lastName 
+                              ? `${tutor.firstName[0]}${tutor.lastName[0]}`
                               : tutor.userEmail.split('@')[0].slice(0, 2).toUpperCase()
                             }
                           </AvatarFallback>
@@ -329,9 +337,9 @@ export function FindTutorPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
                             <h2 className="text-black text-2xl font-bold">
-                              {tutor.user?.firstName && tutor.user?.lastName 
-                                ? `${tutor.user.firstName} ${tutor.user.lastName}`
-                                : tutor.userEmail.split('@')[0]
+                              {tutor.firstName && tutor.lastName 
+                                ? `${tutor.firstName} ${tutor.lastName}`
+                                : tutor.userName || tutor.userEmail.split('@')[0]
                               }
                             </h2>
                             {tutor.videoIntroUrl && (
@@ -350,7 +358,7 @@ export function FindTutorPage() {
                             <Separator orientation="vertical" className="h-4" />
                             <span className="text-sm text-gray-600">0 buổi học</span>
                             <Separator orientation="vertical" className="h-4" />
-                            <span className="text-sm text-gray-600">{tutor.experience || 0} năm kinh nghiệm</span>
+                            <span className="text-sm text-gray-600">{tutor.subjects?.[0]?.experience || 0} năm kinh nghiệm</span>
                           </div>
                         </div>
                         <Button 
@@ -385,7 +393,12 @@ export function FindTutorPage() {
                       <span>Việt Nam</span>
                     </div>
                     <Separator orientation="vertical" className="h-4" />
-                    <span>{tutor.teachingMode || 'Chưa xác định'}</span>
+                    <span>
+                      {tutor.teachingModes === 0 ? 'Offline' : 
+                       tutor.teachingModes === 1 ? 'Online' : 
+                       tutor.teachingModes === 2 ? 'Hybrid' : 
+                       'Chưa xác định'}
+                    </span>
                     {tutor.educations && tutor.educations.length > 0 && (
                       <>
                         <Separator orientation="vertical" className="h-4" />
@@ -401,7 +414,7 @@ export function FindTutorPage() {
                     <div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-3xl text-black font-bold">
-                          {FormatService.formatVND(tutor.hourlyRate)}
+                          {FormatService.formatVND(tutor.subjects?.[0]?.hourlyRate || 0)}
                         </span>
                         <span className="text-base text-gray-600">/giờ</span>
                       </div>

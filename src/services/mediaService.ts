@@ -3,7 +3,7 @@ import { API_ENDPOINTS } from '@/constants';
 import { ApiResponse } from '@/types/api';
 
 // Types for Cloud Media API
-export type MediaType = 'Image' | 'Video' | 'Document';
+export type MediaType = 'Image' | 'Video';
 
 export interface UploadToCloudResponse {
   success: boolean;
@@ -44,8 +44,7 @@ export class MediaService {
 
     return apiClient.post<UploadToCloudResponse>(
       API_ENDPOINTS.CLOUD_MEDIA.UPLOAD,
-      formData,
-      { 'Content-Type': 'multipart/form-data' }
+      formData
     );
   }
 
@@ -62,9 +61,9 @@ export class MediaService {
   /**
    * Delete file by publicId
    */
-  static async deleteFile(publicId: string, mediaType: MediaType): Promise<ApiResponse<UploadToCloudResponse>> {
+  static async deleteFile(publicId: string, _mediaType: MediaType): Promise<ApiResponse<UploadToCloudResponse>> {
     const endpoint = replaceUrlParams(API_ENDPOINTS.CLOUD_MEDIA.DELETE, { publicId });
-    return apiClient.delete<UploadToCloudResponse>(endpoint, { mediaType });
+    return apiClient.delete<UploadToCloudResponse>(endpoint);
   }
 }
 

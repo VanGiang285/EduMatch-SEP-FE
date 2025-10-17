@@ -3,6 +3,7 @@ import { Button } from "../ui/basic/button";
 import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 interface NavbarProps {
@@ -22,6 +23,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
+  const { addToast } = useToast();
   const router = useRouter();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -32,6 +34,22 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
       onNavigateToHome();
     } catch (error) {
       console.error('Logout failed:', error);
+    }
+  };
+
+  const handleBecomeTutorClick = () => {
+    if (!isAuthenticated) {
+      addToast({
+        type: 'warning',
+        title: 'Cần đăng nhập',
+        description: 'Bạn cần đăng nhập để trở thành gia sư',
+        duration: 3000
+      });
+      setTimeout(() => {
+        onNavigateToLogin();
+      }, 1000);
+    } else {
+      onNavigateToBecomeTutor?.();
     }
   };
 
@@ -76,7 +94,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               Danh sách lớp học
             </a>
             <button 
-              onClick={onNavigateToBecomeTutor}
+              onClick={handleBecomeTutorClick}
               className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
             >
               <GraduationCap className="w-4 h-4" />
@@ -257,7 +275,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               Danh sách lớp học
             </a>
             <button 
-              onClick={onNavigateToBecomeTutor}
+              onClick={handleBecomeTutorClick}
               className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
             >
               <GraduationCap className="w-4 h-4" />

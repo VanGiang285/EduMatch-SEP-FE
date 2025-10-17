@@ -18,8 +18,14 @@ class ApiClient {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
   }
-  private getHeaders(customHeaders?: Record<string, string>): Record<string, string> {
+  private getHeaders(customHeaders?: Record<string, string>, isFormData?: boolean): Record<string, string> {
     const headers = { ...this.defaultHeaders, ...customHeaders };
+    
+    // Don't set Content-Type for FormData, let browser set it with boundary
+    if (isFormData && headers['Content-Type']) {
+      delete headers['Content-Type'];
+    }
+    
     const token = this.getAuthToken();
     if (process.env.NODE_ENV === 'development') {
       console.log('Auth token:', token ? `${token.substring(0, 20)}...` : 'No token');
@@ -71,7 +77,8 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
-    const headers = this.getHeaders(options.headers as Record<string, string>);
+    const isFormData = options.body instanceof FormData;
+    const headers = this.getHeaders(options.headers as Record<string, string>, isFormData);
     const config: RequestInit = {
       ...options,
       headers,
@@ -123,13 +130,13 @@ class ApiClient {
   async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: data ? JSON.stringify(data) : null,
+      body: data ? (data instanceof FormData ? data : JSON.stringify(data)) : null,
     });
   }
   async put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PUT',
-      body: data ? JSON.stringify(data) : null,
+      body: data ? (data instanceof FormData ? data : JSON.stringify(data)) : null,
     });
   }
   async patch<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {

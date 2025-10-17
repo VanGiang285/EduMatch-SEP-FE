@@ -4,26 +4,24 @@ import { ApiResponse } from '@/types/api';
 
 // Types for Find Tutor API
 export interface FindTutorProfile {
-  id: number;
+  id?: number;
   userEmail: string;
-  hourlyRate: number;
   bio?: string;
-  experience?: number;
-  teachingMode?: 'Online' | 'Offline' | 'Both';
-  status: 'Pending' | 'Approved' | 'Rejected';
+  teachingExp?: string;
+  videoIntroUrl?: string;
+  teachingModes: number; // 0: Offline, 1: Online, 2: Hybrid
+  status: number; // 0: Pending, 1: Approved, 2: Rejected
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
+  // User information
+  userName?: string;
+  firstName?: string;
+  lastName?: string;
+  avatarUrl?: string;
   // Related data
   educations?: FindTutorEducation[];
   certificates?: FindTutorCertificate[];
   subjects?: FindTutorSubject[];
-  availabilities?: FindTutorAvailability[];
-  user?: {
-    email: string;
-    firstName?: string;
-    lastName?: string;
-    avatarUrl?: string;
-  };
 }
 
 export interface FindTutorEducation {
@@ -85,7 +83,7 @@ export interface FindTimeSlot {
 
 export interface TutorFilter {
   keyword?: string;
-  gender?: 'Male' | 'Female' | 'Other';
+  gender?: number; // 1: Male, 2: Female, 3: Other
   city?: string;
   teachingMode?: 'Online' | 'Offline' | 'Both';
   statusId?: 'Pending' | 'Approved' | 'Rejected';
