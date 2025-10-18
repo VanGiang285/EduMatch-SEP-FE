@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { ManageTutorProfileService, TutorProfile } from '@/services/tutorManagementService';
-import { ApiResponse } from '@/types/api';
+import { useState, useCallback } from 'react';
+import { TutorManagementService, TutorProfile } from '@/services/tutorManagementService';
 
 export interface UseTutorDetailReturn {
   tutor: TutorProfile | null;
@@ -20,16 +19,12 @@ export function useTutorDetail(): UseTutorDetailReturn {
     setError(null);
     
     try {
-      console.log('🔍 Loading tutor detail for ID:', id);
-      const response = await ManageTutorProfileService.getTutorProfileById(id);
-      console.log('📊 Tutor detail response:', response);
+      const response = await TutorManagementService.getTutorById(id);
       
       if (response.success && response.data) {
         setTutor(response.data);
-        console.log('✅ Tutor detail loaded successfully');
       } else {
         setError('Không thể tải thông tin gia sư');
-        console.log('❌ Failed to load tutor detail');
       }
     } catch (err) {
       console.error('Error loading tutor detail:', err);

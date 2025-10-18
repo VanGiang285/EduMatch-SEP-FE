@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api';
+import { apiClient, replaceUrlParams } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
 import { ApiResponse } from '@/types/api';
 
@@ -67,6 +67,14 @@ export class MasterDataService {
    */
   static async getAllSubjects(): Promise<ApiResponse<SubjectDto[]>> {
     return apiClient.get<SubjectDto[]>(API_ENDPOINTS.SUBJECTS.GET_ALL);
+  }
+
+  /**
+   * Get subject by ID
+   */
+  static async getSubjectById(id: number): Promise<ApiResponse<SubjectDto>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.SUBJECTS.GET_BY_ID, { id: id.toString() });
+    return apiClient.get<SubjectDto>(endpoint);
   }
 
   /**

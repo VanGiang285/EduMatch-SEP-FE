@@ -68,7 +68,7 @@ export function FindTutorPage() {
     // Filter by subject
     if (selectedSubject !== 'all') {
       filtered = filtered.filter(tutor => 
-        tutor.subjects?.some(subject => subject.subjectId.toString() === selectedSubject)
+        tutor.tutorSubjects?.some(subject => subject.subjectId.toString() === selectedSubject)
       );
     }
 
@@ -77,13 +77,12 @@ export function FindTutorPage() {
       filtered.sort((a, b) => {
         switch (selectedSort) {
           case 'price-low':
-            return (a.subjects?.[0]?.hourlyRate || 0) - (b.subjects?.[0]?.hourlyRate || 0);
+            return (a.tutorSubjects?.[0]?.hourlyRate || 0) - (b.tutorSubjects?.[0]?.hourlyRate || 0);
           case 'price-high':
-            return (b.subjects?.[0]?.hourlyRate || 0) - (a.subjects?.[0]?.hourlyRate || 0);
+            return (b.tutorSubjects?.[0]?.hourlyRate || 0) - (a.tutorSubjects?.[0]?.hourlyRate || 0);
           case 'experience':
-            return (b.subjects?.[0]?.experience || 0) - (a.subjects?.[0]?.experience || 0);
+            return 0;
           case 'rating':
-            // For now, use a mock rating since we don't have rating data
             return 0;
           default:
             return 0;
@@ -247,9 +246,9 @@ export function FindTutorPage() {
                 className="w-full lg:w-[160px] flex-shrink-0"
               >
                 <SelectWithSearchItem value="all">Tất cả hình thức</SelectWithSearchItem>
-                <SelectWithSearchItem value="Online">Online</SelectWithSearchItem>
-                <SelectWithSearchItem value="Offline">Offline</SelectWithSearchItem>
-                <SelectWithSearchItem value="Both">Cả hai</SelectWithSearchItem>
+                <SelectWithSearchItem value="1">Dạy Online</SelectWithSearchItem>
+                <SelectWithSearchItem value="0">Dạy trực tiếp</SelectWithSearchItem>
+                <SelectWithSearchItem value="2">Dạy Online + Trực tiếp</SelectWithSearchItem>
               </SelectWithSearch>
               <SelectWithSearch 
                 value={selectedSort}
@@ -358,7 +357,7 @@ export function FindTutorPage() {
                             <Separator orientation="vertical" className="h-4" />
                             <span className="text-sm text-gray-600">0 buổi học</span>
                             <Separator orientation="vertical" className="h-4" />
-                            <span className="text-sm text-gray-600">{tutor.subjects?.[0]?.experience || 0} năm kinh nghiệm</span>
+                            <span className="text-sm text-gray-600">0 năm kinh nghiệm</span>
                           </div>
                         </div>
                         <Button 
@@ -372,7 +371,7 @@ export function FindTutorPage() {
                       </div>
                       {/* Subjects */}
                       <div className="flex flex-wrap gap-2">
-                        {tutor.subjects?.map((subject, idx) => (
+                        {tutor.tutorSubjects?.map((subject, idx) => (
                           <Badge key={idx} variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-black border-[#257180]/20">
                             {subject.subject?.subjectName || `Subject ${subject.subjectId}`}
                           </Badge>
@@ -394,17 +393,17 @@ export function FindTutorPage() {
                     </div>
                     <Separator orientation="vertical" className="h-4" />
                     <span>
-                      {tutor.teachingModes === 0 ? 'Offline' : 
-                       tutor.teachingModes === 1 ? 'Online' : 
-                       tutor.teachingModes === 2 ? 'Hybrid' : 
+                      {tutor.teachingModes === 0 ? 'Dạy trực tiếp' : 
+                       tutor.teachingModes === 1 ? 'Dạy Online' : 
+                       tutor.teachingModes === 2 ? 'Dạy Online + Trực tiếp' : 
                        'Chưa xác định'}
                     </span>
-                    {tutor.educations && tutor.educations.length > 0 && (
+                    {tutor.tutorEducations && tutor.tutorEducations.length > 0 && (
                       <>
                         <Separator orientation="vertical" className="h-4" />
                         <div className="flex items-center gap-1.5">
                           <Award className="w-4 h-4" />
-                          <span className="line-clamp-1">{tutor.educations[0].degree}</span>
+                          <span className="line-clamp-1">{tutor.tutorEducations[0].institution?.name || 'Education'}</span>
                         </div>
                       </>
                     )}
@@ -414,7 +413,7 @@ export function FindTutorPage() {
                     <div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-3xl text-black font-bold">
-                          {FormatService.formatVND(tutor.subjects?.[0]?.hourlyRate || 0)}
+                          {FormatService.formatVND(tutor.tutorSubjects?.[0]?.hourlyRate || 0)}
                         </span>
                         <span className="text-base text-gray-600">/giờ</span>
                       </div>

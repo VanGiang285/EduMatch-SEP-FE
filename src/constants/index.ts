@@ -21,6 +21,60 @@ export const USER_ROLES = {
   TUTOR: 'tutor',
   ADMIN: 'admin',
 } as const;
+
+// Enum constants tương ứng với Backend
+export const GENDER_OPTIONS = [
+  { value: 0, label: 'Không xác định' },
+  { value: 1, label: 'Nam' },
+  { value: 2, label: 'Nữ' },
+  { value: 3, label: 'Giới tính khác' }
+] as const;
+
+export const TEACHING_MODE_OPTIONS = [
+  { value: 0, label: 'Dạy trực tiếp' },
+  { value: 1, label: 'Dạy online' },
+  { value: 2, label: 'Kết hợp' }
+] as const;
+
+export const TUTOR_STATUS_OPTIONS = [
+  { value: 0, label: 'Chờ duyệt' },
+  { value: 1, label: 'Đã duyệt' },
+  { value: 2, label: 'Bị từ chối' },
+  { value: 3, label: 'Tạm khóa' },
+  { value: 4, label: 'Ngừng hoạt động' }
+] as const;
+
+export const VERIFY_STATUS_OPTIONS = [
+  { value: 0, label: 'Chờ duyệt' },
+  { value: 1, label: 'Đã xác minh' },
+  { value: 2, label: 'Bị từ chối' },
+  { value: 3, label: 'Hết hạn' },
+  { value: 4, label: 'Đã xóa/thu hồi' }
+] as const;
+
+export const INSTITUTION_TYPE_OPTIONS = [
+  { value: 0, label: 'Trung cấp' },
+  { value: 1, label: 'Cao đẳng' },
+  { value: 2, label: 'Đại học' },
+  { value: 3, label: 'Khác' }
+] as const;
+
+export const DAY_OF_WEEK_OPTIONS = [
+  { value: 0, label: 'Chủ nhật' },
+  { value: 1, label: 'Thứ hai' },
+  { value: 2, label: 'Thứ ba' },
+  { value: 3, label: 'Thứ tư' },
+  { value: 4, label: 'Thứ năm' },
+  { value: 5, label: 'Thứ sáu' },
+  { value: 6, label: 'Thứ bảy' }
+] as const;
+
+export const AVAILABILITY_STATUS_OPTIONS = [
+  { value: 0, label: 'Trống' },
+  { value: 1, label: 'Đã đặt' },
+  { value: 2, label: 'Đang học' },
+  { value: 3, label: 'Đã hủy' }
+] as const;
 export const BOOKING_STATUS = {
   PENDING: 'pending',
   CONFIRMED: 'confirmed',
@@ -73,13 +127,15 @@ export const API_ENDPOINTS = {
   
   TUTORS: {
     BECOME_TUTOR: '/api/tutors/become-tutor',
-    TEST_SEND_MAIL: '/api/tutors/test-send-mail',
-  },
-  
-  MANAGE_TUTOR_PROFILES: {
-    GET_BY_ID: '/api/managetutorprofiles/:id',
-    GET_BY_EMAIL: '/api/managetutorprofiles/email/:email',
-    UPDATE_BY_EMAIL: '/api/managetutorprofiles/:email',
+    UPDATE_EDUCATION: '/api/tutors/update-education/:id',
+    UPDATE_CERTIFICATE: '/api/tutors/update-certificate/:id',
+    UPDATE_TUTOR_SUBJECT: '/api/tutors/update-tutor-subject/:id',
+    VERIFY_EDUCATION_BATCH: '/api/tutors/update-verify-education-list/:tutorId',
+    VERIFY_CERTIFICATE_BATCH: '/api/tutors/update-verify-certificate-list/:tutorId',
+    GET_BY_STATUS: '/api/tutors/get-all-tutor-by-status',
+    GET_ALL: '/api/tutors/get-all-tutor',
+    GET_VERIFICATIONS: '/api/tutors/get-all-tutor-certificate-education/:tutorId',
+    GET_BY_ID: '/api/tutors/get-tutor-by-id/:tutorId',
   },
   
   FIND_TUTORS: {
@@ -89,29 +145,37 @@ export const API_ENDPOINTS = {
   
   ADMIN: {
     GET_USER_BY_ROLE: '/api/admin/role/:roleId',
+    GET_ALL_USERS: '/api/admin/getAllUsers',
     DEACTIVATE_USER: '/api/admin/users/:email/deactivate',
     ACTIVATE_USER: '/api/admin/users/:email/activate',
+    UPDATE_USER_ROLE: '/api/admin/users/:email/:roleId',
     CREATE_ADMIN: '/api/admin/create-admin',
   },
   
   SUBJECTS: {
-    GET_ALL: '/api/Subject/get-all-subject',
+    GET_ALL: '/api/subject/get-all-subject',
+    GET_BY_ID: '/api/subject/get-subject-by-id/:id',
   },
   
   LEVELS: {
-    GET_ALL: '/api/Level/get-all-level',
+    GET_ALL: '/api/level/get-all-level',
   },
   
   CERTIFICATES: {
-    GET_ALL_WITH_SUBJECTS: '/api/Certificate/get-all-certificatetypes-with-subjects',
+    GET_ALL_WITH_SUBJECTS: '/api/certificate/get-all-certificatetypes-with-subjects',
   },
   
   EDUCATION: {
-    GET_ALL_INSTITUTIONS: '/api/Education/get-all-education-institution',
+    GET_ALL_INSTITUTIONS: '/api/education/get-all-education-institution',
   },
   
   TIME_SLOTS: {
-    GET_ALL: '/api/TimeSlots/get-all-time-slots',
+    GET_ALL: '/api/timeslots/get-all-time-slots',
+  },
+  
+  CHAT: {
+    GET_ROOMS: '/api/chat/rooms/:email',
+    GET_MESSAGES: '/api/chat/messages/:roomId',
   },
   
   CLOUD_MEDIA: {

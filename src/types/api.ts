@@ -49,6 +49,7 @@ export interface LoginResponse {
   message: string;
 }
 export interface RegisterRequest {
+  fullName: string;
   email: string;
   password: string;
 }

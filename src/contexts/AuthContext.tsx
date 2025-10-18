@@ -4,13 +4,15 @@ import { User } from '@/types';
 import { AuthService } from '@/services';
 import { ErrorHandler } from '@/lib/error-handler';
 import { STORAGE_KEYS } from '@/constants';
+import { TokenManager } from '@/lib/tokenManager';
+import { apiClient } from '@/lib/api';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (fullName: string, email: string, password: string) => Promise<void>;
   googleLogin: (idToken: string) => Promise<void>;
   verifyEmail: (token: string) => Promise<void>;
   resendVerification: (email: string) => Promise<void>;
@@ -22,6 +24,47 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Token refresh callbacks
+  const handleTokenRefresh = useCallback(async () => {
+    try {
+      console.log('🔄 Refreshing token...');
+      const response = await AuthService.refreshToken();
+      if (response.success && response.data) {
+        const { accessToken } = response.data;
+        localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken);
+        
+        // Cập nhật timer cho token mới
+        TokenManager.saveTokenAndUpdateTimer(
+          accessToken,
+          handleTokenRefresh,
+          handleTokenRefreshFailed
+        );
+        
+        console.log('✅ Token refreshed successfully');
+      } else {
+        throw new Error('Token refresh failed');
+      }
+    } catch (error) {
+      console.error('❌ Token refresh failed:', error);
+      throw error;
+    }
+  }, []);
+
+  const handleTokenRefreshFailed = useCallback(() => {
+    console.log('🚪 Token refresh failed, logging out user');
+    // Dừng token refresh timer
+    TokenManager.stopTokenRefreshTimer();
+    
+    // Clear auth data
+    AuthService.clearStoredData();
+    setUser(null);
+  }, []);
+
+  // Setup ApiClient callbacks
+  useEffect(() => {
+    apiClient.setTokenRefreshCallbacks(handleTokenRefresh, handleTokenRefreshFailed);
+  }, [handleTokenRefresh, handleTokenRefreshFailed]);
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -29,6 +72,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const isAuthenticated = AuthService.isAuthenticated();
         if (isAuthenticated && storedUser) {
           setUser(storedUser);
+          
+          // Bắt đầu token refresh timer cho user đã login
+          const currentToken = TokenManager.getCurrentToken();
+          if (currentToken) {
+            TokenManager.saveTokenAndUpdateTimer(
+              currentToken,
+              handleTokenRefresh,
+              handleTokenRefreshFailed
+            );
+          }
+          
           try {
             const response = await AuthService.getCurrentUser();
             if (response.success && response.data) {
@@ -47,6 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           } catch (error) {
             AuthService.clearStoredData();
             setUser(null);
+            TokenManager.stopTokenRefreshTimer();
           }
         }
       } catch (error) {
@@ -77,6 +132,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
         setUser(tempUser);
         AuthService.storeUserData(tempUser, accessToken);
+        
+        // Bắt đầu token refresh timer
+        TokenManager.saveTokenAndUpdateTimer(
+          accessToken,
+          handleTokenRefresh,
+          handleTokenRefreshFailed
+        );
+        
         if (rememberMe) {
           localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, 'true');
         }
@@ -113,6 +176,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = useCallback(async () => {
     try {
       setLoading(true);
+      
+      // Dừng token refresh timer
+      TokenManager.stopTokenRefreshTimer();
+      
       await AuthService.logout();
     } catch (error) {
       ErrorHandler.logError(error, 'AuthProvider.logout');
@@ -122,10 +189,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     }
   }, []);
-  const register = useCallback(async (email: string, password: string) => {
+  const register = useCallback(async (fullName: string, email: string, password: string) => {
     try {
       setLoading(true);
-      const response = await AuthService.register({ email, password });
+      const response = await AuthService.register({ fullName, email, password });
       if (response.success) {
         // Registration successful, user needs to verify email
         // Don't set user state yet, wait for email verification
@@ -159,6 +226,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           };
           setUser(userData);
           AuthService.storeUserData(userData, accessToken);
+          
+          // Bắt đầu token refresh timer cho Google login
+          TokenManager.saveTokenAndUpdateTimer(
+            accessToken,
+            handleTokenRefresh,
+            handleTokenRefreshFailed
+          );
         }
       } else {
         throw new Error(response.error?.message || 'Google login failed');
@@ -240,6 +314,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user]);
   const clearAuth = useCallback(() => {
+    // Dừng token refresh timer
+    TokenManager.stopTokenRefreshTimer();
+    
     AuthService.clearStoredData();
     setUser(null);
   }, []);

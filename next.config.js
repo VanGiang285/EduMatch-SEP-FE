@@ -1,10 +1,14 @@
 const nextConfig = {
   images: {
-    domains: ['images.unsplash.com'],
+    domains: ['images.unsplash.com', 'res.cloudinary.com'],
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
       },
     ],
   },
@@ -42,4 +46,4 @@ const nextConfig = {
     ];
   },
 }
-module.exports = nextConfig
+module.exports = nextConfig

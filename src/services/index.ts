@@ -17,6 +17,9 @@ export * from './masterDataService';
 // Media Services
 export * from './mediaService';
 
+// Chat Services
+export * from './chatService';
+
 // Legacy Services (for backward compatibility)
 export * from './bookingService';
 export * from './reviewService';

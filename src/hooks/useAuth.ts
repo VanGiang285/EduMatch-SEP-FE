@@ -10,8 +10,8 @@ export const useAuthAsync = () => {
     }
   );
   const registerAsync = useAsync(
-    async (email: string, password: string) => {
-      return await auth.register(email, password);
+    async (fullName: string, email: string, password: string) => {
+      return await auth.register(fullName, email, password);
     }
   );
   const logoutAsync = useAsync(
@@ -83,9 +83,9 @@ export const useAuthActions = () => {
       };
     }
   };
-  const handleRegister = async (email: string, password: string) => {
+  const handleRegister = async (fullName: string, email: string, password: string) => {
     try {
-      await auth.register(email, password);
+      await auth.register(fullName, email, password);
       return { success: true };
     } catch (error) {
       const appError = ErrorHandler.handleApiError(error);

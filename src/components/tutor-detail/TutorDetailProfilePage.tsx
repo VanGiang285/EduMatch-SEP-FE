@@ -185,7 +185,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <Globe className="w-4 h-4" />
-                        <span>{tutor.teachingModes === 0 ? 'Offline' : tutor.teachingModes === 1 ? 'Online' : tutor.teachingModes === 2 ? 'Hybrid' : 'Chưa xác định'}</span>
+                        <span>{tutor.teachingModes === 0 ? 'Dạy trực tiếp' : tutor.teachingModes === 1 ? 'Dạy Online' : tutor.teachingModes === 2 ? 'Dạy Online + Trực tiếp' : 'Chưa xác định'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <Users className="w-4 h-4" />
@@ -249,9 +249,9 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       <div className="flex flex-wrap gap-2">
                         {tutor.teachingModes !== undefined && (
                           <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-black border-[#257180]/20">
-                            {tutor.teachingModes === 0 ? 'Offline' : 
-                             tutor.teachingModes === 1 ? 'Online' : 
-                             tutor.teachingModes === 2 ? 'Hybrid' : 
+                            {tutor.teachingModes === 0 ? 'Dạy trực tiếp' : 
+                             tutor.teachingModes === 1 ? 'Dạy Online' : 
+                             tutor.teachingModes === 2 ? 'Dạy Online + Trực tiếp' : 
                              'Chưa xác định'}
                           </Badge>
                         )}
@@ -264,19 +264,18 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     <CardTitle className="font-bold text-black">Học vấn & Chứng chỉ</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {tutor.educations && tutor.educations.length > 0 && (
+                    {tutor.tutorEducations && tutor.tutorEducations.length > 0 && (
                       <>
                         <div>
                           <h4 className="text-black mb-3 font-bold">Học vấn</h4>
                           <div className="space-y-3">
-                            {tutor.educations.map((edu) => (
+                            {tutor.tutorEducations.map((edu) => (
                               <div key={edu.id} className="flex items-start gap-2">
                                 <Award className="w-4 h-4 text-black mt-1 flex-shrink-0" />
                                 <div>
-                                  <p className="text-gray-700">{edu.degree} - {edu.institutionName}</p>
+                                  <p className="text-gray-700">{edu.institution?.name || 'Education'}</p>
                                   <p className="text-sm text-gray-500">
-                                    {edu.startDate ? new Date(edu.startDate).getFullYear() : 'N/A'}
-                                    {edu.endDate && ` - ${new Date(edu.endDate).getFullYear()}`}
+                                    {edu.issueDate ? new Date(edu.issueDate).getFullYear() : 'N/A'}
                                   </p>
                                   <Badge variant="outline" className="text-xs mt-1 border-[#257180]/20 text-black">
                                     <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -290,18 +289,18 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                         <Separator />
                       </>
                     )}
-                    {tutor.certificates && tutor.certificates.length > 0 && (
+                    {tutor.tutorCertificates && tutor.tutorCertificates.length > 0 && (
                       <div>
                         <h4 className="text-black mb-3 font-bold">Chứng chỉ</h4>
                         <div className="space-y-2">
-                          {tutor.certificates.map((cert) => (
+                          {tutor.tutorCertificates.map((cert) => (
                             <div key={cert.id} className="flex items-start justify-between">
                               <div className="flex items-start gap-2">
                                 <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-black" />
                                 <div>
-                                  <span className="text-gray-700">{cert.certificateName}</span>
-                                  {cert.issuingOrganization && (
-                                    <p className="text-xs text-gray-500">{cert.issuingOrganization}</p>
+                                  <span className="text-gray-700">{cert.certificateType?.name || 'Certificate'}</span>
+                                  {cert.certificateType?.code && (
+                                    <p className="text-xs text-gray-500">{cert.certificateType.code}</p>
                                   )}
                                   {cert.expiryDate && new Date(cert.expiryDate) < new Date() && (
                                     <Badge variant="outline" className="text-xs mt-1 text-[#FD8B51] border-[#FD8B51]">
@@ -327,7 +326,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-2">
-                      {tutor.subjects?.map((subject, idx) => (
+                      {tutor.tutorSubjects?.map((subject, idx) => (
                         <Badge key={idx} variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-black border-[#257180]/20">
                           {subject.subject?.subjectName || `Subject ${subject.subjectId}`}
                         </Badge>
@@ -464,7 +463,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     <div>
                       <span className="text-gray-600 text-sm">Học phí</span>
                       <div className="mt-2">
-                        <span className="text-3xl text-black">{FormatService.formatVND(tutor.hourlyRate)}</span>
+                        <span className="text-3xl text-black">{FormatService.formatVND(tutor.tutorSubjects?.[0]?.hourlyRate || 0)}</span>
                         <span className="text-base text-gray-600">/giờ</span>
                       </div>
                     </div>
@@ -502,7 +501,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Hình thức:</span>
-                      <span className="text-black font-medium">{tutor.teachingMode || 'Chưa xác định'}</span>
+                      <span className="text-black font-medium">{tutor.teachingModes === 0 ? 'Dạy trực tiếp' : tutor.teachingModes === 1 ? 'Dạy Online' : tutor.teachingModes === 2 ? 'Dạy Online + Trực tiếp' : 'Chưa xác định'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Tham gia:</span>

@@ -17,6 +17,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -41,7 +42,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
     setPasswordMatchError("");
     
     // Check null, undefined và empty string
-    if (!email || !password || !confirmPassword || email === '' || password === '' || confirmPassword === '') {
+    if (!fullName || !email || !password || !confirmPassword || fullName === '' || email === '' || password === '' || confirmPassword === '') {
       setError("Vui lòng nhập đầy đủ tất cả thông tin");
       return;
     }
@@ -53,11 +54,12 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
     }
     
     // Trim và check empty sau khi trim
+    const trimmedFullName = fullName.trim();
     const trimmedEmail = email.trim();
     const trimmedPassword = password.trim();
     const trimmedConfirmPassword = confirmPassword.trim();
     
-    if (trimmedEmail.length === 0 || trimmedPassword.length === 0 || trimmedConfirmPassword.length === 0) {
+    if (trimmedFullName.length === 0 || trimmedEmail.length === 0 || trimmedPassword.length === 0 || trimmedConfirmPassword.length === 0) {
       setError("Tất cả các trường không được để trống");
       return;
     }
@@ -88,7 +90,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
     
     try {
       setIsLoading(true);
-      await register(trimmedEmail, trimmedPassword);
+      await register(trimmedFullName, trimmedEmail, trimmedPassword);
       toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
       // Redirect to email verification page
       window.location.href = `/login?email=${encodeURIComponent(trimmedEmail)}`;
@@ -148,6 +150,18 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
               </p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6" noValidate>
+              {/* Full Name Input */}
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="fullName" className="text-black text-sm sm:text-base">Họ và tên</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Nhập họ và tên của bạn"
+                  className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
+                />
+              </div>
               {/* Email Input */}
               <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="email" className="text-black text-sm sm:text-base">Email</Label>

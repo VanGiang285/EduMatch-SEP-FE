@@ -98,22 +98,18 @@ export function useFindTutor(): UseFindTutorReturn {
     setError(null);
     
     try {
-      console.log('📋 Loading all tutors...');
       const response = await FindTutorService.getAllTutors();
-      console.log('📊 All tutors response:', response);
       
       if (response.success && response.data) {
-        console.log('✅ Loaded tutors:', response.data.length);
         setTutors(response.data);
       } else {
-        console.log('❌ Failed to load tutors');
         setError('Không thể tải danh sách gia sư');
         setTutors([]);
       }
     } catch (err) {
       console.error('Error loading tutors:', err);
       setError('Lỗi khi tải danh sách gia sư');
-      setTutors([]); // Set empty array instead of mock data
+      setTutors([]);
     } finally {
       setIsLoadingTutors(false);
     }
@@ -124,36 +120,30 @@ export function useFindTutor(): UseFindTutorReturn {
     setError(null);
     
     try {
-      console.log('🔍 Searching tutors with filters:', filters);
       const response = await FindTutorService.searchTutors(filters);
-      console.log('📊 Search response:', response);
       
       if (response.success && response.data) {
-        console.log('✅ Found tutors:', response.data.length);
         setTutors(response.data);
       } else {
-        console.log('❌ No tutors found or API error');
         setError('Không thể tìm kiếm gia sư');
         setTutors([]);
       }
     } catch (err) {
       console.error('Error searching tutors:', err);
       setError('Lỗi khi tìm kiếm gia sư');
-      setTutors([]); // Set empty array instead of mock data
+      setTutors([]);
     } finally {
       setIsLoadingTutors(false);
     }
   }, [filters]);
 
   const setFilters = useCallback((newFilters: Partial<TutorFilter>) => {
-    console.log('🔧 Setting filters:', newFilters);
     setFiltersState(prev => {
       const cleanFilters: TutorFilter = {
         page: 1,
         pageSize: 10,
         ...newFilters,
       };
-      console.log('🔧 Clean filters:', cleanFilters);
       return cleanFilters;
     });
   }, []);

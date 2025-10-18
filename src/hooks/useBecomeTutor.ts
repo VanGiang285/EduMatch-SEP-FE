@@ -1,13 +1,12 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { BecomeTutorService, BecomeTutorRequest } from '@/services/becomeTutorService';
-import { ApiResponse } from '@/types/api';
+import { TutorManagementService, LegacyBecomeTutorRequest } from '@/services/tutorManagementService';
 
 export interface UseBecomeTutorReturn {
   isSubmitting: boolean;
   error: string | null;
-  submitApplication: (data: BecomeTutorRequest) => Promise<void>;
+  submitApplication: (data: LegacyBecomeTutorRequest) => Promise<void>;
   clearError: () => void;
   isAuthenticated: boolean;
   redirectToLogin: () => void;
@@ -19,13 +18,13 @@ export function useBecomeTutor(): UseBecomeTutorReturn {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
 
-  const submitApplication = useCallback(async (data: BecomeTutorRequest) => {
+  const submitApplication = useCallback(async (data: LegacyBecomeTutorRequest) => {
     setIsSubmitting(true);
     setError(null);
 
     try {
       console.log('🚀 Submitting tutor application:', data);
-      const response = await BecomeTutorService.becomeTutor(data);
+      const response = await TutorManagementService.becomeTutor(data);
       console.log('📊 Application response:', response);
 
       if (response.success && response.data) {

@@ -27,8 +27,15 @@ export class AdminService {
    * Get users by role ID
    */
   static async getUsersByRole(roleId: number): Promise<ApiResponse<ManageUserDto[]>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.ADMIN.GET_USER_BY_ROLE, { roleId });
+    const endpoint = replaceUrlParams(API_ENDPOINTS.ADMIN.GET_USER_BY_ROLE, { roleId: roleId.toString() });
     return apiClient.get<ManageUserDto[]>(endpoint);
+  }
+
+  /**
+   * Get all users
+   */
+  static async getAllUsers(): Promise<ApiResponse<ManageUserDto[]>> {
+    return apiClient.get<ManageUserDto[]>(API_ENDPOINTS.ADMIN.GET_ALL_USERS);
   }
 
   /**
@@ -44,6 +51,14 @@ export class AdminService {
    */
   static async activateUser(email: string): Promise<ApiResponse<string>> {
     const endpoint = replaceUrlParams(API_ENDPOINTS.ADMIN.ACTIVATE_USER, { email });
+    return apiClient.put<string>(endpoint);
+  }
+
+  /**
+   * Update user role
+   */
+  static async updateUserRole(email: string, roleId: number): Promise<ApiResponse<string>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.ADMIN.UPDATE_USER_ROLE, { email, roleId: roleId.toString() });
     return apiClient.put<string>(endpoint);
   }
 

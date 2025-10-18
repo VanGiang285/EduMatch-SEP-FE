@@ -1,9 +1,15 @@
 import { ApiResponse, ApiError } from '@/types/api';
 import { APP_CONFIG } from '@/constants/config';
 import { STORAGE_KEYS } from '@/constants';
+import { TokenManager } from './tokenManager';
 class ApiClient {
   private baseURL: string;
   private defaultHeaders: Record<string, string>;
+  private isRefreshing: boolean = false;
+  private refreshPromise: Promise<string> | null = null;
+  private onTokenRefresh: (() => Promise<void>) | null = null;
+  private onTokenRefreshFailed: (() => void) | null = null;
+
   constructor() {
     this.baseURL = APP_CONFIG.API_BASE_URL;
     this.defaultHeaders = {
@@ -13,6 +19,17 @@ class ApiClient {
     if (process.env.NODE_ENV === 'development') {
       console.log('API Base URL:', this.baseURL);
     }
+  }
+
+  /**
+   * Set callbacks for token refresh
+   */
+  setTokenRefreshCallbacks(
+    onRefresh: () => Promise<void>,
+    onRefreshFailed: () => void
+  ): void {
+    this.onTokenRefresh = onRefresh;
+    this.onTokenRefreshFailed = onRefreshFailed;
   }
   private getAuthToken(): string | null {
     if (typeof window === 'undefined') return null;
@@ -76,6 +93,21 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
+    try {
+      return await this.makeRequest<T>(endpoint, options);
+    } catch (error) {
+      // Handle 401 Unauthorized with auto-refresh
+      if (error instanceof ApiError && error.status === 401) {
+        return await this.handleTokenRefresh<T>(endpoint, options);
+      }
+      throw error;
+    }
+  }
+
+  private async makeRequest<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
     const isFormData = options.body instanceof FormData;
     const headers = this.getHeaders(options.headers as Record<string, string>, isFormData);
@@ -112,6 +144,59 @@ class ApiClient {
         code: 'NETWORK_ERROR',
         details: error,
       });
+    }
+  }
+
+  private async handleTokenRefresh<T>(
+    endpoint: string,
+    options: RequestInit
+  ): Promise<ApiResponse<T>> {
+    // Nếu đang refresh, đợi refresh hoàn thành
+    if (this.isRefreshing && this.refreshPromise) {
+      try {
+        await this.refreshPromise;
+        // Retry request với token mới
+        return await this.makeRequest<T>(endpoint, options);
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    // Bắt đầu refresh token
+    this.isRefreshing = true;
+    this.refreshPromise = this.performTokenRefresh();
+
+    try {
+      await this.refreshPromise;
+      // Retry request với token mới
+      return await this.makeRequest<T>(endpoint, options);
+    } catch (error) {
+      // Refresh thất bại, logout user
+      if (this.onTokenRefreshFailed) {
+        this.onTokenRefreshFailed();
+      }
+      throw error;
+    } finally {
+      this.isRefreshing = false;
+      this.refreshPromise = null;
+    }
+  }
+
+  private async performTokenRefresh(): Promise<string> {
+    if (!this.onTokenRefresh) {
+      throw new Error('Token refresh callback not set');
+    }
+
+    try {
+      await this.onTokenRefresh();
+      const newToken = this.getAuthToken();
+      if (!newToken) {
+        throw new Error('No token after refresh');
+      }
+      return newToken;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      throw error;
     }
   }
   async get<T>(endpoint: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
