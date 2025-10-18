@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FindTutorService, FindTutorProfile, TutorFilter } from '@/services/findTutorService';
 import { MasterDataService, SubjectDto, LevelDto, EducationInstitutionDto } from '@/services/masterDataService';
-import { ApiResponse } from '@/types/api';
 
 export interface UseFindTutorReturn {
   tutors: FindTutorProfile[];
@@ -70,23 +69,23 @@ export function useFindTutor(): UseFindTutorReturn {
     } catch (err) {
       console.error('Error loading master data:', err);
       setSubjects([
-        { id: 1, subjectName: 'Toán học' },
-        { id: 2, subjectName: 'Tiếng Anh' },
-        { id: 3, subjectName: 'Vật lý' },
-        { id: 4, subjectName: 'Hóa học' },
-        { id: 5, subjectName: 'Sinh học' },
-        { id: 6, subjectName: 'Ngữ văn' },
+        { id: 1, subjectName: 'Toán học', isActive: true, createdAt: '', updatedAt: '' },
+        { id: 2, subjectName: 'Tiếng Anh', isActive: true, createdAt: '', updatedAt: '' },
+        { id: 3, subjectName: 'Vật lý', isActive: true, createdAt: '', updatedAt: '' },
+        { id: 4, subjectName: 'Hóa học', isActive: true, createdAt: '', updatedAt: '' },
+        { id: 5, subjectName: 'Sinh học', isActive: true, createdAt: '', updatedAt: '' },
+        { id: 6, subjectName: 'Ngữ văn', isActive: true, createdAt: '', updatedAt: '' },
       ]);
       setLevels([
-        { id: 1, levelName: 'Tiểu học' },
-        { id: 2, levelName: 'THCS' },
-        { id: 3, levelName: 'THPT' },
-        { id: 4, levelName: 'Đại học' },
+        { id: 1, name: 'Tiểu học', isActive: true, createdAt: '', updatedAt: '' },
+        { id: 2, name: 'THCS', isActive: true, createdAt: '', updatedAt: '' },
+        { id: 3, name: 'THPT', isActive: true, createdAt: '', updatedAt: '' },
+        { id: 4, name: 'Đại học', isActive: true, createdAt: '', updatedAt: '' },
       ]);
       setInstitutions([
-        { id: 1, institutionName: 'Đại học Sư phạm Hà Nội' },
-        { id: 2, institutionName: 'Đại học Bách khoa Hà Nội' },
-        { id: 3, institutionName: 'Đại học Khoa học Tự nhiên' },
+        { id: 1, code: 'SPHN', name: 'Đại học Sư phạm Hà Nội', institutionType: 'University', isActive: true, createdAt: '', updatedAt: '' },
+        { id: 2, code: 'BKHN', name: 'Đại học Bách khoa Hà Nội', institutionType: 'University', isActive: true, createdAt: '', updatedAt: '' },
+        { id: 3, code: 'KHTN', name: 'Đại học Khoa học Tự nhiên', institutionType: 'University', isActive: true, createdAt: '', updatedAt: '' },
       ]);
     } finally {
       setIsLoadingMasterData(false);
@@ -138,7 +137,7 @@ export function useFindTutor(): UseFindTutorReturn {
   }, [filters]);
 
   const setFilters = useCallback((newFilters: Partial<TutorFilter>) => {
-    setFiltersState(prev => {
+    setFiltersState(() => {
       const cleanFilters: TutorFilter = {
         page: 1,
         pageSize: 10,

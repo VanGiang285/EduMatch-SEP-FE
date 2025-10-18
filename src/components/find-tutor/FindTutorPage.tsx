@@ -5,7 +5,7 @@ import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
 import { Input } from '../ui/form/input';
 import { Badge } from '../ui/basic/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/basic/avatar';
+import { Avatar, AvatarFallback } from '../ui/basic/avatar';
 import { 
   Search, 
   Star, 
@@ -33,23 +33,18 @@ import {
   PaginationPrevious,
 } from '../ui/navigation/pagination';
 import { useFindTutor } from '@/hooks/useFindTutor';
-import { FindTutorProfile } from '@/services/findTutorService';
 export function FindTutorPage() {
   const router = useRouter();
   const {
     tutors,
     subjects,
-    levels,
-    institutions,
     isLoadingTutors,
     isLoadingMasterData,
     error,
-    filters,
     setFilters,
     clearError,
   } = useFindTutor();
 
-  const [priceRange, setPriceRange] = useState([50000, 500000]);
   const [hoveredTutor, setHoveredTutor] = useState<number | null>(null);
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
@@ -320,12 +315,8 @@ export function FindTutorPage() {
                     <div className="relative flex-shrink-0">
                       <div className="relative w-36 h-36 rounded-lg overflow-hidden bg-gray-100">
                         <Avatar className="w-full h-full rounded-lg">
-                          <AvatarImage src={tutor.avatarUrl || undefined} className="object-cover" />
                           <AvatarFallback className="rounded-lg text-2xl">
-                            {tutor.firstName && tutor.lastName 
-                              ? `${tutor.firstName[0]}${tutor.lastName[0]}`
-                              : tutor.userEmail.split('@')[0].slice(0, 2).toUpperCase()
-                            }
+                            {tutor.userEmail.split('@')[0].slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       </div>
@@ -336,10 +327,7 @@ export function FindTutorPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
                             <h2 className="text-black text-2xl font-bold">
-                              {tutor.firstName && tutor.lastName 
-                                ? `${tutor.firstName} ${tutor.lastName}`
-                                : tutor.userName || tutor.userEmail.split('@')[0]
-                              }
+                              {tutor.userEmail.split('@')[0]}
                             </h2>
                             {tutor.videoIntroUrl && (
                               <Badge variant="outline" className="text-xs px-2 py-0.5 border-[#FD8B51] text-[#FD8B51]">
@@ -515,10 +503,7 @@ export function FindTutorPage() {
                           </div>
                           <p className="text-white font-bold">Xem video giới thiệu</p>
                           <p className="text-white/80 text-sm sm:text-base mt-2">
-                            {currentTutor.user?.firstName && currentTutor.user?.lastName 
-                              ? `${currentTutor.user.firstName} ${currentTutor.user.lastName}`
-                              : currentTutor.userEmail.split('@')[0]
-                            }
+                            {currentTutor.userEmail.split('@')[0]}
                           </p>
                         </div>
                       </div>

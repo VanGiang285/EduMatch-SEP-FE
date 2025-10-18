@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/basic/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/navigation/tabs';
 import { Calendar } from '../ui/form/calendar';
 import { Separator } from '../ui/layout/separator';
-import { Star, Heart, MapPin, Clock, BookOpen, Calendar as CalendarIcon, MessageCircle, Video, Shield, Award, Users, TrendingUp, Globe, CheckCircle2, Play, ArrowLeft, Loader2 } from 'lucide-react';
+import { Star, Heart, MapPin, Clock, BookOpen, Calendar as CalendarIcon, MessageCircle, Video, Shield, Award, Users, Globe, CheckCircle2, Play, ArrowLeft, Loader2 } from 'lucide-react';
 import { FormatService } from '@/lib/format';
 import { useTutorDetail } from '@/hooks/useTutorDetail';
 interface Review {
@@ -38,7 +38,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     if (tutorId) {
       loadTutorDetail(tutorId);
     }
-  }, [tutorId]);
+  }, [tutorId, loadTutorDetail]);
   
   const reviews: Review[] = [];
   const timeSlots: any[] = [];
@@ -114,12 +114,8 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                 <div className="flex items-start gap-6">
                   <div className="relative flex-shrink-0">
                     <Avatar className="w-32 h-32 border-2 border-[#F2E5BF]">
-                      <AvatarImage src={tutor.avatarUrl || undefined} />
                       <AvatarFallback className="bg-[#F2E5BF] text-[#257180]">
-                        {tutor.firstName && tutor.lastName 
-                          ? `${tutor.firstName[0]}${tutor.lastName[0]}`
-                          : tutor.userEmail.split('@')[0].slice(0, 2).toUpperCase()
-                        }
+                        {tutor.userEmail.split('@')[0].slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     {tutor.status === 1 && (
@@ -132,10 +128,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <h1 className="text-black text-2xl font-bold mb-2">
-                          {tutor.firstName && tutor.lastName 
-                            ? `${tutor.firstName} ${tutor.lastName}`
-                            : tutor.userName || tutor.userEmail.split('@')[0]
-                          }
+                          {tutor.userEmail.split('@')[0]}
                         </h1>
                         <div className="flex items-center gap-3 mb-2">
                           <div className="flex items-center gap-1.5">
@@ -149,7 +142,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                           <span className="text-sm text-gray-600">0 học viên</span>
                         </div>
                         <div className="flex flex-wrap gap-2 mb-3">
-                          {tutor.status === 'Approved' && (
+                          {tutor.status === 1 && (
                             <Badge variant="default" className="bg-[#F2E5BF] text-black border-[#257180]/20">
                               <CheckCircle2 className="w-3 h-3 mr-1" />
                               Đã xác thực
@@ -202,7 +195,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                   <div className="relative bg-gradient-to-br from-[#257180] to-[#1e5a66] rounded-lg overflow-hidden aspect-video group cursor-pointer">
                     <div 
                       className="w-full h-full bg-cover bg-center opacity-50"
-                      style={{ backgroundImage: `url(${tutor.avatarUrl || 'https://via.placeholder.com/150x150/cccccc/666666?text=Avatar'})` }}
+                      style={{ backgroundImage: `url('https://via.placeholder.com/150x150/cccccc/666666?text=Avatar')` }}
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-20 h-20 bg-[#FD8B51] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -403,7 +396,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                           <div key={idx}>
                             <h4 className="text-black mb-3">{day.day}</h4>
                             <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                              {day.slots.map((slot, slotIdx) => (
+                              {day.slots.map((slot: any, slotIdx: number) => (
                                 <Button 
                                   key={slotIdx} 
                                   variant={selectedTimeSlot === `${day.day}-${slot.time}` ? "default" : "outline"}

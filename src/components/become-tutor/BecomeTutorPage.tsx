@@ -44,8 +44,9 @@ export function BecomeTutorPage() {
   const { subjects, levels, educationInstitutions, timeSlots, error: masterDataError, loadMasterData } = useBecomeTutorMasterData();
 
   const getDefaultDates = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
     
     const endDate = new Date(tomorrow);
     endDate.setDate(tomorrow.getDate() + 30);
@@ -108,14 +109,17 @@ export function BecomeTutorPage() {
     if (!startDate) return 'Vui lòng chọn ngày bắt đầu';
     
     const today = new Date();
-    const tomorrow = new Date();
+    const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
     
-    const threeMonthsLater = new Date();
+    const threeMonthsLater = new Date(today);
     threeMonthsLater.setMonth(today.getMonth() + 3);
+    threeMonthsLater.setHours(23, 59, 59, 999);
     
-    const start = new Date(startDate);
+    const start = new Date(startDate + 'T00:00:00');
     
+    if (isNaN(start.getTime())) return 'Ngày không hợp lệ';
     if (start < tomorrow) return 'Ngày bắt đầu phải từ ngày mai trở đi';
     if (start > threeMonthsLater) return 'Ngày bắt đầu không được quá 3 tháng trong tương lai';
     
@@ -126,13 +130,17 @@ export function BecomeTutorPage() {
     if (!endDate) return 'Vui lòng chọn ngày kết thúc';
     if (!startDate) return 'Vui lòng chọn ngày bắt đầu trước';
     
-    const end = new Date(endDate);
-    const start = new Date(startDate);
+    const end = new Date(endDate + 'T00:00:00');
+    const start = new Date(startDate + 'T00:00:00');
+    
+    if (isNaN(end.getTime()) || isNaN(start.getTime())) return 'Ngày không hợp lệ';
+    
     const twoMonthsAfterStart = new Date(start);
     twoMonthsAfterStart.setMonth(start.getMonth() + 2);
     
     const sixMonthsLater = new Date();
     sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+    sixMonthsLater.setHours(23, 59, 59, 999);
     
     if (end <= start) return 'Ngày kết thúc phải sau ngày bắt đầu';
     if (end > twoMonthsAfterStart) return 'Ngày kết thúc không được quá 2 tháng sau ngày bắt đầu';
@@ -258,17 +266,7 @@ export function BecomeTutorPage() {
     { id: 7, title: 'Thời gian', description: 'Lịch khả dụng' },
     { id: 8, title: 'Giá cả', description: 'Mức học phí' }
   ];
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = 0; hour < 24; hour++) {
-      const startTime = `${hour.toString().padStart(2, '0')}:00`;
-      const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
-      slots.push({ startTime, endTime });
-    }
-    return slots;
-  };
 
-  const timeSlotsGenerated = generateTimeSlots();
   const availableDistricts = formData.introduction.province 
     ? getDistrictsByProvince(formData.introduction.province)
     : [];
@@ -541,7 +539,7 @@ export function BecomeTutorPage() {
                const availabilities: Array<{tutorId: number, slotId: number, startDate: string}> = [];
                
                Object.entries(formData.availability.schedule).forEach(([date, daySchedule]) => {
-                 Object.entries(daySchedule).forEach(([dayOfWeek, slotIds]) => {
+                 Object.entries(daySchedule).forEach(([, slotIds]) => {
                    slotIds.forEach(slotId => {
                      availabilities.push({
                        tutorId: 1,
@@ -1764,7 +1762,11 @@ export function BecomeTutorPage() {
                           type="date"
                           value={formData.availability.startDate}
                           min={getDefaultDates().startDate}
-                          max={new Date().toISOString().split('T')[0]}
+                          max={(() => {
+                            const threeMonthsLater = new Date();
+                            threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+                            return threeMonthsLater.toISOString().split('T')[0];
+                          })()}
                           onChange={(e) => {
                             const newStartDate = e.target.value;
                             const endDate = new Date(formData.availability.endDate);
@@ -1811,14 +1813,14 @@ export function BecomeTutorPage() {
                           value={formData.availability.endDate}
                           min={formData.availability.startDate}
                           max={(() => {
+                            if (!formData.availability.startDate) return '';
                             const startDate = new Date(formData.availability.startDate);
+                            if (isNaN(startDate.getTime())) return '';
                             startDate.setMonth(startDate.getMonth() + 2);
                             return startDate.toISOString().split('T')[0];
                           })()}
                           onChange={(e) => {
                             const newEndDate = e.target.value;
-                            const startDate = new Date(formData.availability.startDate);
-                            const endDate = new Date(newEndDate);
                             
                             const error = validateAvailabilityEndDate(newEndDate, formData.availability.startDate);
                             if (error) {
@@ -1983,7 +1985,7 @@ export function BecomeTutorPage() {
                                             }
                                           };
                                           
-                                          if (checked && formData.availability.isRepeating) {
+                                          if (formData.availability.isRepeating) {
                                             autoFillRepeatingSlots(dateKey, day.key, newSlots);
                                           } else {
                                             updateFormData('availability', { schedule: newSchedule });

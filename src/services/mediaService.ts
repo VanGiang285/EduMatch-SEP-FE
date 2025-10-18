@@ -61,7 +61,7 @@ export class MediaService {
   /**
    * Delete file by publicId
    */
-  static async deleteFile(publicId: string, _mediaType: MediaType): Promise<ApiResponse<UploadToCloudResponse>> {
+  static async deleteFile(publicId: string): Promise<ApiResponse<UploadToCloudResponse>> {
     const endpoint = replaceUrlParams(API_ENDPOINTS.CLOUD_MEDIA.DELETE, { publicId });
     return apiClient.delete<UploadToCloudResponse>(endpoint);
   }

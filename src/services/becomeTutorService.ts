@@ -71,14 +71,14 @@ export class BecomeTutorService {
     formData.append('TutorProfile.Bio', data.introduction || '');
     formData.append('TutorProfile.TeachingExp', data.teachingExperience || '');
     formData.append('TutorProfile.TeachingModes', (data.teachingMode || 2).toString());
-    formData.append('TutorProfile.VideoIntroUrl', hasYoutubeUrl ? data.youtubeLink : '');
+    formData.append('TutorProfile.VideoIntroUrl', hasYoutubeUrl ? (data.youtubeLink || '') : '');
     
     if (data.profileImage) {
       formData.append('ProfileImage', data.profileImage, data.profileImage.name);
     }
     
     if (hasVideoFile) {
-      formData.append('TutorProfile.VideoIntro', data.videoFile);
+      formData.append('TutorProfile.VideoIntro', data.videoFile!);
     }
     
     if (data.subjects && data.subjects.length > 0) {
@@ -152,8 +152,7 @@ export class BecomeTutorService {
     
     return apiClient.post<BecomeTutorResponse>(
       API_ENDPOINTS.TUTORS.BECOME_TUTOR, 
-      formData,
-      { 'Content-Type': 'multipart/form-data' }
+      formData
     );
   }
 }

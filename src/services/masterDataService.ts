@@ -10,6 +10,7 @@ export interface SubjectDto {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  certificateTypes?: CertificateTypeDto[];
 }
 
 export interface LevelDto {

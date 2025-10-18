@@ -113,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     initializeAuth();
-  }, []);
+  }, [handleTokenRefresh, handleTokenRefreshFailed]);
   const login = useCallback(async (email: string, password: string, rememberMe = false) => {
     try {
       setLoading(true);
@@ -172,7 +172,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleTokenRefresh, handleTokenRefreshFailed]);
   const logout = useCallback(async () => {
     try {
       setLoading(true);
@@ -243,7 +243,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleTokenRefresh, handleTokenRefreshFailed]);
   const verifyEmail = useCallback(async (token: string) => {
     try {
       setLoading(true);

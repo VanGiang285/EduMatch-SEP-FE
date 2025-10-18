@@ -15,7 +15,7 @@ export interface UseBecomeTutorReturn {
 export function useBecomeTutor(): UseBecomeTutorReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
 
   const submitApplication = useCallback(async (data: LegacyBecomeTutorRequest) => {
@@ -40,7 +40,7 @@ export function useBecomeTutor(): UseBecomeTutorReturn {
     } finally {
       setIsSubmitting(false);
     }
-  }, [isAuthenticated, router]);
+  }, [router]);
 
   const clearError = useCallback(() => {
     setError(null);

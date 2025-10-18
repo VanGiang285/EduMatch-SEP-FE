@@ -1,7 +1,6 @@
 import { ApiResponse, ApiError } from '@/types/api';
 import { APP_CONFIG } from '@/constants/config';
 import { STORAGE_KEYS } from '@/constants';
-import { TokenManager } from './tokenManager';
 class ApiClient {
   private baseURL: string;
   private defaultHeaders: Record<string, string>;
