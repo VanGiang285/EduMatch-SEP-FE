@@ -398,10 +398,10 @@ export function FindTutorPage() {
               >
                 <CardContent className="p-6">
                   {/* Row 1: Avatar + Name + Info + Subjects */}
-                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-5 mb-4">
+                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 mb-4">
                     {/* Avatar */}
                     <div className="relative flex-shrink-0 self-center sm:self-start">
-                      <div className="relative w-20 h-20 sm:w-48 sm:h-48 rounded-lg overflow-hidden bg-gray-100">
+                      <div className="relative w-24 h-24 sm:w-36 sm:h-36 rounded-lg overflow-hidden bg-gray-100">
                         {tutor.avatarUrl ? (
                           <img 
                             src={tutor.avatarUrl} 
@@ -426,14 +426,14 @@ export function FindTutorPage() {
                     </div>
                     {/* Name, Info & Subjects */}
                     <div className="flex-1 min-w-0 flex flex-col">
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-2 sm:gap-3">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
                         <div className="flex-1">
-                          <div className="flex items-center justify-center sm:justify-start gap-3 mb-2 sm:mb-3">
-                            <h2 className="text-black text-lg sm:text-2xl font-bold text-center sm:text-left">
+                          <div className="flex items-center gap-3 mb-3">
+                            <h2 className="text-black text-xl sm:text-2xl font-bold">
                               {tutor.userName}
                             </h2>
                           </div>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                             <div className="flex items-center gap-1.5">
                               <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
                               <span className="text-sm text-black font-medium">5.0</span>
@@ -455,9 +455,9 @@ export function FindTutorPage() {
                         </Button>
                       </div>
                       {/* Subjects */}
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center sm:justify-start">
+                      <div className="flex flex-wrap gap-2">
                         {tutor.tutorSubjects?.map((tutorSubject, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs sm:text-sm px-2 sm:px-3 py-1 bg-[#F2E5BF] text-black border-[#257180]/20">
+                          <Badge key={idx} variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-black border-[#257180]/20">
                             {tutorSubject.subject?.subjectName || `Subject ${tutorSubject.id}`}
                           </Badge>
                         ))}
@@ -471,7 +471,7 @@ export function FindTutorPage() {
                     </p>
                   </div>
                   {/* Row 3: Location + Teaching Mode + Education */}
-                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-1.5 sm:gap-4 mb-3 sm:mb-4 text-xs sm:text-sm text-gray-600">
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 mb-4 text-sm text-gray-600">
                     <div className="flex items-center gap-1.5">
                       <MapPin className="w-4 h-4" />
                       <span>
@@ -499,7 +499,7 @@ export function FindTutorPage() {
                     )}
                   </div>
                   {/* Row 4: Price & Actions */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-3 sm:pt-4 border-t border-[#257180]/20 gap-3 sm:gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-[#257180]/20 gap-4">
                     <div>
                       {tutor.tutorSubjects && tutor.tutorSubjects.length > 0 ? (
                         (() => {
@@ -531,8 +531,8 @@ export function FindTutorPage() {
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                       <Button 
                         variant="outline" 
-                        size="sm"
-                        className="border-black text-black hover:bg-black hover:text-white text-sm sm:text-base"
+                        size="lg"
+                        className="border-black text-black hover:bg-black hover:text-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           console.log('Open message with tutor:', tutor.id);
@@ -542,8 +542,8 @@ export function FindTutorPage() {
                         Nhắn tin
                       </Button>
                       <Button 
-                        size="sm"
-                        className="bg-[#FD8B51] hover:bg-[#CB6040] text-white text-sm sm:text-base"
+                        size="lg"
+                        className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           console.log('Book trial lesson with tutor:', tutor.id);

@@ -6,14 +6,25 @@ import { TutorStatus, VerifyStatus, TeachingMode } from '@/types';
 export interface TutorProfile {
   id: number;
   userEmail: string;
+  userName: string;
   bio?: string;
   teachingExp?: string;
+  avatarUrl?: string;
   videoIntroUrl?: string;
   videoIntroPublicId?: string;
   teachingModes: TeachingMode;
   status: TutorStatus;
   createdAt: string;
   updatedAt?: string;
+  province?: {
+    id: number;
+    name: string;
+  };
+  subDistrict?: {
+    id: number;
+    provinceId: number;
+    name: string;
+  };
   tutorAvailabilities?: ManagementTutorAvailability[];
   tutorCertificates?: ManagementTutorCertificate[];
   tutorEducations?: ManagementTutorEducation[];

@@ -114,9 +114,17 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                 <div className="flex items-start gap-6">
                   <div className="relative flex-shrink-0">
                     <Avatar className="w-32 h-32 border-2 border-[#F2E5BF]">
-                      <AvatarFallback className="bg-[#F2E5BF] text-[#257180]">
-                        {tutor.userEmail.split('@')[0].slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
+                      {tutor.avatarUrl ? (
+                        <img 
+                          src={tutor.avatarUrl} 
+                          alt={tutor.userName}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <AvatarFallback className="bg-[#F2E5BF] text-[#257180]">
+                          {tutor.userName.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      )}
                     </Avatar>
                     {tutor.status === 1 && (
                       <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#257180] rounded-full flex items-center justify-center border-4 border-white">
@@ -128,12 +136,12 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <h1 className="text-black text-2xl font-bold mb-2">
-                          {tutor.userEmail.split('@')[0]}
+                          {tutor.userName}
                         </h1>
                         <div className="flex items-center gap-3 mb-2">
                           <div className="flex items-center gap-1.5">
                             <Star className="w-5 h-5 fill-[#FD8B51] text-[#FD8B51]" />
-                            <span className="text-lg text-black">Chưa có</span>
+                            <span className="text-lg text-black">5.0</span>
                             <span className="text-sm text-gray-600">(0 đánh giá)</span>
                           </div>
                           <span className="text-gray-400">•</span>
@@ -170,11 +178,16 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                       <div className="flex items-center gap-2 text-gray-600">
                         <MapPin className="w-4 h-4" />
-                        <span>Việt Nam</span>
+                        <span>
+                          {tutor.subDistrict?.name && tutor.province?.name 
+                            ? `${tutor.subDistrict.name}, ${tutor.province.name}`
+                            : tutor.province?.name || 'Việt Nam'
+                          }
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
-                        <BookOpen className="w-4 h-4" />
-                        <span>{tutor.teachingExp || 'Chưa có thông tin'}</span>
+                        <Award className="w-4 h-4" />
+                        <span>{tutor.tutorCertificates?.length || 0} chứng chỉ</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <Globe className="w-4 h-4" />
@@ -192,16 +205,24 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
             {tutor.videoIntroUrl && (
               <Card className="bg-white border-[#257180]/20">
                 <CardContent className="p-6">
-                  <div className="relative bg-gradient-to-br from-[#257180] to-[#1e5a66] rounded-lg overflow-hidden aspect-video group cursor-pointer">
-                    <div 
-                      className="w-full h-full bg-cover bg-center opacity-50"
-                      style={{ backgroundImage: `url('https://via.placeholder.com/150x150/cccccc/666666?text=Avatar')` }}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-20 h-20 bg-[#FD8B51] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Play className="w-8 h-8 text-white ml-1" />
+                  <div className="relative bg-gradient-to-br from-[#257180] to-[#1e5a66] rounded-lg overflow-hidden aspect-video">
+                    <video 
+                      className="w-full h-full object-cover"
+                      controls
+                      poster={tutor.avatarUrl}
+                      preload="metadata"
+                    >
+                      <source src={tutor.videoIntroUrl} type="video/mp4" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                        <div className="text-center text-white">
+                          <div className="w-20 h-20 rounded-full bg-[#FD8B51]/20 backdrop-blur-sm flex items-center justify-center mb-4 mx-auto">
+                            <Play className="w-8 h-8 text-white ml-1" />
+                          </div>
+                          <p className="font-bold">Video không hỗ trợ</p>
+                          <p className="text-sm mt-2">{tutor.userName}</p>
+                        </div>
                       </div>
-                    </div>
+                    </video>
                     <div className="absolute bottom-4 left-4">
                       <Badge variant="default" className="bg-black bg-opacity-70 text-white">
                         <Video className="w-3 h-3 mr-1" />
