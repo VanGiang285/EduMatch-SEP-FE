@@ -214,41 +214,29 @@ export interface LegacyBecomeTutorRequest {
   attractiveTitle?: string;
   videoFile?: File;
   youtubeLink?: string;
-  schedule?: Record<string, string[]>;
+  // New schedule structure - array of availability records
+  schedule?: Array<{tutorId: number, slotId: number, startDate: string}>;
   hourlyRate: string;
   priceDescription?: string;
 }
 
 // Helper function to convert legacy format to new format
 function convertLegacyToNewFormat(legacyData: LegacyBecomeTutorRequest): BecomeTutorRequest {
-  // Convert schedule to availabilities
+  // Convert availability to availabilities
   const availabilities: TutorAvailabilityCreateRequest[] = [];
   
-  if (legacyData.schedule) {
-    Object.entries(legacyData.schedule).forEach(([_dayOfWeek, timeSlots]) => {
-      if (timeSlots && timeSlots.length > 0) {
-        timeSlots.forEach(timeSlot => {
-          // Convert time slot to slot ID
-          // Time slots like '04:00', '00:00' need to be mapped to actual slot IDs
-          // For now, we'll create a simple mapping based on hour
-          const hour = parseInt(timeSlot.split(':')[0]) || 0;
-          const minute = parseInt(timeSlot.split(':')[1]) || 0;
-          
-          // Create a slot ID based on hour and minute (this is a simplified approach)
-          // In production, you should fetch actual slot IDs from the database
-          const slotId = hour * 4 + Math.floor(minute / 15) + 1; // Assuming 15-minute slots
-          
-          availabilities.push({
-            tutorId: 1, // Temporary value, will be set by backend
-            slotId: slotId,
-            startDate: new Date().toISOString()
-          });
-        });
-      }
+  if (legacyData.schedule && Array.isArray(legacyData.schedule)) {
+    // Process the new schedule format: Array<{tutorId, slotId, startDate}>
+    legacyData.schedule.forEach(availability => {
+      availabilities.push({
+        tutorId: availability.tutorId, // Will be overridden by backend
+        slotId: availability.slotId,
+        startDate: availability.startDate
+      });
     });
   }
   
-  // If no schedule provided, add a default availability
+  // If no availability provided, add a default availability
   if (availabilities.length === 0) {
     availabilities.push({
       tutorId: 1, // Temporary value, will be set by backend

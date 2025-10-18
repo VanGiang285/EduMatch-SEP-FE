@@ -3,6 +3,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ToastManager } from "@/components/common/ToastManager";
+import { Toaster } from "@/components/ui/feedback/sonner";
 import { setupGlobalErrorHandler } from "@/lib/error-handler";
 import { useEffect } from "react";
 function GlobalErrorHandler() {
@@ -20,6 +21,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
           <AuthProvider>
             {children}
             <ToastManager />
+            <Toaster />
           </AuthProvider>
         </ToastProvider>
       </ErrorBoundary>

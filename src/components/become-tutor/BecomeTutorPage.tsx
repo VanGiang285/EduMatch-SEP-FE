@@ -41,7 +41,105 @@ export function BecomeTutorPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const { user, isAuthenticated } = useAuth();
   const { isSubmitting, error, submitApplication, clearError } = useBecomeTutor();
-  const { subjects, levels, educationInstitutions, error: masterDataError, loadMasterData } = useBecomeTutorMasterData();
+  const { subjects, levels, educationInstitutions, timeSlots, error: masterDataError, loadMasterData } = useBecomeTutorMasterData();
+
+  const getDefaultDates = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const endDate = new Date(tomorrow);
+    endDate.setDate(tomorrow.getDate() + 30);
+    
+    return {
+      startDate: tomorrow.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
+    };
+  };
+
+  const validateBirthDate = (birthDate: string) => {
+    if (!birthDate) return 'Vui lòng chọn ngày sinh';
+    
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    if (birth > today) return 'Ngày sinh không được sau hôm nay';
+    if (age < 18) return 'Bạn phải đủ 18 tuổi để trở thành gia sư';
+    if (age > 100) return 'Ngày sinh không hợp lệ';
+    
+    return '';
+  };
+
+  const validateIssueDate = (issueDate: string, fieldName: string = 'ngày cấp') => {
+    if (!issueDate) return `Vui lòng chọn ${fieldName}`;
+    
+    const today = new Date();
+    const issue = new Date(issueDate);
+    const fiftyYearsAgo = new Date();
+    fiftyYearsAgo.setFullYear(today.getFullYear() - 50);
+    
+    if (issue > today) return `${fieldName} không được sau hôm nay`;
+    if (issue < fiftyYearsAgo) return `${fieldName} không được quá 50 năm trước`;
+    
+    return '';
+  };
+
+  const validateExpiryDate = (expiryDate: string, issueDate: string) => {
+    if (!expiryDate) return 'Vui lòng chọn ngày hết hạn';
+    if (!issueDate) return 'Vui lòng chọn ngày cấp trước';
+    
+    const expiry = new Date(expiryDate);
+    const issue = new Date(issueDate);
+    const tenYearsAfterIssue = new Date(issue);
+    tenYearsAfterIssue.setFullYear(issue.getFullYear() + 10);
+    
+    if (expiry <= issue) return 'Ngày hết hạn phải sau ngày cấp';
+    if (expiry > tenYearsAfterIssue) return 'Ngày hết hạn không được quá 10 năm sau ngày cấp';
+    
+    return '';
+  };
+
+  const validateAvailabilityStartDate = (startDate: string) => {
+    if (!startDate) return 'Vui lòng chọn ngày bắt đầu';
+    
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+    
+    const threeMonthsLater = new Date();
+    threeMonthsLater.setMonth(today.getMonth() + 3);
+    
+    const start = new Date(startDate);
+    
+    if (start < tomorrow) return 'Ngày bắt đầu phải từ ngày mai trở đi';
+    if (start > threeMonthsLater) return 'Ngày bắt đầu không được quá 3 tháng trong tương lai';
+    
+    return '';
+  };
+
+  const validateAvailabilityEndDate = (endDate: string, startDate: string) => {
+    if (!endDate) return 'Vui lòng chọn ngày kết thúc';
+    if (!startDate) return 'Vui lòng chọn ngày bắt đầu trước';
+    
+    const end = new Date(endDate);
+    const start = new Date(startDate);
+    const twoMonthsAfterStart = new Date(start);
+    twoMonthsAfterStart.setMonth(start.getMonth() + 2);
+    
+    const sixMonthsLater = new Date();
+    sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+    
+    if (end <= start) return 'Ngày kết thúc phải sau ngày bắt đầu';
+    if (end > twoMonthsAfterStart) return 'Ngày kết thúc không được quá 2 tháng sau ngày bắt đầu';
+    if (end > sixMonthsLater) return 'Ngày kết thúc không được quá 6 tháng trong tương lai';
+    
+    return '';
+  };
   
   const fallbackSubjects = [
     { id: 1, subjectName: 'Toán học' },
@@ -121,7 +219,11 @@ export function BecomeTutorPage() {
       hasVideo: false
     },
     availability: {
-      schedule: {} as Record<string, string[]>
+      startDate: getDefaultDates().startDate, // Ngày bắt đầu (mặc định ngày mai)
+      endDate: getDefaultDates().endDate, // Ngày kết thúc (mặc định 1 tháng)
+      isRepeating: true, // Toggle lặp lại
+      currentWeek: 0, // 0 = tuần hiện tại trong range, 1 = tuần sau, -1 = tuần trước
+      schedule: {} as Record<string, Record<string, number[]>> // {date: {dayOfWeek: [slotIds]}}
     },
     pricing: {
       subjectPricing: [] as Array<{
@@ -171,15 +273,6 @@ export function BecomeTutorPage() {
     ? getDistrictsByProvince(formData.introduction.province)
     : [];
 
-  const validatePricingStep = () => {
-    return formData.pricing.subjectPricing.length === formData.introduction.subjects.length &&
-           formData.pricing.subjectPricing.every(pricing => 
-             pricing.hourlyRate.trim() !== '' && 
-             !isNaN(Number(pricing.hourlyRate)) && 
-             Number(pricing.hourlyRate) > 0
-           ) &&
-           formData.introduction.subjects.every(subject => subject.levels.length > 0);
-  };
   const weekDays = [
     { key: 'monday', label: 'Thứ 2' },
     { key: 'tuesday', label: 'Thứ 3' },
@@ -189,6 +282,99 @@ export function BecomeTutorPage() {
     { key: 'saturday', label: 'Thứ 7' },
     { key: 'sunday', label: 'Chủ nhật' }
   ];
+
+  const generateCurrentWeekDates = () => {
+    const startDate = new Date(formData.availability.startDate);
+    const endDate = new Date(formData.availability.endDate);
+    const currentWeek = formData.availability.currentWeek;
+    
+    const startOfWeek = new Date(startDate);
+    const dayOfWeek = startDate.getDay();
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startOfWeek.setDate(startDate.getDate() - daysToMonday + (currentWeek * 7));
+    
+    const datesByDay: Record<string, string> = {};
+    
+    weekDays.forEach((day, index) => {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + index);
+      
+      if (date >= startDate && date <= endDate) {
+        const dayNum = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        datesByDay[day.key] = `${dayNum}/${month}`;
+      } else {
+        datesByDay[day.key] = '';
+      }
+    });
+
+    return datesByDay;
+  };
+
+  const datesByDay = generateCurrentWeekDates();
+
+  const getDateKey = (dayKey: string) => {
+    const startDate = new Date(formData.availability.startDate);
+    const currentWeek = formData.availability.currentWeek;
+    
+    const startOfWeek = new Date(startDate);
+    const dayOfWeek = startDate.getDay();
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startOfWeek.setDate(startDate.getDate() - daysToMonday + (currentWeek * 7));
+    
+    const dayIndex = weekDays.findIndex(d => d.key === dayKey);
+    const date = new Date(startOfWeek);
+    date.setDate(startOfWeek.getDate() + dayIndex);
+    
+    return date.toISOString().split('T')[0];
+  };
+
+  const autoFillRepeatingSlots = (selectedDate: string, dayOfWeek: string, slotIds: number[]) => {
+    if (!formData.availability.isRepeating) return;
+    
+    const startDate = new Date(formData.availability.startDate);
+    const endDate = new Date(formData.availability.endDate);
+    
+    const dayOfWeekNumber = weekDays.findIndex(d => d.key === dayOfWeek) + 1;
+    const adjustedDayOfWeek = dayOfWeekNumber === 7 ? 0 : dayOfWeekNumber;
+    
+    const repeatingDates: string[] = [];
+    const currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      if (currentDate.getDay() === adjustedDayOfWeek) {
+        const dateKey = currentDate.toISOString().split('T')[0];
+        repeatingDates.push(dateKey);
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    const newSchedule = { ...formData.availability.schedule };
+    repeatingDates.forEach(date => {
+      newSchedule[date] = {
+        ...newSchedule[date],
+        [dayOfWeek]: slotIds
+      };
+    });
+    
+    setFormData(prev => ({
+      ...prev,
+      availability: {
+        ...prev.availability,
+        schedule: newSchedule
+      }
+    }));
+  };
+
+  const validatePricingStep = () => {
+    return formData.pricing.subjectPricing.length === formData.introduction.subjects.length &&
+           formData.pricing.subjectPricing.every(pricing => 
+             pricing.hourlyRate.trim() !== '' && 
+             !isNaN(Number(pricing.hourlyRate)) && 
+             Number(pricing.hourlyRate) > 0
+           ) &&
+           formData.introduction.subjects.every(subject => subject.levels.length > 0);
+  };
   const validateCurrentStepFields = () => {
     const errors: Record<string, string> = {};
     
@@ -205,8 +391,12 @@ export function BecomeTutorPage() {
         } else if (formData.introduction.subjects.some(subject => subject.levels.length === 0)) {
           errors.subjects = 'Vui lòng chọn ít nhất một lớp cho mỗi môn học';
         }
-        if (!formData.introduction.birthDate) {
-          errors.birthDate = 'Vui lòng chọn ngày sinh';
+        const birthDateError = validateBirthDate(formData.introduction.birthDate);
+        if (birthDateError) {
+          errors.birthDate = birthDateError;
+        }
+        if (!formData.introduction.phone.trim()) {
+          errors.phone = 'Vui lòng nhập số điện thoại';
         }
         break;
       case 2:
@@ -219,6 +409,18 @@ export function BecomeTutorPage() {
           errors.hasCertification = 'Vui lòng chọn có chứng chỉ hay không';
         } else if (formData.certifications.hasCertification === true && formData.certifications.items.length === 0) {
           errors.certifications = 'Vui lòng thêm ít nhất một chứng chỉ';
+        } else if (formData.certifications.hasCertification === true) {
+          formData.certifications.items.forEach((cert, index) => {
+            const issueDateError = validateIssueDate(cert.issueDate, 'ngày cấp chứng chỉ');
+            if (issueDateError) {
+              errors[`cert_issue_date_${index}`] = issueDateError;
+            }
+            
+            const expiryDateError = validateExpiryDate(cert.expiryDate, cert.issueDate);
+            if (expiryDateError) {
+              errors[`cert_expiry_date_${index}`] = expiryDateError;
+            }
+          });
         }
         break;
       case 4:
@@ -226,6 +428,13 @@ export function BecomeTutorPage() {
           errors.hasEducation = 'Vui lòng chọn có bằng cấp hay không';
         } else if (formData.education.hasEducation === true && formData.education.items.length === 0) {
           errors.education = 'Vui lòng thêm ít nhất một bằng cấp';
+        } else if (formData.education.hasEducation === true) {
+          formData.education.items.forEach((edu, index) => {
+            const issueDateError = validateIssueDate(edu.issueDate, 'ngày cấp bằng');
+            if (issueDateError) {
+              errors[`edu_issue_date_${index}`] = issueDateError;
+            }
+          });
         }
         break;
       case 5:
@@ -245,9 +454,21 @@ export function BecomeTutorPage() {
         }
         break;
       case 7:
-        const totalSlots = Object.values(formData.availability.schedule).reduce((total, slots) => total + slots.length, 0);
-        if (totalSlots === 0) {
-          errors.schedule = 'Vui lòng chọn ít nhất một khung giờ';
+        const startDateError = validateAvailabilityStartDate(formData.availability.startDate);
+        if (startDateError) {
+          errors.startDate = startDateError;
+        }
+        
+        const endDateError = validateAvailabilityEndDate(formData.availability.endDate, formData.availability.startDate);
+        if (endDateError) {
+          errors.endDate = endDateError;
+        }
+        
+        const totalSlots = Object.values(formData.availability.schedule).reduce((total, dateSchedule) => {
+          return total + Object.values(dateSchedule).reduce((dayTotal, slots) => dayTotal + slots.length, 0);
+        }, 0);
+        if (totalSlots < 1) {
+          errors.schedule = 'Vui lòng chọn ít nhất 1 khung giờ';
         }
         break;
       case 8:
@@ -316,7 +537,23 @@ export function BecomeTutorPage() {
              attractiveTitle: formData.description.attractiveTitle,
              videoFile: formData.video.videoFile || undefined,
              youtubeLink: formData.video.youtubeLink || undefined,
-             schedule: formData.availability.schedule,
+             schedule: (() => {
+               const availabilities: Array<{tutorId: number, slotId: number, startDate: string}> = [];
+               
+               Object.entries(formData.availability.schedule).forEach(([date, daySchedule]) => {
+                 Object.entries(daySchedule).forEach(([dayOfWeek, slotIds]) => {
+                   slotIds.forEach(slotId => {
+                     availabilities.push({
+                       tutorId: 1,
+                       slotId: slotId,
+                       startDate: date + 'T00:00:00'
+                     });
+                   });
+                 });
+               });
+               
+               return availabilities;
+             })(),
              hourlyRate: formData.pricing.subjectPricing[0]?.hourlyRate || '0',
            };
 
@@ -842,17 +1079,20 @@ export function BecomeTutorPage() {
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="phone" className="text-black text-sm sm:text-base">Số điện thoại (Tùy chọn)</Label>
+                        <Label htmlFor="phone" className="text-black text-sm sm:text-base">Số điện thoại <span className="text-red-500">*</span></Label>
                         <div className="relative">
                           <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             id="phone"
                             placeholder="0123 456 789"
-                            className="pl-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                            className={`pl-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.phone ? 'border-red-500' : ''}`}
                             value={formData.introduction.phone}
                             onChange={(e) => updateFormData('introduction', { phone: e.target.value })}
                           />
                         </div>
+                        {fieldErrors.phone && (
+                          <p className="text-red-500 text-sm">{fieldErrors.phone}</p>
+                        )}
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -1064,21 +1304,51 @@ export function BecomeTutorPage() {
                               <Input
                                 id="cert-issue-date"
                                 type="date"
-                                className="border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                                className={`border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.cert_issue_date ? 'border-red-500' : ''}`}
                                 value={currentCertification.issueDate}
-                                onChange={(e) => setCurrentCertification(prev => ({ ...prev, issueDate: e.target.value }))}
+                                onChange={(e) => {
+                                  setCurrentCertification(prev => ({ ...prev, issueDate: e.target.value }));
+                                  const error = validateIssueDate(e.target.value, 'ngày cấp chứng chỉ');
+                                  if (error) {
+                                    setFieldErrors(prev => ({ ...prev, cert_issue_date: error }));
+                                  } else {
+                                    setFieldErrors(prev => {
+                                      const newErrors = { ...prev };
+                                      delete newErrors.cert_issue_date;
+                                      return newErrors;
+                                    });
+                                  }
+                                }}
                                 max={new Date().toISOString().split('T')[0]}
                               />
+                              {fieldErrors.cert_issue_date && (
+                                <p className="text-red-500 text-sm">{fieldErrors.cert_issue_date}</p>
+                              )}
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="cert-expiry-date" className="text-black text-sm sm:text-base">Ngày hết hạn <span className="text-red-500">*</span></Label>
                               <Input
                                 id="cert-expiry-date"
                                 type="date"
-                                className="border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                                className={`border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.cert_expiry_date ? 'border-red-500' : ''}`}
                                 value={currentCertification.expiryDate}
-                                onChange={(e) => setCurrentCertification(prev => ({ ...prev, expiryDate: e.target.value }))}
+                                onChange={(e) => {
+                                  setCurrentCertification(prev => ({ ...prev, expiryDate: e.target.value }));
+                                  const error = validateExpiryDate(e.target.value, currentCertification.issueDate);
+                                  if (error) {
+                                    setFieldErrors(prev => ({ ...prev, cert_expiry_date: error }));
+                                  } else {
+                                    setFieldErrors(prev => {
+                                      const newErrors = { ...prev };
+                                      delete newErrors.cert_expiry_date;
+                                      return newErrors;
+                                    });
+                                  }
+                                }}
                               />
+                              {fieldErrors.cert_expiry_date && (
+                                <p className="text-red-500 text-sm">{fieldErrors.cert_expiry_date}</p>
+                              )}
                             </div>
                           </div>
                           <div className="space-y-2">
@@ -1230,10 +1500,25 @@ export function BecomeTutorPage() {
                               <Input
                               id="issueDate"
                               type="date"
-                                className="border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                                className={`border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.edu_issue_date ? 'border-red-500' : ''}`}
                               value={currentEducation.issueDate}
-                              onChange={(e) => setCurrentEducation(prev => ({ ...prev, issueDate: e.target.value }))}
+                              onChange={(e) => {
+                                setCurrentEducation(prev => ({ ...prev, issueDate: e.target.value }));
+                                const error = validateIssueDate(e.target.value, 'ngày cấp bằng');
+                                if (error) {
+                                  setFieldErrors(prev => ({ ...prev, edu_issue_date: error }));
+                                } else {
+                                  setFieldErrors(prev => {
+                                    const newErrors = { ...prev };
+                                    delete newErrors.edu_issue_date;
+                                    return newErrors;
+                                  });
+                                }
+                              }}
                               />
+                              {fieldErrors.edu_issue_date && (
+                                <p className="text-red-500 text-sm">{fieldErrors.edu_issue_date}</p>
+                              )}
                           </div>
                           <div className="space-y-2">
                             <Label className="text-black text-sm sm:text-base">Tải lên bằng cấp <span className="text-red-500">*</span></Label>
@@ -1467,60 +1752,265 @@ export function BecomeTutorPage() {
                   <div className="space-y-6">
                     <div>
                       <h2 className="text-2xl font-bold text-black mb-2">Thời gian khả dụng</h2>
-                      <p className="text-gray-600">Thiết lập lịch dạy trong tuần</p>
+                      <p className="text-gray-600">Thiết lập lịch dạy trong khoảng thời gian</p>
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-black text-sm sm:text-base mb-2">
+                          Ngày bắt đầu <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          type="date"
+                          value={formData.availability.startDate}
+                          min={getDefaultDates().startDate}
+                          max={new Date().toISOString().split('T')[0]}
+                          onChange={(e) => {
+                            const newStartDate = e.target.value;
+                            const endDate = new Date(formData.availability.endDate);
+                            const startDate = new Date(newStartDate);
+                            
+                            const error = validateAvailabilityStartDate(newStartDate);
+                            if (error) {
+                              setFieldErrors(prev => ({ ...prev, startDate: error }));
+                            } else {
+                              setFieldErrors(prev => {
+                                const newErrors = { ...prev };
+                                delete newErrors.startDate;
+                                return newErrors;
+                              });
+                            }
+                            
+                            if (startDate >= endDate) {
+                              const newEndDate = new Date(startDate);
+                              newEndDate.setDate(startDate.getDate() + 30);
+                              updateFormData('availability', { 
+                                startDate: newStartDate,
+                                endDate: newEndDate.toISOString().split('T')[0]
+                              });
+                            } else {
+                              updateFormData('availability', { startDate: newStartDate });
+                            }
+                          }}
+                          className={`border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.startDate ? 'border-red-500' : ''}`}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Tối thiểu từ ngày mai, tối đa 3 tháng trong tương lai
+                        </p>
+                        {fieldErrors.startDate && (
+                          <p className="text-red-500 text-sm mt-1">{fieldErrors.startDate}</p>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <Label className="text-black text-sm sm:text-base mb-2">
+                          Ngày kết thúc <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          type="date"
+                          value={formData.availability.endDate}
+                          min={formData.availability.startDate}
+                          max={(() => {
+                            const startDate = new Date(formData.availability.startDate);
+                            startDate.setMonth(startDate.getMonth() + 2);
+                            return startDate.toISOString().split('T')[0];
+                          })()}
+                          onChange={(e) => {
+                            const newEndDate = e.target.value;
+                            const startDate = new Date(formData.availability.startDate);
+                            const endDate = new Date(newEndDate);
+                            
+                            const error = validateAvailabilityEndDate(newEndDate, formData.availability.startDate);
+                            if (error) {
+                              setFieldErrors(prev => ({ ...prev, endDate: error }));
+                            } else {
+                              setFieldErrors(prev => {
+                                const newErrors = { ...prev };
+                                delete newErrors.endDate;
+                                return newErrors;
+                              });
+                              updateFormData('availability', { endDate: newEndDate });
+                            }
+                          }}
+                          className={`border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.endDate ? 'border-red-500' : ''}`}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Tối đa 2 tháng từ ngày bắt đầu, không quá 6 tháng trong tương lai
+                        </p>
+                        {fieldErrors.endDate && (
+                          <p className="text-red-500 text-sm mt-1">{fieldErrors.endDate}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Repeat Toggle */}
+                    <div className="flex items-center justify-between p-4 bg-[#F2E5BF] rounded-lg border border-[#257180]/20">
+                      <div>
+                        <Label className="text-black text-sm sm:text-base font-medium">
+                          Lặp lại lịch theo thứ trong tuần
+                        </Label>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Tự động áp dụng lịch cho cùng thứ trong tuần trong khoảng thời gian đã chọn
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <span className={`text-sm font-medium ${!formData.availability.isRepeating ? 'text-[#257180]' : 'text-gray-500'}`}>
+                          Tắt
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateFormData('availability', { 
+                              isRepeating: !formData.availability.isRepeating
+                            });
+                          }}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#FD8B51] focus:ring-offset-2 ${
+                            formData.availability.isRepeating ? 'bg-[#FD8B51]' : 'bg-gray-300'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              formData.availability.isRepeating ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                        <span className={`text-sm font-medium ${formData.availability.isRepeating ? 'text-[#257180]' : 'text-gray-500'}`}>
+                          Bật
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateFormData('availability', { currentWeek: formData.availability.currentWeek - 1 })}
+                          className="border-[#257180]/30 hover:bg-[#F2E5BF]"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                          Tuần trước
+                        </Button>
+                        <div className="text-sm font-medium text-[#257180]">
+                          {formData.availability.currentWeek === 0 ? 'Tuần này' : 
+                           formData.availability.currentWeek === 1 ? 'Tuần sau' :
+                           formData.availability.currentWeek === -1 ? 'Tuần trước' :
+                           `Tuần ${formData.availability.currentWeek > 0 ? '+' : ''}${formData.availability.currentWeek}`}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateFormData('availability', { currentWeek: formData.availability.currentWeek + 1 })}
+                          className="border-[#257180]/30 hover:bg-[#F2E5BF]"
+                        >
+                          Tuần sau
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateFormData('availability', { currentWeek: 0 })}
+                        className="border-[#FD8B51]/30 hover:bg-[#FD8B51]/10 text-[#FD8B51]"
+                      >
+                        Hôm nay
+                      </Button>
+                    </div>
+
                     <div className="space-y-4">
-                      <Label className="text-black text-sm sm:text-base">Chọn thời gian bạn có thể dạy (chọn tối thiểu 5 khung giờ)</Label>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-black text-sm sm:text-base">Chọn thời gian bạn có thể dạy</Label>
+                        
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateFormData('availability', { 
+                              schedule: {}
+                            });
+                          }}
+                          className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                        >
+                          Xóa tất cả
+                        </button>
+                      </div>
                       <div className="overflow-x-auto">
                         <div className="min-w-full">
-                          {/* Header */}
                           <div className="grid grid-cols-8 gap-2 mb-2">
                             <div className="p-2"></div>
                             {weekDays.map((day) => (
                               <div key={day.key} className="p-2 text-center font-medium text-black bg-[#F2E5BF] rounded border border-[#257180]/20">
-                                {day.label}
+                                <div>{day.label}</div>
+                                <div className="text-xs text-gray-600 mt-1">{datesByDay[day.key]}</div>
                               </div>
                             ))}
                           </div>
-                          {/* Time Slots */}
-                          {timeSlotsGenerated.map((timeSlot) => (
-                            <div key={timeSlot.startTime} className="grid grid-cols-8 gap-2 mb-1">
+                          
+                          {timeSlots.length > 0 ? timeSlots.map((slot) => (
+                            <div key={slot.id} className="grid grid-cols-8 gap-2 mb-1">
                               <div className="p-2 text-sm font-medium text-gray-600 flex items-center">
-                                {timeSlot.startTime} - {timeSlot.endTime}
+                                {slot.startTime.split(':').slice(0, 2).join(':')}
                               </div>
-                              {weekDays.map((day) => (
-                                <div key={`${day.key}-${timeSlot.startTime}`} className="p-1">
-                                  <Checkbox 
-                                    id={`${day.key}-${timeSlot.startTime}`} 
-                                    className="w-full h-8 data-[state=checked]:bg-[#FD8B51]"
-                                    checked={formData.availability.schedule[day.key]?.includes(timeSlot.startTime) || false}
-                                    onCheckedChange={(checked) => {
-                                      const currentSlots = formData.availability.schedule[day.key] || [];
-                                      const newSlots = checked 
-                                        ? [...currentSlots, timeSlot.startTime]
-                                        : currentSlots.filter(slot => slot !== timeSlot.startTime);
-                                      updateFormData('availability', {
-                                        schedule: {
-                                          ...formData.availability.schedule,
-                                          [day.key]: newSlots
-                                        }
-                                      });
-                                    }}
-                                  />
-                                </div>
-                              ))}
+                              {weekDays.map((day) => {
+                                const dateKey = getDateKey(day.key);
+                                const today = new Date();
+                                const todayString = today.toISOString().split('T')[0];
+                                const isPastDate = dateKey <= todayString;
+                                const isInRange = datesByDay[day.key] !== '';
+                                
+                                const currentSlots = formData.availability.schedule[dateKey]?.[day.key] || [];
+                                
+                                return (
+                                  <div key={`${day.key}-${slot.id}`} className="p-1">
+                                    {!isInRange || isPastDate ? (
+                                      <div className="w-full h-8 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                                        <span className="text-xs text-gray-400">-</span>
+                                      </div>
+                                    ) : (
+                                      <Checkbox 
+                                        id={`${day.key}-${slot.id}`} 
+                                        className="w-full h-8 data-[state=checked]:bg-[#FD8B51]"
+                                        checked={currentSlots.includes(slot.id)}
+                                        onCheckedChange={(checked) => {
+                                          const newSlots = checked 
+                                            ? [...currentSlots, slot.id]
+                                            : currentSlots.filter(s => s !== slot.id);
+                                          
+                                          const newSchedule = {
+                                            ...formData.availability.schedule,
+                                            [dateKey]: {
+                                              ...formData.availability.schedule[dateKey],
+                                              [day.key]: newSlots
+                                            }
+                                          };
+                                          
+                                          if (checked && formData.availability.isRepeating) {
+                                            autoFillRepeatingSlots(dateKey, day.key, newSlots);
+                                          } else {
+                                            updateFormData('availability', { schedule: newSchedule });
+                                          }
+                                        }}
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
-                          ))}
+                          )) : (
+                            <div className="text-center text-gray-500 py-4">
+                              Đang tải danh sách khung giờ...
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
+
+
                     <div className="bg-[#F2E5BF] p-4 rounded-lg border border-[#257180]/20">
                       <h4 className="font-medium text-black mb-2">Lưu ý về lịch dạy</h4>
                       <div className="text-sm text-black space-y-1">
                         <div>• Chọn những khung giờ bạn thực sự có thể dạy</div>
                         <div>• Lịch này sẽ hiển thị cho học viên khi đặt lịch</div>
                         <div>• Bạn có thể thay đổi lịch sau trong phần quản lý hồ sơ</div>
-                        <div>• Nên chọn ít nhất 10-15 khung giờ để tăng cơ hội được chọn</div>
                       </div>
                     </div>
                     {fieldErrors.schedule && (
