@@ -139,8 +139,8 @@ export const API_ENDPOINTS = {
   },
   
   FIND_TUTORS: {
-    GET_ALL: '/api/findtutor',
-    SEARCH: '/api/findtutor/search',
+    GET_ALL: '/api/tutors/get-all-tutor',
+    SEARCH: '/api/tutors/get-all-tutor',
   },
   
   ADMIN: {

@@ -1,19 +1,30 @@
 import { apiClient } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
 import { ApiResponse } from '@/types/api';
-import { TutorStatus, VerifyStatus, TeachingMode, Gender, TutorAvailabilityStatus } from '@/types';
+import { TutorStatus, VerifyStatus, TeachingMode, TutorAvailabilityStatus } from '@/types';
 
 export interface FindTutorProfile {
   id: number;
   userEmail: string;
+  userName: string;
   bio?: string;
   teachingExp?: string;
+  avatarUrl?: string;
   videoIntroUrl?: string;
   videoIntroPublicId?: string;
   teachingModes: TeachingMode;
   status: TutorStatus;
   createdAt: string;
   updatedAt?: string;
+  province?: {
+    id: number;
+    name: string;
+  };
+  subDistrict?: {
+    id: number;
+    provinceId: number;
+    name: string;
+  };
   tutorAvailabilities?: FindTutorAvailability[];
   tutorCertificates?: FindTutorCertificate[];
   tutorEducations?: FindTutorEducation[];
@@ -91,7 +102,9 @@ export interface FindTutorAvailability {
 
 export interface TutorFilter {
   keyword?: string;
-  gender?: Gender;
+  subjectId?: number;
+  certificateTypeId?: number;
+  institutionId?: number;
   city?: number;
   teachingMode?: TeachingMode;
   statusId?: TutorStatus;
@@ -105,6 +118,13 @@ export class FindTutorService {
   }
 
   static async searchTutors(filter: TutorFilter): Promise<ApiResponse<FindTutorProfile[]>> {
-    return apiClient.post<FindTutorProfile[]>(API_ENDPOINTS.FIND_TUTORS.SEARCH, filter);
+    // Remove empty/undefined values from filter
+    const cleanFilter = Object.fromEntries(
+      Object.entries(filter).filter(([, value]) => value !== undefined && value !== null && value !== '')
+    );
+    
+    return apiClient.get<FindTutorProfile[]>(API_ENDPOINTS.FIND_TUTORS.SEARCH, {
+      params: cleanFilter
+    });
   }
 }

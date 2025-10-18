@@ -37,12 +37,9 @@ export function useFindTutor(): UseFindTutorReturn {
   }, []);
 
   useEffect(() => {
-    if (filters.keyword || filters.gender || filters.city || filters.teachingMode || filters.statusId) {
-      searchTutors();
-    } else {
-      loadAllTutors();
-    }
-  }, [filters.keyword, filters.gender, filters.city, filters.teachingMode, filters.statusId, filters.page, filters.pageSize]);
+    // Only load data once on mount, filtering will be done client-side
+    loadAllTutors();
+  }, []);
 
   const loadMasterData = useCallback(async () => {
     setIsLoadingMasterData(true);
