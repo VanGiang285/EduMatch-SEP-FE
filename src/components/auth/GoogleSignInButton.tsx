@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "../ui/basic/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import { useCustomToast } from "@/hooks/useCustomToast";
 import { useState, useEffect } from "react";
 import { APP_CONFIG } from "@/constants/config";
 import { debugGoogleToken } from "@/lib/debug-google-token";
@@ -18,6 +18,7 @@ export function GoogleSignInButton({
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   const { googleLogin } = useAuth();
+  const { showSuccess, showError } = useCustomToast();
   useEffect(() => {
     const initializeGoogle = async () => {
       try {
@@ -44,10 +45,10 @@ export function GoogleSignInButton({
                 console.log('🔍 Debugging Google ID Token...');
                 debugGoogleToken.testToken(response.credential);
                 await googleLogin(response.credential);
-                toast.success(mode === 'signin' ? 'Đăng nhập thành công!' : 'Đăng ký thành công!');
+                showSuccess(mode === 'signin' ? 'Đăng nhập thành công!' : 'Đăng ký thành công!');
               } catch (error: any) {
                 console.error('Google sign in error:', error);
-                toast.error(error.message || 'Đăng nhập Google thất bại');
+                showError(error.message || 'Đăng nhập Google thất bại');
               } finally {
                 setIsLoading(false);
               }
@@ -97,7 +98,7 @@ export function GoogleSignInButton({
                   family_name: userData.family_name,
                 }));
                 await googleLogin(mockIdToken);
-                toast.success(mode === 'signin' ? 'Đăng nhập thành công!' : 'Đăng ký thành công!');
+                showSuccess(mode === 'signin' ? 'Đăng nhập thành công!' : 'Đăng ký thành công!');
               }
             }
           }).requestAccessToken();

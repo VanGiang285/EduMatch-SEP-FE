@@ -9,7 +9,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 // import { useRouter } from "next/navigation"; // Removed unused import
-import { toast } from "sonner";
+import { useCustomToast } from "@/hooks/useCustomToast";
 interface RegisterPageProps {
   onSwitchToLogin: () => void;
 }
@@ -25,6 +25,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   const [error, setError] = useState("");
   const [passwordMatchError, setPasswordMatchError] = useState("");
   const { register } = useAuth();
+  const { showSuccess } = useCustomToast();
   // const router = useRouter(); // Removed unused variable
   
   // Check password match real-time
@@ -91,7 +92,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
     try {
       setIsLoading(true);
       await register(trimmedFullName, trimmedEmail, trimmedPassword);
-      toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
+      showSuccess("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
       // Redirect to email verification page
       window.location.href = `/login?email=${encodeURIComponent(trimmedEmail)}`;
     } catch (error: any) {

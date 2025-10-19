@@ -3,7 +3,7 @@ import { Button } from "../ui/basic/button";
 import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import { useCustomToast } from "@/hooks/useCustomToast";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 interface NavbarProps {
@@ -23,6 +23,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
+  const { showWarning } = useCustomToast();
   const router = useRouter();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -38,10 +39,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
 
   const handleBecomeTutorClick = () => {
     if (!isAuthenticated) {
-      toast.warning('Cần đăng nhập', {
-        description: 'Bạn cần đăng nhập để trở thành gia sư',
-        duration: 3000
-      });
+      showWarning('Cần đăng nhập', 'Bạn cần đăng nhập để trở thành gia sư', 3000);
       setTimeout(() => {
         onNavigateToLogin();
       }, 1000);

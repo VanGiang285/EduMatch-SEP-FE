@@ -8,7 +8,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useCustomToast } from "@/hooks/useCustomToast";
 import { AuthService } from "@/services/authService";
 interface LoginPageProps {
   onSwitchToRegister: () => void;
@@ -22,6 +22,7 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const { login } = useAuth();
+  const { showSuccess, showInfo } = useCustomToast();
   const router = useRouter();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +52,7 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
     try {
       setIsLoading(true);
       await login(trimmedEmail, trimmedPassword, rememberMe);
-      toast.success("Đăng nhập thành công!");
+      showSuccess("Đăng nhập thành công!");
       router.push("/");
     } catch (error: any) {
       let errorMessage = "Đăng nhập thất bại";
@@ -71,7 +72,7 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
           try {
             await AuthService.resendVerification(trimmedEmail);
             errorMessage = "Vui lòng xác thực email trước khi đăng nhập. Email xác thực đã được gửi lại";
-            toast.info("Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư của bạn");
+            showInfo("Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư của bạn");
           } catch (resendError) {
             errorMessage = "Vui lòng xác thực email trước khi đăng nhập";
           }

@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/basic/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/navigation/tabs';
 import { Calendar } from '../ui/form/calendar';
 import { Separator } from '../ui/layout/separator';
-import { Star, Heart, MapPin, Clock, Calendar as CalendarIcon, MessageCircle, Video, Shield, Award, Users, Globe, CheckCircle2, Play, ArrowLeft, Loader2, GraduationCap, FileText, Medal } from 'lucide-react';
+import { Star, Heart, MapPin, Clock, Calendar as CalendarIcon, MessageCircle, Video, Shield, Award, Users, Globe, CheckCircle2, Play, ArrowLeft, Loader2, GraduationCap, FileText, Medal, ChevronLeft, ChevronRight } from 'lucide-react';
 import { FormatService } from '@/lib/format';
 import { useTutorDetail } from '@/hooks/useTutorDetail';
 interface Review {
@@ -33,6 +33,149 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  
+  // Availability calendar states
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
+    return startOfWeek;
+  });
+  const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
+
+  // Helper functions for availability calendar
+  const weekDays = [
+    { key: 'monday', label: 'Thứ 2' },
+    { key: 'tuesday', label: 'Thứ 3' },
+    { key: 'wednesday', label: 'Thứ 4' },
+    { key: 'thursday', label: 'Thứ 5' },
+    { key: 'friday', label: 'Thứ 6' },
+    { key: 'saturday', label: 'Thứ 7' },
+    { key: 'sunday', label: 'Chủ nhật' }
+  ];
+
+  const timeSlots = Array.from({ length: 24 }, (_, i) => ({
+    id: i + 1,
+    startTime: `${i.toString().padStart(2, '0')}:00`,
+    endTime: `${(i + 1).toString().padStart(2, '0')}:00`
+  }));
+
+  // Generate dates for current week
+  const generateCurrentWeekDates = () => {
+    const datesByDay: { [key: string]: string } = {};
+    weekDays.forEach((day, index) => {
+      const date = new Date(currentWeekStart);
+      date.setDate(currentWeekStart.getDate() + index);
+      datesByDay[day.key] = date.getDate().toString().padStart(2, '0') + '/' + 
+                           (date.getMonth() + 1).toString().padStart(2, '0');
+    });
+    return datesByDay;
+  };
+
+  // Create availability map from tutor data
+  const createAvailabilityMap = () => {
+    const availabilityMap: { [key: string]: boolean } = {};
+    
+    if (tutor?.tutorAvailabilities) {
+      tutor.tutorAvailabilities.forEach(availability => {
+        const startDate = new Date(availability.startDate);
+        const dateKey = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        const timeKey = availability.slot?.startTime?.split(':')[0] || '00'; // HH
+        const slotKey = `${dateKey}-${timeKey}`;
+        availabilityMap[slotKey] = true;
+      });
+    }
+    
+    return availabilityMap;
+  };
+
+  const availabilityMap = createAvailabilityMap();
+  const datesByDay = generateCurrentWeekDates();
+
+  // Check if slot is available
+  const isSlotAvailable = (dayKey: string, timeSlot: any) => {
+    const date = new Date(currentWeekStart);
+    const dayIndex = weekDays.findIndex(day => day.key === dayKey);
+    date.setDate(currentWeekStart.getDate() + dayIndex);
+    const dateKey = date.toISOString().split('T')[0];
+    const slotKey = `${dateKey}-${timeSlot.startTime.split(':')[0]}`;
+    return availabilityMap[slotKey] || false;
+  };
+
+  // Check if slot is selected
+  const isSlotSelected = (dayKey: string, timeSlot: any) => {
+    const date = new Date(currentWeekStart);
+    const dayIndex = weekDays.findIndex(day => day.key === dayKey);
+    date.setDate(currentWeekStart.getDate() + dayIndex);
+    const dateKey = date.toISOString().split('T')[0];
+    const slotKey = `${dateKey}-${timeSlot.startTime.split(':')[0]}`;
+    return selectedSlots.has(slotKey);
+  };
+
+  // Filter to only show time slots that have at least one available slot in the current week
+  const availableTimeSlots = timeSlots.filter(timeSlot => {
+    return weekDays.some(day => isSlotAvailable(day.key, timeSlot));
+  });
+
+  // Navigation functions
+  const goToPreviousWeek = () => {
+    const newWeekStart = new Date(currentWeekStart);
+    newWeekStart.setDate(currentWeekStart.getDate() - 7);
+    setCurrentWeekStart(newWeekStart);
+  };
+
+  const goToNextWeek = () => {
+    const newWeekStart = new Date(currentWeekStart);
+    newWeekStart.setDate(currentWeekStart.getDate() + 7);
+    setCurrentWeekStart(newWeekStart);
+  };
+
+  const goToCurrentWeek = () => {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1);
+    setCurrentWeekStart(startOfWeek);
+  };
+
+  // Format week display
+  const formatWeekDisplay = () => {
+    const endOfWeek = new Date(currentWeekStart);
+    endOfWeek.setDate(currentWeekStart.getDate() + 6);
+    
+    const startDay = currentWeekStart.getDate();
+    const startMonth = currentWeekStart.getMonth() + 1;
+    const endDay = endOfWeek.getDate();
+    const endMonth = endOfWeek.getMonth() + 1;
+    const year = currentWeekStart.getFullYear();
+    
+    if (startMonth === endMonth) {
+      return `Ngày ${startDay} - ${endDay}/${startMonth}/${year}`;
+    } else {
+      return `Ngày ${startDay}/${startMonth} - ${endDay}/${endMonth}/${year}`;
+    }
+  };
+
+  // Handle slot selection
+  const handleSlotClick = (dayKey: string, timeSlot: any) => {
+    const date = new Date(currentWeekStart);
+    const dayIndex = weekDays.findIndex(day => day.key === dayKey);
+    date.setDate(currentWeekStart.getDate() + dayIndex);
+    const dateKey = date.toISOString().split('T')[0];
+    const slotKey = `${dateKey}-${timeSlot.startTime.split(':')[0]}`;
+    
+    // Only allow selection of available slots
+    if (availabilityMap[slotKey]) {
+      setSelectedSlots(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(slotKey)) {
+          newSet.delete(slotKey);
+        } else {
+          newSet.add(slotKey);
+        }
+        return newSet;
+      });
+    }
+  };
 
   useEffect(() => {
     if (tutorId) {
@@ -41,7 +184,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   }, [tutorId, loadTutorDetail]);
   
   const reviews: Review[] = [];
-  const timeSlots: any[] = [];
   const formatDate = (date: Date) => {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
@@ -120,8 +262,12 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                         {tutor.userName.split(' ').slice(-2).map(n => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
-                    {tutor.status === 1 && (
-                      <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center border-4 border-white">
+                    {(tutor.status === 1 || tutor.status === 3 || tutor.status === 4) && (
+                      <div className={`absolute -bottom-2 -right-2 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white ${
+                        tutor.status === 1 ? 'bg-blue-600' : 
+                        tutor.status === 3 ? 'bg-orange-600' : 
+                        'bg-red-600'
+                      }`}>
                         <Shield className="w-5 h-5 text-white" />
                       </div>
                     )}
@@ -148,6 +294,18 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                             <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
                               <CheckCircle2 className="w-3 h-3 mr-1" />
                               Đã xác thực
+                            </Badge>
+                          )}
+                          {tutor.status === 3 && (
+                            <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
+                              <Shield className="w-3 h-3 mr-1" />
+                              Tạm khóa
+                            </Badge>
+                          )}
+                          {tutor.status === 4 && (
+                            <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">
+                              <Shield className="w-3 h-3 mr-1" />
+                              Ngừng hoạt động
                             </Badge>
                           )}
                           <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20">
@@ -196,9 +354,9 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                 </div>
               </CardContent>
             </Card>
-              {tutor.videoIntroUrl && (
+            {tutor.videoIntroUrl && (
                 <Card className="border-[#FD8B51]">
-                  <CardContent className="p-6">
+                <CardContent className="p-6">
                     <div className="relative bg-gradient-to-br from-[#257180] to-[#1e5a66] rounded-lg overflow-hidden aspect-video">
                       <video 
                         className="w-full h-full object-cover"
@@ -210,23 +368,23 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                           <div className="text-center text-white">
                             <div className="w-20 h-20 rounded-full bg-[#FD8B51]/20 backdrop-blur-sm flex items-center justify-center mb-4 mx-auto">
-                              <Play className="w-8 h-8 text-white ml-1" />
+                        <Play className="w-8 h-8 text-white ml-1" />
                             </div>
                             <p className="font-bold">Video không hỗ trợ</p>
                             <p className="text-sm mt-2">{tutor.userName}</p>
-                          </div>
-                        </div>
-                      </video>
-                      <div className="absolute bottom-4 left-4">
-                        <Badge variant="default" className="bg-black bg-opacity-70 text-white">
-                          <Video className="w-3 h-3 mr-1" />
-                          Video giới thiệu
-                        </Badge>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                      </video>
+                    <div className="absolute bottom-4 left-4">
+                      <Badge variant="default" className="bg-black bg-opacity-70 text-white">
+                        <Video className="w-3 h-3 mr-1" />
+                        Video giới thiệu
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             <Tabs defaultValue="about" className="space-y-6">
               <TabsList className="grid w-full grid-cols-3 bg-[#F2E5BF]">
                 <TabsTrigger value="about" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">Giới thiệu</TabsTrigger>
@@ -299,7 +457,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                             {tutor.teachingModes === undefined && (
                               <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
                                 Chưa xác định
-                              </Badge>
+                          </Badge>
                             )}
                           </>
                         )}
@@ -327,9 +485,9 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                                   </p>
                                   {edu.verified === 1 && (
                                     <Badge variant="outline" className="text-xs mt-1">
-                                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                                      Đã xác thực
-                                    </Badge>
+                                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                                    Đã xác thực
+                                  </Badge>
                                   )}
                                 </div>
                               </div>
@@ -352,6 +510,12 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                                   {cert.certificateType?.code && (
                                     <p className="text-xs text-gray-500">{cert.certificateType.code}</p>
                                   )}
+                                  <p className="text-sm text-gray-500">
+                                    {cert.issueDate ? new Date(cert.issueDate).getFullYear() : 'N/A'}
+                                    {cert.expiryDate && (
+                                      <span> - {new Date(cert.expiryDate).getFullYear()}</span>
+                                    )}
+                                  </p>
                                   {cert.expiryDate && new Date(cert.expiryDate) < new Date() && (
                                     <Badge variant="outline" className="text-xs mt-1 text-orange-600 border-orange-300">
                                       Đã hết hạn
@@ -361,8 +525,8 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                               </div>
                               {cert.verified === 1 && (
                                 <Badge variant="outline" className="text-xs">
-                                  Đã xác thực
-                                </Badge>
+                                Đã xác thực
+                              </Badge>
                               )}
                             </div>
                           ))}
@@ -448,62 +612,148 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
               <TabsContent value="availability" className="space-y-6">
                 <Card className="border-[#FD8B51]">
                   <CardHeader>
-                    <CardTitle className="font-bold">Lịch trống trong tuần</CardTitle>
+                    <div className="space-y-4">
+                      <div>
+                        <CardTitle className="font-bold">Lịch trống của gia sư</CardTitle>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {formatWeekDisplay()}
+                        </p>
+                      </div>
+                      
+                      {/* Navigation Controls */}
+                      <div className="flex items-center justify-between">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={goToPreviousWeek}
+                          className="flex items-center gap-2"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                          <span>Tuần trước</span>
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={goToCurrentWeek}
+                          className="bg-[#FD8B51] text-white hover:bg-[#CB6040] border-[#FD8B51]"
+                        >
+                          Về tuần hiện tại
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={goToNextWeek}
+                          className="flex items-center gap-2"
+                        >
+                          <span>Tuần sau</span>
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-6">
-                      {timeSlots.length > 0 ? (
-                        timeSlots.map((day, idx) => (
-                          <div key={idx}>
-                            <h4 className="font-semibold mb-3">{day.day}</h4>
-                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                              {day.slots.map((slot: any, slotIdx: number) => (
-                                <Button 
-                                  key={slotIdx} 
-                                  variant={selectedTimeSlot === `${day.day}-${slot.time}` ? "default" : "outline"}
-                                  size="sm" 
-                                  className="justify-center"
-                                  disabled={!slot.available}
-                                  onClick={() => setSelectedTimeSlot(`${day.day}-${slot.time}`)}
-                                >
-                                  {slot.time}
-                                </Button>
-                              ))}
+                    {availableTimeSlots.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <div className="min-w-[600px]">
+                          {/* Header with days */}
+                          <div className="grid grid-cols-8 gap-1 mb-2">
+                            <div className="p-2 text-sm font-medium text-gray-600">Giờ</div>
+                            {weekDays.map((day) => (
+                              <div key={day.key} className="p-2 text-center">
+                                <div className="text-sm font-medium text-gray-900">{day.label}</div>
+                                <div className="text-xs text-gray-500">{datesByDay[day.key]}</div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Time slots grid */}
+                          <div className="space-y-1">
+                            {availableTimeSlots.map((timeSlot) => (
+                            <div key={timeSlot.id} className="grid grid-cols-8 gap-1">
+                              <div className="p-2 text-sm text-gray-600 bg-gray-50 rounded">
+                                {timeSlot.startTime}
+                              </div>
+                              {weekDays.map((day) => {
+                                const isAvailable = isSlotAvailable(day.key, timeSlot);
+                                const isSelected = isSlotSelected(day.key, timeSlot);
+                                
+                                return (
+                                  <button
+                                    key={`${day.key}-${timeSlot.id}`}
+                                    onClick={() => handleSlotClick(day.key, timeSlot)}
+                                    disabled={!isAvailable}
+                                    className={`
+                                      p-2 text-xs rounded transition-all duration-200
+                                      ${isAvailable 
+                                        ? isSelected
+                                          ? 'bg-[#FD8B51] text-white hover:bg-[#CB6040]'
+                                          : 'bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer'
+                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                      }
+                                    `}
+                                  >
+                                    {isAvailable ? (isSelected ? '✓' : '') : '✗'}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ))}
+                        </div>
                             </div>
                           </div>
-                        ))
                       ) : (
                         <div className="text-center py-8">
                           <CalendarIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                          <p className="text-gray-600">Chưa có lịch trống</p>
-                          <p className="text-sm text-gray-500 mt-2">Gia sư chưa cập nhật lịch trống</p>
+                        <p className="text-gray-600">Không có lịch trống trong tuần này</p>
+                        <p className="text-sm text-gray-500 mt-2">Gia sư chưa cập nhật lịch trống cho tuần này</p>
                         </div>
-                      )}
-                    </div>
-                    {selectedTimeSlot && (
+                    )}
+                    
+                    {/* Selected slots summary */}
+                    {selectedSlots.size > 0 && (
                       <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                         <p className="text-sm text-gray-700 mb-3">
-                          Bạn đã chọn: <span className="font-medium">{selectedTimeSlot}</span>
+                          Bạn đã chọn <span className="font-medium">{selectedSlots.size}</span> khung giờ
                         </p>
-                        <Button className="w-full bg-[#257180] hover:bg-[#257180]/90 text-white">
-                          <CalendarIcon className="w-4 h-4 mr-2" />
-                          Đặt buổi học
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
+                            onClick={() => {
+                              console.log('Book lesson with slots:', Array.from(selectedSlots));
+                            }}
+                          >
+                            <CalendarIcon className="w-4 h-4 mr-2" />
+                            Đặt lịch học
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            onClick={() => setSelectedSlots(new Set())}
+                          >
+                            Xóa lựa chọn
+                          </Button>
+                        </div>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-                <Card className="border-[#FD8B51]">
-                  <CardHeader>
-                    <CardTitle className="font-bold">Chọn ngày khác</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      className="rounded-md border"
-                    />
+                    
+                    {/* Legend - only show when there are available slots */}
+                    {availableTimeSlots.length > 0 && (
+                      <div className="mt-4 flex items-center gap-4 text-xs text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-green-100 rounded"></div>
+                          <span>Có thể đặt</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-[#FD8B51] rounded"></div>
+                          <span>Đã chọn</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-gray-100 rounded"></div>
+                          <span>Không có lịch</span>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -517,8 +767,32 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     <div>
                       <span className="text-gray-600 text-sm">Học phí</span>
                       <div className="mt-2">
-                        <span className="text-3xl">{FormatService.formatVND(tutor.tutorSubjects?.[0]?.hourlyRate || 0)}</span>
-                        <span className="text-base text-gray-600">/giờ</span>
+                        {tutor.tutorSubjects && tutor.tutorSubjects.length > 0 ? (
+                          (() => {
+                            const prices = tutor.tutorSubjects.map(ts => ts.hourlyRate || 0);
+                            const minPrice = Math.min(...prices);
+                            const maxPrice = Math.max(...prices);
+                            
+                            return (
+                              <div className="flex items-baseline justify-center gap-2">
+                                <span className="text-3xl">
+                                  {minPrice === maxPrice 
+                                    ? FormatService.formatVND(minPrice)
+                                    : `${FormatService.formatVND(minPrice)} - ${FormatService.formatVND(maxPrice)}`
+                                  }
+                                </span>
+                                <span className="text-base text-gray-600">/giờ</span>
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <div className="flex items-baseline justify-center gap-2">
+                            <span className="text-3xl">
+                              {FormatService.formatVND(0)}
+                            </span>
+                            <span className="text-base text-gray-600">/giờ</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
