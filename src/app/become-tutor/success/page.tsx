@@ -8,9 +8,9 @@ export default function BecomeTutorSuccess() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-[#F2E5BF] pt-16">
+    <div className="min-h-screen bg-[#F9FAFB] pt-16">
       <div className="max-w-2xl mx-auto px-6 py-12">
-        <Card className="bg-white border-[#257180]/20 shadow-lg">
+        <Card className="bg-white border-[#FD8B51] shadow-lg">
           <CardHeader className="text-center pb-6">
             <div className="flex justify-center mb-4">
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
@@ -34,7 +34,7 @@ export default function BecomeTutorSuccess() {
               </p>
             </div>
 
-            <div className="bg-[#F2E5BF] p-6 rounded-lg border border-[#257180]/20">
+            <div className="bg-[#F2E5BF] p-6 rounded-lg border border-gray-300">
               <h3 className="font-semibold text-black mb-3">Những bước tiếp theo:</h3>
               <div className="text-left space-y-2 text-sm text-gray-700">
                 <div className="flex items-center gap-2">

@@ -97,8 +97,8 @@ export function EmailVerificationPage({ onBackToLogin }: EmailVerificationPagePr
   };
   const statusMessage = getStatusMessage();
   return (
-    <div className="min-h-screen bg-[#F2E5BF] flex items-center justify-center p-2 sm:p-4 lg:p-8 pt-20">
-      <div className="w-full max-w-4xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden lg:grid lg:grid-cols-2">
+    <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center p-2 sm:p-4 lg:p-8 pt-20">
+      <div className="w-full max-w-4xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden lg:grid lg:grid-cols-2 border border-[#FD8B51]">
         {/* Phần bên trái - Hình ảnh và caption */}
         <div className="relative hidden lg:flex lg:flex-col lg:justify-end overflow-hidden">
           <ImageWithFallback
@@ -143,7 +143,7 @@ export function EmailVerificationPage({ onBackToLogin }: EmailVerificationPagePr
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Nhập email để gửi lại liên kết xác thực"
-                    className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
+                    className="h-10 sm:h-11 lg:h-12 border border-gray-300 rounded-lg bg-white text-sm sm:text-base focus:border-[#257180] focus:ring-1 focus:ring-[#257180]"
                     required
                   />
                 </div>

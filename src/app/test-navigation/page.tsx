@@ -2,7 +2,7 @@ import { PageWrapper } from '@/components/common/PageWrapper';
 export default function TestNavigation() {
   return (
     <PageWrapper currentPage="test">
-      <div className="min-h-screen bg-gray-50 pt-16">
+      <div className="min-h-screen bg-[#F9FAFB] pt-16">
         <div className="max-w-4xl mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">
             Test Navigation - EduMatch
@@ -34,4 +34,4 @@ export default function TestNavigation() {
       </div>
     </PageWrapper>
   );
-}
+}

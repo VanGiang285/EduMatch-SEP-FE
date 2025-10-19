@@ -116,8 +116,8 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
     }
   };
   return (
-    <div className="min-h-screen bg-[#F2E5BF] flex items-center justify-center p-2 sm:p-4 lg:p-8 pt-20">
-      <div className="w-full max-w-6xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden lg:grid lg:grid-cols-2">
+    <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center p-2 sm:p-4 lg:p-8 pt-20">
+      <div className="w-full max-w-6xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden lg:grid lg:grid-cols-2 border border-[#FD8B51]">
         {/* Phần bên trái - Hình ảnh và caption */}
         <div className="relative hidden lg:flex lg:flex-col lg:justify-end overflow-hidden">
           <ImageWithFallback
@@ -159,7 +159,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Nhập họ và tên của bạn"
-                  className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
+                  className="h-10 sm:h-11 lg:h-12 border border-gray-300 rounded-lg bg-white text-sm sm:text-base focus:border-[#257180] focus:ring-1 focus:ring-[#257180]"
                 />
               </div>
               {/* Email Input */}
@@ -171,7 +171,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Nhập email của bạn"
-                  className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
+                  className="h-10 sm:h-11 lg:h-12 border border-gray-300 rounded-lg bg-white text-sm sm:text-base focus:border-[#257180] focus:ring-1 focus:ring-[#257180]"
                 />
               </div>
               {/* Password Input */}
@@ -187,7 +187,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                       checkPasswordMatch(e.target.value, confirmPassword);
                     }}
                     placeholder="Tạo mật khẩu mạnh (ít nhất 6 ký tự)"
-                    className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
+                    className="h-10 sm:h-11 lg:h-12 border border-gray-300 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#257180] focus:ring-1 focus:ring-[#257180]"
                   />
                   <button
                     type="button"
@@ -212,7 +212,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                       checkPasswordMatch(password, e.target.value);
                     }}
                     placeholder="Nhập lại mật khẩu"
-                    className="h-10 sm:h-11 lg:h-12 border border-[#257180]/30 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#FD8B51] focus:ring-1 focus:ring-[#FD8B51]"
+                    className="h-10 sm:h-11 lg:h-12 border border-gray-300 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#257180] focus:ring-1 focus:ring-[#257180]"
                   />
                   <button
                     type="button"

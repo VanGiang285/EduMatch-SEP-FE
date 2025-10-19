@@ -725,7 +725,7 @@ export function BecomeTutorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F2E5BF] pt-16">
+    <div className="min-h-screen bg-[#F9FAFB] pt-16">
       {error && (
         <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
           <div className="flex">
@@ -755,7 +755,7 @@ export function BecomeTutorPage() {
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1 space-y-6">
-            <Card className="bg-white border border-[#257180]/20">
+            <Card className="bg-white border border-[#FD8B51]">
               <CardHeader>
                 <CardTitle className="text-lg text-black font-bold">Tiến trình đăng ký</CardTitle>
               </CardHeader>
@@ -785,7 +785,7 @@ export function BecomeTutorPage() {
             </Card>
           </div>
           <div className="lg:col-span-3">
-            <Card className="shadow-lg bg-white border border-[#257180]/20">
+            <Card className="shadow-lg bg-white border border-[#FD8B51]">
               <CardContent className="p-8">
                 {currentStep === 1 && (
                   <div className="space-y-6">
@@ -800,7 +800,7 @@ export function BecomeTutorPage() {
                           <Input
                                   id="fullName"
                                   placeholder="Nhập tên đầy đủ của bạn"
-                             className={`pl-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.fullName ? 'border-red-500' : ''}`}
+                             className={`pl-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180] ${fieldErrors.fullName ? 'border-red-500' : ''}`}
                                   value={formData.introduction.fullName}
                                   onChange={(e) => updateFormData('introduction', { fullName: e.target.value })}
                           />
@@ -817,7 +817,7 @@ export function BecomeTutorPage() {
                           id="email"
                           type="email"
                           placeholder="email@example.com"
-                            className={`pl-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.email ? 'border-red-500' : ''}`}
+                            className={`pl-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180] ${fieldErrors.email ? 'border-red-500' : ''}`}
                           value={formData.introduction.email}
                           onChange={(e) => updateFormData('introduction', { email: e.target.value })}
                         />
@@ -835,7 +835,7 @@ export function BecomeTutorPage() {
                             value={formData.introduction.province}
                             onValueChange={handleProvinceChange}
                             placeholder="Chọn tỉnh/thành phố"
-                            className="pl-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                            className="pl-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                           >
                             {vietnamProvinces.map((province) => (
                               <SelectWithSearchItem 
@@ -858,7 +858,7 @@ export function BecomeTutorPage() {
                             onValueChange={(value) => updateFormData('introduction', { district: value })}
                             placeholder={formData.introduction.province ? "Chọn quận/huyện" : "Chọn tỉnh trước"}
                             disabled={!formData.introduction.province}
-                            className="pl-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] disabled:opacity-50"
+                            className="pl-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180] disabled:opacity-50"
                           >
                             {availableDistricts.map((district) => (
                               <SelectWithSearchItem 
@@ -902,7 +902,7 @@ export function BecomeTutorPage() {
                             ).filter(Boolean);
                             
                             return (
-                              <div key={subject.subjectId} className="bg-[#F2E5BF] border border-[#257180]/20 rounded-lg p-4 shadow-sm">
+                              <div key={subject.subjectId} className="bg-[#F2E5BF] border border-gray-300 rounded-lg p-4 shadow-sm">
                                 <div className="flex justify-between items-start">
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-3">
@@ -919,7 +919,7 @@ export function BecomeTutorPage() {
                                         {selectedLevels.map((levelName, index) => (
                                           <span 
                                             key={index}
-                                            className="px-3 py-1.5 bg-[#FD8B51] text-white text-sm font-semibold rounded-lg shadow-sm border border-[#FD8B51]/20 flex items-center gap-1"
+                                            className="px-3 py-1.5 bg-[#FD8B51] text-white text-sm font-semibold rounded-lg shadow-sm border border-gray-300/20 flex items-center gap-1"
                                           >
                                             <GraduationCap className="w-3 h-3" />
                                             {levelName}
@@ -944,7 +944,7 @@ export function BecomeTutorPage() {
                       )}
 
                       {/* Add new subject form */}
-                      <div className="space-y-4 p-6 border border-[#257180]/20 rounded-lg bg-white">
+                      <div className="space-y-4 p-6 border border-gray-300 rounded-lg bg-white">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="new-subject" className="text-black text-sm sm:text-base">Chọn môn học</Label>
@@ -952,7 +952,7 @@ export function BecomeTutorPage() {
                               value={currentSubject.subjectId.toString()}
                               onValueChange={(value) => setCurrentSubject(prev => ({ ...prev, subjectId: parseInt(value), levels: [] }))}
                               placeholder="Chọn môn học"
-                              className="border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                              className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                             >
                               {displaySubjects
                                 .filter(subject => !formData.introduction.subjects.some(s => s.subjectId === subject.id))
@@ -982,7 +982,7 @@ export function BecomeTutorPage() {
                                 }
                               }}
                               placeholder={levels && levels.length > 0 ? "Chọn lớp để thêm" : "Đang tải danh sách lớp..."}
-                              className="border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                              className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                             >
                               {levels && levels.length > 0 ? (
                                 levels
@@ -1067,7 +1067,7 @@ export function BecomeTutorPage() {
                         <Input
                           id="birthDate"
                           type="date"
-                          className={`border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.birthDate ? 'border-red-500' : ''}`}
+                          className={`border-gray-300 focus:border-[#257180] focus:ring-[#257180] ${fieldErrors.birthDate ? 'border-red-500' : ''}`}
                           value={formData.introduction.birthDate}
                           onChange={(e) => updateFormData('introduction', { birthDate: e.target.value })}
                           max={new Date().toISOString().split('T')[0]}
@@ -1083,7 +1083,7 @@ export function BecomeTutorPage() {
                           <Input
                             id="phone"
                             placeholder="0123 456 789"
-                            className={`pl-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.phone ? 'border-red-500' : ''}`}
+                            className={`pl-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180] ${fieldErrors.phone ? 'border-red-500' : ''}`}
                             value={formData.introduction.phone}
                             onChange={(e) => updateFormData('introduction', { phone: e.target.value })}
                           />
@@ -1165,7 +1165,7 @@ export function BecomeTutorPage() {
                         )}
                       </div>
                     </div>
-                    <div className="bg-[#F2E5BF] p-4 rounded-lg border border-[#257180]/20">
+                    <div className="bg-[#F2E5BF] p-4 rounded-lg border border-gray-300">
                       <h4 className="font-medium text-black mb-2">Mẹo chụp ảnh tốt</h4>
                       <div className="text-sm text-black space-y-1">
                         <div>• Chụp ở nơi có ánh sáng tự nhiên</div>
@@ -1207,7 +1207,7 @@ export function BecomeTutorPage() {
                           <div className="space-y-3">
                             <Label className="text-black text-sm sm:text-base">Chứng chỉ đã thêm ({formData.certifications.items.length})</Label>
                             {formData.certifications.items.map((cert) => (
-                              <div key={cert.id} className="bg-[#F2E5BF] border border-[#257180]/20 rounded-lg p-4">
+                              <div key={cert.id} className="bg-[#F2E5BF] border border-gray-300 rounded-lg p-4">
                                 <div className="flex justify-between items-start">
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-2">
@@ -1246,7 +1246,7 @@ export function BecomeTutorPage() {
                             ))}
                           </div>
                         )}
-                        <div className="space-y-4 p-6 border border-[#257180]/20 rounded-lg bg-white">
+                        <div className="space-y-4 p-6 border border-gray-300 rounded-lg bg-white">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="cert-subject" className="text-black text-sm sm:text-base">Môn học <span className="text-red-500">*</span></Label>
@@ -1254,7 +1254,7 @@ export function BecomeTutorPage() {
                                 value={currentCertification.subjectId.toString()}
                                 onValueChange={(value) => setCurrentCertification(prev => ({ ...prev, subjectId: parseInt(value), certificateTypeId: 0 }))}
                               placeholder="Chọn môn học"
-                              className="border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                              className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                             >
                                 {formData.introduction.subjects.map((subject) => {
                                   const subjectData = subjects.find(s => s.id === subject.subjectId);
@@ -1277,7 +1277,7 @@ export function BecomeTutorPage() {
                                 onValueChange={(value) => setCurrentCertification(prev => ({ ...prev, certificateTypeId: parseInt(value) }))}
                                 placeholder={currentCertification.subjectId ? "Chọn chứng chỉ" : "Chọn môn học trước"}
                                 disabled={!currentCertification.subjectId}
-                                className="border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] disabled:opacity-50"
+                                className="border-gray-300 focus:border-[#257180] focus:ring-[#257180] disabled:opacity-50"
                               >
                                 {currentCertification.subjectId && (() => {
                                   const selectedSubject = subjects.find(subject => subject.id === currentCertification.subjectId);
@@ -1302,7 +1302,7 @@ export function BecomeTutorPage() {
                               <Input
                                 id="cert-issue-date"
                                 type="date"
-                                className={`border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.cert_issue_date ? 'border-red-500' : ''}`}
+                                className={`border-gray-300 focus:border-[#257180] focus:ring-[#257180] ${fieldErrors.cert_issue_date ? 'border-red-500' : ''}`}
                                 value={currentCertification.issueDate}
                                 onChange={(e) => {
                                   setCurrentCertification(prev => ({ ...prev, issueDate: e.target.value }));
@@ -1328,7 +1328,7 @@ export function BecomeTutorPage() {
                               <Input
                                 id="cert-expiry-date"
                                 type="date"
-                                className={`border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.cert_expiry_date ? 'border-red-500' : ''}`}
+                                className={`border-gray-300 focus:border-[#257180] focus:ring-[#257180] ${fieldErrors.cert_expiry_date ? 'border-red-500' : ''}`}
                                 value={currentCertification.expiryDate}
                                 onChange={(e) => {
                                   setCurrentCertification(prev => ({ ...prev, expiryDate: e.target.value }));
@@ -1429,7 +1429,7 @@ export function BecomeTutorPage() {
                           <div className="space-y-3">
                             <Label className="text-black text-sm sm:text-base">Bằng cấp đã thêm ({formData.education.items.length})</Label>
                             {formData.education.items.map((edu) => (
-                              <div key={edu.id} className="bg-[#F2E5BF] border border-[#257180]/20 rounded-lg p-4">
+                              <div key={edu.id} className="bg-[#F2E5BF] border border-gray-300 rounded-lg p-4">
                                 <div className="flex justify-between items-start">
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-2">
@@ -1473,14 +1473,14 @@ export function BecomeTutorPage() {
                           </div>
                         )}
                         {/* Add new education form */}
-                        <div className="space-y-4 p-6 border border-[#257180]/20 rounded-lg bg-white">
+                        <div className="space-y-4 p-6 border border-gray-300 rounded-lg bg-white">
                           <div className="space-y-2">
                             <Label htmlFor="institution" className="text-black text-sm sm:text-base">Tổ chức giáo dục <span className="text-red-500">*</span></Label>
                               <SelectWithSearch
                               value={currentEducation.institutionId.toString()}
                               onValueChange={(value) => setCurrentEducation(prev => ({ ...prev, institutionId: parseInt(value) }))}
                               placeholder="Chọn tổ chức giáo dục"
-                                className="border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                                className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                               >
                               {educationInstitutions.map((institution) => (
                                   <SelectWithSearchItem 
@@ -1498,7 +1498,7 @@ export function BecomeTutorPage() {
                               <Input
                               id="issueDate"
                               type="date"
-                                className={`border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.edu_issue_date ? 'border-red-500' : ''}`}
+                                className={`border-gray-300 focus:border-[#257180] focus:ring-[#257180] ${fieldErrors.edu_issue_date ? 'border-red-500' : ''}`}
                               value={currentEducation.issueDate}
                               onChange={(e) => {
                                 setCurrentEducation(prev => ({ ...prev, issueDate: e.target.value }));
@@ -1582,7 +1582,7 @@ export function BecomeTutorPage() {
                       <Input
                         id="attractive-title"
                         placeholder="VD: Gia sư Toán 10 năm kinh nghiệm, giúp học sinh cải thiện điểm số nhanh chóng"
-                        className={`border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.attractiveTitle ? 'border-red-500' : ''}`}
+                        className={`border-gray-300 focus:border-[#257180] focus:ring-[#257180] ${fieldErrors.attractiveTitle ? 'border-red-500' : ''}`}
                         value={formData.description.attractiveTitle}
                         onChange={(e) => updateFormData('description', { attractiveTitle: e.target.value })}
                       />
@@ -1596,7 +1596,7 @@ export function BecomeTutorPage() {
                       <Textarea
                         id="introduction"
                         placeholder="Hãy viết một đoạn giới thiệu về bản thân, sở thích, tính cách và động lực dạy học..."
-                        className={`min-h-32 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.introduction ? 'border-red-500' : ''}`}
+                        className={`min-h-32 border-gray-300 focus:border-[#257180] focus:ring-[#257180] ${fieldErrors.introduction ? 'border-red-500' : ''}`}
                         value={formData.description.introduction}
                         onChange={(e) => updateFormData('description', { introduction: e.target.value })}
                       />
@@ -1610,7 +1610,7 @@ export function BecomeTutorPage() {
                       <Textarea
                         id="teaching-experience"
                         placeholder="Mô tả kinh nghiệm giảng dạy, phương pháp dạy học, các thành tích đã đạt được..."
-                        className={`min-h-32 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.teachingExperience ? 'border-red-500' : ''}`}
+                        className={`min-h-32 border-gray-300 focus:border-[#257180] focus:ring-[#257180] ${fieldErrors.teachingExperience ? 'border-red-500' : ''}`}
                         value={formData.description.teachingExperience}
                         onChange={(e) => updateFormData('description', { teachingExperience: e.target.value })}
                       />
@@ -1619,7 +1619,7 @@ export function BecomeTutorPage() {
                         <p className="text-red-500 text-sm">{fieldErrors.teachingExperience}</p>
                       )}
                     </div>
-                    <div className="bg-[#F2E5BF] p-4 rounded-lg border border-[#257180]/20">
+                    <div className="bg-[#F2E5BF] p-4 rounded-lg border border-gray-300">
                       <h4 className="font-medium text-black mb-2">Mẹo viết mô tả tốt</h4>
                       <div className="text-sm text-black space-y-1">
                         <div>• Thể hiện đam mê và nhiệt huyết với giảng dạy</div>
@@ -1685,7 +1685,7 @@ export function BecomeTutorPage() {
                             }}
                           />
                           <div 
-                            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#FD8B51] cursor-pointer"
+                            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-300 cursor-pointer"
                             onClick={() => document.getElementById('video-upload')?.click()}
                           >
                             {formData.video.videoFile ? (
@@ -1722,7 +1722,7 @@ export function BecomeTutorPage() {
                                 }
                               }));
                             }}
-                            className="border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                            className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                           />
                           <p className="text-xs text-gray-500">
                             Dán link YouTube video giới thiệu của bạn
@@ -1730,7 +1730,7 @@ export function BecomeTutorPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="bg-[#F2E5BF] p-4 rounded-lg border border-[#257180]/20">
+                    <div className="bg-[#F2E5BF] p-4 rounded-lg border border-gray-300">
                       <h4 className="font-medium text-black mb-2">Gợi ý quay video</h4>
                       <div className="text-sm text-black space-y-1">
                         <div>• Giới thiệu tên, kinh nghiệm và môn dạy</div>
@@ -1794,7 +1794,7 @@ export function BecomeTutorPage() {
                               updateFormData('availability', { startDate: newStartDate });
                             }
                           }}
-                          className={`border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.startDate ? 'border-red-500' : ''}`}
+                          className={`border-gray-300 focus:border-[#257180] focus:ring-[#257180] ${fieldErrors.startDate ? 'border-red-500' : ''}`}
                         />
                         <p className="text-xs text-gray-500 mt-1">
                           Tối thiểu từ ngày mai, tối đa 3 tháng trong tương lai
@@ -1834,7 +1834,7 @@ export function BecomeTutorPage() {
                               updateFormData('availability', { endDate: newEndDate });
                             }
                           }}
-                          className={`border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors.endDate ? 'border-red-500' : ''}`}
+                          className={`border-gray-300 focus:border-[#257180] focus:ring-[#257180] ${fieldErrors.endDate ? 'border-red-500' : ''}`}
                         />
                         <p className="text-xs text-gray-500 mt-1">
                           Tối đa 2 tháng từ ngày bắt đầu, không quá 6 tháng trong tương lai
@@ -1846,7 +1846,7 @@ export function BecomeTutorPage() {
                     </div>
 
                     {/* Repeat Toggle */}
-                    <div className="flex items-center justify-between p-4 bg-[#F2E5BF] rounded-lg border border-[#257180]/20">
+                    <div className="flex items-center justify-between p-4 bg-[#F2E5BF] rounded-lg border border-gray-300">
                       <div>
                         <Label className="text-black text-sm sm:text-base font-medium">
                           Lặp lại lịch theo thứ trong tuần
@@ -1888,7 +1888,7 @@ export function BecomeTutorPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => updateFormData('availability', { currentWeek: formData.availability.currentWeek - 1 })}
-                          className="border-[#257180]/30 hover:bg-[#F2E5BF]"
+                          className="border-gray-300 hover:bg-[#FD8B51] hover:text-white"
                         >
                           <ChevronLeft className="w-4 h-4" />
                           Tuần trước
@@ -1903,7 +1903,7 @@ export function BecomeTutorPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => updateFormData('availability', { currentWeek: formData.availability.currentWeek + 1 })}
-                          className="border-[#257180]/30 hover:bg-[#F2E5BF]"
+                          className="border-gray-300 hover:bg-[#FD8B51] hover:text-white"
                         >
                           Tuần sau
                           <ChevronRight className="w-4 h-4" />
@@ -1913,7 +1913,7 @@ export function BecomeTutorPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => updateFormData('availability', { currentWeek: 0 })}
-                        className="border-[#FD8B51]/30 hover:bg-[#FD8B51]/10 text-[#FD8B51]"
+                        className="border-gray-300/30 hover:bg-[#FD8B51]/10 text-[#FD8B51]"
                       >
                         Hôm nay
                       </Button>
@@ -1940,7 +1940,7 @@ export function BecomeTutorPage() {
                           <div className="grid grid-cols-8 gap-2 mb-2">
                             <div className="p-2"></div>
                             {weekDays.map((day) => (
-                              <div key={day.key} className="p-2 text-center font-medium text-black bg-[#F2E5BF] rounded border border-[#257180]/20">
+                              <div key={day.key} className="p-2 text-center font-medium text-black bg-[#F2E5BF] rounded border border-gray-300">
                                 <div>{day.label}</div>
                                 <div className="text-xs text-gray-600 mt-1">{datesByDay[day.key]}</div>
                               </div>
@@ -2007,7 +2007,7 @@ export function BecomeTutorPage() {
                     </div>
 
 
-                    <div className="bg-[#F2E5BF] p-4 rounded-lg border border-[#257180]/20">
+                    <div className="bg-[#F2E5BF] p-4 rounded-lg border border-gray-300">
                       <h4 className="font-medium text-black mb-2">Lưu ý về lịch dạy</h4>
                       <div className="text-sm text-black space-y-1">
                         <div>• Chọn những khung giờ bạn thực sự có thể dạy</div>
@@ -2048,7 +2048,7 @@ export function BecomeTutorPage() {
                             type="number"
                             min="0"
                             placeholder="200000"
-                            className={`pl-10 text-lg border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51] ${fieldErrors[`pricing_${formData.introduction.subjects.indexOf(subject)}`] ? 'border-red-500' : ''}`}
+                            className={`pl-10 text-lg border-gray-300 focus:border-[#257180] focus:ring-[#257180] ${fieldErrors[`pricing_${formData.introduction.subjects.indexOf(subject)}`] ? 'border-red-500' : ''}`}
                                   value={pricing?.hourlyRate || ''}
                                   onChange={(e) => {
                                     const newPricing = formData.pricing.subjectPricing.map(p => 
@@ -2086,11 +2086,11 @@ export function BecomeTutorPage() {
                       )}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-[#F2E5BF] p-4 rounded-lg text-center border border-[#257180]/20">
+                      <div className="bg-[#F2E5BF] p-4 rounded-lg text-center border border-gray-300">
                         <div className="text-2xl font-bold text-black">{FormatService.formatVND(150000)}-{FormatService.formatVND(200000)}</div>
                         <div className="text-sm text-black">Gia sư mới</div>
                       </div>
-                      <div className="bg-white p-4 rounded-lg text-center border-2 border-[#FD8B51]">
+                      <div className="bg-white p-4 rounded-lg text-center border-2 border-gray-300">
                         <div className="text-2xl font-bold text-[#FD8B51]">{FormatService.formatVND(200000)}-{FormatService.formatVND(350000)}</div>
                         <div className="text-sm text-[#FD8B51]">Có kinh nghiệm</div>
                       </div>
@@ -2099,7 +2099,7 @@ export function BecomeTutorPage() {
                         <div className="text-sm text-[#CB6040]">Chuyên gia</div>
                       </div>
                     </div>
-                    <div className="bg-[#F2E5BF] p-4 rounded-lg border border-[#257180]/20">
+                    <div className="bg-[#F2E5BF] p-4 rounded-lg border border-gray-300">
                       <h4 className="font-medium text-black mb-2">Lưu ý về giá cả</h4>
                       <div className="text-sm text-black space-y-1">
                         <div>• Giá hợp lý sẽ thu hút nhiều học viên hơn</div>
@@ -2109,7 +2109,7 @@ export function BecomeTutorPage() {
                       </div>
                     </div>
                     {/* Summary */}
-                    <div className="bg-white p-6 rounded-lg border border-[#257180]/20">
+                    <div className="bg-white p-6 rounded-lg border border-gray-300">
                       <h4 className="font-medium text-black mb-4">Tóm tắt đăng ký</h4>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
@@ -2162,7 +2162,7 @@ export function BecomeTutorPage() {
                     <Button 
                       variant="outline" 
                       onClick={handlePrevious}
-                      className="border-black text-black hover:bg-[#F2E5BF]"
+                      className="border-black text-black hover:bg-[#FD8B51] hover:text-white"
                     >
                       <ChevronLeft className="w-4 h-4 mr-2" />
                       Quay lại

@@ -313,8 +313,8 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F2E5BF] pt-16">
-      <div className="bg-white border-b border-[#257180]/20">
+    <div className="min-h-screen bg-[#F9FAFB] pt-16">
+      <div className="bg-white border-b border-gray-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="mb-6">
             <h1 className="text-black text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 leading-tight tracking-tight">
@@ -329,31 +329,31 @@ export default function ProfilePage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-white border border-[#257180]/20 shadow-sm">
+          <TabsList className="grid w-full grid-cols-4 bg-[#F2E5BF] border border-gray-300 shadow-sm">
             <TabsTrigger 
               value="profile" 
-              className="flex items-center gap-2 data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+              className="flex items-center gap-2 data-[state=active]:bg-[#257180] data-[state=active]:text-white"
             >
               <UserCircle className="w-4 h-4" />
               Thông tin cá nhân
             </TabsTrigger>
             <TabsTrigger 
               value="wallet" 
-              className="flex items-center gap-2 data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+              className="flex items-center gap-2 data-[state=active]:bg-[#257180] data-[state=active]:text-white"
             >
               <Wallet className="w-4 h-4" />
               Ví
             </TabsTrigger>
             <TabsTrigger 
               value="messages" 
-              className="flex items-center gap-2 data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+              className="flex items-center gap-2 data-[state=active]:bg-[#257180] data-[state=active]:text-white"
             >
               <MessageCircle className="w-4 h-4" />
               Tin nhắn
             </TabsTrigger>
             <TabsTrigger 
               value="notifications" 
-              className="flex items-center gap-2 data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+              className="flex items-center gap-2 data-[state=active]:bg-[#257180] data-[state=active]:text-white"
             >
               <Bell className="w-4 h-4" />
               Thông báo
@@ -363,8 +363,8 @@ export default function ProfilePage() {
           <TabsContent value="profile">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-1">
-                <Card className="bg-white border-[#257180]/20 shadow-lg">
-                  <CardHeader className="border-b border-[#257180]/20">
+                <Card className="bg-white border-[#FD8B51] shadow-lg">
+                  <CardHeader className="border-b border-gray-300">
                     <CardTitle className="text-black text-lg">Ảnh Đại diện</CardTitle>
                   </CardHeader>
                   <CardContent className="flex flex-col items-center space-y-4 p-6">
@@ -383,7 +383,7 @@ export default function ProfilePage() {
                       </Button>
                     </div>
                     <div className="text-center">
-                      <Button variant="outline" size="sm" className="border-[#257180]/30 text-black hover:bg-[#257180]/5">
+                      <Button variant="outline" size="sm" className="border-gray-300 text-black hover:bg-[#FD8B51] hover:text-white">
                         Tải ảnh mới
                       </Button>
                       <p className="text-xs text-gray-500 mt-2">
@@ -393,8 +393,8 @@ export default function ProfilePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="mt-6 bg-white border-[#257180]/20 shadow-lg">
-                  <CardHeader className="border-b border-[#257180]/20">
+                <Card className="mt-6 bg-white border-gray-300 shadow-lg">
+                  <CardHeader className="border-b border-gray-300">
                     <CardTitle className="text-black text-lg">Trạng thái Tài khoản</CardTitle>
                   </CardHeader>
                   <CardContent className="p-6">
@@ -423,8 +423,8 @@ export default function ProfilePage() {
               </div>
 
               <div className="lg:col-span-2">
-                <Card className="bg-white border-[#257180]/20 shadow-lg">
-                  <CardHeader className="border-b border-[#257180]/20">
+                <Card className="bg-white border-[#FD8B51] shadow-lg">
+                  <CardHeader className="border-b border-gray-300">
                     <CardTitle className="text-black text-lg">Thông tin Cá nhân</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6 p-6">
@@ -436,7 +436,7 @@ export default function ProfilePage() {
                           <Input 
                             id="firstName" 
                             placeholder="Nguyễn" 
-                            className="pl-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                            className="pl-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                             defaultValue={user?.name?.split(' ')[0] || ""}
                           />
                         </div>
@@ -446,7 +446,7 @@ export default function ProfilePage() {
                         <Input 
                           id="lastName" 
                           placeholder="Văn A" 
-                          className="border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                          className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                           defaultValue={user?.name?.split(' ').slice(1).join(' ') || ""}
                         />
                       </div>
@@ -461,7 +461,7 @@ export default function ProfilePage() {
                             id="email" 
                             type="email"
                             placeholder="nguyen@example.com" 
-                            className="pl-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                            className="pl-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                             defaultValue={user?.email || ""}
                           />
                         </div>
@@ -474,7 +474,7 @@ export default function ProfilePage() {
                           <Input 
                             id="phone" 
                             placeholder="+84 (90) 123-4567" 
-                            className="pl-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                            className="pl-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                           />
                         </div>
                       </div>
@@ -489,7 +489,7 @@ export default function ProfilePage() {
                             id="age" 
                             type="number"
                             placeholder="20" 
-                            className="pl-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                            className="pl-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                           />
                         </div>
                       </div>
@@ -500,7 +500,7 @@ export default function ProfilePage() {
                           <Input 
                             id="location" 
                             placeholder="Hà Nội, Việt Nam" 
-                            className="pl-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                            className="pl-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                           />
                         </div>
                       </div>
@@ -511,7 +511,7 @@ export default function ProfilePage() {
                       <Textarea 
                         id="bio"
                         placeholder="Hãy kể về bản thân, mục tiêu học tập và sở thích của bạn..."
-                        className="min-h-24 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                        className="min-h-24 border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                         defaultValue="Tôi đam mê học tập và luôn muốn mở rộng kiến thức trong nhiều lĩnh vực khác nhau. Tôi thích các buổi học tương tác và đánh giá cao những gia sư có thể giải thích các khái niệm phức tạp một cách đơn giản."
                       />
                       <p className="text-xs text-gray-500">
@@ -519,7 +519,7 @@ export default function ProfilePage() {
                       </p>
                     </div>
 
-                    <div className="space-y-4 pt-6 border-t border-[#257180]/20">
+                    <div className="space-y-4 pt-6 border-t border-gray-300">
                       <h3 className="text-base font-medium text-black">Sở thích Học tập</h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -528,13 +528,13 @@ export default function ProfilePage() {
                           <Input 
                             id="subjects" 
                             placeholder="Toán học, Vật lý, Tiếng Anh" 
-                            className="border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                            className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                             defaultValue="Toán học, Vật lý, Tiếng Anh"
                           />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="level" className="text-black font-medium">Trình độ học vấn</Label>
-                          <select className="w-full px-3 py-2 border border-[#257180]/30 rounded-md focus:border-[#FD8B51] focus:ring-[#FD8B51]">
+                          <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-[#257180] focus:ring-[#257180]">
                             <option>Trung học phổ thông</option>
                             <option>Đại học</option>
                             <option>Sau đại học</option>
@@ -544,8 +544,8 @@ export default function ProfilePage() {
                       </div>
                     </div>
 
-                    <div className="flex gap-4 pt-6 border-t border-[#257180]/20">
-                      <Button variant="outline" className="flex-1 border-[#257180]/30 text-black hover:bg-[#257180]/5">
+                    <div className="flex gap-4 pt-6 border-t border-gray-300">
+                      <Button variant="outline" className="flex-1 border-gray-300 text-black hover:bg-[#FD8B51] hover:text-white">
                         Hủy thay đổi
                       </Button>
                       <Button className="flex-1 bg-[#FD8B51] hover:bg-[#CB6040] text-white">
@@ -585,7 +585,7 @@ export default function ProfilePage() {
               </Card>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-white border-[#257180]/20">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-white border-gray-300">
                   <CardContent className="p-6">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-[#257180]/10 rounded-lg flex items-center justify-center">
@@ -602,7 +602,7 @@ export default function ProfilePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-white border-[#257180]/20">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-white border-gray-300">
                   <CardContent className="p-6">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-[#FD8B51]/10 rounded-lg flex items-center justify-center">
@@ -612,7 +612,7 @@ export default function ProfilePage() {
                         <h3 className="font-semibold text-black">Rút tiền</h3>
                         <p className="text-gray-600 text-sm">Chuyển về tài khoản ngân hàng</p>
                       </div>
-                      <Button variant="outline" className="border-[#FD8B51] text-[#FD8B51] hover:bg-[#FD8B51] hover:text-white">
+                      <Button variant="outline" className="border-gray-300 text-[#FD8B51] hover:bg-[#FD8B51] hover:text-white">
                         Rút tiền
                       </Button>
                     </div>
@@ -621,7 +621,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="bg-white border-[#257180]/20 shadow-lg">
+                <Card className="bg-white border-[#FD8B51] shadow-lg">
                   <CardContent className="p-6 text-center">
                     <div className="w-12 h-12 bg-[#257180]/10 rounded-lg flex items-center justify-center mx-auto mb-3">
                       <DollarSign className="w-6 h-6 text-[#257180]" />
@@ -632,7 +632,7 @@ export default function ProfilePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-[#257180]/20 shadow-lg">
+                <Card className="bg-white border-[#FD8B51] shadow-lg">
                   <CardContent className="p-6 text-center">
                     <div className="w-12 h-12 bg-[#FD8B51]/10 rounded-lg flex items-center justify-center mx-auto mb-3">
                       <Clock className="w-6 h-6 text-[#FD8B51]" />
@@ -643,7 +643,7 @@ export default function ProfilePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-[#257180]/20 shadow-lg">
+                <Card className="bg-white border-[#FD8B51] shadow-lg">
                   <CardContent className="p-6 text-center">
                     <div className="w-12 h-12 bg-[#CB6040]/10 rounded-lg flex items-center justify-center mx-auto mb-3">
                       <CreditCard className="w-6 h-6 text-[#CB6040]" />
@@ -655,11 +655,11 @@ export default function ProfilePage() {
                 </Card>
               </div>
 
-              <Card className="bg-white border-[#257180]/20 shadow-lg">
-                <CardHeader className="border-b border-[#257180]/20">
+              <Card className="bg-white border-[#FD8B51] shadow-lg">
+                <CardHeader className="border-b border-gray-300">
                   <div className="flex justify-between items-center">
                     <CardTitle className="text-black">Giao dịch gần đây</CardTitle>
-                    <Button variant="outline" size="sm" className="border-[#257180]/30 text-black hover:bg-[#257180]/5">
+                    <Button variant="outline" size="sm" className="border-gray-300 text-black hover:bg-[#FD8B51] hover:text-white">
                       Xem tất cả lịch sử
                     </Button>
                   </div>
@@ -668,7 +668,7 @@ export default function ProfilePage() {
                   <div className="space-y-4">
                     {transactions.map((transaction) => (
                       <div key={transaction.id} className="flex items-center gap-4 p-4 bg-[#257180]/5 rounded-lg">
-                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-[#257180]/20">
+                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-gray-300">
                           {getTransactionIcon(transaction.type)}
                         </div>
                         
@@ -701,13 +701,13 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white border-[#257180]/20 shadow-lg">
-                <CardHeader className="border-b border-[#257180]/20">
+              <Card className="bg-white border-[#FD8B51] shadow-lg">
+                <CardHeader className="border-b border-gray-300">
                   <CardTitle className="text-black">Phương thức thanh toán</CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 border border-[#257180]/20 rounded-lg">
+                    <div className="flex items-center justify-between p-4 border border-gray-300 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-[#257180]/10 rounded-lg flex items-center justify-center">
                           <CreditCard className="w-5 h-5 text-[#257180]" />
@@ -718,12 +718,12 @@ export default function ProfilePage() {
                         </div>
                         <Badge className="bg-[#257180] text-white ml-2">Chính</Badge>
                       </div>
-                      <Button variant="outline" size="sm" className="border-[#257180]/30 text-black hover:bg-[#257180]/5">
+                      <Button variant="outline" size="sm" className="border-gray-300 text-black hover:bg-[#FD8B51] hover:text-white">
                         Chỉnh sửa
                       </Button>
                     </div>
                     
-                    <Button variant="outline" className="w-full border-[#257180]/30 text-black hover:bg-[#257180]/5">
+                    <Button variant="outline" className="w-full border-gray-300 text-black hover:bg-[#FD8B51] hover:text-white">
                       + Thêm phương thức thanh toán mới
                     </Button>
                   </div>
@@ -735,14 +735,14 @@ export default function ProfilePage() {
           <TabsContent value="messages">
             <div className="grid grid-cols-12 gap-6 h-[calc(100vh-300px)]">
               <div className="col-span-4">
-                <Card className="h-full bg-white border-[#257180]/20 shadow-lg">
+                <Card className="h-full bg-white border-gray-300 shadow-lg">
                   <CardContent className="p-0">
-                    <div className="p-4 border-b border-[#257180]/20">
+                    <div className="p-4 border-b border-gray-300">
                       <div className="relative">
                         <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                         <Input 
                           placeholder="Tìm kiếm cuộc trò chuyện..." 
-                          className="pl-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                          className="pl-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                         />
                       </div>
                     </div>
@@ -752,8 +752,8 @@ export default function ProfilePage() {
                         <div
                           key={conversation.id}
                           onClick={() => setSelectedChat(conversation.id)}
-                          className={`p-4 border-b border-[#257180]/10 cursor-pointer hover:bg-[#257180]/5 transition-colors ${
-                            selectedChat === conversation.id ? 'bg-[#257180]/10 border-[#257180]/20' : ''
+                          className={`p-4 border-b border-[#257180]/10 cursor-pointer hover:bg-[#FD8B51] hover:text-white transition-colors ${
+                            selectedChat === conversation.id ? 'bg-[#257180]/10 border-gray-300' : ''
                           }`}
                         >
                           <div className="flex items-center gap-3">
@@ -804,9 +804,9 @@ export default function ProfilePage() {
               </div>
 
               <div className="col-span-8">
-                <Card className="h-full flex flex-col bg-white border-[#257180]/20 shadow-lg">
+                <Card className="h-full flex flex-col bg-white border-gray-300 shadow-lg">
                   {currentConversation && (
-                    <div className="p-4 border-b border-[#257180]/20 flex items-center justify-between">
+                    <div className="p-4 border-b border-gray-300 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="relative">
                           <Avatar className="w-10 h-10">
@@ -878,7 +878,7 @@ export default function ProfilePage() {
                     ))}
                   </div>
 
-                  <div className="p-4 border-t border-[#257180]/20">
+                  <div className="p-4 border-t border-gray-300">
                     <div className="flex items-end gap-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
@@ -899,7 +899,7 @@ export default function ProfilePage() {
                               handleSendMessage();
                             }
                           }}
-                          className="min-h-10 border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                          className="min-h-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                         />
                       </div>
                       <Button 
@@ -920,7 +920,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
               <div className="lg:col-span-3">
                 <Tabs defaultValue="all" className="space-y-6">
-                  <TabsList className="grid w-full grid-cols-4 bg-white border border-[#257180]/20 shadow-sm">
+                  <TabsList className="grid w-full grid-cols-4 bg-[#F2E5BF] border border-gray-300 shadow-sm">
                     <TabsTrigger value="all" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white">
                       Tất cả ({notifications.length})
                     </TabsTrigger>
@@ -938,7 +938,7 @@ export default function ProfilePage() {
                   <TabsContent value="all">
                     <div className="space-y-4">
                       {getNotificationsByType('all').map((notification) => (
-                        <Card key={notification.id} className={`${notification.read ? 'bg-white' : 'bg-[#257180]/5'} hover:shadow-md transition-shadow cursor-pointer border-[#257180]/20`}>
+                        <Card key={notification.id} className={`${notification.read ? 'bg-white' : 'bg-[#257180]/5'} hover:shadow-md transition-shadow cursor-pointer border-gray-300`}>
                           <CardContent className="p-6">
                             <div className="flex items-start gap-4">
                               <div className={`w-10 h-10 rounded-lg ${notification.bgColor} flex items-center justify-center flex-shrink-0`}>
@@ -1009,7 +1009,7 @@ export default function ProfilePage() {
                   <TabsContent value="unread">
                     <div className="space-y-4">
                       {getNotificationsByType('unread').map((notification) => (
-                        <Card key={notification.id} className="bg-[#257180]/5 hover:shadow-md transition-shadow cursor-pointer border-[#257180]/20">
+                        <Card key={notification.id} className="bg-[#257180]/5 hover:shadow-md transition-shadow cursor-pointer border-gray-300">
                           <CardContent className="p-6">
                             <div className="flex items-start gap-4">
                               <div className={`w-10 h-10 rounded-lg ${notification.bgColor} flex items-center justify-center flex-shrink-0`}>
@@ -1111,7 +1111,7 @@ export default function ProfilePage() {
                   <TabsContent value="session_reminder">
                     <div className="space-y-4">
                       {getNotificationsByType('session_reminder').map((notification) => (
-                        <Card key={notification.id} className="hover:shadow-md transition-shadow cursor-pointer bg-white border-[#257180]/20">
+                        <Card key={notification.id} className="hover:shadow-md transition-shadow cursor-pointer bg-white border-gray-300">
                           <CardContent className="p-6">
                             <div className="flex items-start gap-4">
                               <div className="w-10 h-10 rounded-lg bg-[#257180]/10 flex items-center justify-center flex-shrink-0">
@@ -1141,8 +1141,8 @@ export default function ProfilePage() {
               </div>
 
               <div className="lg:col-span-1">
-                <Card className="bg-white border-[#257180]/20 shadow-lg">
-                  <CardHeader className="border-b border-[#257180]/20">
+                <Card className="bg-white border-[#FD8B51] shadow-lg">
+                  <CardHeader className="border-b border-gray-300">
                     <CardTitle className="text-black text-lg">Cài đặt Thông báo</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6 p-6">
@@ -1187,7 +1187,7 @@ export default function ProfilePage() {
                       </div>
                     </div>
 
-                    <div className="border-t border-[#257180]/20 pt-4">
+                    <div className="border-t border-gray-300 pt-4">
                       <h4 className="font-medium mb-3 text-black">Loại thông báo</h4>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
@@ -1209,7 +1209,7 @@ export default function ProfilePage() {
                       </div>
                     </div>
 
-                    <Button variant="outline" className="w-full border-[#257180]/30 text-black hover:bg-[#257180]/5">
+                    <Button variant="outline" className="w-full border-gray-300 text-black hover:bg-[#FD8B51] hover:text-white">
                       Lưu cài đặt
                     </Button>
                   </CardContent>

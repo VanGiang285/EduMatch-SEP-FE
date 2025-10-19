@@ -5,7 +5,6 @@ import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
 import { Input } from '../ui/form/input';
 import { Badge } from '../ui/basic/badge';
-import { Avatar, AvatarFallback } from '../ui/basic/avatar';
 import { 
   Search, 
   Star, 
@@ -99,9 +98,7 @@ export function FindTutorPage() {
     // Filter by institution
     if (selectedInstitution !== 'all') {
       filtered = filtered.filter(tutor => 
-        tutor.tutorEducations?.some(edu => 
-          edu.institution?.id?.toString() === selectedInstitution
-        )
+        tutor.tutorEducations?.some(edu => edu.institution?.id?.toString() === selectedInstitution)
       );
     }
 
@@ -225,130 +222,143 @@ export function FindTutorPage() {
     });
   };
   return (
-    <div className="min-h-screen bg-[#F2E5BF] pt-16">
+    <div className="min-h-screen bg-gray-50 pt-16">
       {/* Title Section */}
-      <div className="bg-white border-b border-[#257180]/20">
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Title */}
           <div className="mb-6">
-            <h1 className="text-black text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 leading-tight tracking-tight">
-              TÌM GIA SƯ TRỰC TUYẾN
+            <h1 className="text-gray-900 mb-2 text-4xl font-bold">
+              Tìm gia sư trực tuyến
             </h1>
-            <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
+            <p className="text-gray-600">
               Kết nối với hơn 1,000+ gia sư chuyên nghiệp
             </p>
           </div>
         </div>
       </div>
-      {/* Sticky Search and Filters Section */}
-      <div className="bg-white border-b border-[#257180]/20 sticky top-16 z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Search, Filters and Price Range in One Row */}
-          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end w-full">
-            {/* Search Bar - Compact */}
-            <div className="relative w-full lg:w-[280px] flex-shrink-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#257180]" />
+      
+      {/* Search and Filters Section - Sticky */}
+      <div className="bg-white border-b border-gray-200 sticky top-16 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
-                placeholder="Tìm gia sư..."
+                placeholder="Tìm theo tên gia sư..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-10 text-sm border-[#257180]/30 focus:border-[#FD8B51] focus:ring-[#FD8B51]"
+                className="pl-12 h-12 text-base border-gray-300"
               />
             </div>
-            {/* Filters - Match main content area width */}
-            <div className="flex flex-wrap lg:flex-nowrap gap-3 flex-1">
-              <SelectWithSearch 
-                value={selectedSubject} 
-                onValueChange={setSelectedSubject}
-                placeholder="Môn học"
-                className="w-full lg:w-[160px] flex-shrink-0"
-                disabled={isLoadingMasterData}
-              >
-                <SelectWithSearchItem value="all">Tất cả môn học</SelectWithSearchItem>
-                {subjects.map((subject) => (
-                  <SelectWithSearchItem key={subject.id} value={subject.id.toString()}>
-                    {subject.subjectName}
-                  </SelectWithSearchItem>
-                ))}
-              </SelectWithSearch>
-              <SelectWithSearch 
-                value={selectedCertificate} 
-                onValueChange={setSelectedCertificate}
-                placeholder="Chứng chỉ"
-                className="w-full lg:w-[160px] flex-shrink-0"
-                disabled={isLoadingMasterData}
-              >
-                <SelectWithSearchItem value="all">Tất cả chứng chỉ</SelectWithSearchItem>
-                {(() => {
-                  const availableCertificates = selectedSubject !== 'all' 
-                    ? subjects.find(s => s.id.toString() === selectedSubject)?.certificateTypes || []
-                    : subjects.flatMap(s => s.certificateTypes || []);
+          </div>
+
+          {/* Horizontal Filters */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <SelectWithSearch 
+              value={selectedSubject} 
+              onValueChange={setSelectedSubject}
+              placeholder="Môn học"
+              disabled={isLoadingMasterData}
+            >
+              <SelectWithSearchItem value="all">Tất cả môn học</SelectWithSearchItem>
+              {subjects.map((subject) => (
+                <SelectWithSearchItem key={subject.id} value={subject.id.toString()}>
+                  {subject.subjectName}
+                </SelectWithSearchItem>
+              ))}
+            </SelectWithSearch>
+
+            <SelectWithSearch 
+              value={selectedCertificate} 
+              onValueChange={setSelectedCertificate}
+              placeholder="Chứng chỉ"
+              disabled={isLoadingMasterData}
+            >
+              <SelectWithSearchItem value="all">Tất cả chứng chỉ</SelectWithSearchItem>
+              {(() => {
+                // Nếu đã chọn subject, chỉ hiển thị chứng chỉ của subject đó
+                if (selectedSubject !== 'all') {
+                  const selectedSubjectData = subjects.find(s => s.id.toString() === selectedSubject);
+                  const availableCertificates = selectedSubjectData?.certificateTypes || [];
                   
-                  const uniqueCertificates = availableCertificates.filter((cert, index, self) => 
-                    index === self.findIndex(c => c.id === cert.id)
-                  );
-                  
-                  return uniqueCertificates.map((cert) => (
+                  return availableCertificates.map((cert) => (
                     <SelectWithSearchItem key={cert.id} value={cert.id.toString()}>
                       {cert.code ? `${cert.code} - ${cert.name}` : cert.name}
                     </SelectWithSearchItem>
                   ));
-                })()}
-              </SelectWithSearch>
-              <SelectWithSearch 
-                value={selectedInstitution} 
-                onValueChange={setSelectedInstitution}
-                placeholder="Trường học"
-                className="w-full lg:w-[160px] flex-shrink-0"
-                disabled={isLoadingMasterData}
-              >
-                <SelectWithSearchItem value="all">Tất cả trường học</SelectWithSearchItem>
-                {institutions.map((institution) => (
-                  <SelectWithSearchItem key={institution.id} value={institution.id.toString()}>
-                    {institution.name}
+                }
+                
+                // Nếu chưa chọn subject, hiển thị tất cả chứng chỉ unique
+                const allCertificates = subjects.flatMap(s => s.certificateTypes || []);
+                const uniqueCertificates = allCertificates.filter((cert, index, self) => 
+                  index === self.findIndex(c => c.id === cert.id)
+                );
+                
+                return uniqueCertificates.map((cert) => (
+                  <SelectWithSearchItem key={cert.id} value={cert.id.toString()}>
+                    {cert.code ? `${cert.code} - ${cert.name}` : cert.name}
                   </SelectWithSearchItem>
-                ))}
-              </SelectWithSearch>
-              <SelectWithSearch 
-                value={selectedCity} 
-                onValueChange={setSelectedCity}
-                placeholder="Thành phố"
-                className="w-full lg:w-[160px] flex-shrink-0"
-                disabled={isLoadingMasterData}
-              >
-                <SelectWithSearchItem value="all">Tất cả thành phố</SelectWithSearchItem>
-                <SelectWithSearchItem value="hanoi">Hà Nội</SelectWithSearchItem>
-                <SelectWithSearchItem value="hcm">TP. Hồ Chí Minh</SelectWithSearchItem>
-                <SelectWithSearchItem value="danang">Đà Nẵng</SelectWithSearchItem>
-                <SelectWithSearchItem value="haiphong">Hải Phòng</SelectWithSearchItem>
-                <SelectWithSearchItem value="cantho">Cần Thơ</SelectWithSearchItem>
-              </SelectWithSearch>
-              <SelectWithSearch 
-                value={selectedTeachingMode}
-                onValueChange={setSelectedTeachingMode}
-                placeholder="Hình thức dạy"
-                className="w-full lg:w-[160px] flex-shrink-0"
-              >
-                <SelectWithSearchItem value="all">Tất cả hình thức</SelectWithSearchItem>
-                <SelectWithSearchItem value="1">Dạy Online</SelectWithSearchItem>
-                <SelectWithSearchItem value="0">Dạy trực tiếp</SelectWithSearchItem>
-                <SelectWithSearchItem value="2">Dạy Online + Trực tiếp</SelectWithSearchItem>
-              </SelectWithSearch>
-              <SelectWithSearch 
-                value={selectedSort}
-                onValueChange={setSelectedSort}
-                placeholder="Sắp xếp"
-                className="w-full lg:w-[160px] flex-shrink-0"
-              >
-                <SelectWithSearchItem value="recommended">Đề xuất</SelectWithSearchItem>
-                <SelectWithSearchItem value="price-low">Giá thấp - cao</SelectWithSearchItem>
-                <SelectWithSearchItem value="price-high">Giá cao - thấp</SelectWithSearchItem>
-                <SelectWithSearchItem value="experience">Kinh nghiệm</SelectWithSearchItem>
-                <SelectWithSearchItem value="rating">Đánh giá cao</SelectWithSearchItem>
-              </SelectWithSearch>
-            </div>
+                ));
+              })()}
+            </SelectWithSearch>
+
+            <SelectWithSearch 
+              value={selectedInstitution} 
+              onValueChange={setSelectedInstitution}
+              placeholder="Trường học"
+              disabled={isLoadingMasterData}
+            >
+              <SelectWithSearchItem value="all">Tất cả trường học</SelectWithSearchItem>
+              {institutions.map((institution) => (
+                <SelectWithSearchItem key={institution.id} value={institution.id.toString()}>
+                  {institution.name}
+                </SelectWithSearchItem>
+              ))}
+            </SelectWithSearch>
+
+            <SelectWithSearch 
+              value={selectedCity} 
+              onValueChange={setSelectedCity}
+              placeholder="Thành phố"
+              disabled={isLoadingMasterData}
+            >
+              <SelectWithSearchItem value="all">Tất cả thành phố</SelectWithSearchItem>
+              <SelectWithSearchItem value="hanoi">Hà Nội</SelectWithSearchItem>
+              <SelectWithSearchItem value="hcm">TP. Hồ Chí Minh</SelectWithSearchItem>
+              <SelectWithSearchItem value="danang">Đà Nẵng</SelectWithSearchItem>
+              <SelectWithSearchItem value="haiphong">Hải Phòng</SelectWithSearchItem>
+              <SelectWithSearchItem value="cantho">Cần Thơ</SelectWithSearchItem>
+            </SelectWithSearch>
+
+            <SelectWithSearch 
+              value={selectedTeachingMode}
+              onValueChange={setSelectedTeachingMode}
+              placeholder="Hình thức"
+            >
+              <SelectWithSearchItem value="all">Tất cả hình thức</SelectWithSearchItem>
+              <SelectWithSearchItem value="1">Trực tuyến</SelectWithSearchItem>
+              <SelectWithSearchItem value="0">Tại nhà</SelectWithSearchItem>
+            </SelectWithSearch>
+
+            <SelectWithSearch 
+              value={selectedSort}
+              onValueChange={setSelectedSort}
+              placeholder="Sắp xếp"
+            >
+              <SelectWithSearchItem value="recommended">Đề xuất</SelectWithSearchItem>
+              <SelectWithSearchItem value="rating">Đánh giá cao</SelectWithSearchItem>
+              <SelectWithSearchItem value="price-low">Giá thấp - cao</SelectWithSearchItem>
+              <SelectWithSearchItem value="price-high">Giá cao - thấp</SelectWithSearchItem>
+              <SelectWithSearchItem value="experience">Kinh nghiệm</SelectWithSearchItem>
+            </SelectWithSearch>
           </div>
+
         </div>
       </div>
+      
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -401,7 +411,7 @@ export function FindTutorPage() {
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 mb-4">
                     {/* Avatar */}
                     <div className="relative flex-shrink-0 self-center sm:self-start">
-                      <div className="relative w-24 h-24 sm:w-36 sm:h-36 rounded-lg overflow-hidden bg-gray-100">
+                      <div className="relative w-24 h-24 sm:w-36 sm:h-36 rounded-lg overflow-hidden bg-[#F2E5BF]">
                         {tutor.avatarUrl ? (
                           <img 
                             src={tutor.avatarUrl} 
@@ -417,7 +427,7 @@ export function FindTutorPage() {
                           />
                         ) : null}
                         <div 
-                          className={`w-full h-full rounded-lg flex items-center justify-center text-2xl font-bold text-gray-600 ${tutor.avatarUrl ? 'hidden' : 'flex'}`}
+                          className={`w-full h-full rounded-lg flex items-center justify-center text-2xl font-bold text-[#257180] bg-[#F2E5BF] ${tutor.avatarUrl ? 'hidden' : 'flex'}`}
                           style={{ display: tutor.avatarUrl ? 'none' : 'flex' }}
                         >
                           {tutor.userName.slice(0, 2).toUpperCase()}
@@ -448,10 +458,10 @@ export function FindTutorPage() {
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="p-2 -mt-1"
+                          className="p-2 -mt-1 hover:bg-[#FD8B51] hover:text-white"
                           onClick={(e) => handleToggleFavorite(tutor.id, e)}
                         >
-                          <Heart className={`w-5 h-5 ${favoriteTutors.has(tutor.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                          <Heart className={`w-5 h-5 transition-colors duration-200 ${favoriteTutors.has(tutor.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
                         </Button>
                       </div>
                       {/* Subjects */}
@@ -528,27 +538,12 @@ export function FindTutorPage() {
                         </div>
                       )}
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                      <Button 
-                        variant="outline" 
-                        size="lg"
-                        className="border-black text-black hover:bg-black hover:text-white"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('Open message with tutor:', tutor.id);
-                        }}
-                      >
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="lg" className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
                         <MessageCircle className="w-4 h-4 mr-2" />
                         Nhắn tin
                       </Button>
-                      <Button 
-                        size="lg"
-                        className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('Book trial lesson with tutor:', tutor.id);
-                        }}
-                      >
+                      <Button size="lg" className="bg-[#257180] hover:bg-[#257180]/90 text-white">
                         Đặt buổi học thử
                       </Button>
                     </div>
@@ -611,7 +606,7 @@ export function FindTutorPage() {
           </div>
           {/* Right Side - Video Preview (Simple & Sticky) */}
           <div className="hidden lg:block lg:col-span-4">
-            <div className="sticky top-[calc(4rem+4rem+1rem)] z-30">
+            <div className="sticky top-64 z-30">
               {/* Video Card */}
               <Card key={`preview-${currentTutor?.id}-${videoKey}`} className="overflow-hidden bg-white border-[#257180]/20 shadow-lg">
                 <CardContent className="p-0">
@@ -664,36 +659,15 @@ export function FindTutorPage() {
                   {/* Action Buttons Only - Không trùng với tutor card */}
                   <div className="p-6">
                     <div className="space-y-3">
-                      <Button 
-                        key={`book-${currentTutor?.id}-${videoKey}`}
-                        variant="outline" 
-                        className="w-full border-black text-black hover:bg-black hover:text-white" 
-                        size="lg"
-                        onClick={() => {
-                          console.log('Open booking calendar for tutor:', currentTutor?.id);
-                        }}
-                      >
+                      <Button variant="outline" className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
                         <Calendar className="w-4 h-4 mr-2" />
                         Đặt lịch học
                       </Button>
-                      <Button 
-                        key={`schedule-${currentTutor?.id}-${videoKey}`}
-                        variant="outline" 
-                        className="w-full border-[#FD8B51] text-[#FD8B51] hover:bg-[#FD8B51] hover:text-white" 
-                        size="lg"
-                        onClick={() => {
-                          console.log('View tutor schedule:', currentTutor?.id);
-                        }}
-                      >
+                      <Button variant="outline" className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
                         <Clock className="w-4 h-4 mr-2" />
                         Xem lịch dạy của gia sư
                       </Button>
-                      <Button 
-                        key={`profile-${currentTutor?.id}-${videoKey}`}
-                        className="w-full bg-[#FD8B51] hover:bg-[#CB6040] text-white" 
-                        size="lg"
-                        onClick={() => currentTutor && handleViewTutorProfile(currentTutor.id)}
-                      >
+                      <Button variant="outline" className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
                         <Send className="w-4 h-4 mr-2" />
                         Xem hồ sơ đầy đủ
                       </Button>

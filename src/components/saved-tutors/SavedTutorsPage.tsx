@@ -198,9 +198,9 @@ export function SavedTutorsPage() {
     router.push(`/tutor/${tutorId}`);
   };
   return (
-    <div className="min-h-screen bg-[#F2E5BF] pt-16">
+    <div className="min-h-screen bg-[#F9FAFB] pt-16">
       {/* Header */}
-      <div className="bg-white border-b border-[#257180]/20">
+      <div className="bg-white border-b border-gray-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="mb-2">
             <h1 className="text-black text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 leading-tight tracking-tight">
@@ -218,14 +218,17 @@ export function SavedTutorsPage() {
           {/* Left Side - Tutor List (Detailed) */}
           <div className="lg:col-span-8">
             {actualSavedTutors.length === 0 ? (
-              <Card>
+              <Card className="border-[#FD8B51]">
                 <CardContent className="p-12 text-center">
                   <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-gray-900 mb-2">Chưa có gia sư nào được lưu</h3>
                   <p className="text-gray-600 mb-6">
                     Bạn chưa lưu gia sư nào. Hãy tìm kiếm và lưu những gia sư yêu thích của bạn.
                   </p>
-                  <Button onClick={() => router.push('/find-tutor')}>
+                  <Button 
+                    onClick={() => router.push('/find-tutor')}
+                    className="bg-[#257180] hover:bg-[#1e5a66] text-white"
+                  >
                     Tìm gia sư
                   </Button>
                 </CardContent>
@@ -246,16 +249,30 @@ export function SavedTutorsPage() {
                     >
                       <CardContent className="p-6">
                         {/* Row 1: Avatar + Name + Info + Subjects */}
-                        <div className="flex gap-5 mb-4">
+                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 mb-4">
                           {/* Avatar */}
-                          <div className="relative flex-shrink-0">
-                            <div className="relative w-36 h-36 rounded-lg overflow-hidden bg-gray-100 group">
-                              <Avatar className="w-full h-full rounded-lg">
-                                <AvatarImage src={tutor.avatarUrl || undefined} className="object-cover" />
-                                <AvatarFallback className="rounded-lg text-2xl">
-                                  {tutor.userName.split(' ').slice(-2).map(n => n[0]).join('')}
-                                </AvatarFallback>
-                              </Avatar>
+                          <div className="relative flex-shrink-0 self-center sm:self-start">
+                            <div className="relative w-24 h-24 sm:w-36 sm:h-36 rounded-lg overflow-hidden bg-[#F2E5BF]">
+                              {tutor.avatarUrl ? (
+                                <img 
+                                  src={tutor.avatarUrl} 
+                                  alt={tutor.userName}
+                                  className="w-full h-full object-cover rounded-lg"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                    if (fallback) {
+                                      fallback.style.display = 'flex';
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <div 
+                                className={`w-full h-full rounded-lg flex items-center justify-center text-2xl font-bold text-[#257180] bg-[#F2E5BF] ${tutor.avatarUrl ? 'hidden' : 'flex'}`}
+                                style={{ display: tutor.avatarUrl ? 'none' : 'flex' }}
+                              >
+                                {tutor.userName.slice(0, 2).toUpperCase()}
+                              </div>
                               {/* Video Play Indicator */}
                               {tutor.videoIntroUrl && (
                                 <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -268,20 +285,14 @@ export function SavedTutorsPage() {
                           </div>
                           {/* Name, Info & Subjects */}
                           <div className="flex-1 min-w-0 flex flex-col">
-                            <div className="flex items-start justify-between mb-3">
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-3">
-                                  <h2 className="text-black text-2xl font-bold">
+                                  <h2 className="text-black text-xl sm:text-2xl font-bold">
                                     {tutor.userName}
                                   </h2>
-                                  {tutor.videoIntroUrl && (
-                                    <Badge variant="outline" className="text-xs px-2 py-0.5 border-[#FD8B51] text-[#FD8B51]">
-                                      <Video className="w-3 h-3 mr-1" />
-                                      Video
-                                    </Badge>
-                                  )}
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                                   <div className="flex items-center gap-1.5">
                                     <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
                                     <span className="text-sm text-black font-medium">{tutor.rating}</span>
@@ -290,16 +301,16 @@ export function SavedTutorsPage() {
                                   <Separator orientation="vertical" className="h-4" />
                                   <span className="text-sm text-gray-600">{tutor.completedLessons} buổi học</span>
                                   <Separator orientation="vertical" className="h-4" />
-                                  <span className="text-sm text-gray-600">{tutor.teachingExp}</span>
+                                  <span className="text-sm text-gray-600">{tutor.totalStudents} học sinh</span>
                                 </div>
                               </div>
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                className="p-2 -mt-1"
+                                className="p-2 -mt-1 hover:bg-[#FD8B51] hover:text-white"
                                 onClick={(e) => handleToggleFavorite(tutor.tutorId, e)}
                               >
-                                <Heart className={`w-5 h-5 ${favoriteTutors.has(tutor.tutorId) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                                <Heart className={`w-5 h-5 transition-colors duration-200 ${favoriteTutors.has(tutor.tutorId) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
                               </Button>
                             </div>
                             {/* Subjects */}
@@ -310,7 +321,7 @@ export function SavedTutorsPage() {
                                 </Badge>
                               ))}
                               {tutor.specializations.slice(0, 2).map((spec, idx) => (
-                                <Badge key={idx} variant="outline" className="text-xs px-2 py-0.5 border-[#FD8B51] text-[#FD8B51]">
+                                <Badge key={idx} variant="outline" className="text-xs px-2 py-0.5 border-gray-300 text-[#FD8B51]">
                                   {spec}
                                 </Badge>
                               ))}
@@ -342,20 +353,20 @@ export function SavedTutorsPage() {
                           )}
                         </div>
                         {/* Row 4: Price & Actions */}
-                        <div className="flex items-center justify-between pt-4 border-t border-[#257180]/20">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-[#257180]/20 gap-4">
                           <div>
                             <div className="flex items-baseline gap-2">
                               <span className="text-3xl text-black font-bold">
                                 {FormatService.formatVND(tutor.hourlyRate)}
                               </span>
-                              <span className="text-base text-gray-600">/giờ</span>
+                              <span className="text-base text-gray-600">VNĐ/giờ</span>
                             </div>
                           </div>
                           <div className="flex gap-2">
                             <Button 
                               variant="outline" 
                               size="lg"
-                              className="border-black text-black hover:bg-black hover:text-white"
+                              className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 console.log('Open message with tutor:', tutor.tutorId);
@@ -366,7 +377,7 @@ export function SavedTutorsPage() {
                             </Button>
                             <Button 
                               size="lg"
-                              className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
+                              className="bg-[#257180] hover:bg-[#257180]/90 text-white"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 console.log('Book trial lesson with tutor:', tutor.tutorId);
@@ -436,22 +447,44 @@ export function SavedTutorsPage() {
           </div>
           {/* Right Side - Video Preview (Simple & Sticky) */}
           <div className="hidden lg:block lg:col-span-4">
-            <div className="sticky-video-preview">
+            <div className="sticky top-20 z-30">
               {/* Video Card */}
               <Card className="overflow-hidden bg-white border-[#257180]/20 shadow-lg">
                 <CardContent className="p-0">
                   {/* Video Section */}
                   <div className="relative bg-gradient-to-br from-[#257180] to-[#1e5a66] aspect-[4/3]">
                     {currentTutor ? (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="w-20 h-20 rounded-full bg-[#FD8B51]/20 backdrop-blur-sm flex items-center justify-center mb-4 mx-auto hover:bg-[#FD8B51]/30 hover:scale-110 transition-all cursor-pointer">
-                            <Play className="w-10 h-10 text-white ml-1" />
-                          </div>
-                          <p className="text-white font-bold">Xem video giới thiệu</p>
-                          <p className="text-white/80 text-sm sm:text-base mt-2">{currentTutor.userName}</p>
+                      currentTutor.videoIntroUrl ? (
+                        <div className="absolute inset-0">
+                          <video 
+                            className="w-full h-full object-cover"
+                            controls
+                            poster={currentTutor.avatarUrl}
+                            preload="metadata"
+                          >
+                            <source src={currentTutor.videoIntroUrl} type="video/mp4" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                              <div className="text-center text-white">
+                                <div className="w-20 h-20 rounded-full bg-[#FD8B51]/20 backdrop-blur-sm flex items-center justify-center mb-4 mx-auto">
+                                  <Play className="w-10 h-10 text-white ml-1" />
+                                </div>
+                                <p className="font-bold">Video không hỗ trợ</p>
+                                <p className="text-sm mt-2">{currentTutor.userName}</p>
+                              </div>
+                            </div>
+                          </video>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center text-white/80">
+                            <div className="w-20 h-20 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
+                              <Video className="w-8 h-8" />
+                            </div>
+                            <p className="font-bold">Không có video</p>
+                            <p className="text-sm mt-2">{currentTutor.userName}</p>
+                          </div>
+                        </div>
+                      )
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center text-white/80">
@@ -468,7 +501,7 @@ export function SavedTutorsPage() {
                     <div className="space-y-3">
                       <Button 
                         variant="outline" 
-                        className="w-full border-black text-black hover:bg-black hover:text-white" 
+                        className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" 
                         size="lg"
                         onClick={() => {
                           console.log('Open booking calendar for tutor:', currentTutor?.tutorId);
@@ -479,7 +512,7 @@ export function SavedTutorsPage() {
                       </Button>
                       <Button 
                         variant="outline" 
-                        className="w-full border-[#FD8B51] text-[#FD8B51] hover:bg-[#FD8B51] hover:text-white" 
+                        className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" 
                         size="lg"
                         onClick={() => {
                           console.log('View tutor schedule:', currentTutor?.tutorId);
@@ -489,7 +522,8 @@ export function SavedTutorsPage() {
                         Xem lịch dạy của gia sư
                       </Button>
                       <Button 
-                        className="w-full bg-[#FD8B51] hover:bg-[#CB6040] text-white" 
+                        variant="outline"
+                        className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" 
                         size="lg"
                         onClick={() => currentTutor && handleViewTutorProfile(currentTutor.tutorId)}
                       >
@@ -506,4 +540,4 @@ export function SavedTutorsPage() {
       </div>
     </div>
   );
-}
+}

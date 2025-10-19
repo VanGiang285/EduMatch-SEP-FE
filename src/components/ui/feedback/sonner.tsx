@@ -7,6 +7,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={(theme as "light" | "dark" | "system") || "system"}
       className="toaster group"
+      position="top-right"
+      toastOptions={{
+        style: {
+          marginTop: '40px'
+        }
+      }}
       style={
         {
           "--normal-bg": "var(--popover)",
@@ -18,4 +24,4 @@ const Toaster = ({ ...props }: ToasterProps) => {
     />
   );
 };
-export { Toaster };
+export { Toaster };

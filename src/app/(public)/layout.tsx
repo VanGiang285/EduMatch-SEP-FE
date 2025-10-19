@@ -4,8 +4,8 @@ interface PublicLayoutProps {
 }
 export default function PublicLayout({ children }: PublicLayoutProps) {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#F9FAFB]">
       {children}
     </div>
   );
-}
+}

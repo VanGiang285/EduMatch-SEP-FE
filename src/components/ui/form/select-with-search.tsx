@@ -32,6 +32,7 @@ export function SelectWithSearch({
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
   const [filteredChildren, setFilteredChildren] = React.useState(children);
+  const [hoveredValue, setHoveredValue] = React.useState<string | null>(null);
   React.useEffect(() => {
     if (!searchValue) {
       setFilteredChildren(children);
@@ -50,6 +51,7 @@ export function SelectWithSearch({
     onValueChange?.(newValue);
     setIsOpen(false);
     setSearchValue("");
+    setHoveredValue(null);
   };
   const selectedItem = React.Children.toArray(children).find(
     (child) => React.isValidElement(child) && child.props.value === value
@@ -64,14 +66,14 @@ export function SelectWithSearch({
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#257180] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
       >
         <span className={cn(!value && "text-muted-foreground")}>
           {displayValue}
         </span>
-        <ChevronDown className="h-4 w-4 opacity-50" />
+        <ChevronDown className={cn("h-4 w-4 opacity-50 transition-transform duration-200", isOpen && "rotate-180")} />
       </button>
       {isOpen && (
         <>
@@ -79,7 +81,10 @@ export function SelectWithSearch({
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-hidden rounded-md border bg-white shadow-lg">
+          <div 
+            data-state={isOpen ? "open" : "closed"}
+            className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-hidden rounded-md border bg-white shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          >
             {/* Search Input */}
             <div className="sticky top-0 border-b bg-white p-2">
               <div className="relative">
@@ -100,19 +105,24 @@ export function SelectWithSearch({
                 React.Children.map(filteredChildren, (child) => {
                   if (React.isValidElement(child)) {
                     const isSelected = child.props.value === value;
+                    const isHovered = child.props.value === hoveredValue;
+                    const shouldShowOrange = isHovered || (isSelected && !hoveredValue);
+                    
                     return React.cloneElement(child, {
                       ...child.props,
                       className: cn(
                         child.props.className,
-                        isSelected && "text-[#257180]"
+                        shouldShowOrange && "bg-[#FD8B51] text-white"
                       ),
                       onClick: () => handleValueChange(child.props.value),
+                      onMouseEnter: () => setHoveredValue(child.props.value),
+                      onMouseLeave: () => setHoveredValue(null),
                       children: (
                         <>
-                          <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                            <Check className={cn("h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
-                          </span>
                           {child.props.children}
+                          <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+                            <Check className={cn("h-4 w-4", isSelected ? "opacity-100" : "opacity-0", isSelected && !isHovered ? "text-[#257180]" : isSelected && isHovered ? "text-white" : "text-[#257180]")} />
+                          </span>
                         </>
                       )
                     });
@@ -151,7 +161,7 @@ export function SelectWithSearchItem({
   return (
     <div
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-gray-50 focus:bg-gray-50 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-3 pr-8 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className
       )}
       data-value={value}
