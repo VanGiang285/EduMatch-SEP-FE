@@ -6,9 +6,9 @@ import { Button } from '../ui/basic/button';
 import { Badge } from '../ui/basic/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/basic/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/navigation/tabs';
-import { Calendar } from '../ui/form/calendar';
+// import { Calendar } from '../ui/form/calendar';
 import { Separator } from '../ui/layout/separator';
-import { Star, Heart, MapPin, Clock, Calendar as CalendarIcon, MessageCircle, Video, Shield, Award, Users, Globe, CheckCircle2, Play, ArrowLeft, Loader2, GraduationCap, FileText, Medal, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, Heart, MapPin, Clock, Calendar as CalendarIcon, MessageCircle, Video, Shield, Users, Globe, CheckCircle2, Play, ArrowLeft, Loader2, GraduationCap, Medal, ChevronLeft, ChevronRight } from 'lucide-react';
 import { FormatService } from '@/lib/format';
 import { useTutorDetail } from '@/hooks/useTutorDetail';
 interface Review {
@@ -30,9 +30,9 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const router = useRouter();
   const { tutor, isLoading, error, loadTutorDetail, clearError } = useTutorDetail();
   
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  // const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isFavorite, setIsFavorite] = useState(false);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  // const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   
   // Availability calendar states
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
@@ -80,7 +80,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       tutor.tutorAvailabilities.forEach(availability => {
         const startDate = new Date(availability.startDate);
         const dateKey = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
-        const timeKey = availability.slot?.startTime?.split(':')[0] || '00'; // HH
+         const timeKey = availability.startDate.split('T')[1]?.split(':')[0] || '00'; // HH
         const slotKey = `${dateKey}-${timeKey}`;
         availabilityMap[slotKey] = true;
       });
@@ -419,7 +419,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                             {tutor.tutorSubjects.map((tutorSubject, idx) => (
                               <li key={idx} className="flex items-start gap-2">
                                 <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                                <span>{tutorSubject.subject?.subjectName} - {tutorSubject.level?.name}</span>
+                                 <span>{tutorSubject.subject?.subjectName} - {tutorSubject.level?.levelName}</span>
                               </li>
                             ))}
                           </ul>

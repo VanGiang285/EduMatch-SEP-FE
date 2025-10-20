@@ -106,7 +106,7 @@ export function GoogleSignInButton({
       });
     } catch (error: any) {
       console.error('Google sign in error:', error);
-      toast.error(error.message || 'Đăng nhập Google thất bại');
+      showError(error.message || 'Đăng nhập Google thất bại');
     } finally {
       setIsLoading(false);
     }

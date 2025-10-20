@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
 import { Badge } from '../ui/basic/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/basic/avatar';
+// import { Avatar, AvatarFallback, AvatarImage } from '../ui/basic/avatar';
 import { FormatService } from '@/lib/format';
 import { 
   Star, 
@@ -459,7 +459,7 @@ export function SavedTutorsPage() {
                           <video 
                             className="w-full h-full object-cover"
                             controls
-                            poster={currentTutor.avatarUrl}
+                            poster={currentTutor.avatarUrl || undefined}
                             preload="metadata"
                           >
                             <source src={currentTutor.videoIntroUrl} type="video/mp4" />

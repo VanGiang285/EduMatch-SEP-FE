@@ -5,11 +5,12 @@ import { Checkbox } from "../ui/form/checkbox";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { GoogleSignInButton } from "./GoogleSignInButton";
 import { Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCustomToast } from "@/hooks/useCustomToast";
 import { AuthService } from "@/services/authService";
+import { USER_ROLES } from "@/constants";
 interface LoginPageProps {
   onSwitchToRegister: () => void;
   onForgotPassword?: () => void;
@@ -21,9 +22,42 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const { login } = useAuth();
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const { login, user } = useAuth();
   const { showSuccess, showInfo } = useCustomToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // useEffect để lắng nghe user changes sau khi login thành công
+  useEffect(() => {
+    if (loginSuccess && user && user.role) {
+      console.log('🔍 useEffect - User changed:', user);
+      console.log('🔍 useEffect - User role:', user.role);
+      
+      const redirectTo = searchParams.get('redirect');
+      if (redirectTo) {
+        console.log('🔍 useEffect - Redirecting to:', redirectTo);
+        router.push(redirectTo);
+        setLoginSuccess(false); // Reset flag after redirect
+        return;
+      }
+      
+      // Redirect based on role
+      if (user.role === USER_ROLES.SYSTEM_ADMIN) {
+        console.log('🔍 useEffect - Redirecting to System Admin...');
+        router.push('/system-admin/users');
+      } else if (user.role === USER_ROLES.BUSINESS_ADMIN) {
+        console.log('🔍 useEffect - Redirecting to Business Admin...');
+        router.push('/business-admin/dashboard');
+      } else {
+        console.log('🔍 useEffect - Redirecting to home page...');
+        router.push('/');
+      }
+      
+      setLoginSuccess(false); // Reset flag after redirect
+    }
+  }, [loginSuccess, user, router, searchParams]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -53,8 +87,11 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
       setIsLoading(true);
       await login(trimmedEmail, trimmedPassword, rememberMe);
       showSuccess("Đăng nhập thành công!");
-      router.push("/");
+      
+      // Set login success flag - useEffect sẽ handle redirect
+      setLoginSuccess(true);
     } catch (error: any) {
+      setLoginSuccess(false); // Reset login success flag
       let errorMessage = "Đăng nhập thất bại";
       
       // Xử lý error message từ nhiều nguồn khác nhau
@@ -137,7 +174,7 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Nhập email của bạn"
-                  className="h-10 sm:h-11 lg:h-12 border border-gray-300 rounded-lg bg-white text-sm sm:text-base focus:border-[#257180] focus:ring-1 focus:ring-[#257180]"
+                  className="h-10 sm:h-11 lg:h-12 border-gray-300 rounded-lg bg-white text-sm sm:text-base focus:border-[#257180] focus:ring-1 focus:ring-[#257180]"
                 />
               </div>
               {/* Password Input */}
@@ -150,7 +187,7 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Nhập mật khẩu"
-                    className="h-10 sm:h-11 lg:h-12 border border-gray-300 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#257180] focus:ring-1 focus:ring-[#257180]"
+                    className="h-10 sm:h-11 lg:h-12 border-gray-300 rounded-lg bg-white pr-10 text-sm sm:text-base focus:border-[#257180] focus:ring-1 focus:ring-[#257180]"
                   />
                   <button
                     type="button"

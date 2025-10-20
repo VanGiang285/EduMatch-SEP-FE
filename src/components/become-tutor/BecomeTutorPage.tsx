@@ -43,6 +43,11 @@ export function BecomeTutorPage() {
   const { isSubmitting, error, submitApplication, clearError } = useBecomeTutor();
   const { subjects, levels, educationInstitutions, timeSlots, error: masterDataError, loadMasterData } = useBecomeTutorMasterData();
 
+  // Note: Authentication and authorization are now handled at page level
+  useEffect(() => {
+    console.log('🔍 BecomeTutorPage - User authenticated and authorized:', { isAuthenticated, user });
+  }, [isAuthenticated, user]);
+
   const getDefaultDates = () => {
     const today = new Date();
     const tomorrow = new Date(today);

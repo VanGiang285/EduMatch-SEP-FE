@@ -1,8 +1,9 @@
-export type UserRole = 'student' | 'tutor' | 'admin';
+export type UserRole = 'guest' | 'learner' | 'tutor' | 'business_admin' | 'system_admin';
 export interface User {
   id: string;
   email: string;
   name: string;
+  fullName?: string; // Added for compatibility with backend
   role: UserRole;
   avatar?: string;
   createdAt: Date;

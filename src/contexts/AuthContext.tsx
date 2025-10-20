@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { User } from '@/types';
 import { AuthService } from '@/services';
 import { ErrorHandler } from '@/lib/error-handler';
-import { STORAGE_KEYS } from '@/constants';
+import { STORAGE_KEYS, ROLE_ID_MAP, USER_ROLES } from '@/constants';
 import { TokenManager } from '@/lib/tokenManager';
 import { apiClient } from '@/lib/api';
 interface AuthContextType {
@@ -90,13 +90,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 id: response.data.email,
                 email: response.data.email,
                 name: response.data.name || response.data.email,
-                role: response.data.roleId === '1' ? 'student' : response.data.roleId === '2' ? 'tutor' : 'admin',
+                fullName: response.data.name,
+                role: ROLE_ID_MAP[Number(response.data.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER,
                 avatar: response.data.avatarUrl || undefined,
                 createdAt: new Date(),
                 updatedAt: new Date(),
               };
               setUser(userData);
               AuthService.storeUserData(userData, localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) || '');
+              
+              // Set role in cookies for middleware
+              document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}`;
             }
           } catch (error) {
             AuthService.clearStoredData();
@@ -125,11 +129,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: email,
           email: email,
           name: email,
-          role: 'student',
+          role: USER_ROLES.LEARNER,
           avatar: undefined,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
+        // Set role in cookies for middleware IMMEDIATELY
+        document.cookie = `userRole=${tempUser.role}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+        document.cookie = `accessToken=${accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+        
+        console.log('🔍 AuthContext - User set after login:', tempUser);
+        console.log('🔍 AuthContext - isAuthenticated will be:', !!tempUser);
+        
         setUser(tempUser);
         AuthService.storeUserData(tempUser, accessToken);
         
@@ -143,26 +154,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (rememberMe) {
           localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, 'true');
         }
-        setTimeout(async () => {
-          try {
-            const userResponse = await AuthService.getCurrentUser();
-            if (userResponse.success && userResponse.data) {
-              const userData: User = {
-                id: userResponse.data.email,
-                email: userResponse.data.email,
-                name: userResponse.data.name || userResponse.data.email,
-                role: userResponse.data.roleId === '1' ? 'student' : userResponse.data.roleId === '2' ? 'tutor' : 'admin',
-                avatar: userResponse.data.avatarUrl || undefined,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              };
-              setUser(userData);
-              AuthService.storeUserData(userData, accessToken);
-            }
-          } catch (error) {
-            console.warn('Failed to get user details:', error);
+        // Get user details immediately (no setTimeout)
+        try {
+          const userResponse = await AuthService.getCurrentUser();
+          if (userResponse.success && userResponse.data) {
+            const userData: User = {
+              id: userResponse.data.email,
+              email: userResponse.data.email,
+              name: userResponse.data.name || userResponse.data.email,
+              fullName: userResponse.data.name,
+              role: ROLE_ID_MAP[Number(userResponse.data.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER,
+              avatar: userResponse.data.avatarUrl || undefined,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+            setUser(userData);
+            AuthService.storeUserData(userData, accessToken);
+            
+            // Update role in cookies for middleware
+            document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+            
+            console.log('🔍 AuthContext - User details updated:', userData);
           }
-        }, 1000);
+        } catch (error) {
+          console.warn('Failed to get user details:', error);
+        }
       } else {
         throw new Error(response.error?.message || 'Login failed');
       }
@@ -187,6 +203,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       AuthService.clearStoredData();
       setUser(null);
       setLoading(false);
+      
+      // Clear role cookie
+      document.cookie = 'userRole=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     }
   }, []);
   const register = useCallback(async (fullName: string, email: string, password: string) => {
@@ -219,13 +238,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             id: userResponse.data.email,
             email: userResponse.data.email,
             name: userResponse.data.name || userResponse.data.email,
-            role: userResponse.data.roleId === '1' ? 'student' : userResponse.data.roleId === '2' ? 'tutor' : 'admin',
+            role: ROLE_ID_MAP[Number(userResponse.data.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER,
             avatar: userResponse.data.avatarUrl || undefined,
             createdAt: new Date(),
             updatedAt: new Date(),
           };
           setUser(userData);
           AuthService.storeUserData(userData, accessToken);
+          
+          // Set role in cookies for middleware
+          document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}`;
           
           // Bắt đầu token refresh timer cho Google login
           TokenManager.saveTokenAndUpdateTimer(
@@ -288,13 +310,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             id: userResponse.data.email,
             email: userResponse.data.email,
             name: userResponse.data.name || userResponse.data.email,
-            role: userResponse.data.roleId === '1' ? 'student' : userResponse.data.roleId === '2' ? 'tutor' : 'admin',
+            role: ROLE_ID_MAP[Number(userResponse.data.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER,
             avatar: userResponse.data.avatarUrl || undefined,
             createdAt: new Date(),
             updatedAt: new Date(),
           };
           setUser(userData);
           AuthService.storeUserData(userData, accessToken);
+          
+          // Set role in cookies for middleware
+          document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}`;
         }
       } else {
         throw new Error('Token refresh failed');
@@ -319,6 +344,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     AuthService.clearStoredData();
     setUser(null);
+    
+    // Clear role cookie
+    document.cookie = 'userRole=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   }, []);
   const value: AuthContextType = {
     user,

@@ -1,6 +1,7 @@
 import { useAuth as useAuthContext } from '@/contexts/AuthContext';
 import { useAsync } from './useAsync';
 import { ErrorHandler } from '@/lib/error-handler';
+import { USER_ROLES } from '@/constants';
 export const useAuth = useAuthContext;
 export const useAuthAsync = () => {
   const auth = useAuthContext();
@@ -50,9 +51,14 @@ export const useAuthStatus = () => {
     isAuthenticated,
     isLoading: loading,
     user,
-    isStudent: user?.role === 'student',
-    isTutor: user?.role === 'tutor',
-    isAdmin: user?.role === 'admin',
+    isGuest: user?.role === USER_ROLES.GUEST,
+    isLearner: user?.role === USER_ROLES.LEARNER,
+    isTutor: user?.role === USER_ROLES.TUTOR,
+    isBusinessAdmin: user?.role === USER_ROLES.BUSINESS_ADMIN,
+    isSystemAdmin: user?.role === USER_ROLES.SYSTEM_ADMIN,
+    // Legacy support
+    isStudent: user?.role === USER_ROLES.LEARNER,
+    isAdmin: user?.role === USER_ROLES.SYSTEM_ADMIN,
   };
 };
 export const useProtectedRoute = (requiredRole?: string) => {

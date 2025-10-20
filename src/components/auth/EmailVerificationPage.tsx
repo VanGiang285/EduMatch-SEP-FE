@@ -6,7 +6,7 @@ import { Mail, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSearchParams } from "next/navigation";
-import { useCustomToast } from "@/hooks/useCustomToast";
+import { toast } from "sonner";
 interface EmailVerificationPageProps {
   onBackToLogin: () => void;
 }
@@ -17,7 +17,6 @@ export function EmailVerificationPage({ onBackToLogin }: EmailVerificationPagePr
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [errorMessage, setErrorMessage] = useState("");
   const { verifyEmail, resendVerification } = useAuth();
-  const { showSuccess, showError } = useCustomToast();
   // const router = useRouter(); // Removed unused variable
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -28,14 +27,14 @@ export function EmailVerificationPage({ onBackToLogin }: EmailVerificationPagePr
       setVerificationStatus('pending');
       await verifyEmail(verificationToken);
       setVerificationStatus('success');
-      showSuccess("Email đã được xác thực thành công!");
+      toast.success("Email đã được xác thực thành công!");
       setTimeout(() => {
         onBackToLogin();
       }, 2000);
     } catch (error: any) {
       setVerificationStatus('error');
       setErrorMessage(error.message || "Xác thực email thất bại");
-      showError(error.message || "Xác thực email thất bại");
+      toast.error(error.message || "Xác thực email thất bại");
     } finally {
       setIsVerifying(false);
     }
@@ -54,15 +53,15 @@ export function EmailVerificationPage({ onBackToLogin }: EmailVerificationPagePr
   }, [token, handleVerifyEmail]);
   const handleResendVerification = async () => {
     if (!email) {
-      showError("Vui lòng nhập email");
+      toast.error("Vui lòng nhập email");
       return;
     }
     try {
       setIsLoading(true);
       await resendVerification(email);
-      showSuccess("Email xác thực đã được gửi lại!");
+      toast.success("Email xác thực đã được gửi lại!");
     } catch (error: any) {
-      showError(error.message || "Gửi lại email thất bại");
+      toast.error(error.message || "Gửi lại email thất bại");
     } finally {
       setIsLoading(false);
     }

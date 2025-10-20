@@ -15,11 +15,41 @@ export const ROUTES = {
   CONTACT: '/contact',
   PRIVACY: '/privacy',
   TERMS: '/terms',
+  // Admin routes
+  SYSTEM_ADMIN: '/system-admin',
+  SYSTEM_ADMIN_DASHBOARD: '/system-admin/dashboard',
+  SYSTEM_ADMIN_USERS: '/system-admin/users',
+  SYSTEM_ADMIN_TUTORS: '/system-admin/tutors',
+  SYSTEM_ADMIN_REVIEWS: '/system-admin/reviews',
+  SYSTEM_ADMIN_SETTINGS: '/system-admin/settings',
+  BUSINESS_ADMIN: '/business-admin',
+  BUSINESS_ADMIN_DASHBOARD: '/business-admin/dashboard',
+  BUSINESS_ADMIN_USERS: '/business-admin/users',
+  BUSINESS_ADMIN_TUTORS: '/business-admin/tutors',
+  BUSINESS_ADMIN_REVIEWS: '/business-admin/reviews',
+  BUSINESS_ADMIN_SETTINGS: '/business-admin/settings',
 } as const;
 export const USER_ROLES = {
-  STUDENT: 'student',
-  TUTOR: 'tutor',
-  ADMIN: 'admin',
+  GUEST: 'guest',
+  LEARNER: 'learner',      // roleId: 1
+  TUTOR: 'tutor',          // roleId: 2  
+  BUSINESS_ADMIN: 'business_admin', // roleId: 3
+  SYSTEM_ADMIN: 'system_admin'      // roleId: 4
+} as const;
+
+export const ROLE_ID_MAP = {
+  1: 'learner',
+  2: 'tutor', 
+  3: 'business_admin',
+  4: 'system_admin'
+} as const;
+
+export const ROLE_LABELS = {
+  guest: 'Khách',
+  learner: 'Học viên',
+  tutor: 'Gia sư',
+  business_admin: 'Quản trị viên kinh doanh',
+  system_admin: 'Quản trị viên hệ thống'
 } as const;
 
 // Enum constants tương ứng với Backend

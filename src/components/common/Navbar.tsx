@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCustomToast } from "@/hooks/useCustomToast";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { USER_ROLES } from "@/constants";
 interface NavbarProps {
   onNavigateToLogin: () => void;
   onNavigateToRegister: () => void;
@@ -27,6 +28,9 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
   const router = useRouter();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
+  // Check if user is admin (system or business)
+  const isAdmin = user && (user.role === USER_ROLES.SYSTEM_ADMIN || user.role === USER_ROLES.BUSINESS_ADMIN);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -38,12 +42,17 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
   };
 
   const handleBecomeTutorClick = () => {
-    if (!isAuthenticated) {
+    console.log('🔍 Navbar - isAuthenticated:', isAuthenticated);
+    console.log('🔍 Navbar - user:', user);
+    
+    if (!isAuthenticated || !user) {
+      console.log('🔍 Navbar - Not authenticated, redirecting to login');
       showWarning('Cần đăng nhập', 'Bạn cần đăng nhập để trở thành gia sư', 3000);
       setTimeout(() => {
         onNavigateToLogin();
       }, 1000);
     } else {
+      console.log('🔍 Navbar - Authenticated, navigating to become-tutor');
       onNavigateToBecomeTutor?.();
     }
   };
@@ -73,31 +82,34 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
             </div>
             <span className="text-xl font-bold text-white tracking-tight">EduMatch</span>
           </button>
-          <div className="hidden lg:flex items-center space-x-1">
-            <button 
-              onClick={onNavigateToFindTutor}
-              className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
-            >
-              <Search className="w-4 h-4" />
-              Tìm gia sư
-            </button>
-            <a 
-              href="#classes" 
-              className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
-            >
-              <BookOpen className="w-4 h-4" />
-              Danh sách lớp học
-            </a>
-            <button 
-              onClick={handleBecomeTutorClick}
-              className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
-            >
-              <GraduationCap className="w-4 h-4" />
-              Trở thành gia sư
-            </button>
-          </div>
+          {/* Hide menu items for admin users */}
+          {!isAdmin && (
+            <div className="hidden lg:flex items-center space-x-1">
+              <button 
+                onClick={onNavigateToFindTutor}
+                className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
+              >
+                <Search className="w-4 h-4" />
+                Tìm gia sư
+              </button>
+              <a 
+                href="#classes" 
+                className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
+              >
+                <BookOpen className="w-4 h-4" />
+                Danh sách lớp học
+              </a>
+              <button 
+                onClick={handleBecomeTutorClick}
+                className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
+              >
+                <GraduationCap className="w-4 h-4" />
+                Trở thành gia sư
+              </button>
+            </div>
+          )}
            <div className="hidden lg:flex items-center space-x-2">
-             {isAuthenticated && (
+             {isAuthenticated && !isAdmin && (
                <div className="flex items-center space-x-1">
                  <button
                    onClick={onNavigateToMessages}
@@ -164,46 +176,51 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                         <p className="text-xs text-gray-500 truncate">{user.email}</p>
                       </div>
                       <div className="py-1">
-                 <button
-                   onClick={() => {
-                     setUserMenuOpen(false);
-                     router.push('/profile?tab=profile');
-                   }}
-                   className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
-                 >
-                   <UserCircle className="w-4 h-4" />
-                   <span>Thông tin cá nhân</span>
-                 </button>
-                 <button
-                   onClick={() => {
-                     setUserMenuOpen(false);
-                     router.push('/profile?tab=wallet');
-                   }}
-                   className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
-                 >
-                   <Wallet className="w-4 h-4" />
-                   <span>Ví</span>
-                 </button>
-                 <button
-                   onClick={() => {
-                     setUserMenuOpen(false);
-                     router.push('/profile?tab=messages');
-                   }}
-                   className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
-                 >
-                   <MessageCircle className="w-4 h-4" />
-                   <span>Tin nhắn</span>
-                 </button>
-                 <button
-                   onClick={() => {
-                     setUserMenuOpen(false);
-                     router.push('/profile?tab=notifications');
-                   }}
-                   className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
-                 >
-                   <Bell className="w-4 h-4" />
-                   <span>Thông báo</span>
-                 </button>
+                        {/* Show profile menu items for non-admin users */}
+                        {!isAdmin && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setUserMenuOpen(false);
+                                router.push('/profile');
+                              }}
+                              className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                            >
+                              <UserCircle className="w-4 h-4" />
+                              <span>Tài khoản của tôi</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setUserMenuOpen(false);
+                                router.push('/profile/wallet');
+                              }}
+                              className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                            >
+                              <Wallet className="w-4 h-4" />
+                              <span>Ví & Thanh toán</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setUserMenuOpen(false);
+                                router.push('/profile/messages');
+                              }}
+                              className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                              <span>Tin nhắn</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setUserMenuOpen(false);
+                                router.push('/profile?tab=notifications');
+                              }}
+                              className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                            >
+                              <Bell className="w-4 h-4" />
+                              <span>Thông báo</span>
+                            </button>
+                          </>
+                        )}
                       </div>
                       <div className="border-t border-gray-100 mt-1 pt-1">
                         <button
@@ -255,28 +272,33 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
       {mobileMenuOpen && (
         <div className="lg:hidden bg-[#257180] border-t border-white/20">
           <div className="px-4 py-4 space-y-2">
-            <button 
-              onClick={onNavigateToFindTutor}
-              className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
-            >
-              <Search className="w-4 h-4" />
-              Tìm gia sư
-            </button>
-            <a 
-              href="#classes" 
-              className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
-            >
-              <BookOpen className="w-4 h-4" />
-              Danh sách lớp học
-            </a>
-            <button 
-              onClick={handleBecomeTutorClick}
-              className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
-            >
-              <GraduationCap className="w-4 h-4" />
-              Trở thành gia sư
-            </button>
-             {isAuthenticated && (
+            {/* Hide mobile menu items for admin users */}
+            {!isAdmin && (
+              <>
+                <button 
+                  onClick={onNavigateToFindTutor}
+                  className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
+                >
+                  <Search className="w-4 h-4" />
+                  Tìm gia sư
+                </button>
+                <a 
+                  href="#classes" 
+                  className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  Danh sách lớp học
+                </a>
+                <button 
+                  onClick={handleBecomeTutorClick}
+                  className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  Trở thành gia sư
+                </button>
+              </>
+            )}
+             {isAuthenticated && !isAdmin && (
                <div className="pt-4 space-y-2 border-t border-white/20">
                  <div className="flex items-center justify-center space-x-4">
                    <button

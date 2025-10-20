@@ -1,7 +1,7 @@
 "use client";
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, ToasterProps } from "sonner";
-import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from "lucide-react";
+// import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from "lucide-react";
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
