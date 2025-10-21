@@ -1,9 +1,54 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { User, Mail, Phone, MapPin, Calendar, Shield, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/basic/button';
 import { Badge } from '@/components/ui/basic/badge';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { UserProfileService } from '@/services/userProfileService';
+import { useCustomToast } from '@/hooks/useCustomToast';
 
 export default function ProfilePage() {
+  const { user } = useAuth();
+  const { showError } = useCustomToast();
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user?.email) return;
+      
+      try {
+        setLoading(true);
+        const response = await UserProfileService.getUserProfileByEmail(user.email);
+        
+        if (response.success && response.data) {
+          setProfile(response.data);
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        showError('Không thể tải thông tin profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadProfile();
+  }, [user?.email]);
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="bg-white rounded-lg shadow-sm border border-[#FD8B51] p-6">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Page Header */}
@@ -36,7 +81,7 @@ export default function ProfilePage() {
                   JD
                 </span>
                     </div>
-              <h3 className="text-xl font-semibold text-gray-900">John Doe</h3>
+              <h3 className="text-xl font-semibold text-gray-900">{profile?.userName || 'Chưa cập nhật'}</h3>
               <p className="text-gray-600">Học viên</p>
               <div className="mt-4">
                 <Badge className="bg-green-100 text-green-800 border border-green-200">
@@ -59,7 +104,7 @@ export default function ProfilePage() {
                   <Mail className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">Email</p>
-                    <p className="text-sm text-gray-600">john.doe@example.com</p>
+                    <p className="text-sm text-gray-600">{profile?.userEmail || 'Chưa cập nhật'}</p>
                       </div>
                     </div>
 
@@ -67,7 +112,7 @@ export default function ProfilePage() {
                   <Phone className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">Số điện thoại</p>
-                    <p className="text-sm text-gray-600">+84 123 456 789</p>
+                    <p className="text-sm text-gray-600">{profile?.phone || 'Chưa cập nhật'}</p>
                         </div>
                       </div>
                       
@@ -75,7 +120,11 @@ export default function ProfilePage() {
                   <MapPin className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">Địa chỉ</p>
-                    <p className="text-sm text-gray-600">Hà Nội, Việt Nam</p>
+                    <p className="text-sm text-gray-600">
+                      {profile?.addressLine || 'Chưa cập nhật'}
+                      {profile?.province?.name && `, ${profile.province.name}`}
+                      {profile?.subDistrict?.name && `, ${profile.subDistrict.name}`}
+                    </p>
                       </div>
                     </div>
 
@@ -83,7 +132,9 @@ export default function ProfilePage() {
                   <Calendar className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">Ngày sinh</p>
-                    <p className="text-sm text-gray-600">01/01/1990</p>
+                    <p className="text-sm text-gray-600">
+                      {profile?.dob ? new Date(profile.dob).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+                    </p>
                         </div>
                       </div>
                     </div>
@@ -91,8 +142,7 @@ export default function ProfilePage() {
               <div className="pt-4 border-t border-gray-200">
                 <h4 className="font-medium text-gray-900 mb-2">Giới thiệu bản thân</h4>
                 <p className="text-sm text-gray-600 leading-relaxed">
-                  Tôi là một học viên đam mê học tập và phát triển bản thân. 
-                  Tôi luôn tìm kiếm những cơ hội học tập mới và cải thiện kỹ năng của mình.
+                  {profile?.bio || 'Chưa có giới thiệu về bản thân'}
                 </p>
               </div>
                     </div>
@@ -122,7 +172,9 @@ export default function ProfilePage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-900">Ngày tham gia</span>
-                <span className="text-sm text-gray-600">15/01/2024</span>
+                <span className="text-sm text-gray-600">
+                  {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('vi-VN') : 'Chưa xác định'}
+                </span>
                               </div>
                             </div>
                           </CardContent>

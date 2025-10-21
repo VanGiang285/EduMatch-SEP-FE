@@ -31,10 +31,13 @@ export default function BusinessAdminLayout({ children }: BusinessAdminLayoutPro
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== USER_ROLES.BUSINESS_ADMIN)) {
+    // Don't redirect if we're on the home page (likely after logout)
+    const isOnHomePage = pathname === '/';
+    
+    if (!loading && (!user || user.role !== USER_ROLES.BUSINESS_ADMIN) && !isOnHomePage) {
       router.push('/unauthorized');
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, pathname]);
 
   if (loading) {
     return (

@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/basic/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/layout/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/feedback/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/feedback/alert-dialog';
 import { Textarea } from '@/components/ui/form/textarea';
 import { useCustomToast } from '@/hooks/useCustomToast';
@@ -531,15 +533,130 @@ export default function BusinessAdminTutorApplicationManagement({ className }: B
       {/* Tutor Detail Modal */}
       <Dialog open={showTutorDetail} onOpenChange={setShowTutorDetail}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Chi tiết đơn đăng ký gia sư</DialogTitle>
-            <DialogDescription>
-              Xem và duyệt đơn đăng ký của {selectedTutor?.userName}
-            </DialogDescription>
+          <DialogHeader className="border-b border-gray-200 pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                  <User className="h-6 w-6 text-[#257180]" />
+                  Hồ sơ gia sư - {selectedTutor?.userName}
+                </DialogTitle>
+                <DialogDescription className="mt-2">
+                  Xem và duyệt đơn đăng ký trở thành gia sư
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
           
           {selectedTutor && (
             <div className="space-y-6">
+              {/* Header Info */}
+              <div className="bg-gradient-to-r from-[#257180]/5 to-[#FD8B51]/5 rounded-lg p-6 border border-[#257180]/10">
+                <div className="flex items-start gap-6">
+                  <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
+                    <AvatarImage src={selectedTutor.avatarUrl} alt={selectedTutor.userName} />
+                    <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-xl font-semibold">
+                      {selectedTutor.userName.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 space-y-4">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">{selectedTutor.userName}</h2>
+                      <div className="flex items-center gap-4 mt-2">
+                        <Badge className={`${getStatusColor(selectedTutor.status)} border`}>
+                          {getStatusLabel(selectedTutor.status)}
+                        </Badge>
+                        <span className="text-sm text-gray-500">
+                          Đăng ký: {formatDate(selectedTutor.createdAt, 'dd/MM/yyyy HH:mm')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Mail className="h-4 w-4 text-[#257180]" />
+                        <span className="text-sm">{selectedTutor.userEmail}</span>
+                      </div>
+                      {selectedTutor.province && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <MapPin className="h-4 w-4 text-[#257180]" />
+                          <span className="text-sm">{selectedTutor.province.name}, {selectedTutor.subDistrict?.name}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <Tabs defaultValue="overview" className="w-full">
+                <TabsList className="grid w-full grid-cols-4 bg-[#F2E5BF]">
+                  <TabsTrigger value="overview" className="data-[state=active]:bg-white">
+                    Tổng quan
+                  </TabsTrigger>
+                  <TabsTrigger value="education" className="data-[state=active]:bg-white">
+                    Học vấn
+                  </TabsTrigger>
+                  <TabsTrigger value="teaching" className="data-[state=active]:bg-white">
+                    Giảng dạy
+                  </TabsTrigger>
+                  <TabsTrigger value="media" className="data-[state=active]:bg-white">
+                    Hình ảnh & Video
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Overview Tab */}
+                <TabsContent value="overview" className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Personal Info */}
+                    <Card className="border border-[#FD8B51]">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <User className="h-5 w-5 text-[#257180]" />
+                          Thông tin cá nhân
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {selectedTutor.bio && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Giới thiệu</label>
+                            <p className="text-sm text-gray-900 mt-1">{selectedTutor.bio}</p>
+                          </div>
+                        )}
+                        {selectedTutor.teachingExp && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Kinh nghiệm</label>
+                            <p className="text-sm text-gray-900 mt-1">{selectedTutor.teachingExp}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Teaching Subjects */}
+                    {selectedTutor.tutorSubjects && selectedTutor.tutorSubjects.length > 0 && (
+                      <Card className="border border-[#FD8B51]">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <BookOpen className="h-5 w-5 text-[#257180]" />
+                            Môn học
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedTutor.tutorSubjects.map((subject) => (
+                              <Badge key={subject.id} className="bg-[#F2E5BF] text-[#257180]">
+                                {subject.subject?.name} - {subject.level?.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* Education Tab */}
+                <TabsContent value="education" className="space-y-6">
               {/* Basic Information */}
               <Card className="border border-[#FD8B51]">
                 <CardHeader>

@@ -156,3 +156,4 @@ export const validateStyle = (component: string, style: string): boolean => {
   return validStyles[component as keyof typeof validStyles]?.includes(style) ?? false;
 };
 
+

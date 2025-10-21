@@ -505,3 +505,4 @@ export function TutorProfileModal({ isOpen, onClose, tutor }: TutorProfileModalP
     </Dialog>
   );
 }
+
