@@ -25,15 +25,15 @@ export const APP_CONFIG = {
     ENABLE_ANALYTICS: process.env.NODE_ENV === 'production',
   },
   SECURITY: {
-    SESSION_TIMEOUT: 24 * 60 * 60 * 1000, // 24 hours
-    REFRESH_TOKEN_TIMEOUT: 7 * 24 * 60 * 60 * 1000, // 7 days
+    SESSION_TIMEOUT: 24 * 60 * 60 * 1000, 
+    REFRESH_TOKEN_TIMEOUT: 7 * 24 * 60 * 60 * 1000,
     MAX_LOGIN_ATTEMPTS: 5,
-    LOCKOUT_DURATION: 15 * 60 * 1000, // 15 minutes
+    LOCKOUT_DURATION: 15 * 60 * 1000, 
   },
   PERFORMANCE: {
     DEBOUNCE_DELAY: 300,
     THROTTLE_DELAY: 1000,
-    CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
+    CACHE_DURATION: 5 * 60 * 1000, 
     IMAGE_OPTIMIZATION: true,
     LAZY_LOADING: true,
   },
