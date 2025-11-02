@@ -1,130 +1,25 @@
 import { apiClient } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
 import { ApiResponse } from '@/types/api';
-import { TutorStatus, VerifyStatus, TeachingMode, TutorAvailabilityStatus } from '@/types';
-
-export interface FindTutorProfile {
-  id: number;
-  userEmail: string;
-  userName: string;
-  bio?: string;
-  teachingExp?: string;
-  avatarUrl?: string;
-  videoIntroUrl?: string;
-  videoIntroPublicId?: string;
-  teachingModes: TeachingMode;
-  status: TutorStatus;
-  createdAt: string;
-  updatedAt?: string;
-  province?: {
-    id: number;
-    name: string;
-  };
-  subDistrict?: {
-    id: number;
-    provinceId: number;
-    name: string;
-  };
-  tutorAvailabilities?: FindTutorAvailability[];
-  tutorCertificates?: FindTutorCertificate[];
-  tutorEducations?: FindTutorEducation[];
-  tutorSubjects?: FindTutorSubject[];
-}
-
-export interface FindTutorEducation {
-  id: number;
-  tutorId: number;
-  institutionId: number;
-  issueDate?: string;
-  certificateUrl?: string;
-  certificatePublicId?: string;
-  createdAt?: string;
-  verified: VerifyStatus;
-  rejectReason?: string;
-  institution?: {
-    id: number;
-    code: string;
-    name: string;
-    institutionType: number;
-    createdAt: string;
-  };
-}
-
-export interface FindTutorCertificate {
-  id: number;
-  tutorId: number;
-  certificateTypeId: number;
-  issueDate?: string;
-  expiryDate?: string;
-  certificateUrl?: string;
-  certificatePublicId?: string;
-  createdAt?: string;
-  verified: VerifyStatus;
-  rejectReason?: string;
-  certificateType?: {
-    id: number;
-    code: string;
-    name: string;
-    createdAt: string;
-  };
-}
-
-export interface FindTutorSubject {
-  id: number;
-  tutorId: number;
-  subjectId: number;
-  hourlyRate?: number;
-  levelId?: number;
-  level?: {
-    id: number;
-    levelName: string;
-  };
-  subject?: {
-    id: number;
-    subjectName: string;
-  };
-  tutor?: FindTutorProfile;
-}
-
-export interface FindTutorAvailability {
-  id: number;
-  tutorId: number;
-  slotId: number;
-  availabilityType: number;
-  date?: string;
-  dayOfWeek?: number;
-  startDate: string;
-  endDate?: string;
-  status: TutorAvailabilityStatus;
-  createdAt: string;
-  updatedAt?: string;
-}
-
-export interface TutorFilter {
-  keyword?: string;
-  subjectId?: number;
-  certificateTypeId?: number;
-  institutionId?: number;
-  city?: number;
-  teachingMode?: TeachingMode;
-  statusId?: TutorStatus;
-  page?: number;
-  pageSize?: number;
-}
+import { TutorProfileDto, TutorFilterDto } from '@/types/backend';
 
 export class FindTutorService {
-  static async getAllTutors(): Promise<ApiResponse<FindTutorProfile[]>> {
-    return apiClient.get<FindTutorProfile[]>(API_ENDPOINTS.FIND_TUTORS.GET_ALL);
+  // Lấy tất cả gia sư (public browsing)
+  static async getAllTutors(): Promise<ApiResponse<TutorProfileDto[]>> {
+    return apiClient.get<TutorProfileDto[]>(API_ENDPOINTS.FIND_TUTORS.GET_ALL);
   }
 
-  static async searchTutors(filter: TutorFilter): Promise<ApiResponse<FindTutorProfile[]>> {
-    // Remove empty/undefined values from filter
+  // Tìm kiếm gia sư với bộ lọc (keyword, gender, city, teaching mode, pagination)
+  static async searchTutors(filter: TutorFilterDto): Promise<ApiResponse<TutorProfileDto[]>> {
     const cleanFilter = Object.fromEntries(
       Object.entries(filter).filter(([, value]) => value !== undefined && value !== null && value !== '')
-    );
-    
-    return apiClient.get<FindTutorProfile[]>(API_ENDPOINTS.FIND_TUTORS.SEARCH, {
-      params: cleanFilter
-    });
+    ) as TutorFilterDto;
+    return apiClient.post<TutorProfileDto[]>(API_ENDPOINTS.FIND_TUTORS.SEARCH, cleanFilter);
+  }
+
+  // Lấy thông tin chi tiết gia sư theo ID (public view)
+  static async getTutorById(tutorId: number): Promise<ApiResponse<TutorProfileDto>> {
+    const url = API_ENDPOINTS.TUTORS.GET_BY_ID.replace(':tutorId', tutorId.toString());
+    return apiClient.get<TutorProfileDto>(url);
   }
 }

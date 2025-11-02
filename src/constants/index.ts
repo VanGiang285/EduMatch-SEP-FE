@@ -139,6 +139,7 @@ export const SUBJECT_LEVELS = {
   ADULT: 'Người lớn',
 } as const;
 export const API_ENDPOINTS = {
+  // ==================== AUTH ====================
   AUTH: {
     LOGIN: '/api/user/login',
     REGISTER: '/api/user/register',
@@ -150,29 +151,40 @@ export const API_ENDPOINTS = {
     GET_CURRENT_USER: '/api/user/me',
   },
   
+  // ==================== USER PROFILES ====================
   USER_PROFILES: {
     GET_BY_EMAIL: '/api/userprofiles/:email',
-    UPDATE_BY_EMAIL: '/api/userprofiles/:email',
+    UPDATE: '/api/userprofiles/update-user-profile',
   },
   
+  // ==================== TUTORS ====================
   TUTORS: {
+    // Become Tutor
     BECOME_TUTOR: '/api/tutors/become-tutor',
-    UPDATE_EDUCATION: '/api/tutors/update-education/:id',
-    UPDATE_CERTIFICATE: '/api/tutors/update-certificate/:id',
-    UPDATE_TUTOR_SUBJECT: '/api/tutors/update-tutor-subject/:id',
-    VERIFY_EDUCATION_BATCH: '/api/tutors/update-verify-education-list/:tutorId',
-    VERIFY_CERTIFICATE_BATCH: '/api/tutors/update-verify-certificate-list/:tutorId',
+    
+    // Get Tutors
     GET_BY_STATUS: '/api/tutors/get-all-tutor-by-status',
     GET_ALL: '/api/tutors/get-all-tutor',
-    GET_VERIFICATIONS: '/api/tutors/get-all-tutor-certificate-education/:tutorId',
     GET_BY_ID: '/api/tutors/get-tutor-by-id/:tutorId',
+    GET_VERIFICATIONS: '/api/tutors/get-all-tutor-certificate-education/:tutorId',
+    
+    // Update Tutor
+    UPDATE_PROFILE: '/api/tutors/update-tutor-profile',
+    UPDATE_STATUS: '/api/tutors/update-tutor-status/:tutorId',
+    APPROVE_AND_VERIFY_ALL: '/api/tutors/approve-and-verify-all/:tutorId',
+    
+    // Verify batch
+    VERIFY_EDUCATION_BATCH: '/api/tutors/verify-list-education/:tutorId',
+    VERIFY_CERTIFICATE_BATCH: '/api/tutors/verify-list-certificate/:tutorId',
   },
   
+  // ==================== FIND TUTORS ====================
   FIND_TUTORS: {
-    GET_ALL: '/api/tutors/get-all-tutor',
-    SEARCH: '/api/tutors/get-all-tutor',
+    GET_ALL: '/api/findtutor',
+    SEARCH: '/api/findtutor/search',
   },
   
+  // ==================== ADMIN ====================
   ADMIN: {
     GET_USER_BY_ROLE: '/api/admin/role/:roleId',
     GET_ALL_USERS: '/api/admin/getAllUsers',
@@ -182,38 +194,87 @@ export const API_ENDPOINTS = {
     CREATE_ADMIN: '/api/admin/create-admin',
   },
   
+  // ==================== SUBJECTS ====================
   SUBJECTS: {
     GET_ALL: '/api/subject/get-all-subject',
     GET_BY_ID: '/api/subject/get-subject-by-id/:id',
+    GET_TUTOR_SUBJECTS: '/api/subject/get-:tutorId-list-subject',
+    CREATE_TUTOR_SUBJECT: '/api/subject/create-:tutorId-subject',
+    UPDATE_TUTOR_SUBJECT: '/api/subject/update-:tutorId-subject',
+    DELETE_TUTOR_SUBJECT: '/api/subject/delete-:tutorId-subject',
   },
   
+  // ==================== LEVELS ====================
   LEVELS: {
     GET_ALL: '/api/level/get-all-level',
   },
   
+  // ==================== CERTIFICATES ====================
   CERTIFICATES: {
-    GET_ALL_WITH_SUBJECTS: '/api/certificate/get-all-certificatetypes-with-subjects',
+    GET_ALL: '/api/certificatetype/get-all-certificate-types',
+    GET_BY_VERIFY_STATUS: '/api/certificatetype/get-certificate-types-by-verify-status/:verifyStatus',
+    CREATE: '/api/certificatetype/create-certificate-type',
+    ADD_SUBJECTS: '/api/certificatetype/add-subjects-to-certificate-type/:certificateTypeId',
+    VERIFY: '/api/certificatetype/verify-certificate-type/:certificateTypeId',
+    DELETE: '/api/certificatetype/delete-certificate-type/:certificateTypeId',
   },
   
+  // ==================== EDUCATION ====================
   EDUCATION: {
     GET_ALL_INSTITUTIONS: '/api/education/get-all-education-institution',
+    GET_INSTITUTIONS_BY_VERIFY_STATUS: '/api/education/get-education-institutions-by-verify-status/:verifyStatus',
+    CREATE_INSTITUTION: '/api/education/create-education-institution',
+    VERIFY_INSTITUTION: '/api/education/verify-education-institution/:educationInstitutionId',
+    
+    GET_TUTOR_EDUCATIONS: '/api/education/get-:tutorId-list-education',
+    CREATE_TUTOR_EDUCATION: '/api/education/create-:tutorId-education',
+    UPDATE_TUTOR_EDUCATION: '/api/education/update-:tutorId-education',
+    DELETE_TUTOR_EDUCATION: '/api/education/delete-:tutorId-education',
   },
   
+  // ==================== TUTOR AVAILABILITY ====================
+  AVAILABILITY: {
+    CREATE_LIST: '/api/tutoravailability/tutor-availability-create-list',
+    UPDATE_LIST: '/api/tutoravailability/tutor-availability-update-list',
+    DELETE_LIST: '/api/tutoravailability/tutor-availability-delete-list',
+    GET_ALL: '/api/tutoravailability/tutor-availability-get-all/:tutorId',
+    GET_BY_STATUS: '/api/tutoravailability/tutor-availability-get-list-by-status/:tutorId/:status',
+  },
+  
+  // ==================== TIME SLOTS ====================
   TIME_SLOTS: {
     GET_ALL: '/api/timeslots/get-all-time-slots',
   },
   
+  // ==================== CHAT ====================
   CHAT: {
     GET_ROOMS: '/api/chat/rooms/:email',
     GET_MESSAGES: '/api/chat/messages/:roomId',
   },
   
-  CLOUD_MEDIA: {
-    UPLOAD: '/api/CloudMedia/upload',
-    UPLOAD_FROM_URL: '/api/CloudMedia/upload-from-url',
-    DELETE: '/api/CloudMedia/:publicId',
+  // ==================== FAVORITE TUTORS ====================
+  FAVORITE_TUTORS: {
+    ADD: '/api/favoritetutor/add/:tutorId',
+    REMOVE: '/api/favoritetutor/remove/:tutorId',
+    IS_FAVORITE: '/api/favoritetutor/is-favorite/:tutorId',
+    LIST: '/api/favoritetutor/list',
   },
   
+  // ==================== GOOGLE AUTH (for Meeting) ====================
+  GOOGLE_AUTH: {
+    AUTHORIZE: '/api/googleauth/authorize',
+    CALLBACK: '/api/googleauth/callback',
+    CREATE_MEETING: '/api/googleauth/create',
+  },
+  
+  // ==================== CLOUD MEDIA ====================
+  CLOUD_MEDIA: {
+    UPLOAD: '/api/cloudmedia/upload',
+    UPLOAD_FROM_URL: '/api/cloudmedia/upload-from-url',
+    DELETE: '/api/cloudmedia/:publicId',
+  },
+  
+  // ==================== BOOKINGS ====================
   BOOKINGS: {
     LIST: '/api/bookings',
     DETAIL: '/api/bookings/:id',
@@ -223,6 +284,8 @@ export const API_ENDPOINTS = {
     CANCEL: '/api/bookings/:id/cancel',
     CONFIRM: '/api/bookings/:id/confirm',
   },
+  
+  // ==================== REVIEWS ====================
   REVIEWS: {
     LIST: '/api/reviews',
     DETAIL: '/api/reviews/:id',
@@ -230,12 +293,25 @@ export const API_ENDPOINTS = {
     UPDATE: '/api/reviews/:id',
     DELETE: '/api/reviews/:id',
   },
-  USERS: {
-    PROFILE: '/api/User/me',
-    UPDATE: '/api/users/profile',
-    CHANGE_PASSWORD: '/api/users/change-password',
-    UPLOAD_AVATAR: '/api/users/upload-avatar',
+  
+  // ==================== WALLET & PAYMENT (MỚI) ====================
+  WALLET: {
+    GET_BALANCE: '/api/wallet/balance',
+    GET_TRANSACTIONS: '/api/wallet/transactions',
+    CREATE_DEPOSIT: '/api/wallet/deposit',
+    CREATE_WITHDRAWAL: '/api/wallet/withdrawal',
+    GET_WITHDRAWALS: '/api/wallet/withdrawals',
+    PROCESS_WITHDRAWAL: '/api/wallet/process-withdrawal/:withdrawalId',
+    
+    // Bank Accounts
+    GET_BANK_ACCOUNTS: '/api/wallet/bank-accounts',
+    CREATE_BANK_ACCOUNT: '/api/wallet/bank-account',
+    UPDATE_BANK_ACCOUNT: '/api/wallet/bank-account/:id',
+    DELETE_BANK_ACCOUNT: '/api/wallet/bank-account/:id',
+    SET_DEFAULT_BANK_ACCOUNT: '/api/wallet/bank-account/:id/set-default',
   },
+  
+  // ==================== UPLOAD ====================
   UPLOAD: {
     IMAGE: '/api/upload/image',
     DOCUMENT: '/api/upload/document',

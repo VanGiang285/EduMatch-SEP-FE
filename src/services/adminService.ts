@@ -1,72 +1,61 @@
 import { apiClient, replaceUrlParams } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
 import { ApiResponse } from '@/types/api';
-
-// Types for Admin API
-export interface ManageUserDto {
-  id: number;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  phoneNumber?: string;
-  roleId: number;
-  roleName?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  loginProvider?: string;
-  avatarUrl?: string;
-}
-
-export interface CreateAdminAccDto {
-  email: string;
-}
+import { ManageUserDto } from '@/types/backend';
+import { CreateAdminAccDto } from '@/types/requests';
 
 export class AdminService {
-  /**
-   * Get users by role ID
-   */
+  // Lấy danh sách user theo role (1=Learner, 2=Tutor, 3=Business Admin, 4=System Admin)
   static async getUsersByRole(roleId: number): Promise<ApiResponse<ManageUserDto[]>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.ADMIN.GET_USER_BY_ROLE, { roleId: roleId.toString() });
-    return apiClient.get<ManageUserDto[]>(endpoint);
+    const url = replaceUrlParams(API_ENDPOINTS.ADMIN.GET_USER_BY_ROLE, { roleId: roleId.toString() });
+    return apiClient.get<ManageUserDto[]>(url);
   }
 
-  /**
-   * Get all users
-   */
+  // Lấy tất cả user trong hệ thống
   static async getAllUsers(): Promise<ApiResponse<ManageUserDto[]>> {
     return apiClient.get<ManageUserDto[]>(API_ENDPOINTS.ADMIN.GET_ALL_USERS);
   }
 
-  /**
-   * Deactivate user by email
-   */
-  static async deactivateUser(email: string): Promise<ApiResponse<string>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.ADMIN.DEACTIVATE_USER, { email });
-    return apiClient.put<string>(endpoint);
+  // Vô hiệu hóa tài khoản user (isActive = false)
+  static async deactivateUser(email: string): Promise<ApiResponse<void>> {
+    const url = replaceUrlParams(API_ENDPOINTS.ADMIN.DEACTIVATE_USER, { email });
+    return apiClient.put<void>(url);
   }
 
-  /**
-   * Activate user by email
-   */
-  static async activateUser(email: string): Promise<ApiResponse<string>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.ADMIN.ACTIVATE_USER, { email });
-    return apiClient.put<string>(endpoint);
+  // Kích hoạt tài khoản user (isActive = true)
+  static async activateUser(email: string): Promise<ApiResponse<void>> {
+    const url = replaceUrlParams(API_ENDPOINTS.ADMIN.ACTIVATE_USER, { email });
+    return apiClient.put<void>(url);
   }
 
-  /**
-   * Update user role
-   */
-  static async updateUserRole(email: string, roleId: number): Promise<ApiResponse<string>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.ADMIN.UPDATE_USER_ROLE, { email, roleId: roleId.toString() });
-    return apiClient.put<string>(endpoint);
+  // Cập nhật role của user
+  static async updateUserRole(email: string, roleId: number): Promise<ApiResponse<void>> {
+    const url = replaceUrlParams(API_ENDPOINTS.ADMIN.UPDATE_USER_ROLE, { email, roleId: roleId.toString() });
+    return apiClient.put<void>(url);
   }
 
-  /**
-   * Create admin account
-   */
-  static async createAdminAccount(adminData: CreateAdminAccDto): Promise<ApiResponse<any>> {
-    return apiClient.post<any>(API_ENDPOINTS.ADMIN.CREATE_ADMIN, adminData);
+  // Tạo tài khoản admin
+  static async createAdmin(data: CreateAdminAccDto): Promise<ApiResponse<ManageUserDto>> {
+    return apiClient.post<ManageUserDto>(API_ENDPOINTS.ADMIN.CREATE_ADMIN, data);
+  }
+
+  // Lấy danh sách học viên
+  static async getAllLearners(): Promise<ApiResponse<ManageUserDto[]>> {
+    return this.getUsersByRole(1);
+  }
+
+  // Lấy danh sách gia sư
+  static async getAllTutors(): Promise<ApiResponse<ManageUserDto[]>> {
+    return this.getUsersByRole(2);
+  }
+
+  // Lấy danh sách business admin
+  static async getAllBusinessAdmins(): Promise<ApiResponse<ManageUserDto[]>> {
+    return this.getUsersByRole(3);
+  }
+
+  // Lấy danh sách system admin
+  static async getAllSystemAdmins(): Promise<ApiResponse<ManageUserDto[]>> {
+    return this.getUsersByRole(4);
   }
 }
-
