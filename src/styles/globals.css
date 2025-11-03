@@ -8,6 +8,10 @@ html {
   scrollbar-gutter: stable;
 }
 
+body {
+  scrollbar-gutter: stable;
+}
+
 /* Custom scrollbar styles */
 .scrollbar-thin {
   scrollbar-width: thin;

@@ -1,12 +1,14 @@
 "use client";
 import { Button } from "../ui/basic/button";
-import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle } from "lucide-react";
+import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomToast } from "@/hooks/useCustomToast";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { USER_ROLES } from "@/constants";
+import { MessageDropdown } from "./MessageDropdown";
+import { NotificationDropdown } from "./NotificationDropdown";
 interface NavbarProps {
   onNavigateToLogin: () => void;
   onNavigateToRegister: () => void;
@@ -112,20 +114,26 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
            <div className="hidden lg:flex items-center space-x-2">
              {isAuthenticated && !isAdmin && (
                <div className="flex items-center space-x-1">
-                 <button
-                   onClick={onNavigateToMessages}
-                   className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
-                   title="Tin nhắn"
-                 >
-                   <MessageCircle className="w-5 h-5" />
-                 </button>
-                 <button
-                   onClick={onNavigateToNotifications}
-                   className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
-                   title="Thông báo"
-                 >
-                   <Bell className="w-5 h-5" />
-                 </button>
+                 <MessageDropdown 
+                   onViewAll={() => {
+                     onNavigateToMessages?.();
+                   }}
+                   onMessageClick={(id) => {
+                     onNavigateToMessages?.();
+                   }}
+                 />
+                 <NotificationDropdown 
+                   onViewAll={() => {
+                     onNavigateToNotifications?.();
+                   }}
+                   onNotificationClick={(id) => {
+                     onNavigateToNotifications?.();
+                   }}
+                   onMarkAllRead={() => {
+                     // TODO: Implement mark all as read
+                     console.log('Mark all notifications as read');
+                   }}
+                 />
                  <button
                    onClick={onNavigateToFavorites}
                    className="p-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
@@ -188,7 +196,27 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                               className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
                             >
                               <UserCircle className="w-4 h-4" />
-                              <span>Tài khoản của tôi</span>
+                              <span>Thông tin người dùng</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setUserMenuOpen(false);
+                                router.push('/profile?tab=schedule');
+                              }}
+                              className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                            >
+                              <Calendar className="w-4 h-4" />
+                              <span>Lịch học</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setUserMenuOpen(false);
+                                router.push('/profile?tab=classes');
+                              }}
+                              className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                            >
+                              <BookOpen className="w-4 h-4" />
+                              <span>Lớp học</span>
                             </button>
                             <button
                               onClick={() => {
@@ -198,7 +226,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                               className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
                             >
                               <Wallet className="w-4 h-4" />
-                              <span>Ví & Thanh toán</span>
+                              <span>Ví</span>
                             </button>
                             <button
                               onClick={() => {
@@ -213,12 +241,12 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                             <button
                               onClick={() => {
                                 setUserMenuOpen(false);
-                                router.push('/profile?tab=notifications');
+                                router.push('/profile?tab=settings');
                               }}
                               className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
                             >
-                              <Bell className="w-4 h-4" />
-                              <span>Thông báo</span>
+                              <Settings className="w-4 h-4" />
+                              <span>Cài đặt</span>
                             </button>
                           </>
                         )}
