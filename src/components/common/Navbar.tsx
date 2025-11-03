@@ -135,7 +135,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                    <Heart className="w-5 h-5" />
                  </button>
                  <button
-                   onClick={onNavigateToWallet}
+                   onClick={() => router.push('/profile?tab=wallet')}
                    className="flex items-center space-x-2 px-3 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
                    title="Ví tiền"
                  >
@@ -151,46 +151,46 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/10 transition-all">
-                      {user.avatar ? (
+                    {user.avatar ? (
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={user.avatar} alt={user.name} />
                           <AvatarFallback className="bg-[#FD8B51] text-white">
                             {user.name?.[0] || 'U'}
                           </AvatarFallback>
                         </Avatar>
-                      ) : (
+                    ) : (
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="bg-[#FD8B51] text-white">
                             {user.name?.[0] || 'U'}
                           </AvatarFallback>
                         </Avatar>
-                      )}
-                      <span className="text-white font-medium text-sm max-w-32 truncate">
-                        {user.name}
-                      </span>
+                    )}
+                    <span className="text-white font-medium text-sm max-w-32 truncate">
+                      {user.name}
+                    </span>
                       <ChevronDown className="h-4 w-4 text-white/70" />
-                    </button>
+                  </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 bg-white border border-[#FD8B51]">
                     <div className="px-2 py-1.5">
                       <p className="font-medium text-gray-900 truncate">{user.name}</p>
                       <p className="text-sm text-gray-500 truncate">{user.email}</p>
-                    </div>
+                      </div>
                     <DropdownMenuSeparator />
                     
-                    {!isAdmin && (
-                      <>
+                        {!isAdmin && (
+                          <>
                         <DropdownMenuItem
-                          onClick={() => router.push('/profile')}
+                          onClick={() => router.push('/profile?tab=profile')}
                           className="cursor-pointer"
                         >
                           <User className="h-4 w-4 mr-2" />
                           Thông tin người dùng
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => router.push('/profile/teaching-profile')}
+                          onClick={() => router.push('/profile?tab=tutorProfile')}
                           className="cursor-pointer"
-                        >
+                            >
                           <GraduationCap className="h-4 w-4 mr-2" />
                           Hồ sơ gia sư
                         </DropdownMenuItem>
@@ -204,21 +204,21 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=classes')}
                           className="cursor-pointer"
-                        >
+                            >
                           <BookOpen className="h-4 w-4 mr-2" />
                           Lớp học
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => router.push('/class-requests')}
+                          onClick={() => router.push('/profile?tab=classRequests')}
                           className="cursor-pointer"
                         >
                           <FileText className="h-4 w-4 mr-2" />
                           Yêu cầu mở lớp
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => router.push('/profile/wallet')}
+                          onClick={() => router.push('/profile?tab=wallet')}
                           className="cursor-pointer"
-                        >
+                            >
                           <Wallet className="h-4 w-4 mr-2" />
                           Ví
                         </DropdownMenuItem>
@@ -230,9 +230,9 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                           Thông báo
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => router.push('/profile/messages')}
+                          onClick={() => router.push('/profile?tab=messages')}
                           className="cursor-pointer"
-                        >
+                            >
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Tin nhắn
                         </DropdownMenuItem>
@@ -248,9 +248,9 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                     
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={handleLogout}
+                          onClick={handleLogout}
                       className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-                    >
+                        >
                       <LogOut className="h-4 w-4 mr-2" />
                       Đăng xuất
                     </DropdownMenuItem>
@@ -347,7 +347,10 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                  </div>
                  <div className="flex justify-center">
                    <button
-                     onClick={onNavigateToWallet}
+                     onClick={() => {
+                       setMobileMenuOpen(false);
+                       router.push('/profile?tab=wallet');
+                     }}
                      className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
                    >
                      <Wallet className="w-4 h-4" />
@@ -386,8 +389,48 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                       }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
                     >
-                      <UserCircle className="w-4 h-4" />
-                      <span className="text-sm">Thông tin cá nhân</span>
+                      <User className="w-4 h-4" />
+                      <span className="text-sm">Thông tin người dùng</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push('/profile?tab=tutorProfile');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                    >
+                      <GraduationCap className="w-4 h-4" />
+                      <span className="text-sm">Hồ sơ gia sư</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push('/profile?tab=schedule');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      <span className="text-sm">Lịch học</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push('/profile?tab=classes');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      <span className="text-sm">Lớp học</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push('/profile?tab=classRequests');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span className="text-sm">Yêu cầu mở lớp</span>
                     </button>
                     <button
                       onClick={() => {
@@ -402,6 +445,16 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                     <button
                       onClick={() => {
                         setMobileMenuOpen(false);
+                        router.push('/profile?tab=notifications');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                    >
+                      <Bell className="w-4 h-4" />
+                      <span className="text-sm">Thông báo</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
                         router.push('/profile?tab=messages');
                       }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
@@ -412,12 +465,12 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                     <button
                       onClick={() => {
                         setMobileMenuOpen(false);
-                        router.push('/profile?tab=notifications');
+                        router.push('/profile?tab=settings');
                       }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
                     >
-                      <Bell className="w-4 h-4" />
-                      <span className="text-sm">Thông báo</span>
+                      <Settings className="w-4 h-4" />
+                      <span className="text-sm">Cài đặt</span>
                     </button>
                   </div>
                   <Button

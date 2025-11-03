@@ -122,7 +122,7 @@ export function TutorProfileModal({ isOpen, onClose, tutor }: TutorProfileModalP
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="!max-w-6xl sm:!max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="border-b border-gray-200 pb-4">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
@@ -480,7 +480,7 @@ export function TutorProfileModal({ isOpen, onClose, tutor }: TutorProfileModalP
         {/* Image Modal */}
         {selectedImage && (
           <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-            <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+            <DialogContent className="!max-w-4xl sm:!max-w-4xl max-h-[90vh] p-0">
               <div className="relative">
                 <Button
                   variant="ghost"

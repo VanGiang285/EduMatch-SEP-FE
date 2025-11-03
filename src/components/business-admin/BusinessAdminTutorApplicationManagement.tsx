@@ -532,7 +532,7 @@ export default function BusinessAdminTutorApplicationManagement({ className }: B
 
       {/* Tutor Detail Modal */}
       <Dialog open={showTutorDetail} onOpenChange={setShowTutorDetail}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="!max-w-6xl sm:!max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="border-b border-gray-200 pb-4">
             <div className="flex items-center justify-between">
               <div>

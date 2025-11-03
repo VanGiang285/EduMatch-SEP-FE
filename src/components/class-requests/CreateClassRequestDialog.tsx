@@ -157,7 +157,7 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-[95vw] sm:max-w-[80vw] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[80vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-3xl">
             {editingRequest ? 'Chỉnh sửa yêu cầu mở lớp' : 'Tạo yêu cầu mở lớp'} - Bước {step}/3

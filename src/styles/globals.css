@@ -12,6 +12,33 @@ body {
   scrollbar-gutter: stable;
 }
 
+/* Hide scrollbars but allow scrolling */
+/* Áp dụng cho tất cả các element có overflow */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Đảm bảo scrollbar vẫn bị ẩn trong các container có overflow */
+[data-slot="dialog-content"],
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+[data-slot="dialog-content"]::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-auto::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
 /* Custom scrollbar styles */
 .scrollbar-thin {
   scrollbar-width: thin;

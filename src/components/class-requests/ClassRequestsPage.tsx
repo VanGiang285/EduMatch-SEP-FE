@@ -420,7 +420,7 @@ export function ClassRequestsPage() {
         {/* Detail Dialog */}
         {selectedRequestData && (
           <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-            <DialogContent className="w-full max-w-[95vw] sm:max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white">
+            <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white">
               <DialogHeader>
                 <DialogTitle className="text-2xl sm:text-3xl font-bold text-gray-900">Chi tiết yêu cầu mở lớp</DialogTitle>
                 <DialogDescription className="text-sm sm:text-base text-gray-600">
