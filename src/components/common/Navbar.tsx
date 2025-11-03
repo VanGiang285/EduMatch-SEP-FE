@@ -17,10 +17,11 @@ interface NavbarProps {
   onNavigateToNotifications?: () => void;
   onNavigateToFavorites?: () => void;
   onNavigateToWallet?: () => void;
+  onNavigateToClassRequests?: () => void;
   currentPage: string;
   walletBalance?: number;
 }
-export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, onNavigateToMessages, onNavigateToNotifications, onNavigateToFavorites, onNavigateToWallet, currentPage, walletBalance = 0 }: NavbarProps) {
+export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, onNavigateToMessages, onNavigateToNotifications, onNavigateToFavorites, onNavigateToWallet, onNavigateToClassRequests, currentPage, walletBalance = 0 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
@@ -92,13 +93,13 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                 <Search className="w-4 h-4" />
                 Tìm gia sư
               </button>
-              <a 
-                href="#classes" 
+              <button 
+                onClick={onNavigateToClassRequests}
                 className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
               >
                 <BookOpen className="w-4 h-4" />
-                Danh sách lớp học
-              </a>
+                Yêu cầu mở lớp
+              </button>
               <button 
                 onClick={handleBecomeTutorClick}
                 className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
@@ -282,13 +283,13 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                   <Search className="w-4 h-4" />
                   Tìm gia sư
                 </button>
-                <a 
-                  href="#classes" 
-                  className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
+                <button 
+                  onClick={onNavigateToClassRequests}
+                  className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
                 >
                   <BookOpen className="w-4 h-4" />
-                  Danh sách lớp học
-                </a>
+                  Yêu cầu mở lớp
+                </button>
                 <button 
                   onClick={handleBecomeTutorClick}
                   className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
