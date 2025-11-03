@@ -52,6 +52,19 @@ export const ROLE_LABELS = {
   system_admin: 'Quản trị viên hệ thống'
 } as const;
 
+// Map từ roleName (API) sang role string (system)
+export const ROLE_NAME_TO_ROLE_MAP: Record<string, string> = {
+  'Học viên': 'learner',
+  'Learner': 'learner',
+  'Gia sư': 'tutor',
+  'Tutor': 'tutor',
+  'Business Admin': 'business_admin',
+  'Quản trị viên kinh doanh': 'business_admin',
+  'System Admin': 'system_admin',
+  'Quản trị viên hệ thống': 'system_admin',
+  'System Administrator': 'system_admin',
+};
+
 // Enum constants tương ứng với Backend
 export const GENDER_OPTIONS = [
   { value: 0, label: 'Không xác định' },

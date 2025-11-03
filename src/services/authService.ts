@@ -32,7 +32,8 @@ export interface ResendVerificationResponse {
 export interface CurrentUserResponse {
   email: string;
   name: string;
-  roleId: string;
+  roleId?: string; // Optional - API may not return this
+  roleName?: string; // API returns this instead of roleId
   loginProvider: string;
   createdAt: string;
   avatarUrl?: string;

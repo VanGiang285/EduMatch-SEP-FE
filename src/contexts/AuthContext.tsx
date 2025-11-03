@@ -3,9 +3,20 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { User } from '@/types';
 import { AuthService } from '@/services';
 import { ErrorHandler } from '@/lib/error-handler';
-import { STORAGE_KEYS, ROLE_ID_MAP, USER_ROLES } from '@/constants';
+import { STORAGE_KEYS, ROLE_ID_MAP, ROLE_NAME_TO_ROLE_MAP, USER_ROLES } from '@/constants';
 import { TokenManager } from '@/lib/tokenManager';
 import { apiClient } from '@/lib/api';
+import { CurrentUserResponse } from '@/services/authService';
+
+// Helper function to determine role from API response
+function determineRoleFromResponse(responseData: CurrentUserResponse): typeof USER_ROLES[keyof typeof USER_ROLES] {
+  if (responseData.roleId) {
+    return ROLE_ID_MAP[Number(responseData.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER;
+  } else if (responseData.roleName) {
+    return (ROLE_NAME_TO_ROLE_MAP[responseData.roleName] || USER_ROLES.LEARNER) as typeof USER_ROLES[keyof typeof USER_ROLES];
+  }
+  return USER_ROLES.LEARNER;
+}
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -80,12 +91,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           try {
             const response = await AuthService.getCurrentUser();
             if (response.success && response.data) {
+              const role = determineRoleFromResponse(response.data);
+              
               const userData: User = {
                 id: response.data.email,
                 email: response.data.email,
                 name: response.data.name || response.data.email,
                 fullName: response.data.name,
-                role: ROLE_ID_MAP[Number(response.data.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER,
+                role: role,
                 avatar: response.data.avatarUrl || undefined,
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -148,12 +161,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
           const userResponse = await AuthService.getCurrentUser();
           if (userResponse.success && userResponse.data) {
+            const role = determineRoleFromResponse(userResponse.data);
+            
             const userData: User = {
               id: userResponse.data.email,
               email: userResponse.data.email,
               name: userResponse.data.name || userResponse.data.email,
               fullName: userResponse.data.name,
-              role: ROLE_ID_MAP[Number(userResponse.data.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER,
+              role: role,
               avatar: userResponse.data.avatarUrl || undefined,
               createdAt: new Date(),
               updatedAt: new Date(),
@@ -219,11 +234,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken);
         const userResponse = await AuthService.getCurrentUser();
         if (userResponse.success && userResponse.data) {
+          const role = determineRoleFromResponse(userResponse.data);
+          
           const userData: User = {
             id: userResponse.data.email,
             email: userResponse.data.email,
             name: userResponse.data.name || userResponse.data.email,
-            role: ROLE_ID_MAP[Number(userResponse.data.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER,
+            role: role,
             avatar: userResponse.data.avatarUrl || undefined,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -291,11 +308,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken);
         const userResponse = await AuthService.getCurrentUser();
         if (userResponse.success && userResponse.data) {
+          const role = determineRoleFromResponse(userResponse.data);
+          
           const userData: User = {
             id: userResponse.data.email,
             email: userResponse.data.email,
             name: userResponse.data.name || userResponse.data.email,
-            role: ROLE_ID_MAP[Number(userResponse.data.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER,
+            role: role,
             avatar: userResponse.data.avatarUrl || undefined,
             createdAt: new Date(),
             updatedAt: new Date(),
