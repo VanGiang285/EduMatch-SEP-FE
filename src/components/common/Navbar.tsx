@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "../ui/basic/button";
-import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings } from "lucide-react";
+import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings, FileText, ChevronDown } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomToast } from "@/hooks/useCustomToast";
@@ -9,6 +9,14 @@ import { useRouter } from "next/navigation";
 import { USER_ROLES } from "@/constants";
 import { MessageDropdown } from "./MessageDropdown";
 import { NotificationDropdown } from "./NotificationDropdown";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/navigation/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/basic/avatar";
 interface NavbarProps {
   onNavigateToLogin: () => void;
   onNavigateToRegister: () => void;
@@ -25,11 +33,9 @@ interface NavbarProps {
 }
 export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, onNavigateToMessages, onNavigateToNotifications, onNavigateToFavorites, onNavigateToWallet, onNavigateToClassRequests, currentPage, walletBalance = 0 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
   const { showWarning } = useCustomToast();
   const router = useRouter();
-  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Check if user is admin (system or business)
   const isAdmin = user && (user.role === USER_ROLES.SYSTEM_ADMIN || user.role === USER_ROLES.BUSINESS_ADMIN);
@@ -37,7 +43,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
   const handleLogout = async () => {
     try {
       await logout();
-      setUserMenuOpen(false);
       onNavigateToHome();
     } catch (error) {
       console.error('Logout failed:', error);
@@ -60,18 +65,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
     }
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#257180] border-b border-white/20 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -155,114 +148,114 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
              )}
             <div className="flex items-center space-x-3 ml-4">
               {isAuthenticated && user ? (
-                <div className="relative" ref={userMenuRef}>
-                  <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/10 transition-all"
-                  >
-                    {user.avatar ? (
-                      <Image
-                        src={user.avatar}
-                        alt={user.name}
-                        width={32}
-                        height={32}
-                        className="rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 bg-[#FD8B51] rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                    <span className="text-white font-medium text-sm max-w-32 truncate">
-                      {user.name}
-                    </span>
-                  </button>
-                  
-                  {userMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
-                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                      </div>
-                      <div className="py-1">
-                        {/* Show profile menu items for non-admin users */}
-                        {!isAdmin && (
-                          <>
-                            <button
-                              onClick={() => {
-                                setUserMenuOpen(false);
-                                router.push('/profile');
-                              }}
-                              className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
-                            >
-                              <UserCircle className="w-4 h-4" />
-                              <span>Thông tin người dùng</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                setUserMenuOpen(false);
-                                router.push('/profile?tab=schedule');
-                              }}
-                              className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
-                            >
-                              <Calendar className="w-4 h-4" />
-                              <span>Lịch học</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                setUserMenuOpen(false);
-                                router.push('/profile?tab=classes');
-                              }}
-                              className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
-                            >
-                              <BookOpen className="w-4 h-4" />
-                              <span>Lớp học</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                setUserMenuOpen(false);
-                                router.push('/profile/wallet');
-                              }}
-                              className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
-                            >
-                              <Wallet className="w-4 h-4" />
-                              <span>Ví</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                setUserMenuOpen(false);
-                                router.push('/profile/messages');
-                              }}
-                              className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
-                            >
-                              <MessageCircle className="w-4 h-4" />
-                              <span>Tin nhắn</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                setUserMenuOpen(false);
-                                router.push('/profile?tab=settings');
-                              }}
-                              className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
-                            >
-                              <Settings className="w-4 h-4" />
-                              <span>Cài đặt</span>
-                            </button>
-                          </>
-                        )}
-                      </div>
-                      <div className="border-t border-gray-100 mt-1 pt-1">
-                        <button
-                          onClick={handleLogout}
-                          className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          <span>Đăng xuất</span>
-                        </button>
-                      </div>
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/10 transition-all">
+                      {user.avatar ? (
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user.avatar} alt={user.name} />
+                          <AvatarFallback className="bg-[#FD8B51] text-white">
+                            {user.name?.[0] || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                      ) : (
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-[#FD8B51] text-white">
+                            {user.name?.[0] || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <span className="text-white font-medium text-sm max-w-32 truncate">
+                        {user.name}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-white/70" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-white border border-[#FD8B51]">
+                    <div className="px-2 py-1.5">
+                      <p className="font-medium text-gray-900 truncate">{user.name}</p>
+                      <p className="text-sm text-gray-500 truncate">{user.email}</p>
                     </div>
-                  )}
-                </div>
+                    <DropdownMenuSeparator />
+                    
+                    {!isAdmin && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => router.push('/profile')}
+                          className="cursor-pointer"
+                        >
+                          <User className="h-4 w-4 mr-2" />
+                          Thông tin người dùng
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => router.push('/profile/teaching-profile')}
+                          className="cursor-pointer"
+                        >
+                          <GraduationCap className="h-4 w-4 mr-2" />
+                          Hồ sơ gia sư
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => router.push('/profile?tab=schedule')}
+                          className="cursor-pointer"
+                        >
+                          <Calendar className="h-4 w-4 mr-2" />
+                          Lịch học
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => router.push('/profile?tab=classes')}
+                          className="cursor-pointer"
+                        >
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Lớp học
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => router.push('/class-requests')}
+                          className="cursor-pointer"
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Yêu cầu mở lớp
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => router.push('/profile/wallet')}
+                          className="cursor-pointer"
+                        >
+                          <Wallet className="h-4 w-4 mr-2" />
+                          Ví
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => router.push('/profile?tab=notifications')}
+                          className="cursor-pointer"
+                        >
+                          <Bell className="h-4 w-4 mr-2" />
+                          Thông báo
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => router.push('/profile/messages')}
+                          className="cursor-pointer"
+                        >
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          Tin nhắn
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => router.push('/profile?tab=settings')}
+                          className="cursor-pointer"
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Cài đặt
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Đăng xuất
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
                 <>
                   {currentPage !== 'login' && (
