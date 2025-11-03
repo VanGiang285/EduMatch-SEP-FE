@@ -36,9 +36,14 @@ import { FormatService } from "@/lib/format";
 import { useBecomeTutor } from "@/hooks/useBecomeTutor";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBecomeTutorMasterData } from "@/hooks/useBecomeTutorMasterData";
+import { MediaService } from "@/services/mediaService";
+import { CertificateService } from "@/services/certificateService";
+import { BecomeTutorRequest } from "@/types/requests";
+import { TeachingMode, InstitutionType } from "@/types/enums";
 export function BecomeTutorPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const { user, isAuthenticated } = useAuth();
   const { isSubmitting, error, submitApplication, clearError } = useBecomeTutor();
   const { subjects, levels, educationInstitutions, timeSlots, error: masterDataError, loadMasterData } = useBecomeTutorMasterData();
@@ -257,6 +262,21 @@ export function BecomeTutorPage() {
     issueDate: '',
     degreeFile: null as null | File
   });
+  // State cho tạo certificate type mới
+  const [showNewCertificateInput, setShowNewCertificateInput] = useState(false);
+  const [newCertificate, setNewCertificate] = useState({
+    name: '',
+    code: ''
+  });
+  const [isCreatingCertificate, setIsCreatingCertificate] = useState(false);
+  // State cho tạo institution mới
+  const [showNewInstitutionInput, setShowNewInstitutionInput] = useState(false);
+  const [newInstitution, setNewInstitution] = useState({
+    name: '',
+    code: '',
+    institutionType: undefined as InstitutionType | undefined
+  });
+  const [isCreatingInstitution, setIsCreatingInstitution] = useState(false);
   const [currentSubject, setCurrentSubject] = useState({
     subjectId: 0,
     levels: [] as number[]
@@ -427,11 +447,10 @@ export function BecomeTutorPage() {
         }
         break;
       case 4:
-        if (formData.education.hasEducation === null) {
-          errors.hasEducation = 'Vui lòng chọn có bằng cấp hay không';
-        } else if (formData.education.hasEducation === true && formData.education.items.length === 0) {
+        // Education is now required - must have at least one education item
+        if (formData.education.items.length === 0) {
           errors.education = 'Vui lòng thêm ít nhất một bằng cấp';
-        } else if (formData.education.hasEducation === true) {
+        } else {
           formData.education.items.forEach((edu, index) => {
             const issueDateError = validateIssueDate(edu.issueDate, 'ngày cấp bằng');
             if (issueDateError) {
@@ -501,66 +520,248 @@ export function BecomeTutorPage() {
       setCurrentStep(currentStep - 1);
     }
   };
+  // Helper function để upload files
+  const uploadFiles = async (): Promise<{
+    avatarUrl?: string;
+    videoIntroUrl?: string;
+    certificateUrls: string[];
+    educationUrls: string[];
+  }> => {
+    const result = {
+      certificateUrls: [] as string[],
+      educationUrls: [] as string[]
+    };
+
+    if (!user?.email) {
+      throw new Error('Vui lòng đăng nhập để tiếp tục');
+    }
+
+    // Upload profile image
+    if (formData.photo.profileImage) {
+      const avatarResponse = await MediaService.uploadFile({
+        file: formData.photo.profileImage,
+        ownerEmail: user.email,
+        mediaType: 'Image'
+      });
+      if (avatarResponse.success && avatarResponse.data) {
+        // ApiClient unwraps response.data, so avatarResponse.data is UploadToCloudResponse
+        // UploadToCloudResponse has structure: { success, message, data?: { secureUrl, ... } }
+        const uploadData = avatarResponse.data as any;
+        if (uploadData.data?.secureUrl) {
+          result.avatarUrl = uploadData.data.secureUrl;
+        } else if (uploadData.secureUrl) {
+          result.avatarUrl = uploadData.secureUrl;
+        }
+      } else {
+        throw new Error(`Không thể upload ảnh đại diện: ${avatarResponse.message || 'Lỗi không xác định'}`);
+      }
+    }
+
+    // Upload video file
+    if (formData.video.videoFile) {
+      const videoResponse = await MediaService.uploadFile({
+        file: formData.video.videoFile,
+        ownerEmail: user.email,
+        mediaType: 'Video'
+      });
+      if (videoResponse.success && videoResponse.data) {
+        const uploadData = videoResponse.data as any;
+        if (uploadData.data?.secureUrl) {
+          result.videoIntroUrl = uploadData.data.secureUrl;
+        } else if (uploadData.secureUrl) {
+          result.videoIntroUrl = uploadData.secureUrl;
+        }
+      } else {
+        throw new Error(`Không thể upload video: ${videoResponse.message || 'Lỗi không xác định'}`);
+      }
+    }
+
+    // Upload certificate files
+    if (formData.certifications.items.length > 0) {
+      for (const cert of formData.certifications.items) {
+        if (cert.certificateFile) {
+          const certResponse = await MediaService.uploadFile({
+            file: cert.certificateFile,
+            ownerEmail: user.email,
+            mediaType: 'Image'
+          });
+          if (certResponse.success && certResponse.data) {
+            const uploadData = certResponse.data as any;
+            const url = uploadData.data?.secureUrl || uploadData.secureUrl;
+            if (url) {
+              result.certificateUrls.push(url);
+            }
+          } else {
+            throw new Error(`Không thể upload chứng chỉ: ${certResponse.message || 'Lỗi không xác định'}`);
+          }
+        } else {
+          result.certificateUrls.push(''); // Placeholder nếu không có file
+        }
+      }
+    }
+
+    // Upload education files (Required)
+    if (formData.education.items.length > 0) {
+      for (const edu of formData.education.items) {
+        if (edu.degreeFile) {
+          const eduResponse = await MediaService.uploadFile({
+            file: edu.degreeFile,
+            ownerEmail: user.email,
+            mediaType: 'Image'
+          });
+          if (eduResponse.success && eduResponse.data) {
+            const uploadData = eduResponse.data as any;
+            const url = uploadData.data?.secureUrl || uploadData.secureUrl;
+            if (url) {
+              result.educationUrls.push(url);
+            }
+          } else {
+            throw new Error(`Không thể upload bằng cấp: ${eduResponse.message || 'Lỗi không xác định'}`);
+          }
+        } else {
+          result.educationUrls.push(''); // Placeholder nếu không có file
+        }
+      }
+    }
+
+    return result;
+  };
+
+  // Helper function để build request theo đúng structure backend
+  const buildBecomeTutorRequest = (
+    uploadedFiles: {
+      avatarUrl?: string;
+      videoIntroUrl?: string;
+      certificateUrls: string[];
+      educationUrls: string[];
+    }
+  ): BecomeTutorRequest => {
+    // Build availabilities từ schedule
+    const availabilities = Object.entries(formData.availability.schedule).flatMap(([date, daySchedule]) =>
+      Object.values(daySchedule).flatMap(slotIds =>
+        slotIds.map(slotId => ({
+          tutorId: 0, // Backend sẽ set
+          slotId: slotId,
+          startDate: date + 'T00:00:00'
+        }))
+      )
+    );
+
+    // Build subjects từ formData
+    const subjects = formData.introduction.subjects.flatMap(subject =>
+      subject.levels.map(levelId => {
+        const pricing = formData.pricing.subjectPricing.find(p => p.subjectId === subject.subjectId);
+        const hourlyRate = pricing?.hourlyRate ? parseFloat(pricing.hourlyRate) : 0;
+        
+        const subjectName = displaySubjects.find(s => s.id === subject.subjectId)?.subjectName || 'N/A';
+        if (hourlyRate <= 0) {
+          throw new Error(`Vui lòng nhập giá cho môn học: ${subjectName}`);
+        }
+
+        return {
+          tutorId: 0, // Backend sẽ set
+          subjectId: subject.subjectId,
+          hourlyRate: hourlyRate,
+          levelId: levelId
+        };
+      })
+    );
+
+    // Build certificates
+    const certificates = formData.certifications.items.length > 0
+      ? formData.certifications.items.map((cert, idx) => ({
+          tutorId: 0, // Backend sẽ set
+          certificateTypeId: cert.certificateTypeId,
+          issueDate: cert.issueDate,
+          expiryDate: cert.expiryDate,
+          certificateUrl: uploadedFiles.certificateUrls[idx] || undefined
+        }))
+      : [];
+
+    // Build educations (Required by backend)
+    const educations = formData.education.items.length > 0
+      ? formData.education.items.map((edu, idx) => ({
+          tutorId: 0, // Backend sẽ set
+          institutionId: edu.institutionId,
+          issueDate: edu.issueDate,
+          certificateEducationUrl: uploadedFiles.educationUrls[idx] || undefined
+        }))
+      : [];
+    
+    // Backend requires at least one education
+    if (educations.length === 0) {
+      throw new Error('Vui lòng thêm ít nhất một bằng cấp học vấn');
+    }
+
+    // Validate provinceId và subDistrictId
+    const provinceId = parseInt(formData.introduction.province);
+    const subDistrictId = parseInt(formData.introduction.district);
+    
+    if (isNaN(provinceId) || provinceId <= 0) {
+      throw new Error('Vui lòng chọn tỉnh/thành phố');
+    }
+    if (isNaN(subDistrictId) || subDistrictId <= 0) {
+      throw new Error('Vui lòng chọn quận/huyện');
+    }
+
+    // Build request
+    const request: BecomeTutorRequest = {
+      tutorProfile: {
+        userEmail: formData.introduction.email || user?.email || '',
+        userName: formData.introduction.fullName,
+        phone: formData.introduction.phone,
+        bio: formData.description.introduction,
+        dateOfBirth: formData.introduction.birthDate,
+        avatarUrl: uploadedFiles.avatarUrl,
+        provinceId: provinceId,
+        subDistrictId: subDistrictId,
+        teachingExp: formData.description.teachingExperience,
+        videoIntroUrl: uploadedFiles.videoIntroUrl || formData.video.youtubeLink || undefined,
+        teachingModes: formData.introduction.teachingMode as TeachingMode
+      },
+      educations: educations,
+      certificates: certificates.length > 0 ? certificates : undefined,
+      subjects: subjects,
+      availabilities: availabilities
+    };
+
+    return request;
+  };
+
   const handleSubmit = async () => {
     if (!validatePricingStep()) {
       alert('Vui lòng điền đầy đủ thông tin giá cả cho tất cả môn học');
       return;
     }
 
-           const applicationData = {
-             fullName: formData.introduction.fullName,
-             email: formData.introduction.email,
-             province: formData.introduction.province,
-             district: formData.introduction.district,
-             subjects: formData.introduction.subjects.flatMap(subject => 
-               subject.levels.map(levelId => ({
-                 subjectId: subject.subjectId,
-                 levelId: levelId,
-                 hourlyRate: formData.pricing.subjectPricing.find(p => p.subjectId === subject.subjectId)?.hourlyRate || '0'
-               }))
-             ),
-             birthDate: formData.introduction.birthDate,
-             phone: formData.introduction.phone,
-             teachingMode: formData.introduction.teachingMode,
-             profileImage: formData.photo.profileImage || undefined,
-             certifications: formData.certifications.hasCertification ? formData.certifications.items.map(cert => ({
-               subjectId: cert.subjectId,
-               certificateTypeId: cert.certificateTypeId,
-               issueDate: cert.issueDate,
-               expiryDate: cert.expiryDate,
-               certificateFile: cert.certificateFile || undefined
-             })) : undefined,
-             education: formData.education.hasEducation ? formData.education.items.map(edu => ({
-               institutionId: edu.institutionId,
-               issueDate: edu.issueDate,
-               degreeFile: edu.degreeFile || undefined
-             })) : undefined,
-             introduction: formData.description.introduction,
-             teachingExperience: formData.description.teachingExperience,
-             attractiveTitle: formData.description.attractiveTitle,
-             videoFile: formData.video.videoFile || undefined,
-             youtubeLink: formData.video.youtubeLink || undefined,
-             schedule: (() => {
-               const availabilities: Array<{tutorId: number, slotId: number, startDate: string}> = [];
-               
-               Object.entries(formData.availability.schedule).forEach(([date, daySchedule]) => {
-                 Object.entries(daySchedule).forEach(([, slotIds]) => {
-                   slotIds.forEach(slotId => {
-                     availabilities.push({
-                       tutorId: 1,
-                       slotId: slotId,
-                       startDate: date + 'T00:00:00'
-                     });
-                   });
-                 });
-               });
-               
-               return availabilities;
-             })(),
-             hourlyRate: formData.pricing.subjectPricing[0]?.hourlyRate || '0',
-           };
+    if (!user?.email) {
+      alert('Vui lòng đăng nhập để tiếp tục');
+      return;
+    }
 
-    await submitApplication(applicationData);
+    try {
+      setIsUploadingFiles(true);
+      clearError();
+
+      // Step 1: Upload files trước
+      console.log('📤 Bắt đầu upload files...');
+      const uploadedFiles = await uploadFiles();
+      console.log('✅ Upload files thành công:', uploadedFiles);
+
+      // Step 2: Build request đúng structure
+      console.log('🔨 Building request...');
+      const request = buildBecomeTutorRequest(uploadedFiles);
+      console.log('📋 Request data:', request);
+
+      // Step 3: Submit request
+      await submitApplication(request);
+    } catch (err: any) {
+      console.error('❌ Error in handleSubmit:', err);
+      setFieldErrors({ submit: err.message || 'Lỗi khi gửi đơn đăng ký' });
+      alert(err.message || 'Lỗi khi gửi đơn đăng ký. Vui lòng thử lại.');
+    } finally {
+      setIsUploadingFiles(false);
+    }
   };
   const updateFormData = (step: string, data: any) => {
     setFormData(prev => ({
@@ -603,6 +804,119 @@ export function BecomeTutorPage() {
       }
     }));
     return true;
+  };
+
+  // Helper function để generate code từ name
+  const generateCodeFromName = (name: string): string => {
+    // Loại bỏ dấu tiếng Việt và chuyển thành uppercase
+    const removeAccents = (str: string) => {
+      return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    };
+    return removeAccents(name)
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .substring(0, 20); // Giới hạn 20 ký tự
+  };
+
+  // Tạo certificate type mới
+  const handleCreateCertificateType = async () => {
+    if (!newCertificate.name.trim()) {
+      alert('Vui lòng nhập tên chứng chỉ');
+      return;
+    }
+    if (!currentCertification.subjectId) {
+      alert('Vui lòng chọn môn học trước');
+      return;
+    }
+
+    setIsCreatingCertificate(true);
+    try {
+      const code = newCertificate.code.trim() || generateCodeFromName(newCertificate.name);
+      
+      // Tạo certificate type mới
+      const createResponse = await CertificateService.createCertificateType({
+        name: newCertificate.name.trim(),
+        code: code
+      });
+
+      if (!createResponse.success || !createResponse.data) {
+        throw new Error(createResponse.message || 'Không thể tạo chứng chỉ mới');
+      }
+
+      const newCertificateTypeId = createResponse.data.id;
+
+      // Link certificate type với subject
+      const linkResponse = await CertificateService.addSubjectsToCertificateType(
+        newCertificateTypeId,
+        [currentCertification.subjectId]
+      );
+
+      if (!linkResponse.success) {
+        throw new Error(linkResponse.message || 'Không thể liên kết chứng chỉ với môn học');
+      }
+
+      // Refresh master data để cập nhật danh sách
+      await loadMasterData();
+
+      // Chọn certificate type vừa tạo
+      setCurrentCertification(prev => ({
+        ...prev,
+        certificateTypeId: newCertificateTypeId
+      }));
+
+      // Reset form và ẩn input
+      setNewCertificate({ name: '', code: '' });
+      setShowNewCertificateInput(false);
+    } catch (error: any) {
+      alert(error.message || 'Có lỗi xảy ra khi tạo chứng chỉ mới');
+      console.error('Error creating certificate type:', error);
+    } finally {
+      setIsCreatingCertificate(false);
+    }
+  };
+
+  // Tạo institution mới
+  const handleCreateInstitution = async () => {
+    if (!newInstitution.name.trim()) {
+      alert('Vui lòng nhập tên tổ chức giáo dục');
+      return;
+    }
+
+    setIsCreatingInstitution(true);
+    try {
+      const code = newInstitution.code.trim() || generateCodeFromName(newInstitution.name);
+      
+      // Tạo institution mới
+      const createResponse = await CertificateService.createInstitution({
+        name: newInstitution.name.trim(),
+        code: code,
+        institutionType: newInstitution.institutionType
+      });
+
+      if (!createResponse.success || !createResponse.data) {
+        throw new Error(createResponse.message || 'Không thể tạo tổ chức giáo dục mới');
+      }
+
+      const newInstitutionId = createResponse.data.id;
+
+      // Refresh master data để cập nhật danh sách
+      await loadMasterData();
+
+      // Chọn institution vừa tạo
+      setCurrentEducation(prev => ({
+        ...prev,
+        institutionId: newInstitutionId
+      }));
+
+      // Reset form và ẩn input
+      setNewInstitution({ name: '', code: '', institutionType: undefined });
+      setShowNewInstitutionInput(false);
+    } catch (error: any) {
+      alert(error.message || 'Có lỗi xảy ra khi tạo tổ chức giáo dục mới');
+      console.error('Error creating institution:', error);
+    } finally {
+      setIsCreatingInstitution(false);
+    }
   };
 
   // Handle file upload for certification
@@ -1277,28 +1591,100 @@ export function BecomeTutorPage() {
                           </div>
                           <div className="space-y-2">
                               <Label htmlFor="cert-type" className="text-black text-sm sm:text-base">Chứng chỉ <span className="text-red-500">*</span></Label>
-                            <SelectWithSearch
+                            {!showNewCertificateInput ? (
+                              <SelectWithSearch
                                 value={currentCertification.certificateTypeId.toString()}
-                                onValueChange={(value) => setCurrentCertification(prev => ({ ...prev, certificateTypeId: parseInt(value) }))}
+                                onValueChange={(value) => {
+                                  if (value === "NEW_CERTIFICATE") {
+                                    setShowNewCertificateInput(true);
+                                  } else {
+                                    setCurrentCertification(prev => ({ ...prev, certificateTypeId: parseInt(value) }));
+                                  }
+                                }}
                                 placeholder={currentCertification.subjectId ? "Chọn chứng chỉ" : "Chọn môn học trước"}
                                 disabled={!currentCertification.subjectId}
                                 className="border-gray-300 focus:border-[#257180] focus:ring-[#257180] disabled:opacity-50"
                               >
-                                {currentCertification.subjectId && (() => {
+                                {currentCertification.subjectId ? (() => {
                                   const selectedSubject = subjects.find(subject => subject.id === currentCertification.subjectId);
                                   const availableCertificateTypes = selectedSubject?.certificateTypes || [];
                                   
-                                  return availableCertificateTypes.map((certType) => (
-                                <SelectWithSearchItem 
-                                      key={certType.id} 
-                                      value={certType.id.toString()}
-                                      onClick={() => setCurrentCertification(prev => ({ ...prev, certificateTypeId: certType.id }))}
-                                    >
-                                      {certType.code} - {certType.name}
-                                </SelectWithSearchItem>
-                                  ));
-                                })()}
-                            </SelectWithSearch>
+                                  return (
+                                    <>
+                                      <SelectWithSearchItem 
+                                        value="NEW_CERTIFICATE"
+                                        onClick={() => setShowNewCertificateInput(true)}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <Plus className="w-4 h-4 text-black" />
+                                          <span>Không có trong hệ thống</span>
+                                        </div>
+                                      </SelectWithSearchItem>
+                                      {availableCertificateTypes.map((certType) => (
+                                        <SelectWithSearchItem 
+                                          key={certType.id} 
+                                          value={certType.id.toString()}
+                                          onClick={() => setCurrentCertification(prev => ({ ...prev, certificateTypeId: certType.id }))}
+                                        >
+                                          {certType.code} - {certType.name}
+                                        </SelectWithSearchItem>
+                                      ))}
+                                    </>
+                                  );
+                                })() : null}
+                              </SelectWithSearch>
+                            ) : (
+                              <div className="space-y-3 p-4 border border-[#257180] rounded-lg bg-gray-50">
+                                <div className="space-y-2">
+                                  <Label className="text-black text-sm sm:text-base">Tên chứng chỉ <span className="text-red-500">*</span></Label>
+                                  <Input
+                                    value={newCertificate.name}
+                                    onChange={(e) => setNewCertificate(prev => ({ ...prev, name: e.target.value }))}
+                                    placeholder="VD: Chứng chỉ Toán học Quốc tế"
+                                    className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-black text-sm sm:text-base">Mã chứng chỉ (tùy chọn)</Label>
+                                  <Input
+                                    value={newCertificate.code}
+                                    onChange={(e) => setNewCertificate(prev => ({ ...prev, code: e.target.value }))}
+                                    placeholder="Để trống để tự động tạo mã"
+                                    className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
+                                  />
+                                  <p className="text-xs text-gray-500">Nếu để trống, mã sẽ được tự động tạo từ tên</p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    onClick={handleCreateCertificateType}
+                                    disabled={isCreatingCertificate || !newCertificate.name.trim()}
+                                    className="bg-[#257180] hover:bg-[#1e5a66] text-white flex-1"
+                                  >
+                                    {isCreatingCertificate ? (
+                                      <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Đang tạo...
+                                      </>
+                                    ) : (
+                                      'Tạo và chọn'
+                                    )}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setShowNewCertificateInput(false);
+                                      setNewCertificate({ name: '', code: '' });
+                                    }}
+                                    disabled={isCreatingCertificate}
+                                    className="flex-1"
+                                  >
+                                    Hủy
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1406,29 +1792,9 @@ export function BecomeTutorPage() {
                   <div className="space-y-6">
                     <div>
                       <h2 className="text-2xl font-bold text-black mb-2">Giáo dục</h2>
-                      <p className="text-gray-600">Thông tin về trình độ học vấn và bằng cấp</p>
+                      <p className="text-gray-600">Thông tin về trình độ học vấn và bằng cấp <span className="text-red-500">*</span></p>
                     </div>
-                    <div className="space-y-4">
-                      <Label className="text-black text-sm sm:text-base">Bạn có bằng cấp giáo dục không? <span className="text-red-500">*</span></Label>
-                      <RadioGroup 
-                        value={formData.education.hasEducation?.toString() || null} 
-                        onValueChange={(value) => updateFormData('education', { hasEducation: value === 'true' })}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="false" id="no-edu" />
-                          <Label htmlFor="no-edu">Không có bằng cấp giáo dục</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="true" id="has-edu" />
-                          <Label htmlFor="has-edu">Có bằng cấp</Label>
-                        </div>
-                      </RadioGroup>
-                      {fieldErrors.hasEducation && (
-                        <p className="text-red-500 text-sm">{fieldErrors.hasEducation}</p>
-                      )}
-                    </div>
-                    {formData.education.hasEducation && (
-                      <div className="space-y-6">
+                    <div className="space-y-6">
                         {/* List of added education */}
                         {formData.education.items.length > 0 && (
                           <div className="space-y-3">
@@ -1481,22 +1847,121 @@ export function BecomeTutorPage() {
                         <div className="space-y-4 p-6 border border-gray-300 rounded-lg bg-white">
                           <div className="space-y-2">
                             <Label htmlFor="institution" className="text-black text-sm sm:text-base">Tổ chức giáo dục <span className="text-red-500">*</span></Label>
+                            {!showNewInstitutionInput ? (
                               <SelectWithSearch
-                              value={currentEducation.institutionId.toString()}
-                              onValueChange={(value) => setCurrentEducation(prev => ({ ...prev, institutionId: parseInt(value) }))}
-                              placeholder="Chọn tổ chức giáo dục"
+                                value={currentEducation.institutionId.toString()}
+                                onValueChange={(value) => {
+                                  if (value === "NEW_INSTITUTION") {
+                                    setShowNewInstitutionInput(true);
+                                  } else {
+                                    setCurrentEducation(prev => ({ ...prev, institutionId: parseInt(value) }));
+                                  }
+                                }}
+                                placeholder="Chọn tổ chức giáo dục"
                                 className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                               >
-                              {educationInstitutions.map((institution) => (
-                                  <SelectWithSearchItem 
-                                  key={institution.id} 
-                                  value={institution.id.toString()}
-                                  onClick={() => setCurrentEducation(prev => ({ ...prev, institutionId: institution.id }))}
+                                <SelectWithSearchItem 
+                                  value="NEW_INSTITUTION"
+                                  onClick={() => setShowNewInstitutionInput(true)}
                                 >
-                                  {`${institution.code} - ${institution.name}`}
+                                  <div className="flex items-center gap-2">
+                                    <Plus className="w-4 h-4 text-black" />
+                                    <span>Chưa có Tổ chức giáo dục này trong hệ thống</span>
+                                  </div>
+                                </SelectWithSearchItem>
+                                {educationInstitutions.map((institution) => (
+                                  <SelectWithSearchItem 
+                                    key={institution.id} 
+                                    value={institution.id.toString()}
+                                    onClick={() => setCurrentEducation(prev => ({ ...prev, institutionId: institution.id }))}
+                                  >
+                                    {`${institution.code} - ${institution.name}`}
                                   </SelectWithSearchItem>
                                 ))}
                               </SelectWithSearch>
+                            ) : (
+                              <div className="space-y-3 p-4 border border-[#257180] rounded-lg bg-gray-50">
+                                <div className="space-y-2">
+                                  <Label className="text-black text-sm sm:text-base">Tên tổ chức giáo dục <span className="text-red-500">*</span></Label>
+                                  <Input
+                                    value={newInstitution.name}
+                                    onChange={(e) => setNewInstitution(prev => ({ ...prev, name: e.target.value }))}
+                                    placeholder="VD: Đại học Bách khoa Hà Nội"
+                                    className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-black text-sm sm:text-base">Mã tổ chức (tùy chọn)</Label>
+                                  <Input
+                                    value={newInstitution.code}
+                                    onChange={(e) => setNewInstitution(prev => ({ ...prev, code: e.target.value }))}
+                                    placeholder="Để trống để tự động tạo mã"
+                                    className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
+                                  />
+                                  <p className="text-xs text-gray-500">Nếu để trống, mã sẽ được tự động tạo từ tên</p>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-black text-sm sm:text-base">Loại tổ chức (tùy chọn)</Label>
+                                  <SelectWithSearch
+                                    value={newInstitution.institutionType?.toString() || ''}
+                                    onValueChange={(value) => {
+                                      if (value === '') {
+                                        setNewInstitution(prev => ({ ...prev, institutionType: undefined }));
+                                      } else {
+                                        setNewInstitution(prev => ({ ...prev, institutionType: parseInt(value) as InstitutionType }));
+                                      }
+                                    }}
+                                    placeholder="Chọn loại tổ chức"
+                                    className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
+                                  >
+                                    <SelectWithSearchItem value="" onClick={() => setNewInstitution(prev => ({ ...prev, institutionType: undefined }))}>
+                                      Không chọn
+                                    </SelectWithSearchItem>
+                                    <SelectWithSearchItem value={InstitutionType.University.toString()} onClick={() => setNewInstitution(prev => ({ ...prev, institutionType: InstitutionType.University }))}>
+                                      Đại học
+                                    </SelectWithSearchItem>
+                                    <SelectWithSearchItem value={InstitutionType.College.toString()} onClick={() => setNewInstitution(prev => ({ ...prev, institutionType: InstitutionType.College }))}>
+                                      Cao đẳng
+                                    </SelectWithSearchItem>
+                                    <SelectWithSearchItem value={InstitutionType.Vocational.toString()} onClick={() => setNewInstitution(prev => ({ ...prev, institutionType: InstitutionType.Vocational }))}>
+                                      Trung cấp
+                                    </SelectWithSearchItem>
+                                    <SelectWithSearchItem value={InstitutionType.Other.toString()} onClick={() => setNewInstitution(prev => ({ ...prev, institutionType: InstitutionType.Other }))}>
+                                      Khác
+                                    </SelectWithSearchItem>
+                                  </SelectWithSearch>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    onClick={handleCreateInstitution}
+                                    disabled={isCreatingInstitution || !newInstitution.name.trim()}
+                                    className="bg-[#257180] hover:bg-[#1e5a66] text-white flex-1"
+                                  >
+                                    {isCreatingInstitution ? (
+                                      <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Đang tạo...
+                                      </>
+                                    ) : (
+                                      'Tạo và chọn'
+                                    )}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setShowNewInstitutionInput(false);
+                                      setNewInstitution({ name: '', code: '', institutionType: undefined });
+                                    }}
+                                    disabled={isCreatingInstitution}
+                                    className="flex-1"
+                                  >
+                                    Hủy
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                             </div>
                             <div className="space-y-2">
                             <Label htmlFor="issueDate" className="text-black text-sm sm:text-base">Ngày cấp <span className="text-red-500">*</span></Label>
@@ -1571,8 +2036,7 @@ export function BecomeTutorPage() {
                       {fieldErrors.education && (
                         <p className="text-red-500 text-sm">{fieldErrors.education}</p>
                       )}
-                      </div>
-                    )}
+                    </div>
                   </div>
                 )}
                 {/* Step 5: Mô tả */}
@@ -2185,10 +2649,15 @@ export function BecomeTutorPage() {
                   ) : (
                     <Button 
                       onClick={handleSubmit} 
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isUploadingFiles}
                       className="bg-[#257180] hover:bg-[#1a5a66] text-white disabled:opacity-50 px-8 py-3 text-lg font-semibold"
                     >
-                      {isSubmitting ? (
+                      {isUploadingFiles ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Đang tải file lên...
+                        </>
+                      ) : isSubmitting ? (
                         <>
                           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                           Đang gửi đơn đăng ký...

@@ -53,10 +53,17 @@ export interface UserProfileUpdateRequest {
 
 export interface TutorProfileCreateRequest {
   userEmail: string;
+  userName?: string;
+  phone?: string;
   bio?: string;
+  dateOfBirth?: string; // ISO date string
+  avatarUrl?: string;
+  provinceId?: number;
+  subDistrictId?: number;
   teachingExp?: string;
   videoIntroUrl?: string;
-  videoIntroPublicId?: string;
+  latitude?: number;
+  longitude?: number;
   teachingModes: TeachingMode;
 }
 
@@ -77,10 +84,10 @@ export interface UpdateTutorStatusRequest {
 // ==================== TUTOR SUBJECT REQUESTS ====================
 
 export interface TutorSubjectCreateRequest {
-  tutorId: number;
+  tutorId: number; // Backend sẽ set, truyền 0
   subjectId: number;
-  hourlyRate?: number;
-  levelId?: number;
+  hourlyRate: number; // Required
+  levelId: number; // Required
 }
 
 export interface TutorSubjectUpdateRequest {
@@ -94,11 +101,10 @@ export interface TutorSubjectUpdateRequest {
 // ==================== TUTOR EDUCATION REQUESTS ====================
 
 export interface TutorEducationCreateRequest {
-  tutorId: number;
+  tutorId: number; // Backend sẽ set, truyền 0
   institutionId: number;
   issueDate?: string;
-  certificateUrl?: string;
-  certificatePublicId?: string;
+  certificateEducationUrl?: string; // Backend dùng tên này
 }
 
 export interface TutorEducationUpdateRequest {
@@ -131,12 +137,11 @@ export interface EducationInstitutionUpdateRequest {
 // ==================== TUTOR CERTIFICATE REQUESTS ====================
 
 export interface TutorCertificateCreateRequest {
-  tutorId: number;
+  tutorId: number; // Backend sẽ set, truyền 0
   certificateTypeId: number;
   issueDate?: string;
   expiryDate?: string;
   certificateUrl?: string;
-  certificatePublicId?: string;
 }
 
 export interface TutorCertificateUpdateRequest {
@@ -168,11 +173,9 @@ export interface CertificateTypeUpdateRequest {
 // ==================== TUTOR AVAILABILITY REQUESTS ====================
 
 export interface TutorAvailabilityCreateRequest {
-  tutorId: number;
-  slotId: number;
-  startDate: string; // ISO 8601 date-time
-  endDate?: string;
-  status?: TutorAvailabilityStatus;
+  tutorId: number; // Backend sẽ set, truyền 0
+  slotId: number; // Required
+  startDate: string; // Required, ISO 8601 date-time
 }
 
 export interface TutorAvailabilityUpdateRequest {
