@@ -11,6 +11,23 @@ import { Separator } from '../ui/layout/separator';
 import { Star, Heart, MapPin, Clock, Calendar as CalendarIcon, MessageCircle, Video, Shield, Users, Globe, CheckCircle2, Play, ArrowLeft, Loader2, GraduationCap, Medal, ChevronLeft, ChevronRight } from 'lucide-react';
 import { FormatService } from '@/lib/format';
 import { useTutorDetail } from '@/hooks/useTutorDetail';
+import { EnumHelpers, TeachingMode } from '@/types/enums';
+
+// Helper function để convert string enum từ API sang TeachingMode enum
+function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
+  if (typeof mode === 'number') {
+    return mode as TeachingMode;
+  }
+  if (typeof mode === 'string') {
+    switch (mode) {
+      case 'Offline': return TeachingMode.Offline;
+      case 'Online': return TeachingMode.Online;
+      case 'Hybrid': return TeachingMode.Hybrid;
+      default: return TeachingMode.Offline;
+    }
+  }
+  return mode as TeachingMode;
+}
 interface Review {
   id: number;
   studentName: string;
@@ -343,7 +360,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <Globe className="w-4 h-4" />
-                        <span>{tutor.teachingModes === 0 ? 'Dạy trực tiếp' : tutor.teachingModes === 1 ? 'Dạy Online' : tutor.teachingModes === 2 ? 'Dạy Online + Trực tiếp' : 'Chưa xác định'}</span>
+                        <span>{EnumHelpers.getTeachingModeLabel(getTeachingModeValue(tutor.teachingModes))}</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <Users className="w-4 h-4" />
@@ -419,7 +436,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                             {tutor.tutorSubjects.map((tutorSubject, idx) => (
                               <li key={idx} className="flex items-start gap-2">
                                 <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                                 <span>{tutorSubject.subject?.subjectName} - {tutorSubject.level?.levelName}</span>
+                                 <span>{tutorSubject.subject?.subjectName} - {tutorSubject.level?.name}</span>
                               </li>
                             ))}
                           </ul>
@@ -432,19 +449,10 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     <div>
                       <h3 className="text-gray-900 mb-3 font-bold">Hình thức dạy học</h3>
                       <div className="flex flex-wrap gap-2">
-                        {tutor.teachingModes !== undefined && (
-                          <>
-                            {tutor.teachingModes === 0 && (
-                              <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
-                                Dạy trực tiếp
-                              </Badge>
-                            )}
-                            {tutor.teachingModes === 1 && (
-                              <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
-                                Dạy Online
-                              </Badge>
-                            )}
-                            {tutor.teachingModes === 2 && (
+                        {tutor.teachingModes !== undefined && (() => {
+                          const modeValue = getTeachingModeValue(tutor.teachingModes);
+                          if (modeValue === TeachingMode.Hybrid) {
+                            return (
                               <>
                                 <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
                                   Dạy Online
@@ -453,14 +461,14 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                                   Dạy trực tiếp
                                 </Badge>
                               </>
-                            )}
-                            {tutor.teachingModes === undefined && (
-                              <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
-                                Chưa xác định
-                          </Badge>
-                            )}
-                          </>
-                        )}
+                            );
+                          }
+                          return (
+                            <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
+                              {EnumHelpers.getTeachingModeLabel(modeValue)}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                     </div>
                   </CardContent>
@@ -829,7 +837,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Hình thức:</span>
-                      <span className="font-medium">{tutor.teachingModes === 0 ? 'Dạy trực tiếp' : tutor.teachingModes === 1 ? 'Dạy Online' : tutor.teachingModes === 2 ? 'Dạy Online + Trực tiếp' : 'Chưa xác định'}</span>
+                      <span className="font-medium">{EnumHelpers.getTeachingModeLabel(getTeachingModeValue(tutor.teachingModes))}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Tham gia:</span>

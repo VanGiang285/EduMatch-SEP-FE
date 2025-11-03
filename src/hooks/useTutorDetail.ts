@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
-import { TutorManagementService, TutorProfile } from '@/services/tutorManagementService';
+import { TutorService } from '@/services/tutorService';
+import { TutorProfileDto } from '@/types/backend';
 
 export interface UseTutorDetailReturn {
-  tutor: TutorProfile | null;
+  tutor: TutorProfileDto | null;
   isLoading: boolean;
   error: string | null;
   loadTutorDetail: (id: number) => Promise<void>;
@@ -10,7 +11,7 @@ export interface UseTutorDetailReturn {
 }
 
 export function useTutorDetail(): UseTutorDetailReturn {
-  const [tutor, setTutor] = useState<TutorProfile | null>(null);
+  const [tutor, setTutor] = useState<TutorProfileDto | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +20,7 @@ export function useTutorDetail(): UseTutorDetailReturn {
     setError(null);
     
     try {
-      const response = await TutorManagementService.getTutorById(id);
+      const response = await TutorService.getTutorById(id);
       
       if (response.success && response.data) {
         setTutor(response.data);
