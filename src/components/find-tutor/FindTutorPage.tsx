@@ -33,12 +33,31 @@ import {
   PaginationPrevious,
 } from '../ui/navigation/pagination';
 import { useFindTutor } from '@/hooks/useFindTutor';
+import { EnumHelpers, TeachingMode } from '@/types/enums';
+
+// Helper function để convert string enum từ API sang TeachingMode enum
+function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
+  if (typeof mode === 'number') {
+    return mode as TeachingMode;
+  }
+  if (typeof mode === 'string') {
+    switch (mode) {
+      case 'Offline': return TeachingMode.Offline;
+      case 'Online': return TeachingMode.Online;
+      case 'Hybrid': return TeachingMode.Hybrid;
+      default: return TeachingMode.Offline;
+    }
+  }
+  return mode as TeachingMode;
+}
+
 export function FindTutorPage() {
   const router = useRouter();
   const {
     tutors,
     subjects,
     levels,
+    certificateTypes,
     isLoadingTutors,
     isLoadingMasterData,
     error,
@@ -71,9 +90,9 @@ export function FindTutorPage() {
     if (searchQuery.trim()) {
       const keyword = searchQuery.trim().toLowerCase();
       filtered = filtered.filter(tutor => {
-        const userName = tutor.userName?.toLowerCase() || '';
-        const bio = tutor.bio?.toLowerCase() || '';
-        const email = tutor.userEmail?.toLowerCase() || '';
+        const userName = (tutor.userName || '').toLowerCase();
+        const bio = (tutor.bio || '').toLowerCase();
+        const email = (tutor.userEmail || '').toLowerCase();
         
         return userName.includes(keyword) || 
                bio.includes(keyword) || 
@@ -121,9 +140,10 @@ export function FindTutorPage() {
 
     // Filter by teaching mode
     if (selectedTeachingMode !== 'all') {
-      filtered = filtered.filter(tutor => 
-        tutor.teachingModes?.toString() === selectedTeachingMode
-      );
+      filtered = filtered.filter(tutor => {
+        const modeValue = getTeachingModeValue(tutor.teachingModes);
+        return modeValue.toString() === selectedTeachingMode;
+      });
     }
 
     // Filter by price range
@@ -282,31 +302,11 @@ export function FindTutorPage() {
               disabled={isLoadingMasterData}
             >
               <SelectWithSearchItem value="all">Tất cả chứng chỉ</SelectWithSearchItem>
-              {(() => {
-                // Nếu đã chọn subject, chỉ hiển thị chứng chỉ của subject đó
-                if (selectedSubject !== 'all') {
-                  const selectedSubjectData = subjects.find(s => s.id.toString() === selectedSubject);
-                  const availableCertificates = selectedSubjectData?.certificateTypes || [];
-                  
-                  return availableCertificates.map((cert) => (
+              {certificateTypes.map((cert) => (
                     <SelectWithSearchItem key={cert.id} value={cert.id.toString()}>
                       {cert.code ? `${cert.code} - ${cert.name}` : cert.name}
                     </SelectWithSearchItem>
-                  ));
-                }
-                
-                // Nếu chưa chọn subject, hiển thị tất cả chứng chỉ unique
-                const allCertificates = subjects.flatMap(s => s.certificateTypes || []);
-                const uniqueCertificates = allCertificates.filter((cert, index, self) => 
-                  index === self.findIndex(c => c.id === cert.id)
-                );
-                
-                return uniqueCertificates.map((cert) => (
-                  <SelectWithSearchItem key={cert.id} value={cert.id.toString()}>
-                    {cert.code ? `${cert.code} - ${cert.name}` : cert.name}
-                  </SelectWithSearchItem>
-                ));
-              })()}
+              ))}
             </SelectWithSearch>
             </div>
 
@@ -455,7 +455,7 @@ export function FindTutorPage() {
                         {tutor.avatarUrl ? (
                           <img 
                             src={tutor.avatarUrl} 
-                            alt={tutor.userName}
+                            alt={tutor.userName || tutor.userEmail || 'Gia sư'}
                             className="w-full h-full object-cover rounded-lg"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
@@ -470,7 +470,7 @@ export function FindTutorPage() {
                           className={`w-full h-full rounded-lg flex items-center justify-center text-2xl font-bold text-[#257180] bg-[#F2E5BF] ${tutor.avatarUrl ? 'hidden' : 'flex'}`}
                           style={{ display: tutor.avatarUrl ? 'none' : 'flex' }}
                         >
-                          {tutor.userName.slice(0, 2).toUpperCase()}
+                          {(tutor.userName || tutor.userEmail || 'U').slice(0, 2).toUpperCase()}
                         </div>
                       </div>
                     </div>
@@ -480,7 +480,7 @@ export function FindTutorPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
                             <h2 className="text-black text-xl sm:text-2xl font-bold">
-                              {tutor.userName}
+                              {tutor.userName || tutor.userEmail || 'Gia sư'}
                             </h2>
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
@@ -533,10 +533,7 @@ export function FindTutorPage() {
                     </div>
                     <Separator orientation="vertical" className="h-4" />
                     <span>
-                      {tutor.teachingModes === 0 ? 'Dạy trực tiếp' : 
-                       tutor.teachingModes === 1 ? 'Dạy Online' : 
-                       tutor.teachingModes === 2 ? 'Dạy Online + Trực tiếp' : 
-                       'Chưa xác định'}
+                      {EnumHelpers.getTeachingModeLabel(getTeachingModeValue(tutor.teachingModes))}
                     </span>
                     {tutor.tutorEducations && tutor.tutorEducations.length > 0 && (
                       <>
