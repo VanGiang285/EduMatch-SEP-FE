@@ -45,10 +45,12 @@ export function middleware(request: NextRequest) {
     '/system-admin/settings': ['system_admin'],
     '/business-admin': ['business_admin'], // Only business admin
     '/business-admin/dashboard': ['business_admin'],
-    '/business-admin/users': ['business_admin'],
+    '/business-admin/learners': ['business_admin'],
     '/business-admin/tutors': ['business_admin'],
-    '/business-admin/reviews': ['business_admin'],
-    '/business-admin/settings': ['business_admin'],
+    '/business-admin/applications': ['business_admin'],
+    '/business-admin/class-requests': ['business_admin'],
+    '/business-admin/reports': ['business_admin'],
+    '/business-admin/wallet': ['business_admin'],
   };
   
   // Check if current path requires protection
