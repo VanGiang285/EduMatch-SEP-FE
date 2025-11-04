@@ -173,12 +173,12 @@ export function ManageReports() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Quản lý Báo cáo</h1>
+        <h1 className="text-3xl font-semibold text-gray-900">Quản lý Báo cáo</h1>
         <p className="text-gray-600 mt-1">Xử lý báo cáo từ người dùng về gia sư</p>
       </div>
 
       {/* Filters */}
-      <Card className="bg-white">
+      <Card>
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
@@ -213,13 +213,13 @@ export function ManageReports() {
             </Select>
           </div>
         </CardContent>
-      </Card className="bg-white">
+      </Card>
 
       {/* Reports Table */}
-      <Card className="bg-white">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-gray-900">Danh sách báo cáo</CardTitle>
+            <CardTitle>Danh sách báo cáo</CardTitle>
             <Badge variant="outline">{filteredReports.length} báo cáo</Badge>
           </div>
         </CardHeader>
@@ -227,7 +227,7 @@ export function ManageReports() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50 border-b border-gray-200">
+                <TableRow className="bg-gray-50">
                   <TableHead className="w-[80px]">
                     <Button variant="ghost" size="sm" onClick={() => handleSort('id')} className="h-8 px-2">
                       ID <ArrowUpDown className="ml-1 h-3 w-3" />
@@ -262,7 +262,7 @@ export function ManageReports() {
                   </TableRow>
                 ) : (
                   paginatedReports.map((report) => (
-                    <TableRow key=$1 className="hover:bg-gray-50 border-b border-gray-200">
+                    <TableRow key={report.id} className="hover:bg-gray-50">
                       <TableCell>
                         <span className="font-mono text-sm text-gray-600">{report.id}</span>
                       </TableCell>
@@ -353,11 +353,11 @@ export function ManageReports() {
             </div>
           )}
         </CardContent>
-      </Card className="bg-white">
+      </Card>
 
       {/* Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="!!max-w- sm:!max-w-xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Chi tiết báo cáo</DialogTitle>
           </DialogHeader>

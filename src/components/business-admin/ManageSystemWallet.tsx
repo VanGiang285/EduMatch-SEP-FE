@@ -125,13 +125,13 @@ export function ManageSystemWallet() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Quản lý Ví hệ thống</h1>
+        <h1 className="text-3xl font-semibold text-gray-900">Quản lý Ví hệ thống</h1>
         <p className="text-gray-600 mt-1">Theo dõi và quản lý ví của hệ thống EduMatch</p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-white">
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 rounded-lg bg-blue-50">
@@ -141,16 +141,16 @@ export function ManageSystemWallet() {
             </div>
             <div>
               <p className="text-sm text-gray-600 mb-1">Số dư ví hệ thống</p>
-              <p className="text-2xl sm:text-3xl font-bold text-gray-900">{formatCurrency(currentBalance)}</p>
+              <p className="text-3xl font-semibold text-gray-900">{formatCurrency(currentBalance)}</p>
               <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
                 <ArrowUpRight className="h-3 w-3" />
                 +5.2% so với tháng trước
               </p>
             </div>
           </CardContent>
-        </Card className="bg-white">
+        </Card>
 
-        <Card className="bg-white">
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 rounded-lg bg-green-50">
@@ -160,15 +160,15 @@ export function ManageSystemWallet() {
             </div>
             <div>
               <p className="text-sm text-gray-600 mb-1">Tổng tiền vào ví</p>
-              <p className="text-2xl sm:text-3xl font-bold text-green-600">{formatCurrency(totalCredit)}</p>
+              <p className="text-3xl font-semibold text-green-600">{formatCurrency(totalCredit)}</p>
               <p className="text-xs text-gray-500 mt-1">
                 {mockSystemWalletTransactions.filter(t => t.transactionType === 1).length} giao dịch
               </p>
             </div>
           </CardContent>
-        </Card className="bg-white">
+        </Card>
 
-        <Card className="bg-white">
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 rounded-lg bg-red-50">
@@ -178,19 +178,19 @@ export function ManageSystemWallet() {
             </div>
             <div>
               <p className="text-sm text-gray-600 mb-1">Tổng tiền ra ví</p>
-              <p className="text-2xl sm:text-3xl font-bold text-red-600">{formatCurrency(totalDebit)}</p>
+              <p className="text-3xl font-semibold text-red-600">{formatCurrency(totalDebit)}</p>
               <p className="text-xs text-gray-500 mt-1">
                 {mockSystemWalletTransactions.filter(t => t.transactionType === 0).length} giao dịch
               </p>
             </div>
           </CardContent>
-        </Card className="bg-white">
+        </Card>
       </div>
 
       {/* Balance Chart */}
-      <Card className="bg-white">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-gray-900">Biến động số dư theo tháng</CardTitle>
+          <CardTitle>Biến động số dư theo tháng</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -213,10 +213,10 @@ export function ManageSystemWallet() {
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
-      </Card className="bg-white">
+      </Card>
 
       {/* Filters */}
-      <Card className="bg-white">
+      <Card>
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
@@ -251,13 +251,13 @@ export function ManageSystemWallet() {
             </Select>
           </div>
         </CardContent>
-      </Card className="bg-white">
+      </Card>
 
       {/* Transactions Table */}
-      <Card className="bg-white">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-gray-900">Lịch sử giao dịch</CardTitle>
+            <CardTitle>Lịch sử giao dịch</CardTitle>
             <Badge variant="outline">{filteredTransactions.length} giao dịch</Badge>
           </div>
         </CardHeader>
@@ -265,7 +265,7 @@ export function ManageSystemWallet() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50 border-b border-gray-200">
+                <TableRow className="bg-gray-50">
                   <TableHead className="w-[100px]">ID</TableHead>
                   <TableHead>Loại giao dịch</TableHead>
                   <TableHead>Người dùng</TableHead>
@@ -285,7 +285,7 @@ export function ManageSystemWallet() {
                   </TableRow>
                 ) : (
                   paginatedTransactions.map((transaction) => (
-                    <TableRow key=$1 className="hover:bg-gray-50 border-b border-gray-200">
+                    <TableRow key={transaction.id} className="hover:bg-gray-50">
                       <TableCell>
                         <span className="font-mono text-sm text-gray-600">#{transaction.id}</span>
                       </TableCell>
@@ -389,7 +389,7 @@ export function ManageSystemWallet() {
             </div>
           )}
         </CardContent>
-      </Card className="bg-white">
+      </Card>
     </div>
   );
 }

@@ -164,12 +164,12 @@ export function ManageClassRequests() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Quản lý Yêu cầu mở lớp</h1>
+        <h1 className="text-3xl font-semibold text-gray-900">Quản lý Yêu cầu mở lớp</h1>
         <p className="text-gray-600 mt-1">Duyệt yêu cầu mở lớp từ học viên</p>
       </div>
 
       {/* Filters */}
-      <Card className="bg-white">
+      <Card>
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
@@ -204,13 +204,13 @@ export function ManageClassRequests() {
             </Select>
           </div>
         </CardContent>
-      </Card className="bg-white">
+      </Card>
 
       {/* Requests Table */}
-      <Card className="bg-white">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-gray-900">Danh sách yêu cầu</CardTitle>
+            <CardTitle>Danh sách yêu cầu</CardTitle>
             <Badge variant="outline">{filteredRequests.length} yêu cầu</Badge>
           </div>
         </CardHeader>
@@ -218,7 +218,7 @@ export function ManageClassRequests() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50 border-b border-gray-200">
+                <TableRow className="bg-gray-50">
                   <TableHead className="w-[80px]">
                     <Button variant="ghost" size="sm" onClick={() => handleSort('id')} className="h-8 px-2">
                       ID <ArrowUpDown className="ml-1 h-3 w-3" />
@@ -251,7 +251,7 @@ export function ManageClassRequests() {
                   </TableRow>
                 ) : (
                   paginatedRequests.map((request) => (
-                    <TableRow key=$1 className="hover:bg-gray-50 border-b border-gray-200">
+                    <TableRow key={request.id} className="hover:bg-gray-50">
                       <TableCell>
                         <span className="font-mono text-sm text-gray-600">{request.id}</span>
                       </TableCell>
@@ -356,11 +356,11 @@ export function ManageClassRequests() {
             </div>
           )}
         </CardContent>
-      </Card className="bg-white">
+      </Card>
 
       {/* Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="!!max-w- sm:!max-w-xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Chi tiết yêu cầu mở lớp</DialogTitle>
           </DialogHeader>
@@ -452,7 +452,7 @@ export function ManageClassRequests() {
                 {/* Right Column - Schedule */}
                 <div className="space-y-6">
                   {/* Schedule */}
-                  <Card className="bg-white">
+                  <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-base">
                         <Calendar className="h-5 w-5" />
@@ -469,7 +469,7 @@ export function ManageClassRequests() {
                         ))}
                       </div>
                     </CardContent>
-                  </Card className="bg-white">
+                  </Card>
                 </div>
               </div>
 
@@ -534,3 +534,4 @@ export function ManageClassRequests() {
     </div>
   );
 }
+
