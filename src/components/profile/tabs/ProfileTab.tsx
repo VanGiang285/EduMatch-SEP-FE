@@ -1,33 +1,152 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
 import { Label } from '@/components/ui/form/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
-import { Camera, Save } from 'lucide-react';
-import { mockCurrentUser } from '@/data/mockLearnerData';
+import { Camera, Save, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { UserProfileService } from '@/services/userProfileService';
+import { useCustomToast } from '@/hooks/useCustomToast';
+import { Gender } from '@/types/enums';
+import { UserProfileDto } from '@/types/backend';
+import { UserProfileUpdateRequest } from '@/types/requests';
 
 export function ProfileTab() {
+  const { user } = useAuth();
+  const { showSuccess, showError } = useCustomToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [originalData, setOriginalData] = useState<UserProfileDto | null>(null);
   const [formData, setFormData] = useState({
-    userName: mockCurrentUser.userName,
-    email: mockCurrentUser.email,
-    phone: mockCurrentUser.phone,
-    dob: mockCurrentUser.dob,
-    gender: mockCurrentUser.gender.toString(),
-    cityName: mockCurrentUser.cityName,
-    subDistrictName: mockCurrentUser.subDistrictName,
-    addressLine: mockCurrentUser.addressLine,
+    userName: '',
+    email: '',
+    phone: '',
+    dob: '',
+    gender: Gender.Unknown.toString(),
+    cityId: '',
+    subDistrictId: '',
+    cityName: '',
+    subDistrictName: '',
+    addressLine: '',
+    avatarUrl: '',
   });
 
-  const handleSave = () => {
-    // Handle save logic here
-    console.log('Save profile:', formData);
+  // Load user profile data
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!user?.email) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await UserProfileService.getUserProfile(user.email);
+        if (response.success && response.data) {
+          const profile = response.data;
+          setOriginalData(profile);
+          
+          // Format date for input (YYYY-MM-DD)
+          const dobFormatted = profile.dob 
+            ? new Date(profile.dob).toISOString().split('T')[0]
+            : '';
+
+          setFormData({
+            userName: user.name || user.email || '',
+            email: user.email,
+            phone: user.phone || '',
+            dob: dobFormatted,
+            gender: profile.gender?.toString() || Gender.Unknown.toString(),
+            cityId: profile.cityId?.toString() || '',
+            subDistrictId: profile.subDistrictId?.toString() || '',
+            cityName: profile.province?.name || '',
+            subDistrictName: profile.subDistrict?.name || '',
+            addressLine: profile.addressLine || '',
+            avatarUrl: profile.avatarUrl || '',
+          });
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+        showError('Lỗi', 'Không thể tải thông tin người dùng. Vui lòng thử lại.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUserProfile();
+  }, [user?.email]);
+
+  const handleCancel = () => {
+    if (originalData && user) {
+      const dobFormatted = originalData.dob 
+        ? new Date(originalData.dob).toISOString().split('T')[0]
+        : '';
+      
+      setFormData({
+        userName: user.name || user.email || '',
+        email: user.email,
+        phone: user.phone || '',
+        dob: dobFormatted,
+        gender: originalData.gender?.toString() || Gender.Unknown.toString(),
+        cityId: originalData.cityId?.toString() || '',
+        subDistrictId: originalData.subDistrictId?.toString() || '',
+        cityName: originalData.province?.name || '',
+        subDistrictName: originalData.subDistrict?.name || '',
+        addressLine: originalData.addressLine || '',
+        avatarUrl: originalData.avatarUrl || '',
+      });
+    }
     setIsEditing(false);
   };
+
+  const handleSave = async () => {
+    if (!user?.email) {
+      showError('Lỗi', 'Không tìm thấy thông tin người dùng.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const updateRequest: UserProfileUpdateRequest = {
+        userEmail: user.email,
+        dob: formData.dob || undefined,
+        gender: parseInt(formData.gender) as Gender,
+        addressLine: formData.addressLine || undefined,
+        cityId: formData.cityId ? parseInt(formData.cityId) : undefined,
+        subDistrictId: formData.subDistrictId ? parseInt(formData.subDistrictId) : undefined,
+        avatarUrl: formData.avatarUrl || undefined,
+      };
+
+      const response = await UserProfileService.updateUserProfile(updateRequest);
+      
+      if (response.success && response.data) {
+        setOriginalData(response.data);
+        showSuccess('Thành công', 'Cập nhật thông tin thành công.');
+        setIsEditing(false);
+      } else {
+        throw new Error(response.message || 'Cập nhật thất bại');
+      }
+    } catch (error: any) {
+      console.error('Error updating user profile:', error);
+      showError('Lỗi', error.message || 'Không thể cập nhật thông tin. Vui lòng thử lại.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-[#257180]" />
+        <span className="ml-2 text-gray-600">Đang tải thông tin...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -42,12 +161,26 @@ export function ProfileTab() {
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
+            <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
               Hủy
             </Button>
-            <Button onClick={handleSave} size="lg" className="bg-[#257180] hover:bg-[#257180]/90 text-white">
-              <Save className="h-4 w-4 mr-2" />
-              Lưu thay đổi
+            <Button 
+              onClick={handleSave} 
+              size="lg" 
+              className="bg-[#257180] hover:bg-[#257180]/90 text-white"
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang lưu...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Lưu thay đổi
+                </>
+              )}
             </Button>
           </div>
         )}
@@ -60,13 +193,16 @@ export function ProfileTab() {
         <CardContent>
           <div className="flex items-center gap-6">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={mockCurrentUser.avatar} alt={mockCurrentUser.userName} />
-              <AvatarFallback className="text-2xl">{mockCurrentUser.userName[0]}</AvatarFallback>
+              <AvatarImage src={formData.avatarUrl || user?.avatar} alt={formData.userName} />
+              <AvatarFallback className="text-2xl">
+                {(formData.userName || user?.name || user?.email || 'U')[0].toUpperCase()}
+              </AvatarFallback>
             </Avatar>
             {isEditing && (
-              <Button variant="outline">
+              <Button variant="outline" disabled>
                 <Camera className="h-4 w-4 mr-2" />
                 Tải ảnh lên
+                <span className="ml-2 text-xs text-gray-500">(Tính năng đang phát triển)</span>
               </Button>
             )}
           </div>
@@ -106,7 +242,9 @@ export function ProfileTab() {
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                disabled={!isEditing}
+                disabled={true}
+                className="bg-gray-50"
+                placeholder="Số điện thoại (tính năng cập nhật đang phát triển)"
               />
             </div>
 
@@ -154,8 +292,9 @@ export function ProfileTab() {
               <Input
                 id="city"
                 value={formData.cityName}
-                onChange={(e) => setFormData({ ...formData, cityName: e.target.value })}
-                disabled={!isEditing}
+                disabled={true}
+                className="bg-gray-50"
+                placeholder="Tỉnh/Thành phố (chỉ đọc)"
               />
             </div>
 
@@ -164,8 +303,9 @@ export function ProfileTab() {
               <Input
                 id="district"
                 value={formData.subDistrictName}
-                onChange={(e) => setFormData({ ...formData, subDistrictName: e.target.value })}
-                disabled={!isEditing}
+                disabled={true}
+                className="bg-gray-50"
+                placeholder="Quận/Huyện (chỉ đọc)"
               />
             </div>
 
@@ -176,9 +316,15 @@ export function ProfileTab() {
                 value={formData.addressLine}
                 onChange={(e) => setFormData({ ...formData, addressLine: e.target.value })}
                 disabled={!isEditing}
+                placeholder="Nhập địa chỉ chi tiết (số nhà, tên đường, phường/xã)"
               />
             </div>
           </div>
+          {isEditing && (
+            <p className="text-sm text-gray-500 mt-2">
+              Lưu ý: Tỉnh/Thành phố và Quận/Huyện hiện chỉ hiển thị. Địa chỉ chi tiết có thể được cập nhật.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
