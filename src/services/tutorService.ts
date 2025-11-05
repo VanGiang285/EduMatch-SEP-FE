@@ -59,4 +59,16 @@ export class TutorService {
     const url = replaceUrlParams(API_ENDPOINTS.TUTORS.VERIFY_EDUCATION_BATCH, { tutorId: tutorId.toString() });
     return apiClient.put<TutorEducationDto[]>(url, updates);
   }
+
+  // Lấy tutor profile theo email (QUAN TRỌNG!)
+  static async getTutorByEmail(email: string): Promise<ApiResponse<TutorProfileDto>> {
+    const url = replaceUrlParams(API_ENDPOINTS.MANAGE_TUTOR_PROFILES.GET_BY_EMAIL, { email });
+    return apiClient.get<TutorProfileDto>(url);
+  }
+
+  // Lấy tutor profile theo ID (full với relations)
+  static async getTutorByIdFull(id: number): Promise<ApiResponse<TutorProfileDto>> {
+    const url = replaceUrlParams(API_ENDPOINTS.MANAGE_TUTOR_PROFILES.GET_BY_ID, { id: id.toString() });
+    return apiClient.get<TutorProfileDto>(url);
+  }
 }

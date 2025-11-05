@@ -1,8 +1,8 @@
 import { apiClient, replaceUrlParams } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
 import { ApiResponse } from '@/types/api';
-import { CertificateTypeDto, EducationInstitutionDto, TutorEducationDto, LevelDto } from '@/types/backend';
-import { CertificateTypeCreateRequest, EducationInstitutionCreateRequest, TutorEducationCreateRequest, TutorEducationUpdateRequest } from '@/types/requests';
+import { CertificateTypeDto, EducationInstitutionDto, TutorEducationDto, TutorCertificateDto, LevelDto } from '@/types/backend';
+import { CertificateTypeCreateRequest, EducationInstitutionCreateRequest, TutorEducationCreateRequest, TutorEducationUpdateRequest, TutorCertificateCreateRequest, TutorCertificateUpdateRequest } from '@/types/requests';
 import { VerifyStatus } from '@/types/enums';
 
 export class CertificateService {
@@ -89,5 +89,37 @@ export class CertificateService {
   // Lấy tất cả cấp độ học tập
   static async getAllLevels(): Promise<ApiResponse<LevelDto[]>> {
     return apiClient.get<LevelDto[]>(API_ENDPOINTS.LEVELS.GET_ALL);
+  }
+
+  // ==================== TUTOR CERTIFICATES ====================
+
+  // Lấy danh sách chứng chỉ của gia sư
+  static async getTutorCertificates(tutorId: number): Promise<ApiResponse<TutorCertificateDto[]>> {
+    const url = API_ENDPOINTS.CERTIFICATES.GET_TUTOR_CERTIFICATES.replace(':tutorId', tutorId.toString());
+    return apiClient.get<TutorCertificateDto[]>(url);
+  }
+
+  // Thêm chứng chỉ cho gia sư
+  static async createTutorCertificate(tutorId: number, request: Omit<TutorCertificateCreateRequest, 'tutorId'>): Promise<ApiResponse<TutorCertificateDto>> {
+    const url = API_ENDPOINTS.CERTIFICATES.CREATE_TUTOR_CERTIFICATE.replace(':tutorId', tutorId.toString());
+    return apiClient.post<TutorCertificateDto>(url, { ...request, tutorId: 0 }); // Backend sẽ set từ route
+  }
+
+  // Cập nhật chứng chỉ của gia sư
+  static async updateTutorCertificate(tutorId: number, request: TutorCertificateUpdateRequest): Promise<ApiResponse<TutorCertificateDto>> {
+    const url = API_ENDPOINTS.CERTIFICATES.UPDATE_TUTOR_CERTIFICATE.replace(':tutorId', tutorId.toString());
+    return apiClient.put<TutorCertificateDto>(url, { ...request, tutorId });
+  }
+
+  // Xóa chứng chỉ của gia sư
+  static async deleteTutorCertificate(tutorId: number, certificateId?: number): Promise<ApiResponse<void>> {
+    const url = API_ENDPOINTS.CERTIFICATES.DELETE_TUTOR_CERTIFICATE.replace(':tutorId', tutorId.toString());
+    const finalUrl = certificateId ? `${url}?certificateId=${certificateId}` : url;
+    return apiClient.delete<void>(finalUrl);
+  }
+
+  // Lấy tất cả loại chứng chỉ kèm môn học
+  static async getAllCertificateTypesWithSubjects(): Promise<ApiResponse<CertificateTypeDto[]>> {
+    return apiClient.get<CertificateTypeDto[]>(API_ENDPOINTS.CERTIFICATES.GET_ALL_WITH_SUBJECTS);
   }
 }

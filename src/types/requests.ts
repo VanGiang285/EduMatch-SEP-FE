@@ -319,6 +319,29 @@ export interface UpdateClassApplicationRequest {
   status?: number; // ClassApplicationStatus
 }
 
+// ==================== CLASS REQUEST ADDITIONAL REQUESTS ====================
+
+export interface IsApprovedClassRequestDto {
+  isApproved: boolean;
+  rejectionReason?: string; // null nếu duyệt
+}
+
+export interface CancelClassRequestDto {
+  reason: string;
+}
+
+// ==================== TUTOR APPLICATION REQUESTS ====================
+
+export interface TutorApplyRequest {
+  classRequestId: number;
+  message: string; // Required
+}
+
+export interface TutorApplicationEditRequest {
+  tutorApplicationId: number; // Required
+  message: string; // Required
+}
+
 // ==================== GOOGLE MEETING REQUESTS ====================
 
 export interface CreateMeetingRequest {

@@ -16,3 +16,5 @@ export * from './masterDataService';
 export * from './mediaService';
 export * from './tutorManagementService';
 export * from './userService';
+export * from './classRequestService';
+export * from './tutorApplicationService';

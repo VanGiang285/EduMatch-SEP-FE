@@ -55,30 +55,6 @@ function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMod
   }
   return mode as TeachingMode;
 }
-
-interface TutorCardData {
-  tutorId: number;
-  userEmail: string;
-  userName: string;
-  avatarUrl: string | null;
-  gender: string | null;
-  bio: string | null;
-  teachingExp: string | null;
-  videoIntroUrl: string | null;
-  teachingModes: string | null;
-  subjects: string[];
-  hourlyRate: number;
-  provinceName: string;
-  subDistrictName: string;
-  rating: number;
-  reviewCount: number;
-  completedLessons: number;
-  totalStudents: number;
-  isFavorite: boolean;
-  education: string;
-  isVerified: boolean;
-  specializations: string[];
-}
 export function SavedTutorsPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
@@ -90,7 +66,7 @@ export function SavedTutorsPage() {
     isLoadingMasterData,
   } = useFindTutor();
 
-  const [hoveredTutor, setHoveredTutor] = useState<number | null>(1);
+  const [hoveredTutor, setHoveredTutor] = useState<number | null>(null);
   const [videoKey, setVideoKey] = useState(0);
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedCertificate, setSelectedCertificate] = useState('all');
@@ -101,63 +77,11 @@ export function SavedTutorsPage() {
   const [selectedSort, setSelectedSort] = useState('recommended');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [savedTutors, setSavedTutors] = useState<TutorCardData[]>([]);
+  const [savedTutors, setSavedTutors] = useState<TutorProfileDto[]>([]);
   const [isLoadingTutors, setIsLoadingTutors] = useState(true);
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set());
   const [loadingFavorite, setLoadingFavorite] = useState<Set<number>>(new Set());
   const tutorsPerPage = 6;
-
-  // Helper function to convert TutorProfileDto to TutorCardData
-  const convertTutorToCardData = (tutor: TutorProfileDto): TutorCardData => {
-    const prices = tutor.tutorSubjects?.map(ts => ts.hourlyRate || 0).filter(p => p > 0) || [];
-    const hourlyRate = prices.length > 0 ? Math.min(...prices) : 0;
-    
-    const subjects = tutor.tutorSubjects?.map(ts => ts.subject?.subjectName || '').filter(s => s) || [];
-    const specializations = tutor.tutorSubjects?.map(ts => ts.level?.name || '').filter(s => s) || [];
-    
-    // Get teaching modes as string
-    let teachingModesStr = '';
-    if (tutor.teachingModes !== undefined) {
-      const mode = getTeachingModeValue(tutor.teachingModes);
-      const modes: string[] = [];
-      if (mode === TeachingMode.Online || mode === TeachingMode.Hybrid) {
-        modes.push('Trực tuyến');
-      }
-      if (mode === TeachingMode.Offline || mode === TeachingMode.Hybrid) {
-        modes.push('Tại nhà');
-      }
-      teachingModesStr = modes.join(', ');
-    }
-    
-    // Get education (first education if available)
-    const education = tutor.tutorEducations?.[0] 
-      ? `${tutor.tutorEducations[0].degree || ''} ${tutor.tutorEducations[0].major || ''} - ${tutor.tutorEducations[0].schoolName || ''}`.trim()
-      : '';
-
-    return {
-      tutorId: tutor.id,
-      userEmail: tutor.userEmail,
-      userName: tutor.userName || tutor.userEmail,
-      avatarUrl: tutor.avatarUrl || null,
-      gender: tutor.gender || null,
-      teachingExp: tutor.teachingExp || null,
-      bio: tutor.bio || null,
-      videoIntroUrl: tutor.videoIntroUrl || null,
-      teachingModes: teachingModesStr || null,
-      subjects,
-      hourlyRate,
-      provinceName: tutor.province?.name || '',
-      subDistrictName: tutor.subDistrict?.name || '',
-      rating: 5.0, // Default rating, can be updated if API provides it
-      reviewCount: 0, // Default, can be updated if API provides it
-      completedLessons: 0, // Default, can be updated if API provides it
-      totalStudents: 0, // Default, can be updated if API provides it
-      isFavorite: true, // All tutors in this page are favorites
-      isVerified: !!tutor.verifiedAt,
-      education,
-      specializations,
-    };
-  };
 
   // Load favorite tutors from API (only if authenticated)
   useEffect(() => {
@@ -165,30 +89,38 @@ export function SavedTutorsPage() {
       if (!isAuthenticated) {
         setIsLoadingTutors(false);
         setSavedTutors([]);
+        setFavoriteTutors(new Set());
         return;
       }
 
       setIsLoadingTutors(true);
       try {
         const response = await FavoriteTutorService.getFavoriteTutors();
-        const tutors = response.data || [];
-        const cardData = tutors.map(convertTutorToCardData);
-        setSavedTutors(cardData);
-        setFavoriteTutors(new Set(cardData.map(t => t.tutorId)));
-      } catch (error) {
+        if (response.success) {
+          const tutors = response.data || [];
+          setSavedTutors(tutors);
+          setFavoriteTutors(new Set(tutors.map(t => t.id)));
+        } else {
+          console.error('Failed to load favorite tutors:', response.message);
+          setSavedTutors([]);
+          setFavoriteTutors(new Set());
+        }
+      } catch (error: any) {
         console.error('Error loading favorite tutors:', error);
         setSavedTutors([]);
+        setFavoriteTutors(new Set());
       } finally {
         setIsLoadingTutors(false);
       }
     };
 
     loadFavoriteTutors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   // Client-side filtering and sorting
   const filteredAndSortedTutors = React.useMemo(() => {
-    let filtered = savedTutors.filter(tutor => favoriteTutors.has(tutor.tutorId));
+    let filtered = savedTutors.filter(tutor => favoriteTutors.has(tutor.id));
 
     // Filter by keyword (search)
     if (searchQuery.trim()) {
@@ -207,25 +139,26 @@ export function SavedTutorsPage() {
     // Filter by subject
     if (selectedSubject !== 'all') {
       filtered = filtered.filter(tutor => 
-        tutor.subjects.some(subject => {
-          const subjectObj = subjects.find(s => s.id.toString() === selectedSubject);
-          return subjectObj && subject.toLowerCase().includes(subjectObj.subjectName.toLowerCase());
+        tutor.tutorSubjects?.some(tutorSubject => {
+          return tutorSubject.subjectId.toString() === selectedSubject;
         })
       );
     }
 
     // Filter by certificate type
     if (selectedCertificate !== 'all') {
-      // Note: Mock data doesn't have certificate info, so we'll skip this filter for now
-      // or you can add certificate field to TutorCardData if needed
+      filtered = filtered.filter(tutor => 
+        tutor.tutorCertificates?.some(cert => {
+          return cert.certificateTypeId.toString() === selectedCertificate;
+        })
+      );
     }
 
     // Filter by level
     if (selectedLevel !== 'all') {
       filtered = filtered.filter(tutor => 
-        tutor.specializations.some(spec => {
-          const levelObj = levels.find(l => l.id.toString() === selectedLevel);
-          return levelObj && spec.toLowerCase().includes(levelObj.name.toLowerCase());
+        tutor.tutorSubjects?.some(tutorSubject => {
+          return tutorSubject.levelId?.toString() === selectedLevel;
         })
       );
     }
@@ -241,29 +174,35 @@ export function SavedTutorsPage() {
       };
       const cityName = cityMap[selectedCity];
       filtered = filtered.filter(tutor => 
-        tutor.provinceName === cityName
+        tutor.province?.name === cityName
       );
     }
 
     // Filter by teaching mode
     if (selectedTeachingMode !== 'all') {
-      const modeMap: { [key: string]: string } = {
-        '1': 'Trực tuyến',
-        '0': 'Tại nhà'
-      };
-      const modeText = modeMap[selectedTeachingMode];
-      if (modeText) {
-        filtered = filtered.filter(tutor => 
-          tutor.teachingModes?.includes(modeText)
-        );
-      }
+      const modeValue = parseInt(selectedTeachingMode);
+      filtered = filtered.filter(tutor => {
+        const mode = getTeachingModeValue(tutor.teachingModes);
+        if (modeValue === TeachingMode.Online) {
+          return mode === TeachingMode.Online || mode === TeachingMode.Hybrid;
+        } else if (modeValue === TeachingMode.Offline) {
+          return mode === TeachingMode.Offline || mode === TeachingMode.Hybrid;
+        }
+        return false;
+      });
     }
 
     // Filter by price range
     if (priceRange[0] > 0 || priceRange[1] < 1000000) {
       const [minRange, maxRange] = priceRange;
       filtered = filtered.filter(tutor => {
-        return tutor.hourlyRate >= minRange && tutor.hourlyRate <= maxRange;
+        const prices = tutor.tutorSubjects?.map(ts => ts.hourlyRate || 0).filter(p => p > 0) || [];
+        if (prices.length === 0) return false;
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        return (minPrice >= minRange && minPrice <= maxRange) || 
+               (maxPrice >= minRange && maxPrice <= maxRange) ||
+               (minPrice <= minRange && maxPrice >= maxRange);
       });
     }
 
@@ -271,17 +210,29 @@ export function SavedTutorsPage() {
     if (selectedSort !== 'recommended') {
       filtered.sort((a, b) => {
         switch (selectedSort) {
-          case 'price-low':
-            return a.hourlyRate - b.hourlyRate;
-          case 'price-high':
-            return b.hourlyRate - a.hourlyRate;
-          case 'experience':
+          case 'price-low': {
+            const aPrices = a.tutorSubjects?.map(ts => ts.hourlyRate || 0).filter(p => p > 0) || [0];
+            const bPrices = b.tutorSubjects?.map(ts => ts.hourlyRate || 0).filter(p => p > 0) || [0];
+            const aMin = Math.min(...aPrices);
+            const bMin = Math.min(...bPrices);
+            return aMin - bMin;
+          }
+          case 'price-high': {
+            const aPrices = a.tutorSubjects?.map(ts => ts.hourlyRate || 0).filter(p => p > 0) || [0];
+            const bPrices = b.tutorSubjects?.map(ts => ts.hourlyRate || 0).filter(p => p > 0) || [0];
+            const aMax = Math.max(...aPrices);
+            const bMax = Math.max(...bPrices);
+            return bMax - aMax;
+          }
+          case 'experience': {
             // Sort by teaching experience (years)
-            const aExp = parseInt(a.teachingExp?.replace(/\D/g, '') || '0');
-            const bExp = parseInt(b.teachingExp?.replace(/\D/g, '') || '0');
+            const aExp = parseInt((a.teachingExp || '').replace(/\D/g, '') || '0');
+            const bExp = parseInt((b.teachingExp || '').replace(/\D/g, '') || '0');
             return bExp - aExp;
+          }
           case 'rating':
-            return b.rating - a.rating;
+            // Default rating for now
+            return 0;
           default:
             return 0;
         }
@@ -302,16 +253,16 @@ export function SavedTutorsPage() {
 
   useEffect(() => {
     if (filteredAndSortedTutors.length > 0 && !hoveredTutor) {
-      setHoveredTutor(filteredAndSortedTutors[0].tutorId);
+      setHoveredTutor(filteredAndSortedTutors[0].id);
     }
   }, [filteredAndSortedTutors, hoveredTutor]);
 
   // Update hoveredTutor when filtered results change
   useEffect(() => {
     if (filteredAndSortedTutors.length > 0) {
-      const currentHoveredExists = filteredAndSortedTutors.some(t => t.tutorId === hoveredTutor);
+      const currentHoveredExists = filteredAndSortedTutors.some(t => t.id === hoveredTutor);
       if (!currentHoveredExists) {
-        setHoveredTutor(filteredAndSortedTutors[0].tutorId);
+        setHoveredTutor(filteredAndSortedTutors[0].id);
       }
     }
   }, [filteredAndSortedTutors, hoveredTutor]);
@@ -325,7 +276,11 @@ export function SavedTutorsPage() {
   const indexOfLastTutor = currentPage * tutorsPerPage;
   const indexOfFirstTutor = indexOfLastTutor - tutorsPerPage;
   const currentTutors = filteredAndSortedTutors.slice(indexOfFirstTutor, indexOfLastTutor);
-  const currentTutor = filteredAndSortedTutors.find(t => t.tutorId === hoveredTutor) || filteredAndSortedTutors[0];
+  
+  const currentTutor = filteredAndSortedTutors.length > 0 
+    ? (filteredAndSortedTutors.find(t => t.id === hoveredTutor) || filteredAndSortedTutors[0])
+    : undefined;
+
   const handleToggleFavorite = async (tutorId: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
     
@@ -343,7 +298,7 @@ export function SavedTutorsPage() {
     
     // Optimistic update - remove from UI immediately
     if (isCurrentlyFavorite) {
-      setSavedTutors(prev => prev.filter(t => t.tutorId !== tutorId));
+      setSavedTutors(prev => prev.filter(t => t.id !== tutorId));
       setFavoriteTutors(prev => {
         const newFavorites = new Set(prev);
         newFavorites.delete(tutorId);
@@ -362,18 +317,16 @@ export function SavedTutorsPage() {
         // Reload the list if adding (shouldn't happen in saved tutors page, but just in case)
         const response = await FavoriteTutorService.getFavoriteTutors();
         const tutors = response.data || [];
-        const cardData = tutors.map(convertTutorToCardData);
-        setSavedTutors(cardData);
-        setFavoriteTutors(new Set(cardData.map(t => t.tutorId)));
+        setSavedTutors(tutors);
+        setFavoriteTutors(new Set(tutors.map(t => t.id)));
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
       // Reload on error to revert
       const response = await FavoriteTutorService.getFavoriteTutors();
       const tutors = response.data || [];
-      const cardData = tutors.map(convertTutorToCardData);
-      setSavedTutors(cardData);
-      setFavoriteTutors(new Set(cardData.map(t => t.tutorId)));
+      setSavedTutors(tutors);
+      setFavoriteTutors(new Set(tutors.map(t => t.id)));
     } finally {
       setLoadingFavorite(prev => {
         const newSet = new Set(prev);
@@ -382,9 +335,11 @@ export function SavedTutorsPage() {
       });
     }
   };
+  
   const handleViewTutorProfile = (tutorId: number) => {
     router.push(`/tutor/${tutorId}`);
   };
+  
   return (
     <div className="min-h-screen bg-gray-50 pt-16">
       {/* Search and Filters Section - Sticky */}
@@ -556,7 +511,7 @@ export function SavedTutorsPage() {
                 <Loader2 className="w-8 h-8 animate-spin text-[#FD8B51]" />
                 <span className="ml-2 text-gray-600">Đang tải danh sách gia sư yêu thích...</span>
               </div>
-            ) : !isLoadingMasterData && (
+            ) : (
             <>
             {filteredAndSortedTutors.length === 0 ? (
               <Card className="border-[#FD8B51]">
@@ -589,14 +544,14 @@ export function SavedTutorsPage() {
                 <div className="space-y-6">
                   {currentTutors.map((tutor) => (
                     <Card 
-                      key={tutor.tutorId}
+                      key={tutor.id}
                       className={`cursor-pointer transition-all duration-200 ${
-                        hoveredTutor === tutor.tutorId 
+                        hoveredTutor === tutor.id 
                           ? 'border-[#FD8B51] shadow-lg bg-white' 
                           : 'hover:border-[#257180]/40 hover:shadow-md bg-white'
                       }`}
-                      onMouseEnter={() => setHoveredTutor(tutor.tutorId)}
-                      onClick={() => handleViewTutorProfile(tutor.tutorId)}
+                      onMouseEnter={() => setHoveredTutor(tutor.id)}
+                      onClick={() => handleViewTutorProfile(tutor.id)}
                     >
                       <CardContent className="p-6">
                         {/* Row 1: Avatar + Name + Info + Subjects */}
@@ -607,7 +562,7 @@ export function SavedTutorsPage() {
                               {tutor.avatarUrl ? (
                                 <img 
                                   src={tutor.avatarUrl} 
-                                  alt={tutor.userName}
+                                  alt={tutor.userName || tutor.userEmail || 'Gia sư'}
                                   className="w-full h-full object-cover rounded-lg"
                                   onError={(e) => {
                                     e.currentTarget.style.display = 'none';
@@ -622,16 +577,8 @@ export function SavedTutorsPage() {
                                 className={`w-full h-full rounded-lg flex items-center justify-center text-2xl font-bold text-[#257180] bg-[#F2E5BF] ${tutor.avatarUrl ? 'hidden' : 'flex'}`}
                                 style={{ display: tutor.avatarUrl ? 'none' : 'flex' }}
                               >
-                                {tutor.userName.slice(0, 2).toUpperCase()}
+                                {(tutor.userName || tutor.userEmail || 'U').slice(0, 2).toUpperCase()}
                               </div>
-                              {/* Video Play Indicator */}
-                              {tutor.videoIntroUrl && (
-                                <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
-                                    <Play className="w-6 h-6 text-gray-900 ml-0.5" />
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           </div>
                           {/* Name, Info & Subjects */}
@@ -640,45 +587,40 @@ export function SavedTutorsPage() {
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-3">
                                   <h2 className="text-black text-xl sm:text-2xl font-bold">
-                                    {tutor.userName}
+                                    {tutor.userName || tutor.userEmail || 'Gia sư'}
                                   </h2>
                                 </div>
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                                   <div className="flex items-center gap-1.5">
                                     <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
-                                    <span className="text-sm text-black font-medium">{tutor.rating}</span>
-                                    <span className="text-sm text-gray-600">({tutor.reviewCount} đánh giá)</span>
+                                    <span className="text-sm text-black font-medium">5.0</span>
+                                    <span className="text-sm text-gray-600">(0 đánh giá)</span>
                                   </div>
                                   <Separator orientation="vertical" className="h-4" />
-                                  <span className="text-sm text-gray-600">{tutor.completedLessons} buổi học</span>
+                                  <span className="text-sm text-gray-600">0 buổi học</span>
                                   <Separator orientation="vertical" className="h-4" />
-                                  <span className="text-sm text-gray-600">{tutor.totalStudents} học sinh</span>
+                                  <span className="text-sm text-gray-600">0 học sinh</span>
                                 </div>
                               </div>
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
                                 className="p-2 -mt-1 hover:bg-[#FD8B51] hover:text-white"
-                                onClick={(e) => handleToggleFavorite(tutor.tutorId, e)}
-                                disabled={loadingFavorite.has(tutor.tutorId)}
+                                onClick={(e) => handleToggleFavorite(tutor.id, e)}
+                                disabled={loadingFavorite.has(tutor.id)}
                               >
-                                {loadingFavorite.has(tutor.tutorId) ? (
+                                {loadingFavorite.has(tutor.id) ? (
                                   <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
                                 ) : (
-                                  <Heart className={`w-5 h-5 transition-colors duration-200 ${favoriteTutors.has(tutor.tutorId) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                                  <Heart className={`w-5 h-5 transition-colors duration-200 ${favoriteTutors.has(tutor.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
                                 )}
                               </Button>
                             </div>
                             {/* Subjects */}
                             <div className="flex flex-wrap gap-2">
-                              {tutor.subjects.map((subject, idx) => (
+                              {tutor.tutorSubjects?.map((tutorSubject, idx) => (
                                 <Badge key={idx} variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-black border-[#257180]/20">
-                                  {subject}
-                                </Badge>
-                              ))}
-                              {tutor.specializations.slice(0, 2).map((spec, idx) => (
-                                <Badge key={idx} variant="outline" className="text-xs px-2 py-0.5 border-gray-300 text-[#FD8B51]">
-                                  {spec}
+                                  {tutorSubject.subject?.subjectName || `Subject ${tutorSubject.id}`}
                                 </Badge>
                               ))}
                             </div>
@@ -687,7 +629,7 @@ export function SavedTutorsPage() {
                         {/* Row 2: Bio */}
                         <div className="mb-4">
                           <p className="text-sm text-gray-600 line-clamp-2">
-                            {tutor.bio}
+                            {tutor.bio || 'Chưa có thông tin giới thiệu.'}
                           </p>
                         </div>
                         {/* Row 3: Location + Teaching Mode + Education */}
@@ -695,20 +637,22 @@ export function SavedTutorsPage() {
                           <div className="flex items-center gap-1.5">
                             <MapPin className="w-4 h-4" />
                             <span>
-                              {tutor.subDistrictName && tutor.provinceName
-                                ? `${tutor.subDistrictName}, ${tutor.provinceName}`
-                                : tutor.provinceName || 'Việt Nam'
+                              {tutor.subDistrict?.name && tutor.province?.name 
+                                ? `${tutor.subDistrict.name}, ${tutor.province.name}`
+                                : tutor.province?.name || 'Việt Nam'
                               }
                             </span>
                           </div>
                           <Separator orientation="vertical" className="h-4" />
-                          <span>{tutor.teachingModes}</span>
-                          {tutor.education && (
+                          <span>
+                            {EnumHelpers.getTeachingModeLabel(getTeachingModeValue(tutor.teachingModes))}
+                          </span>
+                          {tutor.tutorEducations && tutor.tutorEducations.length > 0 && (
                             <>
                               <Separator orientation="vertical" className="h-4" />
                               <div className="flex items-center gap-1.5">
                                 <Award className="w-4 h-4" />
-                                <span className="line-clamp-1">{tutor.education}</span>
+                                <span className="line-clamp-1">{tutor.tutorEducations[0].institution?.name || 'Education'}</span>
                               </div>
                             </>
                           )}
@@ -716,12 +660,32 @@ export function SavedTutorsPage() {
                         {/* Row 4: Price & Actions */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-[#257180]/20 gap-4">
                           <div>
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-3xl text-black font-bold">
-                                {FormatService.formatVND(tutor.hourlyRate)}
-                              </span>
-                              <span className="text-base text-gray-600">/giờ</span>
-                            </div>
+                            {tutor.tutorSubjects && tutor.tutorSubjects.length > 0 ? (
+                              (() => {
+                                const prices = tutor.tutorSubjects.map(ts => ts.hourlyRate || 0);
+                                const minPrice = Math.min(...prices);
+                                const maxPrice = Math.max(...prices);
+                                
+                                return (
+                                  <div className="flex items-baseline gap-2">
+                                    <span className="text-3xl text-black font-bold">
+                                      {minPrice === maxPrice 
+                                        ? FormatService.formatVND(minPrice)
+                                        : `${FormatService.formatVND(minPrice)} - ${FormatService.formatVND(maxPrice)}`
+                                      }
+                                    </span>
+                                    <span className="text-base text-gray-600">/giờ</span>
+                                  </div>
+                                );
+                              })()
+                            ) : (
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-3xl text-black font-bold">
+                                  {FormatService.formatVND(0)}
+                                </span>
+                                <span className="text-base text-gray-600">/giờ</span>
+                              </div>
+                            )}
                           </div>
                           <div className="flex gap-2">
                             <Button variant="outline" size="lg" className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
@@ -795,7 +759,7 @@ export function SavedTutorsPage() {
           <div className="hidden lg:block lg:col-span-4">
             <div className="sticky top-72 z-30">
               {/* Video Card */}
-              <Card key={`preview-${currentTutor?.tutorId}-${videoKey}`} className="overflow-hidden bg-white border-[#257180]/20 shadow-lg">
+              <Card key={`preview-${currentTutor?.id}-${videoKey}`} className="overflow-hidden bg-white border-[#257180]/20 shadow-lg">
                 <CardContent className="p-0">
                   {/* Video Section */}
                   <div className="relative bg-gradient-to-br from-[#257180] to-[#1e5a66] aspect-[4/3]">
@@ -803,7 +767,7 @@ export function SavedTutorsPage() {
                       currentTutor.videoIntroUrl ? (
                         <div className="absolute inset-0">
                           <video 
-                            key={`video-${currentTutor.tutorId}-${videoKey}`}
+                            key={`video-${currentTutor.id}-${videoKey}`}
                             className="w-full h-full object-cover"
                             controls
                             poster={currentTutor.avatarUrl || undefined}
@@ -816,7 +780,7 @@ export function SavedTutorsPage() {
                                   <Play className="w-10 h-10 text-white ml-1" />
                                 </div>
                                 <p className="font-bold">Video không hỗ trợ</p>
-                                <p className="text-sm mt-2">{currentTutor.userName}</p>
+                                <p className="text-sm mt-2">{currentTutor.userName || currentTutor.userEmail}</p>
                               </div>
                             </div>
                           </video>
@@ -828,7 +792,7 @@ export function SavedTutorsPage() {
                               <Video className="w-8 h-8" />
                             </div>
                             <p className="font-bold">Không có video</p>
-                            <p className="text-sm mt-2">{currentTutor.userName}</p>
+                            <p className="text-sm mt-2">{currentTutor.userName || currentTutor.userEmail}</p>
                           </div>
                         </div>
                       )

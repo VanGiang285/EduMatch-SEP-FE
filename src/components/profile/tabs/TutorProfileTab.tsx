@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/form/label';
 import { Textarea } from '@/components/ui/form/textarea';
 import { Badge } from '@/components/ui/basic/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
-import { Checkbox } from '@/components/ui/form/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/form/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Separator } from '@/components/ui/layout/separator';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
@@ -31,8 +31,16 @@ import {
   AlertCircle,
   Plus,
   Trash2,
-  Eye
+  Eye,
+  Loader2
 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
+import { useAuth } from '@/contexts/AuthContext';
+import { TutorService, CertificateService, SubjectService } from '@/services';
+import { useCustomToast } from '@/hooks/useCustomToast';
+import { TutorProfileDto, TutorEducationDto, TutorCertificateDto, TutorSubjectDto } from '@/types/backend';
+import { TutorProfileUpdateRequest, TutorEducationCreateRequest, TutorCertificateCreateRequest, TutorSubjectCreateRequest, TutorEducationUpdateRequest, TutorCertificateUpdateRequest, TutorSubjectUpdateRequest } from '@/types/requests';
+import { TeachingMode, VerifyStatus, EnumHelpers } from '@/types/enums';
 
 // Types dựa trên database schema
 interface TutorEducation {
@@ -68,14 +76,23 @@ interface TutorSubject {
 }
 
 export function TutorProfileTab() {
+  const { user } = useAuth();
+  const { showSuccess, showError } = useCustomToast();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [tutorProfile, setTutorProfile] = useState<TutorProfileDto | null>(null);
+  const [tutorId, setTutorId] = useState<number | null>(null);
   
   // Modal states
   const [showEducationModal, setShowEducationModal] = useState(false);
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
+  const [editingEducation, setEditingEducation] = useState<TutorEducationDto | null>(null);
+  const [editingCertificate, setEditingCertificate] = useState<TutorCertificateDto | null>(null);
+  const [editingSubject, setEditingSubject] = useState<TutorSubjectDto | null>(null);
   
   const [profileData, setProfileData] = useState({
     // Thông tin cơ bản từ user_profiles
@@ -98,7 +115,7 @@ export function TutorProfileTab() {
       bio: 'Tôi là một gia sư toán học đam mê với hơn 5 năm kinh nghiệm giúp học sinh đạt được mục tiêu học tập. Tôi chuyên biến những khái niệm toán học phức tạp thành dễ hiểu thông qua các ví dụ thực tế và phương pháp học tương tác.',
       teachingExp: 'Với 5 năm kinh nghiệm giảng dạy, tôi đã giúp hơn 200 học sinh cải thiện điểm số toán. Phương pháp của tôi tập trung vào việc xây dựng nền tảng vững chắc và áp dụng kiến thức vào thực tế.',
       videoIntroUrl: 'https://youtube.com/watch?v=sample123',
-      teachingModes: 2, // 0=Offline, 1=Online, 2=Cả hai
+      teachingModes: TeachingMode.Offline, // 0=Offline, 1=Online, 2=Hybrid
       status: 1, // 0=Chờ duyệt, 1=Đã duyệt, 2=Bị từ chối
     },
     // Học vấn từ tutor_education
@@ -187,23 +204,37 @@ export function TutorProfileTab() {
   });
 
   // Form states for modals
+  // Master data states
+  const [masterData, setMasterData] = useState({
+    institutions: [] as any[],
+    certificateTypes: [] as any[],
+    subjects: [] as any[],
+    levels: [] as any[],
+    isLoading: false,
+  });
+
   const [newEducation, setNewEducation] = useState({
+    institutionId: 0,
     institutionName: '',
     institutionType: 2,
     issueDate: '',
+    certificateUrl: '',
     certificateFile: null as File | null,
   });
 
   const [newCertificate, setNewCertificate] = useState({
+    certificateTypeId: 0,
     certificateName: '',
-    subjectName: '',
     issueDate: '',
     expiryDate: '',
+    certificateUrl: '',
     certificateFile: null as File | null,
   });
 
   const [newSubject, setNewSubject] = useState({
+    subjectId: 0,
     subjectName: '',
+    levelId: 0,
     levelName: '',
     hourlyRate: '',
   });
@@ -216,15 +247,33 @@ export function TutorProfileTab() {
 
   const [showTimeSlotModal, setShowTimeSlotModal] = useState(false);
 
-  const subjects = [
-    'Toán học', 'Vật lý', 'Hóa học', 'Sinh học', 'Tiếng Anh', 'Tiếng Pháp',
-    'Văn học', 'Lịch sử', 'Địa lý', 'Tin học', 'Lập trình', 'Kinh tế'
-  ];
+  // Load master data
+  useEffect(() => {
+    const loadMasterData = async () => {
+      setMasterData(prev => ({ ...prev, isLoading: true }));
+      try {
+        const [institutionsRes, certificateTypesRes, subjectsRes, levelsRes] = await Promise.all([
+          CertificateService.getAllInstitutions(),
+          CertificateService.getAllCertificateTypesWithSubjects(),
+          SubjectService.getAllSubjects(),
+          CertificateService.getAllLevels(),
+        ]);
 
-  const levels = [
-    'Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5', 'Lớp 6',
-    'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 10', 'Lớp 11', 'Lớp 12'
-  ];
+        setMasterData({
+          institutions: institutionsRes.success ? institutionsRes.data || [] : [],
+          certificateTypes: certificateTypesRes.success ? certificateTypesRes.data || [] : [],
+          subjects: subjectsRes.success ? subjectsRes.data || [] : [],
+          levels: levelsRes.success ? levelsRes.data || [] : [],
+          isLoading: false,
+        });
+      } catch (error) {
+        console.error('Error loading master data:', error);
+        setMasterData(prev => ({ ...prev, isLoading: false }));
+      }
+    };
+
+    loadMasterData();
+  }, []);
 
   const cities = [
     'Hà Nội', 'Hồ Chí Minh', 'Đà Nẵng', 'Hải Phòng', 'Cần Thơ', 'Biên Hòa',
@@ -267,11 +316,175 @@ export function TutorProfileTab() {
     return amount.toLocaleString('vi-VN') + '₫';
   };
 
-  const handleSave = () => {
-    console.log('Profile updated:', profileData);
+  // Helper function to check if URL is YouTube
+  const isYouTubeUrl = (url: string): boolean => {
+    if (!url) return false;
+    return /youtube\.com|youtu\.be/.test(url);
+  };
+
+  // Helper function to check if URL is Cloudinary
+  const isCloudinaryUrl = (url: string): boolean => {
+    if (!url) return false;
+    return /cloudinary\.com|res\.cloudinary\.com/.test(url);
+  };
+
+  // Helper function to extract YouTube video ID from URL
+  const getYouTubeVideoId = (url: string): string | null => {
+    if (!url) return null;
+    
+    // Handle various YouTube URL formats
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    
+    return null;
+  };
+
+  // Helper function to get YouTube embed URL
+  const getYouTubeEmbedUrl = (url: string): string | null => {
+    const videoId = getYouTubeVideoId(url);
+    if (!videoId) return null;
+    return `https://www.youtube.com/embed/${videoId}`;
+  };
+
+  // Load tutor profile từ email
+  useEffect(() => {
+    const loadTutorProfile = async () => {
+      if (!user?.email) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await TutorService.getTutorByEmail(user.email);
+        if (response.success && response.data) {
+          const profile = response.data;
+          setTutorProfile(profile);
+          setTutorId(profile.id);
+          
+          // Map data từ TutorProfileDto vào profileData
+          const educations: TutorEducation[] = (profile.tutorEducations || []).map((edu) => ({
+            id: edu.id,
+            institutionId: edu.institutionId,
+            institutionName: edu.institution?.name || '',
+            institutionType: edu.institution?.institutionType || 0,
+            issueDate: edu.issueDate || '',
+            certificateUrl: edu.certificateUrl,
+            verified: edu.verified,
+            rejectReason: edu.rejectReason,
+          }));
+
+          const certificates: TutorCertificate[] = (profile.tutorCertificates || []).map((cert) => ({
+            id: cert.id,
+            certificateTypeId: cert.certificateTypeId,
+            certificateName: cert.certificateType?.name || '',
+            subjectName: cert.certificateType?.subjects?.[0]?.subjectName,
+            issueDate: cert.issueDate || '',
+            expiryDate: cert.expiryDate,
+            certificateUrl: cert.certificateUrl,
+            verified: cert.verified,
+            rejectReason: cert.rejectReason,
+          }));
+
+          const subjects: TutorSubject[] = (profile.tutorSubjects || []).map((subj) => ({
+            id: subj.id,
+            subjectId: subj.subjectId,
+            subjectName: subj.subject?.subjectName || '',
+            levelId: subj.levelId,
+            levelName: subj.level?.name || '',
+            hourlyRate: subj.hourlyRate || 0,
+          }));
+
+          setProfileData(prev => ({
+            ...prev,
+            basic: {
+              firstName: profile.userName?.split(' ').slice(0, -1).join(' ') || '',
+              lastName: profile.userName?.split(' ').slice(-1)[0] || '',
+              email: profile.userEmail,
+              phone: profile.phone || '',
+              dob: profile.dob || '',
+              gender: profile.gender || 0,
+              cityId: profile.province?.id || 0,
+              cityName: profile.province?.name || '',
+              subDistrictId: profile.subDistrict?.id || 0,
+              subDistrictName: profile.subDistrict?.name || '',
+              addressLine: profile.addressLine || '',
+              avatarUrl: profile.avatarUrl || '',
+            },
+            tutorProfile: {
+              bio: profile.bio || '',
+              teachingExp: profile.teachingExp || '',
+              videoIntroUrl: profile.videoIntroUrl || '',
+              teachingModes: profile.teachingModes ?? TeachingMode.Offline, // Default to Offline if undefined
+              status: profile.status,
+            },
+            educations,
+            certificates,
+            subjects,
+          }));
+        } else {
+          // Không có tutor profile - có thể chưa đăng ký làm gia sư
+          showError('Thông báo', 'Bạn chưa có hồ sơ gia sư. Vui lòng đăng ký làm gia sư trước.');
+        }
+      } catch (error: any) {
+        console.error('Error loading tutor profile:', error);
+        if (error.status === 404) {
+          showError('Thông báo', 'Bạn chưa có hồ sơ gia sư. Vui lòng đăng ký làm gia sư trước.');
+        } else {
+          showError('Lỗi', 'Không thể tải thông tin hồ sơ gia sư. Vui lòng thử lại.');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTutorProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email]);
+
+  const handleSave = async () => {
+    if (!tutorId || !tutorProfile) {
+      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const updateRequest: TutorProfileUpdateRequest = {
+        id: tutorId,
+        bio: profileData.tutorProfile.bio,
+        teachingExp: profileData.tutorProfile.teachingExp,
+        videoIntroUrl: profileData.tutorProfile.videoIntroUrl,
+        teachingModes: profileData.tutorProfile.teachingModes,
+      };
+
+      const response = await TutorService.updateTutorProfile(updateRequest);
+      if (response.success) {
     setIsEditing(false);
     setSaveSuccess(true);
+        showSuccess('Thành công', 'Cập nhật hồ sơ gia sư thành công.');
     setTimeout(() => setSaveSuccess(false), 3000);
+        
+        // Reload data
+        await reloadTutorProfile();
+      } else {
+        showError('Lỗi', response.message || 'Không thể cập nhật hồ sơ gia sư.');
+      }
+    } catch (error: any) {
+      console.error('Error updating tutor profile:', error);
+      showError('Lỗi', 'Không thể cập nhật hồ sơ gia sư. Vui lòng thử lại.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const updateProfileData = (section: string, data: any) => {
@@ -281,95 +494,273 @@ export function TutorProfileTab() {
     }));
   };
 
-  // Handlers for education
-  const handleAddEducation = () => {
-    const education: TutorEducation = {
-      id: Date.now(),
-      institutionId: 0,
-      institutionName: newEducation.institutionName,
-      institutionType: newEducation.institutionType,
-      issueDate: newEducation.issueDate,
-      verified: 0, // Chờ duyệt
-    };
+  // Helper function to reload tutor profile
+  const reloadTutorProfile = async () => {
+    if (!user?.email) return;
+
+    try {
+      const response = await TutorService.getTutorByEmail(user.email);
+      if (response.success && response.data) {
+        const profile = response.data;
+        setTutorProfile(profile);
+        setTutorId(profile.id);
+        
+        const educations: TutorEducation[] = (profile.tutorEducations || []).map((edu) => ({
+          id: edu.id,
+          institutionId: edu.institutionId,
+          institutionName: edu.institution?.name || '',
+          institutionType: edu.institution?.institutionType || 0,
+          issueDate: edu.issueDate || '',
+          certificateUrl: edu.certificateUrl,
+          verified: edu.verified,
+          rejectReason: edu.rejectReason,
+        }));
+
+        const certificates: TutorCertificate[] = (profile.tutorCertificates || []).map((cert) => ({
+          id: cert.id,
+          certificateTypeId: cert.certificateTypeId,
+          certificateName: cert.certificateType?.name || '',
+          subjectName: cert.certificateType?.subjects?.[0]?.subjectName,
+          issueDate: cert.issueDate || '',
+          expiryDate: cert.expiryDate,
+          certificateUrl: cert.certificateUrl,
+          verified: cert.verified,
+          rejectReason: cert.rejectReason,
+        }));
+
+          const subjects: TutorSubject[] = (profile.tutorSubjects || []).map((subj) => ({
+            id: subj.id,
+            subjectId: subj.subjectId,
+            subjectName: subj.subject?.subjectName || '',
+            levelId: subj.levelId,
+            levelName: subj.level?.name || '',
+            hourlyRate: subj.hourlyRate || 0,
+          }));
+
     setProfileData(prev => ({
       ...prev,
-      educations: [...prev.educations, education]
-    }));
+          tutorProfile: {
+            bio: profile.bio || '',
+            teachingExp: profile.teachingExp || '',
+            videoIntroUrl: profile.videoIntroUrl || '',
+            teachingModes: profile.teachingModes ?? TeachingMode.Offline, // Default to Offline if undefined
+            status: profile.status,
+          },
+          educations,
+          certificates,
+          subjects,
+        }));
+      }
+    } catch (error) {
+      console.error('Error reloading tutor profile:', error);
+    }
+  };
+
+  // Handlers for education
+  const handleAddEducation = async () => {
+    if (!tutorId) {
+      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      return;
+    }
+
+    if (!newEducation.institutionId) {
+      showError('Lỗi', 'Vui lòng chọn trường học.');
+      return;
+    }
+
+    try {
+      const request: Omit<TutorEducationCreateRequest, 'tutorId'> = {
+        institutionId: newEducation.institutionId,
+        issueDate: newEducation.issueDate || undefined,
+        certificateEducationUrl: newEducation.certificateUrl || undefined,
+      };
+
+      const response = await CertificateService.createTutorEducation(tutorId, request);
+      if (response.success && response.data) {
+        showSuccess('Thành công', 'Thêm học vấn thành công.');
     setShowEducationModal(false);
     setNewEducation({
+          institutionId: 0,
       institutionName: '',
       institutionType: 2,
       issueDate: '',
+          certificateUrl: '',
       certificateFile: null,
     });
+        
+        // Reload tutor profile
+        await reloadTutorProfile();
+      } else {
+        showError('Lỗi', response.message || 'Không thể thêm học vấn.');
+      }
+    } catch (error: any) {
+      console.error('Error adding education:', error);
+      showError('Lỗi', 'Không thể thêm học vấn. Vui lòng thử lại.');
+    }
   };
 
-  const handleDeleteEducation = (id: number) => {
-    setProfileData(prev => ({
-      ...prev,
-      educations: prev.educations.filter(e => e.id !== id)
-    }));
+  const handleDeleteEducation = async (id: number) => {
+    if (!tutorId) {
+      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      return;
+    }
+
+    if (!confirm('Bạn có chắc chắn muốn xóa học vấn này?')) {
+      return;
+    }
+
+    try {
+      const response = await CertificateService.deleteTutorEducation(tutorId, id);
+      if (response.success) {
+        showSuccess('Thành công', 'Xóa học vấn thành công.');
+        
+        // Reload tutor profile
+        await reloadTutorProfile();
+      } else {
+        showError('Lỗi', response.message || 'Không thể xóa học vấn.');
+      }
+    } catch (error: any) {
+      console.error('Error deleting education:', error);
+      showError('Lỗi', 'Không thể xóa học vấn. Vui lòng thử lại.');
+    }
   };
 
   // Handlers for certificate
-  const handleAddCertificate = () => {
-    const certificate: TutorCertificate = {
-      id: Date.now(),
-      certificateTypeId: 0,
-      certificateName: newCertificate.certificateName,
-      subjectName: newCertificate.subjectName,
-      issueDate: newCertificate.issueDate,
+  const handleAddCertificate = async () => {
+    if (!tutorId) {
+      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      return;
+    }
+
+    if (!newCertificate.certificateTypeId) {
+      showError('Lỗi', 'Vui lòng chọn loại chứng chỉ.');
+      return;
+    }
+
+    try {
+      const request: Omit<TutorCertificateCreateRequest, 'tutorId'> = {
+        certificateTypeId: newCertificate.certificateTypeId,
+        issueDate: newCertificate.issueDate || undefined,
       expiryDate: newCertificate.expiryDate || undefined,
-      verified: 0, // Chờ duyệt
-    };
-    setProfileData(prev => ({
-      ...prev,
-      certificates: [...prev.certificates, certificate]
-    }));
+        certificateUrl: newCertificate.certificateUrl || undefined,
+      };
+
+      const response = await CertificateService.createTutorCertificate(tutorId, request);
+      if (response.success && response.data) {
+        showSuccess('Thành công', 'Thêm chứng chỉ thành công.');
     setShowCertificateModal(false);
     setNewCertificate({
+          certificateTypeId: 0,
       certificateName: '',
-      subjectName: '',
       issueDate: '',
       expiryDate: '',
+          certificateUrl: '',
       certificateFile: null,
     });
+        
+        // Reload tutor profile
+        await reloadTutorProfile();
+      } else {
+        showError('Lỗi', response.message || 'Không thể thêm chứng chỉ.');
+      }
+    } catch (error: any) {
+      console.error('Error adding certificate:', error);
+      showError('Lỗi', 'Không thể thêm chứng chỉ. Vui lòng thử lại.');
+    }
   };
 
-  const handleDeleteCertificate = (id: number) => {
-    setProfileData(prev => ({
-      ...prev,
-      certificates: prev.certificates.filter(c => c.id !== id)
-    }));
+  const handleDeleteCertificate = async (id: number) => {
+    if (!tutorId) {
+      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      return;
+    }
+
+    if (!confirm('Bạn có chắc chắn muốn xóa chứng chỉ này?')) {
+      return;
+    }
+
+    try {
+      const response = await CertificateService.deleteTutorCertificate(tutorId, id);
+      if (response.success) {
+        showSuccess('Thành công', 'Xóa chứng chỉ thành công.');
+        
+        // Reload tutor profile
+        await reloadTutorProfile();
+      } else {
+        showError('Lỗi', response.message || 'Không thể xóa chứng chỉ.');
+      }
+    } catch (error: any) {
+      console.error('Error deleting certificate:', error);
+      showError('Lỗi', 'Không thể xóa chứng chỉ. Vui lòng thử lại.');
+    }
   };
 
   // Handlers for subject
-  const handleAddSubject = () => {
-    const subject: TutorSubject = {
-      id: Date.now(),
-      subjectId: 0,
-      subjectName: newSubject.subjectName,
-      levelId: 0,
-      levelName: newSubject.levelName,
+  const handleAddSubject = async () => {
+    if (!tutorId) {
+      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      return;
+    }
+
+    if (!newSubject.subjectId || !newSubject.levelId || !newSubject.hourlyRate) {
+      showError('Lỗi', 'Vui lòng điền đầy đủ thông tin môn học.');
+      return;
+    }
+
+    try {
+      const request: Omit<TutorSubjectCreateRequest, 'tutorId'> = {
+        subjectId: newSubject.subjectId,
+        levelId: newSubject.levelId,
       hourlyRate: parseFloat(newSubject.hourlyRate),
     };
-    setProfileData(prev => ({
-      ...prev,
-      subjects: [...prev.subjects, subject]
-    }));
+
+      const response = await SubjectService.createTutorSubject(tutorId, request);
+      if (response.success && response.data) {
+        showSuccess('Thành công', 'Thêm môn học thành công.');
     setShowSubjectModal(false);
     setNewSubject({
+          subjectId: 0,
       subjectName: '',
+          levelId: 0,
       levelName: '',
       hourlyRate: '',
     });
+        
+        // Reload tutor profile
+        await reloadTutorProfile();
+      } else {
+        showError('Lỗi', response.message || 'Không thể thêm môn học.');
+      }
+    } catch (error: any) {
+      console.error('Error adding subject:', error);
+      showError('Lỗi', 'Không thể thêm môn học. Vui lòng thử lại.');
+    }
   };
 
-  const handleDeleteSubject = (id: number) => {
-    setProfileData(prev => ({
-      ...prev,
-      subjects: prev.subjects.filter(s => s.id !== id)
-    }));
+  const handleDeleteSubject = async (id: number) => {
+    if (!tutorId) {
+      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      return;
+    }
+
+    if (!confirm('Bạn có chắc chắn muốn xóa môn học này?')) {
+      return;
+    }
+
+    try {
+      const response = await SubjectService.deleteTutorSubject(tutorId, id);
+      if (response.success) {
+        showSuccess('Thành công', 'Xóa môn học thành công.');
+        
+        // Reload tutor profile
+        await reloadTutorProfile();
+      } else {
+        showError('Lỗi', response.message || 'Không thể xóa môn học.');
+      }
+    } catch (error: any) {
+      console.error('Error deleting subject:', error);
+      showError('Lỗi', 'Không thể xóa môn học. Vui lòng thử lại.');
+    }
   };
 
   // Handlers for time slots
@@ -412,6 +803,32 @@ export function TutorProfileTab() {
     }));
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-[#257180]" />
+          <p className="text-gray-600">Đang tải thông tin hồ sơ gia sư...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No tutor profile
+  if (!tutorProfile || !tutorId) {
+    return (
+      <div className="space-y-6">
+        <Alert className="bg-yellow-50 border-yellow-200">
+          <AlertCircle className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="text-yellow-800">
+            Bạn chưa có hồ sơ gia sư. Vui lòng đăng ký làm gia sư trước.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -427,13 +844,46 @@ export function TutorProfileTab() {
             </Button>
           ) : (
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditing(false);
+                  // Reset to original data
+                  if (tutorProfile) {
+                    setProfileData(prev => ({
+                      ...prev,
+                      tutorProfile: {
+                        bio: tutorProfile.bio || '',
+                        teachingExp: tutorProfile.teachingExp || '',
+                        videoIntroUrl: tutorProfile.videoIntroUrl || '',
+                        teachingModes: tutorProfile.teachingModes,
+                        status: tutorProfile.status,
+                      },
+                    }));
+                  }
+                }}
+                disabled={isSaving}
+              >
                 <X className="w-4 h-4 mr-2" />
                 Hủy
               </Button>
-              <Button onClick={handleSave} size="lg" className="bg-[#257180] hover:bg-[#257180]/90 text-white">
+              <Button 
+                onClick={handleSave} 
+                size="lg" 
+                className="bg-[#257180] hover:bg-[#257180]/90 text-white"
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  <>
                 <Save className="w-4 h-4 mr-2" />
                 Lưu thay đổi
+                  </>
+                )}
               </Button>
             </div>
           )}
@@ -478,13 +928,20 @@ export function TutorProfileTab() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-6 mb-6">
-                <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                  <User className="w-12 h-12 text-gray-400" />
-                </div>
+                <Avatar className="h-24 w-24">
+                  <AvatarImage 
+                    src={profileData.basic.avatarUrl || tutorProfile?.avatarUrl || user?.avatar} 
+                    alt={profileData.basic.firstName + ' ' + profileData.basic.lastName || user?.name || 'User'} 
+                  />
+                  <AvatarFallback className="text-2xl bg-[#F2E5BF] text-[#257180]">
+                    {(profileData.basic.firstName?.[0] || profileData.basic.lastName?.[0] || user?.name?.[0] || user?.email?.[0] || 'U').toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
                   <Button disabled={!isEditing} variant="outline">
                     <Upload className="w-4 h-4 mr-2" />
                     Tải ảnh lên
+                    <span className="ml-2 text-xs text-gray-500">(Tính năng đang phát triển)</span>
                   </Button>
                   <p className="text-sm text-gray-600 mt-2">JPG, PNG. Tối đa 5MB</p>
                 </div>
@@ -498,6 +955,7 @@ export function TutorProfileTab() {
                     value={profileData.basic.lastName}
                     onChange={(e) => updateProfileData('basic', { lastName: e.target.value })}
                     disabled={!isEditing}
+                    className={!isEditing ? "disabled:text-black disabled:opacity-100" : ""}
                   />
                 </div>
                 <div className="space-y-2">
@@ -507,6 +965,7 @@ export function TutorProfileTab() {
                     value={profileData.basic.firstName}
                     onChange={(e) => updateProfileData('basic', { firstName: e.target.value })}
                     disabled={!isEditing}
+                    className={!isEditing ? "disabled:text-black disabled:opacity-100" : ""}
                   />
                 </div>
               </div>
@@ -519,6 +978,7 @@ export function TutorProfileTab() {
                     type="email"
                     value={profileData.basic.email}
                     disabled
+                    className="disabled:text-black disabled:opacity-100"
                   />
                 </div>
                 <div className="space-y-2">
@@ -528,6 +988,7 @@ export function TutorProfileTab() {
                     value={profileData.basic.phone}
                     onChange={(e) => updateProfileData('basic', { phone: e.target.value })}
                     disabled={!isEditing}
+                    className={!isEditing ? "disabled:text-black disabled:opacity-100" : ""}
                   />
                 </div>
               </div>
@@ -541,6 +1002,7 @@ export function TutorProfileTab() {
                     value={profileData.basic.dob}
                     onChange={(e) => updateProfileData('basic', { dob: e.target.value })}
                     disabled={!isEditing}
+                    className={!isEditing ? "disabled:text-black disabled:opacity-100" : ""}
                   />
                 </div>
                 <div className="space-y-2">
@@ -550,7 +1012,7 @@ export function TutorProfileTab() {
                     onValueChange={(value) => updateProfileData('basic', { gender: parseInt(value) })}
                     disabled={!isEditing}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={!isEditing ? "disabled:text-black disabled:opacity-100" : ""}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -576,7 +1038,7 @@ export function TutorProfileTab() {
                       onValueChange={(value) => updateProfileData('basic', { cityName: value })}
                       disabled={!isEditing}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className={!isEditing ? "disabled:text-black disabled:opacity-100" : ""}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -594,6 +1056,7 @@ export function TutorProfileTab() {
                       onChange={(e) => updateProfileData('basic', { subDistrictName: e.target.value })}
                       disabled={!isEditing}
                       placeholder="Ví dụ: Quận Ba Đình"
+                      className={!isEditing ? "disabled:text-black disabled:opacity-100" : ""}
                     />
                   </div>
                 </div>
@@ -605,6 +1068,7 @@ export function TutorProfileTab() {
                     onChange={(e) => updateProfileData('basic', { addressLine: e.target.value })}
                     disabled={!isEditing}
                     placeholder="Số nhà, tên đường..."
+                    className={!isEditing ? "disabled:text-black disabled:opacity-100" : ""}
                   />
                 </div>
               </div>
@@ -613,44 +1077,27 @@ export function TutorProfileTab() {
 
               <div className="space-y-3">
                 <Label>Hình thức dạy học</Label>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="offline" 
-                      checked={profileData.tutorProfile.teachingModes === 0 || profileData.tutorProfile.teachingModes === 2}
-                      onCheckedChange={(checked) => {
-                        const current = profileData.tutorProfile.teachingModes;
-                        let newMode = current;
-                        if (checked) {
-                          newMode = current === 1 ? 2 : 0;
-                        } else {
-                          newMode = current === 2 ? 1 : current;
-                        }
-                        updateProfileData('tutorProfile', { teachingModes: newMode });
+                <RadioGroup 
+                  value={profileData.tutorProfile.teachingModes?.toString() ?? TeachingMode.Offline.toString()}
+                  onValueChange={(value) => {
+                    updateProfileData('tutorProfile', { teachingModes: parseInt(value) as TeachingMode });
                       }}
                       disabled={!isEditing}
-                    />
-                    <Label htmlFor="offline">Tại nhà</Label>
+                      className={!isEditing ? "[&_label]:text-black [&_label]:opacity-100" : ""}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={TeachingMode.Offline.toString()} id="offline" />
+                    <Label htmlFor="offline" className={`cursor-pointer ${!isEditing ? "text-black opacity-100" : ""}`}>{EnumHelpers.getTeachingModeLabel(TeachingMode.Offline)}</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="online" 
-                      checked={profileData.tutorProfile.teachingModes === 1 || profileData.tutorProfile.teachingModes === 2}
-                      onCheckedChange={(checked) => {
-                        const current = profileData.tutorProfile.teachingModes;
-                        let newMode = current;
-                        if (checked) {
-                          newMode = current === 0 ? 2 : 1;
-                        } else {
-                          newMode = current === 2 ? 0 : current;
-                        }
-                        updateProfileData('tutorProfile', { teachingModes: newMode });
-                      }}
-                      disabled={!isEditing}
-                    />
-                    <Label htmlFor="online">Trực tuyến</Label>
+                    <RadioGroupItem value={TeachingMode.Online.toString()} id="online" />
+                    <Label htmlFor="online" className={`cursor-pointer ${!isEditing ? "text-black opacity-100" : ""}`}>{EnumHelpers.getTeachingModeLabel(TeachingMode.Online)}</Label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={TeachingMode.Hybrid.toString()} id="hybrid" />
+                    <Label htmlFor="hybrid" className={`cursor-pointer ${!isEditing ? "text-black opacity-100" : ""}`}>{EnumHelpers.getTeachingModeLabel(TeachingMode.Hybrid)}</Label>
                 </div>
+                </RadioGroup>
               </div>
             </CardContent>
           </Card>
@@ -670,7 +1117,7 @@ export function TutorProfileTab() {
                 <p className="text-sm text-gray-600">Giới thiệu về bản thân, đam mê và triết lý giảng dạy của bạn</p>
                 <Textarea
                   id="bio"
-                  className="min-h-32"
+                  className={`min-h-32 ${!isEditing ? "disabled:text-black disabled:opacity-100" : ""}`}
                   value={profileData.tutorProfile.bio}
                   onChange={(e) => updateProfileData('tutorProfile', { bio: e.target.value })}
                   disabled={!isEditing}
@@ -683,7 +1130,7 @@ export function TutorProfileTab() {
                 <p className="text-sm text-gray-600">Mô tả kinh nghiệm giảng dạy, thành tích và kết quả đạt được</p>
                 <Textarea
                   id="teachingExp"
-                  className="min-h-32"
+                  className={`min-h-32 ${!isEditing ? "disabled:text-black disabled:opacity-100" : ""}`}
                   value={profileData.tutorProfile.teachingExp}
                   onChange={(e) => updateProfileData('tutorProfile', { teachingExp: e.target.value })}
                   disabled={!isEditing}
@@ -710,12 +1157,49 @@ export function TutorProfileTab() {
                   onChange={(e) => updateProfileData('tutorProfile', { videoIntroUrl: e.target.value })}
                   disabled={!isEditing}
                   placeholder="https://youtube.com/watch?v=..."
+                  className={!isEditing ? "disabled:text-black disabled:opacity-100" : ""}
                 />
               </div>
-              <Button disabled={!isEditing} variant="outline">
-                <Upload className="w-4 h-4 mr-2" />
-                Tải video lên
-              </Button>
+              
+              {/* Video Preview */}
+              {profileData.tutorProfile.videoIntroUrl && (
+                <div className="space-y-2">
+                  <Label>Preview video</Label>
+                  {isYouTubeUrl(profileData.tutorProfile.videoIntroUrl) && getYouTubeEmbedUrl(profileData.tutorProfile.videoIntroUrl) ? (
+                    <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+                      <iframe
+                        src={getYouTubeEmbedUrl(profileData.tutorProfile.videoIntroUrl) || ''}
+                        title="Video giới thiệu"
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : isCloudinaryUrl(profileData.tutorProfile.videoIntroUrl) ? (
+                    <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+                      <video
+                        src={profileData.tutorProfile.videoIntroUrl}
+                        controls
+                        className="w-full h-full object-contain"
+                        preload="metadata"
+                      >
+                        Trình duyệt của bạn không hỗ trợ video tag.
+                      </video>
+                    </div>
+                  ) : (
+                    <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+                      <video
+                        src={profileData.tutorProfile.videoIntroUrl}
+                        controls
+                        className="w-full h-full object-contain"
+                        preload="metadata"
+                      >
+                        Trình duyệt của bạn không hỗ trợ video tag.
+                      </video>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1064,7 +1548,7 @@ export function TutorProfileTab() {
             </Button>
             <Button 
               onClick={handleAddEducation}
-              disabled={!newEducation.institutionName || !newEducation.issueDate}
+              disabled={!newEducation.institutionId || !newEducation.issueDate}
               size="lg"
               className="bg-[#257180] hover:bg-[#257180]/90 text-white"
             >
@@ -1081,27 +1565,25 @@ export function TutorProfileTab() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="certificateName">Tên chứng chỉ</Label>
-              <Input
-                id="certificateName"
-                value={newCertificate.certificateName}
-                onChange={(e) => setNewCertificate({ ...newCertificate, certificateName: e.target.value })}
-                placeholder="Ví dụ: Chứng chỉ TESOL"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="certSubjectName">Môn học (tùy chọn)</Label>
+              <Label htmlFor="certificateTypeId">Loại chứng chỉ *</Label>
               <Select 
-                value={newCertificate.subjectName}
-                onValueChange={(value) => setNewCertificate({ ...newCertificate, subjectName: value })}
+                value={newCertificate.certificateTypeId.toString()}
+                onValueChange={(value) => {
+                  const certType = masterData.certificateTypes.find(ct => ct.id === parseInt(value));
+                  setNewCertificate({ 
+                    ...newCertificate, 
+                    certificateTypeId: parseInt(value),
+                    certificateName: certType?.name || '',
+                  });
+                }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Chọn môn học" />
+                  <SelectValue placeholder="Chọn loại chứng chỉ" />
                 </SelectTrigger>
                 <SelectContent>
-                  {subjects.map((subject) => (
-                    <SelectItem key={subject} value={subject}>
-                      {subject}
+                  {masterData.certificateTypes.map((certType) => (
+                    <SelectItem key={certType.id} value={certType.id.toString()}>
+                      {certType.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1143,7 +1625,7 @@ export function TutorProfileTab() {
             </Button>
             <Button 
               onClick={handleAddCertificate}
-              disabled={!newCertificate.certificateName || !newCertificate.issueDate}
+              disabled={!newCertificate.certificateTypeId || !newCertificate.issueDate}
               size="lg"
               className="bg-[#257180] hover:bg-[#257180]/90 text-white"
             >
@@ -1160,36 +1642,50 @@ export function TutorProfileTab() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="subjectName">Môn học</Label>
+              <Label htmlFor="subjectId">Môn học *</Label>
               <Select 
-                value={newSubject.subjectName}
-                onValueChange={(value) => setNewSubject({ ...newSubject, subjectName: value })}
+                value={newSubject.subjectId.toString()}
+                onValueChange={(value) => {
+                  const subject = masterData.subjects.find(s => s.id === parseInt(value));
+                  setNewSubject({ 
+                    ...newSubject, 
+                    subjectId: parseInt(value),
+                    subjectName: subject?.subjectName || '',
+                  });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn môn học" />
                 </SelectTrigger>
                 <SelectContent>
-                  {subjects.map((subject) => (
-                    <SelectItem key={subject} value={subject}>
-                      {subject}
+                  {masterData.subjects.map((subject) => (
+                    <SelectItem key={subject.id} value={subject.id.toString()}>
+                      {subject.subjectName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="levelName">Cấp độ</Label>
+              <Label htmlFor="levelId">Cấp độ *</Label>
               <Select 
-                value={newSubject.levelName}
-                onValueChange={(value) => setNewSubject({ ...newSubject, levelName: value })}
+                value={newSubject.levelId.toString()}
+                onValueChange={(value) => {
+                  const level = masterData.levels.find(l => l.id === parseInt(value));
+                  setNewSubject({ 
+                    ...newSubject, 
+                    levelId: parseInt(value),
+                    levelName: level?.name || '',
+                  });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn cấp độ" />
                 </SelectTrigger>
                 <SelectContent>
-                  {levels.map((level) => (
-                    <SelectItem key={level} value={level}>
-                      {level}
+                  {masterData.levels.map((level) => (
+                    <SelectItem key={level.id} value={level.id.toString()}>
+                      {level.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1213,7 +1709,7 @@ export function TutorProfileTab() {
             </Button>
             <Button 
               onClick={handleAddSubject}
-              disabled={!newSubject.subjectName || !newSubject.levelName || !newSubject.hourlyRate}
+              disabled={!newSubject.subjectId || !newSubject.levelId || !newSubject.hourlyRate}
               size="lg"
               className="bg-[#257180] hover:bg-[#257180]/90 text-white"
             >
