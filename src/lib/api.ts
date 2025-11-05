@@ -83,7 +83,7 @@ class ApiClient {
     }
            return {
              success: true,
-             data: data.data || data,
+             data: data.data !== undefined ? data.data : data,
              error: undefined,
              message: data.message,
            };

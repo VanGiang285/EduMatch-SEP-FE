@@ -12,6 +12,9 @@ import { Star, Heart, MapPin, Clock, Calendar as CalendarIcon, MessageCircle, Vi
 import { FormatService } from '@/lib/format';
 import { useTutorDetail } from '@/hooks/useTutorDetail';
 import { EnumHelpers, TeachingMode } from '@/types/enums';
+import { FavoriteTutorService } from '@/services/favoriteTutorService';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCustomToast } from '@/hooks/useCustomToast';
 
 // Helper function để convert string enum từ API sang TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
@@ -45,10 +48,13 @@ interface TutorDetailProfilePageProps {
 
 export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps) {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const { showWarning } = useCustomToast();
   const { tutor, isLoading, error, loadTutorDetail, clearError } = useTutorDetail();
   
   // const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isFavorite, setIsFavorite] = useState(false);
+  const [loadingFavorite, setLoadingFavorite] = useState(false);
   // const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   
   // Availability calendar states
@@ -199,6 +205,32 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       loadTutorDetail(tutorId);
     }
   }, [tutorId, loadTutorDetail]);
+
+  // Check favorite status when tutor loads (only if authenticated)
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      // Reset favorite when not authenticated or no tutorId
+      if (!tutorId || !isAuthenticated) {
+        setIsFavorite(false);
+        return;
+      }
+      
+      try {
+        const response = await FavoriteTutorService.isFavorite(tutorId);
+        // Ensure response.data is a boolean - check for explicit true
+        const isFavorite = response.data === true;
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Tutor ${tutorId} favorite status:`, response.data, '→ isFavorite:', isFavorite);
+        }
+        setIsFavorite(isFavorite);
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+        setIsFavorite(false);
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [tutorId, isAuthenticated]);
   
   const reviews: Review[] = [];
   const formatDate = (date: Date) => {
@@ -338,10 +370,44 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setIsFavorite(!isFavorite)}
+                        onClick={async () => {
+                          // Check if user is authenticated
+                          if (!isAuthenticated) {
+                            showWarning(
+                              'Vui lòng đăng nhập',
+                              'Bạn cần đăng nhập để thêm gia sư vào danh sách yêu thích.'
+                            );
+                            router.push('/login');
+                            return;
+                          }
+
+                          const newFavoriteState = !isFavorite;
+                          // Optimistic update
+                          setIsFavorite(newFavoriteState);
+                          setLoadingFavorite(true);
+
+                          try {
+                            if (newFavoriteState) {
+                              await FavoriteTutorService.addToFavorite(tutorId);
+                            } else {
+                              await FavoriteTutorService.removeFromFavorite(tutorId);
+                            }
+                          } catch (error) {
+                            console.error('Error toggling favorite:', error);
+                            // Revert optimistic update on error
+                            setIsFavorite(!newFavoriteState);
+                          } finally {
+                            setLoadingFavorite(false);
+                          }
+                        }}
                         className="p-2 hover:bg-[#FD8B51] hover:text-white"
+                        disabled={loadingFavorite}
                       >
-                        <Heart className={`w-6 h-6 transition-colors duration-200 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                        {loadingFavorite ? (
+                          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                        ) : (
+                          <Heart className={`w-6 h-6 transition-colors duration-200 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                        )}
                       </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">

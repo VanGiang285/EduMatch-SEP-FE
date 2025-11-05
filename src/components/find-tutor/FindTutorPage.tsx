@@ -34,6 +34,9 @@ import {
 } from '../ui/navigation/pagination';
 import { useFindTutor } from '@/hooks/useFindTutor';
 import { EnumHelpers, TeachingMode } from '@/types/enums';
+import { FavoriteTutorService } from '@/services/favoriteTutorService';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCustomToast } from '@/hooks/useCustomToast';
 
 // Helper function để convert string enum từ API sang TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
@@ -53,6 +56,8 @@ function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMod
 
 export function FindTutorPage() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const { showWarning } = useCustomToast();
   const {
     tutors,
     subjects,
@@ -77,6 +82,7 @@ export function FindTutorPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set());
+  const [loadingFavorite, setLoadingFavorite] = useState<Set<number>>(new Set());
   const tutorsPerPage = 6;
   
   // Note: Using client-side filtering instead of API filtering
@@ -239,24 +245,106 @@ export function FindTutorPage() {
   const currentTutors = filteredAndSortedTutors.slice(indexOfFirstTutor, indexOfLastTutor);
   const currentTutor = filteredAndSortedTutors.find(t => t.id === hoveredTutor) || filteredAndSortedTutors[0];
 
+  // Check favorite status for all tutors when they load (only if authenticated)
+  useEffect(() => {
+    const checkFavoriteStatuses = async () => {
+      // Reset favorites when not authenticated or no tutors
+      if (tutors.length === 0 || !isAuthenticated) {
+        setFavoriteTutors(new Set());
+        return;
+      }
+      
+      const favoriteChecks = tutors.map(async (tutor) => {
+        try {
+          const response = await FavoriteTutorService.isFavorite(tutor.id);
+          // Ensure response.data is a boolean - check for explicit true
+          const isFavorite = response.data === true;
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`Tutor ${tutor.id} favorite status:`, response.data, '→ isFavorite:', isFavorite);
+          }
+          return { tutorId: tutor.id, isFavorite };
+        } catch (error) {
+          console.error(`Error checking favorite status for tutor ${tutor.id}:`, error);
+          return { tutorId: tutor.id, isFavorite: false };
+        }
+      });
+
+      const results = await Promise.all(favoriteChecks);
+      const favoriteSet = new Set<number>();
+      results.forEach(({ tutorId, isFavorite }) => {
+        // Only add if explicitly true
+        if (isFavorite === true) {
+          favoriteSet.add(tutorId);
+        }
+      });
+      setFavoriteTutors(favoriteSet);
+    };
+
+    checkFavoriteStatuses();
+  }, [tutors, isAuthenticated]);
+
   // Reset video when currentTutor changes
   useEffect(() => {
     setVideoKey(prev => prev + 1);
   }, [currentTutor?.id]);
+  
   const handleViewTutorProfile = (tutorId: number) => {
     router.push(`/tutor/${tutorId}`);
   };
-  const handleToggleFavorite = (tutorId: number, e: React.MouseEvent) => {
+  
+  const handleToggleFavorite = async (tutorId: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
+    
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      showWarning(
+        'Vui lòng đăng nhập',
+        'Bạn cần đăng nhập để thêm gia sư vào danh sách yêu thích.'
+      );
+      router.push('/login');
+      return;
+    }
+    
+    // Optimistic update
+    const isCurrentlyFavorite = favoriteTutors.has(tutorId);
     setFavoriteTutors(prev => {
       const newFavorites = new Set(prev);
-      if (newFavorites.has(tutorId)) {
+      if (isCurrentlyFavorite) {
         newFavorites.delete(tutorId);
       } else {
         newFavorites.add(tutorId);
       }
       return newFavorites;
     });
+
+    // Set loading state
+    setLoadingFavorite(prev => new Set(prev).add(tutorId));
+
+    try {
+      if (isCurrentlyFavorite) {
+        await FavoriteTutorService.removeFromFavorite(tutorId);
+      } else {
+        await FavoriteTutorService.addToFavorite(tutorId);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      // Revert optimistic update on error
+      setFavoriteTutors(prev => {
+        const newFavorites = new Set(prev);
+        if (isCurrentlyFavorite) {
+          newFavorites.add(tutorId);
+        } else {
+          newFavorites.delete(tutorId);
+        }
+        return newFavorites;
+      });
+    } finally {
+      setLoadingFavorite(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(tutorId);
+        return newSet;
+      });
+    }
   };
   return (
     <div className="min-h-screen bg-gray-50 pt-16">
@@ -500,8 +588,13 @@ export function FindTutorPage() {
                           size="sm" 
                           className="p-2 -mt-1 hover:bg-[#FD8B51] hover:text-white"
                           onClick={(e) => handleToggleFavorite(tutor.id, e)}
+                          disabled={loadingFavorite.has(tutor.id)}
                         >
-                          <Heart className={`w-5 h-5 transition-colors duration-200 ${favoriteTutors.has(tutor.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                          {loadingFavorite.has(tutor.id) ? (
+                            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                          ) : (
+                            <Heart className={`w-5 h-5 transition-colors duration-200 ${favoriteTutors.has(tutor.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                          )}
                         </Button>
                       </div>
                       {/* Subjects */}

@@ -414,7 +414,6 @@ export function TutorProfileTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900">Hồ sơ gia sư</h2>
@@ -441,7 +440,6 @@ export function TutorProfileTab() {
         </div>
       </div>
 
-      {/* Success Alert */}
       {saveSuccess && (
         <Alert className="bg-green-50 border-green-200">
           <CheckCircle className="h-4 w-4 text-green-600" />
@@ -451,7 +449,6 @@ export function TutorProfileTab() {
         </Alert>
       )}
 
-      {/* Status Alert */}
       <Alert className={profileData.tutorProfile.status === 1 ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}>
         <Info className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-800">
@@ -461,7 +458,6 @@ export function TutorProfileTab() {
         </AlertDescription>
       </Alert>
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="basic">Thông tin cơ bản</TabsTrigger>
@@ -472,7 +468,6 @@ export function TutorProfileTab() {
           <TabsTrigger value="availability">Lịch khả dụng</TabsTrigger>
         </TabsList>
 
-        {/* Tab: Thông tin cơ bản */}
         <TabsContent value="basic" className="space-y-6">
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
@@ -661,7 +656,6 @@ export function TutorProfileTab() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Mô tả */}
         <TabsContent value="description" className="space-y-6">
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
@@ -726,7 +720,6 @@ export function TutorProfileTab() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Học vấn */}
         <TabsContent value="education" className="space-y-6">
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
@@ -794,7 +787,6 @@ export function TutorProfileTab() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Chứng chỉ */}
         <TabsContent value="certificates" className="space-y-6">
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
@@ -865,7 +857,6 @@ export function TutorProfileTab() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Môn học & Giá */}
         <TabsContent value="subjects" className="space-y-6">
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
@@ -920,7 +911,6 @@ export function TutorProfileTab() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Lịch khả dụng */}
         <TabsContent value="availability" className="space-y-6">
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
@@ -1016,7 +1006,6 @@ export function TutorProfileTab() {
         </TabsContent>
       </Tabs>
 
-      {/* Modal: Thêm học vấn */}
       <Dialog open={showEducationModal} onOpenChange={setShowEducationModal}>
         <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
@@ -1085,7 +1074,6 @@ export function TutorProfileTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal: Thêm chứng chỉ */}
       <Dialog open={showCertificateModal} onOpenChange={setShowCertificateModal}>
         <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
@@ -1165,7 +1153,6 @@ export function TutorProfileTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal: Thêm môn học */}
       <Dialog open={showSubjectModal} onOpenChange={setShowSubjectModal}>
         <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
@@ -1236,7 +1223,6 @@ export function TutorProfileTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal: Thêm khung giờ */}
       <Dialog open={showTimeSlotModal} onOpenChange={setShowTimeSlotModal}>
         <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
