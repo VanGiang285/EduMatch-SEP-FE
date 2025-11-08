@@ -899,7 +899,7 @@ export function TutorProfileTab() {
         </Alert>
       )}
 
-      <Alert className={profileData.tutorProfile.status === 1 ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}>
+      <Alert className={profileData.tutorProfile.status === 1 ? 'bg-green-50 border-green-200' : 'bg-black-50 border-black-200'}>
         <Info className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-800">
           {profileData.tutorProfile.status === 0 && 'Hồ sơ gia sư của bạn đang chờ duyệt.'}

@@ -128,7 +128,7 @@ export function ClassesTab() {
                       </div>
 
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="flex-1">
+                        <Button variant="outline" size="lg" className="flex-1 hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Nhắn tin
                         </Button>

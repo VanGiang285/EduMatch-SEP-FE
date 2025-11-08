@@ -555,7 +555,7 @@ export function ClassRequestsTab() {
                                   Ứng tuyển: {new Date(applicant.appliedAt).toLocaleString('vi-VN')}
                                 </p>
                                 <div className="flex gap-2">
-                                  <Button variant="outline" size="sm">
+                                  <Button variant="outline" size="lg" className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
                                     Xem hồ sơ
                                   </Button>
                                   <Button size="lg" className="bg-[#257180] hover:bg-[#257180]/90 text-white">
