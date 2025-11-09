@@ -224,7 +224,7 @@ export function ManageTutorApplications() {
       </div>
 
       {/* Search */}
-      <Card>
+      <Card className="bg-white">
         <CardContent className="p-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -242,7 +242,7 @@ export function ManageTutorApplications() {
       </Card>
 
       {/* Applications Table */}
-      <Card>
+      <Card className="bg-white">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách đơn đăng ký</CardTitle>

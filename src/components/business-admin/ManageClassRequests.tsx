@@ -471,7 +471,7 @@ export function ManageClassRequests() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-white">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
@@ -512,7 +512,7 @@ export function ManageClassRequests() {
       </Card>
 
       {/* Requests Table */}
-      <Card>
+      <Card className="bg-white">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách yêu cầu</CardTitle>

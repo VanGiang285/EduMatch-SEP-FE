@@ -14,12 +14,15 @@ import { ClassRequestsTab } from './tabs/ClassRequestsTab';
 import { NotificationsTab } from './tabs/NotificationsTab';
 import { Badge } from '@/components/ui/basic/badge';
 import { mockNotifications } from '@/data/mockLearnerData';
+import { useAuth } from '@/hooks/useAuth';
+import { USER_ROLES } from '@/constants';
 
 interface LearnerAccountProps {
   initialTab?: string;
 }
 
 export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // Sync activeTab with initialTab when it changes (e.g., from URL query)
@@ -29,11 +32,21 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
     }
   }, [initialTab]);
 
+  // Redirect to profile if user tries to access tutorProfile but is not a tutor
+  useEffect(() => {
+    if (activeTab === 'tutorProfile' && user && user.role !== USER_ROLES.TUTOR) {
+      setActiveTab('profile');
+    }
+  }, [activeTab, user]);
+
   const unreadNotifications = mockNotifications.filter(n => !n.isRead).length;
+
+  // Check if user is a tutor
+  const isTutor = user && user.role === USER_ROLES.TUTOR;
 
   const menuItems = [
     { id: 'profile', label: 'Thông tin người dùng', icon: User },
-    { id: 'tutorProfile', label: 'Hồ sơ gia sư', icon: GraduationCap },
+    ...(isTutor ? [{ id: 'tutorProfile', label: 'Hồ sơ gia sư', icon: GraduationCap }] : []),
     { id: 'schedule', label: 'Lịch học', icon: Calendar },
     { id: 'classes', label: 'Lớp học', icon: BookOpen },
     { id: 'classRequests', label: 'Yêu cầu mở lớp', icon: FileText },
