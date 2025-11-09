@@ -219,7 +219,6 @@ export function ClassRequestsTab() {
 
         setRequests(allRequests);
       } catch (err: any) {
-        console.error('Error loading class requests:', err);
         showError('Lỗi', 'Không thể tải danh sách yêu cầu. Vui lòng thử lại.');
         setRequests([]);
       } finally {
@@ -254,7 +253,6 @@ export function ClassRequestsTab() {
             }
           }
         } catch (err: any) {
-          console.error('Error loading detail:', err);
           showError('Lỗi', 'Không thể tải thông tin chi tiết');
         } finally {
           setLoadingDetail(false);
@@ -331,7 +329,6 @@ export function ClassRequestsTab() {
         showError('Lỗi', 'Không thể tải thông tin chi tiết');
       }
     } catch (err: any) {
-      console.error('Error loading detail:', err);
       showError('Lỗi', 'Không thể tải thông tin chi tiết');
     }
   };
@@ -401,7 +398,6 @@ export function ClassRequestsTab() {
         throw new Error(response.message || 'Không thể xóa yêu cầu');
       }
     } catch (error: any) {
-      console.error('Error deleting class request:', error);
       showError('Lỗi', error.message || 'Không thể xóa yêu cầu mở lớp. Vui lòng thử lại.');
     } finally {
       setIsDeleting(false);
@@ -750,7 +746,7 @@ export function ClassRequestsTab() {
                         Yêu cầu gia sư
                       </p>
                       <p className="font-medium text-gray-900 mt-1 break-words whitespace-pre-wrap">{selectedRequest.tutorRequirement || 'Chưa có'}</p>
-                    </div>
+                      </div>
                     <div className="sm:col-span-2 min-w-0">
                       <p className="text-sm text-gray-600">Mức giá mong muốn</p>
                       <p className="font-medium text-[#257180] mt-1 break-words">
@@ -934,8 +930,7 @@ export function ClassRequestsTab() {
                                           size="lg" 
                                           className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                                           onClick={() => {
-                                            // TODO: Navigate to tutor profile
-                                            console.log('View tutor profile:', applicant.tutorId);
+                                            handleViewTutorProfile(applicant.tutorId);
                                           }}
                                         >
                                     Xem hồ sơ
@@ -945,7 +940,6 @@ export function ClassRequestsTab() {
                                           className="bg-[#257180] hover:bg-[#257180]/90 text-white"
                                           onClick={() => {
                                             // TODO: Implement select tutor
-                                            console.log('Select tutor:', applicant.applicationId);
                                           }}
                                         >
                                     Chọn gia sư

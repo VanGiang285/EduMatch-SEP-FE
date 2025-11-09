@@ -85,22 +85,12 @@ export function ClassRequestsPage() {
       setError(null);
       try {
         const response = await ClassRequestService.getOpenClassRequests();
-        console.log('[Public] Loading OPEN class requests:', response);
         if (response.success && response.data) {
-          console.log('[Public] Loaded requests count:', response.data.length);
-          console.log('[Public] Requests data:', response.data);
-          // Log status của từng request để debug
-          response.data.forEach((req, idx) => {
-            const statusNum = typeof req.status === 'string' ? parseInt(req.status) : req.status;
-            console.log(`[Public] Request ${idx}: id=${req.id}, status="${req.status}" (parsed=${statusNum}), title="${req.title}"`);
-          });
           setClassRequests(response.data);
         } else {
-          console.error('[Public] Failed to load requests:', response.message);
           setError(response.message || 'Không thể tải danh sách yêu cầu');
         }
       } catch (err: any) {
-        console.error('[Public] Error loading class requests:', err);
         setError(err.message || 'Có lỗi xảy ra khi tải danh sách yêu cầu');
       } finally {
         setLoading(false);
@@ -130,12 +120,10 @@ export function ClassRequestsPage() {
               }
             } catch (err: any) {
               // Nếu bị 403 hoặc lỗi khác, không hiển thị danh sách applicants (có thể là public không có quyền)
-              console.log('[Public] Cannot load applicants (may require auth):', err);
               setApplicants([]);
             }
           }
         } catch (err: any) {
-          console.error('Error loading detail:', err);
           showError('Lỗi', 'Không thể tải thông tin chi tiết');
         } finally {
           setLoadingDetail(false);
@@ -153,13 +141,11 @@ export function ClassRequestsPage() {
 
   // Filter và sort requests
   const filteredRequests = useMemo(() => {
-    console.log('[Public] Filtering requests. Total:', classRequests.length);
     const filtered = classRequests.filter((request) => {
       // Status filter - chỉ hiển thị Open (status = 0 hoặc "0" hoặc "Open")
       // Xử lý cả trường hợp status là string enum name, string number, number, hoặc null/undefined
       let statusNum: number;
       if (request.status === null || request.status === undefined) {
-        console.log(`[Public] Request ${request.id} has null/undefined status, skipping`);
         return false;
       }
       if (typeof request.status === 'string') {
@@ -179,16 +165,13 @@ export function ClassRequestsPage() {
           };
           statusNum = statusMap[request.status];
           if (statusNum === undefined) {
-            console.log(`[Public] Request ${request.id} has unknown status string: "${request.status}"`);
             return false;
           }
         }
       } else {
         statusNum = request.status;
       }
-      console.log(`[Public] Checking request id=${request.id}, status="${request.status}" (parsed=${statusNum}), Open=${ClassRequestStatus.Open}`);
       if (statusNum !== ClassRequestStatus.Open) {
-        console.log(`[Public] Request ${request.id} filtered out: status ${statusNum} !== ${ClassRequestStatus.Open}`);
         return false;
       }
 
@@ -310,7 +293,6 @@ export function ClassRequestsPage() {
         setApplyingRequestId(null);
         // Reload danh sách để cập nhật số lượng ứng viên
         const refreshResponse = await ClassRequestService.getOpenClassRequests();
-        console.log('[Public] Reloaded after apply:', refreshResponse);
         if (refreshResponse.success && refreshResponse.data) {
           setClassRequests(refreshResponse.data);
         }
@@ -318,7 +300,6 @@ export function ClassRequestsPage() {
         throw new Error(response.message || 'Ứng tuyển thất bại');
       }
     } catch (err: any) {
-      console.error('Error applying:', err);
       showError('Lỗi', err.message || 'Không thể ứng tuyển. Vui lòng thử lại.');
     } finally {
       setIsApplying(false);
@@ -729,42 +710,45 @@ export function ClassRequestsPage() {
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">
+                      <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">
                         {selectedRequestDetail.title || `${selectedRequestDetail.subjectName || ''} ${selectedRequestDetail.level || ''}`.trim()}
                       </h3>
-                      <Badge className={`${getClassRequestStatusColor(parseInt(selectedRequestDetail.status))} text-xs sm:text-sm px-3 py-1`}>
-                        {getClassRequestStatusText(parseInt(selectedRequestDetail.status))}
-                      </Badge>
                     </div>
                   </div>
 
                   <Separator className="my-2" />
 
                   {/* Quick Info */}
-                  <div className="grid grid-cols-2 gap-5 bg-gray-50 p-6 rounded-lg border border-gray-200">
-                    <div>
-                      <p className="text-gray-500 mb-1">Môn học</p>
-                      <p className="font-semibold text-lg">{selectedRequestDetail.subjectName || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 mb-1">Cấp độ</p>
-                      <p className="font-semibold text-lg">{selectedRequestDetail.level || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 mb-1">Hình thức dạy</p>
-                      <p className="font-semibold text-lg">
-                        {getModeText(selectedRequestDetail.mode)}
+                  <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-600 flex items-center gap-1">
+                        <BookOpen className="h-4 w-4 flex-shrink-0" />
+                        Môn học
                       </p>
+                      <p className="font-medium text-gray-900 mt-1 break-words">{selectedRequestDetail.subjectName || 'N/A'}</p>
                     </div>
-                    <div>
-                      <p className="text-gray-500 mb-1">Tổng số buổi</p>
-                      <p className="font-semibold text-lg">{selectedRequestDetail.expectedSessions} buổi</p>
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-600 flex items-center gap-1">
+                        <GraduationCap className="h-4 w-4 flex-shrink-0" />
+                        Cấp độ
+                      </p>
+                      <p className="font-medium text-gray-900 mt-1 break-words">{selectedRequestDetail.level || 'N/A'}</p>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-600">Hình thức</p>
+                      <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20 mt-1">
+                        {getModeText(selectedRequestDetail.mode)}
+                      </Badge>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-600">Số buổi học</p>
+                      <p className="font-medium text-gray-900 mt-1 break-words">{selectedRequestDetail.expectedSessions} buổi</p>
                     </div>
                     {selectedRequestDetail.targetUnitPriceMin && selectedRequestDetail.targetUnitPriceMax && (
-                      <div className="col-span-2 bg-[#F2E5BF]/40 p-5 rounded-lg -m-1">
-                        <p className="text-gray-600 mb-2 text-base">Khoảng giá mong muốn</p>
-                        <p className="text-3xl font-semibold text-[#257180]">
-                          {FormatService.formatVND(selectedRequestDetail.targetUnitPriceMin)} - {FormatService.formatVND(selectedRequestDetail.targetUnitPriceMax)}
+                      <div className="sm:col-span-2 min-w-0">
+                        <p className="text-sm text-gray-600">Mức giá mong muốn</p>
+                        <p className="font-medium text-[#257180] mt-1 break-words">
+                          {FormatService.formatVND(selectedRequestDetail.targetUnitPriceMin)} - {FormatService.formatVND(selectedRequestDetail.targetUnitPriceMax)}/buổi
                         </p>
                       </div>
                     )}
@@ -772,21 +756,23 @@ export function ClassRequestsPage() {
 
                   {/* Description */}
                   {(selectedRequestDetail.learningGoal || selectedRequestDetail.tutorRequirement) && (
-                    <div className="bg-white border border-gray-200 p-5 rounded-lg">
-                      <h4 className="text-lg font-semibold mb-3 flex items-center gap-2 text-gray-900">
-                        <BookOpen className="h-6 w-6 text-[#257180]" />
-                        Mô tả chi tiết
-                      </h4>
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                       {selectedRequestDetail.learningGoal && (
-                        <div className="mb-3">
-                          <p className="text-sm font-medium text-gray-600 mb-1">Mục tiêu học tập:</p>
-                          <p className="text-gray-700 leading-relaxed text-base">{selectedRequestDetail.learningGoal}</p>
+                        <div className="mb-4 min-w-0">
+                          <p className="text-sm text-gray-600 flex items-center gap-1 mb-1">
+                            <BookOpen className="h-4 w-4 flex-shrink-0" />
+                            Mục tiêu học tập
+                          </p>
+                          <p className="font-medium text-gray-900 mt-1 break-words whitespace-pre-wrap">{selectedRequestDetail.learningGoal}</p>
                         </div>
                       )}
                       {selectedRequestDetail.tutorRequirement && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">Yêu cầu gia sư:</p>
-                          <p className="text-gray-700 leading-relaxed text-base">{selectedRequestDetail.tutorRequirement}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm text-gray-600 flex items-center gap-1 mb-1">
+                            <GraduationCap className="h-4 w-4 flex-shrink-0" />
+                            Yêu cầu gia sư
+                          </p>
+                          <p className="font-medium text-gray-900 mt-1 break-words whitespace-pre-wrap">{selectedRequestDetail.tutorRequirement}</p>
                         </div>
                       )}
                     </div>
@@ -794,39 +780,45 @@ export function ClassRequestsPage() {
 
                   {/* Location */}
                   {((selectedRequestDetail.addressLine && selectedRequestDetail.addressLine !== 'string') || selectedRequestDetail.subDistrictName || selectedRequestDetail.provinceName) && (
-                    <div className="bg-white border border-gray-200 p-5 rounded-lg">
-                      <h4 className="text-lg font-semibold mb-3 flex items-center gap-2 text-gray-900">
-                        <MapPin className="h-6 w-6 text-[#257180]" />
-                        Địa điểm học
-                      </h4>
-                      {selectedRequestDetail.addressLine && selectedRequestDetail.addressLine !== 'string' && (
-                        <p className="text-gray-700 text-base font-medium">{selectedRequestDetail.addressLine}</p>
-                      )}
-                      {(selectedRequestDetail.subDistrictName || selectedRequestDetail.provinceName) && (
-                        <p className="text-gray-600 mt-2">
-                          {selectedRequestDetail.subDistrictName || ''}, {selectedRequestDetail.provinceName || ''}
-                        </p>
-                      )}
+                    <div className="p-4 border border-gray-200 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-600">Địa điểm học</p>
+                          <p className="font-medium text-gray-900 mt-1 break-words">
+                            {selectedRequestDetail.subDistrictName && selectedRequestDetail.provinceName ? (
+                              `${selectedRequestDetail.subDistrictName}, ${selectedRequestDetail.provinceName}`
+                            ) : selectedRequestDetail.provinceName || selectedRequestDetail.subDistrictName || 'Chưa có'}
+                          </p>
+                          {selectedRequestDetail.addressLine && selectedRequestDetail.addressLine !== 'string' && (
+                            <p className="text-sm text-gray-600 mt-1 break-words">{selectedRequestDetail.addressLine}</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
 
                   {/* Dates */}
-                  <div className="grid grid-cols-2 gap-5 bg-white border border-gray-200 p-5 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4 p-4 border border-gray-200 rounded-lg">
                     <div>
-                      <p className="text-gray-500 mb-1">Ngày đăng</p>
-                      <p className="font-semibold text-base">{FormatService.formatDate(selectedRequestDetail.createdAt)}</p>
+                      <p className="text-sm text-gray-600">Ngày tạo</p>
+                      <p className="font-medium text-gray-900 mt-1">
+                        {FormatService.formatDate(selectedRequestDetail.createdAt)}
+                      </p>
                     </div>
                     {selectedRequestDetail.updatedAt && (
                       <div>
-                        <p className="text-gray-500 mb-1">Cập nhật lần cuối</p>
-                        <p className="font-semibold text-base">{FormatService.formatDate(selectedRequestDetail.updatedAt)}</p>
+                        <p className="text-sm text-gray-600">Ngày cập nhật</p>
+                        <p className="font-medium text-gray-900 mt-1">
+                          {FormatService.formatDate(selectedRequestDetail.updatedAt)}
+                        </p>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Right Column: Applicants */}
-                <div className="border-l-2 pl-6 lg:col-span-1">
+                <div className="border-l-2 border-gray-200 pl-6 lg:col-span-1">
                   <h4 className="text-xl font-semibold mb-5 flex items-center gap-2 text-gray-900">
                     <GraduationCap className="h-6 w-6 text-[#257180]" />
                     Gia sư ứng tuyển ({applicants.length})
@@ -845,7 +837,7 @@ export function ClassRequestsPage() {
                   ) : (
                     <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2">
                       {applicants.map((applicant) => (
-                        <Card key={applicant.applicationId} className="border hover:border-[#257180]/30 transition-all">
+                        <Card key={applicant.applicationId} className="border border-gray-200 hover:border-[#FD8B51]/30 transition-all">
                           <CardContent className="p-4">
                             <div className="flex gap-3 mb-3">
                               <div className="relative flex-shrink-0">
@@ -880,16 +872,16 @@ export function ClassRequestsPage() {
                               </div>
                             </div>
 
-                            <div className="mb-3">
+                            <div className="mb-3 min-w-0">
                               <p className="text-gray-500 text-xs mb-1">Thư ứng tuyển:</p>
-                              <p className="text-gray-700 leading-relaxed text-sm">{applicant.message}</p>
+                              <p className="text-gray-700 leading-relaxed text-sm break-words whitespace-pre-wrap">{applicant.message}</p>
                             </div>
 
                             <div className="flex gap-2">
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                className="flex-1 border-[#257180] text-[#257180] hover:bg-[#257180] hover:text-white text-xs"
+                                className="flex-1 hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51] text-xs"
                                 onClick={() => handleViewTutorProfile(applicant.tutorId)}
                               >
                                 Xem hồ sơ
@@ -907,6 +899,47 @@ export function ClassRequestsPage() {
                 <p className="text-gray-500">Không tìm thấy thông tin chi tiết</p>
               </div>
             )}
+            
+            {/* Footer với button Ứng tuyển ở góc phải */}
+            {selectedRequestDetail && (() => {
+              // Parse status number
+              let statusNum: number;
+              if (typeof selectedRequestDetail.status === 'number') {
+                statusNum = selectedRequestDetail.status;
+              } else {
+                const parsed = parseInt(selectedRequestDetail.status, 10);
+                if (!isNaN(parsed)) {
+                  statusNum = parsed;
+                } else {
+                  // Map từ enum name
+                  const statusMap: Record<string, number> = {
+                    'Open': ClassRequestStatus.Open,
+                    'Reviewing': ClassRequestStatus.Reviewing,
+                    'Selected': ClassRequestStatus.Selected,
+                    'Closed': ClassRequestStatus.Closed,
+                    'Cancelled': ClassRequestStatus.Cancelled,
+                    'Expired': ClassRequestStatus.Expired,
+                  };
+                  statusNum = statusMap[selectedRequestDetail.status] ?? -1;
+                }
+              }
+              const isOpen = statusNum === ClassRequestStatus.Open;
+              if (isOpen && user && isTutor) {
+                return (
+                  <div className="mt-6 pt-6 border-t border-gray-200 flex justify-end">
+                    <Button
+                      onClick={() => handleApplyClick(selectedRequestDetail.id)}
+                      className="bg-[#FD8B51] hover:bg-[#FD8B51]/90 text-white"
+                      size="lg"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Ứng tuyển
+                    </Button>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </DialogContent>
         </Dialog>
 
@@ -981,7 +1014,7 @@ export function ClassRequestsPage() {
                   setClassRequests(response.data);
                 }
               } catch (err) {
-                console.error('[Public] Error reloading after create:', err);
+                // Silent error - không cần log
               }
             };
             reload();

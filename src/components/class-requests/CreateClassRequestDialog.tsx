@@ -199,13 +199,10 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
         slots: slots,
       };
 
-      console.log('[Create Request] Submitting:', request);
       const response = await ClassRequestService.createClassRequest(request);
-      console.log('[Create Request] Response:', response);
 
       if (response.success && response.data) {
         showSuccess('Thành công', 'Tạo yêu cầu mở lớp thành công!');
-        console.log('[Create Request] Created request ID:', response.data.id);
         // Reset form
         setStep(1);
         setSubjectId('');
@@ -230,7 +227,6 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
         throw new Error(response.message || 'Tạo yêu cầu thất bại');
       }
     } catch (err: any) {
-      console.error('[Create Request] Error:', err);
       // Kiểm tra nếu là lỗi 403 (Forbidden) - check status code
       if (err.status === 403 || err.message?.includes('403') || err.message?.includes('Forbidden')) {
         showError('Lỗi', 'Bạn không có quyền tạo yêu cầu. Vui lòng đăng nhập với tài khoản Learner.');

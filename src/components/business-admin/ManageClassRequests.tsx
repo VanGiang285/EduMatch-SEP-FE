@@ -107,16 +107,9 @@ export function ManageClassRequests() {
         if (statusFilter === 'pending' || targetStatus === ClassRequestStatus.Reviewing) {
           // Chờ duyệt - Reviewing (1) - chỉ gọi LIST_PENDING
           const response = await ClassRequestService.getPendingClassRequests();
-          console.log('[Business Admin] Loading PENDING requests:', response);
           if (response.success && response.data) {
             allRequests = response.data;
-            // Log status của từng request để debug
-            response.data.forEach((req, idx) => {
-              const statusNum = getStatusNumber(req.status);
-              console.log(`[Business Admin] PENDING Request ${idx}: id=${req.id}, status="${req.status}" (parsed=${statusNum})`);
-            });
           } else {
-            console.error('[Business Admin] Failed to load PENDING:', response.message);
             if (response.message) {
               showError('Lỗi', response.message);
             }
@@ -124,16 +117,9 @@ export function ManageClassRequests() {
         } else if (statusFilter === 'open' || targetStatus === ClassRequestStatus.Open) {
           // Đã duyệt/Đang mở - Open (0) - chỉ gọi LIST_OPEN
           const response = await ClassRequestService.getOpenClassRequests();
-          console.log('[Business Admin] Loading OPEN requests:', response);
           if (response.success && response.data) {
             allRequests = response.data;
-            // Log status của từng request để debug
-            response.data.forEach((req, idx) => {
-              const statusNum = getStatusNumber(req.status);
-              console.log(`[Business Admin] OPEN Request ${idx}: id=${req.id}, status="${req.status}" (parsed=${statusNum})`);
-            });
           } else {
-            console.error('[Business Admin] Failed to load OPEN:', response.message);
             if (response.message) {
               showError('Lỗi', response.message);
             }
@@ -141,7 +127,6 @@ export function ManageClassRequests() {
         } else {
           // Các status khác (Selected, Closed, Cancelled, Expired)
           // Gọi cả LIST_PENDING và LIST_OPEN, merge lại rồi filter theo status
-          console.log('[Business Admin] Loading ALL requests for status:', targetStatus);
           const [pendingResponse, openResponse] = await Promise.all([
             ClassRequestService.getPendingClassRequests(),
             ClassRequestService.getOpenClassRequests(),
@@ -167,10 +152,8 @@ export function ManageClassRequests() {
           });
         }
         
-        console.log('[Business Admin] Final filtered requests:', allRequests.length, allRequests);
         setRequests(allRequests);
       } catch (err: any) {
-        console.error('[Business Admin] Error loading class requests:', err);
         showError('Lỗi', 'Không thể tải danh sách yêu cầu. Vui lòng thử lại.');
         setRequests([]);
       } finally {
@@ -208,7 +191,6 @@ export function ManageClassRequests() {
             }
           }
         } catch (err: any) {
-          console.error('Error loading detail:', err);
           showError('Lỗi', 'Không thể tải thông tin chi tiết');
         } finally {
           setLoadingDetail(false);
@@ -296,9 +278,8 @@ export function ManageClassRequests() {
       } else {
         showError('Lỗi', 'Không thể tải thông tin chi tiết');
       }
-    } catch (err: any) {
-      console.error('Error loading detail:', err);
-      showError('Lỗi', 'Không thể tải thông tin chi tiết');
+      } catch (err: any) {
+        showError('Lỗi', 'Không thể tải thông tin chi tiết');
     }
   };
 
@@ -350,9 +331,8 @@ export function ManageClassRequests() {
       } else {
         throw new Error(response.message || 'Duyệt yêu cầu thất bại');
       }
-    } catch (err: any) {
-      console.error('Error approving request:', err);
-      showError('Lỗi', err.message || 'Không thể duyệt yêu cầu. Vui lòng thử lại.');
+      } catch (err: any) {
+        showError('Lỗi', err.message || 'Không thể duyệt yêu cầu. Vui lòng thử lại.');
     } finally {
       setIsApproving(false);
     }
@@ -419,9 +399,8 @@ export function ManageClassRequests() {
       } else {
         throw new Error(response.message || 'Từ chối yêu cầu thất bại');
       }
-    } catch (err: any) {
-      console.error('Error rejecting request:', err);
-      showError('Lỗi', err.message || 'Không thể từ chối yêu cầu. Vui lòng thử lại.');
+      } catch (err: any) {
+        showError('Lỗi', err.message || 'Không thể từ chối yêu cầu. Vui lòng thử lại.');
     } finally {
       setIsRejecting(false);
     }
@@ -445,13 +424,11 @@ export function ManageClassRequests() {
   // Helper để lấy status number từ string enum name hoặc number
   const getStatusNumber = (status: string | number | null | undefined): number => {
     if (status === null || status === undefined) {
-      console.log('[Business Admin] getStatusNumber: status is null/undefined');
       return -1; // Invalid status
     }
     
     // Nếu là number, trả về trực tiếp
     if (typeof status === 'number') {
-      console.log(`[Business Admin] getStatusNumber: status is number: ${status}`);
       return status;
     }
     
@@ -459,7 +436,6 @@ export function ManageClassRequests() {
     const statusStr = String(status).trim();
     const parsed = parseInt(statusStr, 10);
     if (!isNaN(parsed)) {
-      console.log(`[Business Admin] getStatusNumber: parsed string "${statusStr}" to number: ${parsed}`);
       return parsed;
     }
     
@@ -483,13 +459,7 @@ export function ManageClassRequests() {
       'pending': ClassRequestStatus.Reviewing,   // 1
     };
     
-    const mapped = statusMap[statusStr] ?? -1;
-    if (mapped === -1) {
-      console.warn(`[Business Admin] getStatusNumber: Unknown status string "${statusStr}", returning -1`);
-    } else {
-      console.log(`[Business Admin] getStatusNumber: status string "${statusStr}" mapped to ${mapped}`);
-    }
-    return mapped;
+    return statusMap[statusStr] ?? -1;
   };
 
   return (
