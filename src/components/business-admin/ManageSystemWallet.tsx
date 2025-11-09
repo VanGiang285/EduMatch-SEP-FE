@@ -131,7 +131,7 @@ export function ManageSystemWallet() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+        <Card className="bg-white">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 rounded-lg bg-blue-50">
@@ -150,7 +150,7 @@ export function ManageSystemWallet() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 rounded-lg bg-green-50">
@@ -168,7 +168,7 @@ export function ManageSystemWallet() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 rounded-lg bg-red-50">
@@ -188,7 +188,7 @@ export function ManageSystemWallet() {
       </div>
 
       {/* Balance Chart */}
-      <Card>
+      <Card className="bg-white">
         <CardHeader>
           <CardTitle>Biến động số dư theo tháng</CardTitle>
         </CardHeader>
@@ -216,7 +216,7 @@ export function ManageSystemWallet() {
       </Card>
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-white">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
@@ -254,7 +254,7 @@ export function ManageSystemWallet() {
       </Card>
 
       {/* Transactions Table */}
-      <Card>
+      <Card className="bg-white">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Lịch sử giao dịch</CardTitle>
