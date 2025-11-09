@@ -1,8 +1,9 @@
 "use client";
 
-import React from 'react';
-import { BusinessAdminNavbar } from './BusinessAdminNavbar';
+import React, { useState } from 'react';
+import { BusinessAdminSidebar } from './BusinessAdminSidebar';
 import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 interface BusinessAdminLayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ interface BusinessAdminLayoutProps {
 
 export function BusinessAdminLayout({ children }: BusinessAdminLayoutProps) {
   const pathname = usePathname();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // Map pathname to view ID
   const getCurrentView = () => {
@@ -24,10 +26,21 @@ export function BusinessAdminLayout({ children }: BusinessAdminLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <BusinessAdminNavbar currentView={getCurrentView()} />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
+    <div className="min-h-screen bg-gray-50 flex">
+      <BusinessAdminSidebar 
+        currentView={getCurrentView()} 
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={setIsSidebarCollapsed}
+      />
+      {/* Main Content */}
+      <main className={cn(
+        "flex-1 transition-all duration-300",
+        "lg:ml-64", // Desktop: default margin for sidebar (256px = 64 * 4)
+        isSidebarCollapsed && "lg:ml-16" // Desktop: collapsed margin (64px = 16 * 4)
+      )}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {children}
+        </div>
       </main>
     </div>
   );
