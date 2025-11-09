@@ -3,7 +3,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/layout/card';
 import { Badge } from '@/components/ui/basic/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
 import { Button } from '@/components/ui/basic/button';
 import { Calendar, Clock, MapPin, Video, MessageCircle } from 'lucide-react';
 import { mockUpcomingSchedule, getTeachingModeText } from '@/data/mockLearnerData';
@@ -31,14 +30,14 @@ export function ScheduleTab() {
                 <div className="flex flex-col md:flex-row gap-6">
                   {/* Date Box */}
                   <div className="flex-shrink-0">
-                    <div className="bg-[#257180]/10 rounded-lg p-4 text-center w-20">
-                      <div className="text-2xl font-bold text-[#257180]">
+                    <div className="bg-[#257180]/10 rounded-lg p-6 text-center w-28 h-28 flex flex-col items-center justify-center border-2 border-[#257180]/20">
+                      <div className="text-4xl font-bold text-[#257180] leading-none">
                         {new Date(schedule.date).getDate()}
                       </div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm font-medium text-gray-700 mt-1">
                         Tháng {new Date(schedule.date).getMonth() + 1}
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs font-medium text-gray-600 mt-1 uppercase">
                         {schedule.dayOfWeek}
                       </div>
                     </div>
@@ -48,16 +47,36 @@ export function ScheduleTab() {
                   <div className="flex-1">
                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                       <div className="flex gap-3">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={schedule.tutorAvatar} alt={schedule.tutorName} />
-                          <AvatarFallback>{schedule.tutorName[0]}</AvatarFallback>
-                        </Avatar>
+                        <div className="relative flex-shrink-0">
+                          <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-[#F2E5BF]">
+                            {schedule.tutorAvatar ? (
+                              <img 
+                                src={schedule.tutorAvatar} 
+                                alt={schedule.tutorName}
+                                className="w-full h-full object-cover rounded-lg"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                  if (fallback) {
+                                    fallback.style.display = 'flex';
+                                  }
+                                }}
+                              />
+                            ) : null}
+                            <div 
+                              className={`w-full h-full rounded-lg flex items-center justify-center text-lg font-bold text-[#257180] bg-[#F2E5BF] ${schedule.tutorAvatar ? 'hidden' : 'flex'}`}
+                              style={{ display: schedule.tutorAvatar ? 'none' : 'flex' }}
+                            >
+                              {schedule.tutorName ? schedule.tutorName.slice(0, 2).toUpperCase() : 'GS'}
+                            </div>
+                          </div>
+                        </div>
                         <div>
                           <h3 className="font-semibold text-lg">{schedule.subject}</h3>
                           <p className="text-gray-600">Gia sư: {schedule.tutorName}</p>
                         </div>
                       </div>
-                      <Badge variant="secondary">
+                      <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20">
                         {getTeachingModeText(schedule.teachingMode)}
                       </Badge>
                     </div>

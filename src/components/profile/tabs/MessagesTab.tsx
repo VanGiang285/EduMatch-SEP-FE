@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/layout/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
 import { Badge } from '@/components/ui/basic/badge';
 import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
@@ -63,11 +62,11 @@ export function MessagesTab() {
         <p className="text-gray-600 mt-1">Trò chuyện với gia sư</p>
       </div>
 
-      <Card className="h-[600px] hover:shadow-md transition-shadow">
+      <Card className="h-[600px] border border-gray-200 hover:shadow-md transition-shadow">
         <CardContent className="p-0 h-full flex">
           {/* Conversations List */}
-          <div className="w-80 border-r flex flex-col">
-            <div className="p-4 border-b">
+          <div className="w-80 border-r border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input 
@@ -78,7 +77,7 @@ export function MessagesTab() {
             </div>
 
             <ScrollArea className="flex-1">
-              <div className="divide-y">
+              <div className="divide-y divide-gray-200">
                 {mockMessages.map((conversation) => (
                   <div
                     key={conversation.id}
@@ -88,10 +87,30 @@ export function MessagesTab() {
                     onClick={() => setSelectedConversation(conversation.id)}
                   >
                     <div className="flex gap-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={conversation.tutorAvatar} alt={conversation.tutorName} />
-                        <AvatarFallback>{conversation.tutorName[0]}</AvatarFallback>
-                      </Avatar>
+                      <div className="relative flex-shrink-0">
+                        <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-[#F2E5BF]">
+                          {conversation.tutorAvatar ? (
+                            <img 
+                              src={conversation.tutorAvatar} 
+                              alt={conversation.tutorName}
+                              className="w-full h-full object-cover rounded-lg"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (fallback) {
+                                  fallback.style.display = 'flex';
+                                }
+                              }}
+                            />
+                          ) : null}
+                          <div 
+                            className={`w-full h-full rounded-lg flex items-center justify-center text-sm font-bold text-[#257180] bg-[#F2E5BF] ${conversation.tutorAvatar ? 'hidden' : 'flex'}`}
+                            style={{ display: conversation.tutorAvatar ? 'none' : 'flex' }}
+                          >
+                            {conversation.tutorName ? conversation.tutorName.slice(0, 2).toUpperCase() : 'GS'}
+                          </div>
+                        </div>
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <p className={`truncate ${!conversation.isRead ? 'font-semibold' : 'font-medium'}`}>
@@ -129,17 +148,32 @@ export function MessagesTab() {
             {selectedConversation ? (
               <>
                 {/* Chat Header */}
-                <div className="p-4 border-b flex items-center justify-between">
+                <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage 
-                        src={mockMessages.find(m => m.id === selectedConversation)?.tutorAvatar} 
-                        alt={mockMessages.find(m => m.id === selectedConversation)?.tutorName}
-                      />
-                      <AvatarFallback>
-                        {mockMessages.find(m => m.id === selectedConversation)?.tutorName[0]}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative flex-shrink-0">
+                      <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#F2E5BF]">
+                        {mockMessages.find(m => m.id === selectedConversation)?.tutorAvatar ? (
+                          <img 
+                            src={mockMessages.find(m => m.id === selectedConversation)?.tutorAvatar} 
+                            alt={mockMessages.find(m => m.id === selectedConversation)?.tutorName}
+                            className="w-full h-full object-cover rounded-lg"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (fallback) {
+                                fallback.style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          className={`w-full h-full rounded-lg flex items-center justify-center text-xs font-bold text-[#257180] bg-[#F2E5BF] ${mockMessages.find(m => m.id === selectedConversation)?.tutorAvatar ? 'hidden' : 'flex'}`}
+                          style={{ display: mockMessages.find(m => m.id === selectedConversation)?.tutorAvatar ? 'none' : 'flex' }}
+                        >
+                          {mockMessages.find(m => m.id === selectedConversation)?.tutorName ? mockMessages.find(m => m.id === selectedConversation)!.tutorName.slice(0, 2).toUpperCase() : 'GS'}
+                        </div>
+                      </div>
+                    </div>
                     <div>
                       <p className="font-semibold">
                         {mockMessages.find(m => m.id === selectedConversation)?.tutorName}
@@ -182,7 +216,7 @@ export function MessagesTab() {
                 </ScrollArea>
 
                 {/* Message Input */}
-                <div className="p-4 border-t">
+                <div className="p-4 border-t border-gray-200">
                   <div className="flex gap-2">
                     <Input
                       placeholder="Nhập tin nhắn..."

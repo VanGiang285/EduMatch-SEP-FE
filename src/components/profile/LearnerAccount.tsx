@@ -109,7 +109,7 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
 
           {/* Main Content */}
           <main className="flex-1 min-w-0">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg shadow-sm border-2 border-[#FD8B51] p-6">
               {renderTabContent()}
             </div>
           </main>

@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout
 import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
 import { Label } from '@/components/ui/form/label';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
 import { Camera, Save, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -192,12 +191,30 @@ export function ProfileTab() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-6">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={formData.avatarUrl || user?.avatar} alt={formData.userName} />
-              <AvatarFallback className="text-2xl">
-                {(formData.userName || user?.name || user?.email || 'U')[0].toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative flex-shrink-0">
+              <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-[#F2E5BF]">
+                {formData.avatarUrl || user?.avatar ? (
+                  <img 
+                    src={formData.avatarUrl || user?.avatar} 
+                    alt={formData.userName}
+                    className="w-full h-full object-cover rounded-lg"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) {
+                        fallback.style.display = 'flex';
+                      }
+                    }}
+                  />
+                ) : null}
+                <div 
+                  className={`w-full h-full rounded-lg flex items-center justify-center text-2xl font-bold text-[#257180] bg-[#F2E5BF] ${formData.avatarUrl || user?.avatar ? 'hidden' : 'flex'}`}
+                  style={{ display: formData.avatarUrl || user?.avatar ? 'none' : 'flex' }}
+                >
+                  {(formData.userName || user?.name || user?.email || 'U').slice(0, 2).toUpperCase()}
+                </div>
+              </div>
+            </div>
             {isEditing && (
               <Button variant="outline" disabled>
                 <Camera className="h-4 w-4 mr-2" />

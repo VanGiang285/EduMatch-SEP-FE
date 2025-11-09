@@ -34,7 +34,6 @@ import {
   Eye,
   Loader2
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { TutorService, CertificateService, SubjectService } from '@/services';
 import { useCustomToast } from '@/hooks/useCustomToast';
@@ -928,15 +927,30 @@ export function TutorProfileTab() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-6 mb-6">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage 
-                    src={profileData.basic.avatarUrl || tutorProfile?.avatarUrl || user?.avatar} 
-                    alt={profileData.basic.firstName + ' ' + profileData.basic.lastName || user?.name || 'User'} 
-                  />
-                  <AvatarFallback className="text-2xl bg-[#F2E5BF] text-[#257180]">
-                    {(profileData.basic.firstName?.[0] || profileData.basic.lastName?.[0] || user?.name?.[0] || user?.email?.[0] || 'U').toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative flex-shrink-0">
+                  <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-[#F2E5BF]">
+                    {profileData.basic.avatarUrl || tutorProfile?.avatarUrl || user?.avatar ? (
+                      <img 
+                        src={profileData.basic.avatarUrl || tutorProfile?.avatarUrl || user?.avatar} 
+                        alt={profileData.basic.firstName + ' ' + profileData.basic.lastName || user?.name || 'User'}
+                        className="w-full h-full object-cover rounded-lg"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) {
+                            fallback.style.display = 'flex';
+                          }
+                        }}
+                      />
+                    ) : null}
+                    <div 
+                      className={`w-full h-full rounded-lg flex items-center justify-center text-2xl font-bold text-[#257180] bg-[#F2E5BF] ${profileData.basic.avatarUrl || tutorProfile?.avatarUrl || user?.avatar ? 'hidden' : 'flex'}`}
+                      style={{ display: profileData.basic.avatarUrl || tutorProfile?.avatarUrl || user?.avatar ? 'none' : 'flex' }}
+                    >
+                      {(profileData.basic.firstName?.[0] || profileData.basic.lastName?.[0] || user?.name?.[0] || user?.email?.[0] || 'U').toUpperCase()}
+                    </div>
+                  </div>
+                </div>
                 <div>
                   <Button disabled={!isEditing} variant="outline">
                     <Upload className="w-4 h-4 mr-2" />
