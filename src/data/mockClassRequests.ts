@@ -290,23 +290,29 @@ export const mockClassApplications: Record<number, Array<{
 
 // Helper functions
 export function getClassRequestStatusText(status: number): string {
+  // Map theo ClassRequestStatus enum:
+  // Open = 0, Reviewing = 1, Selected = 2, Closed = 3, Cancelled = 4, Expired = 5
   switch (status) {
-    case 0: return 'Nháp';
-    case 1: return 'Đang mở';
-    case 2: return 'Đã đóng';
-    case 3: return 'Đã hủy';
-    case 4: return 'Hết hạn';
+    case 0: return 'Đang mở';        // Open
+    case 1: return 'Chờ duyệt';      // Reviewing
+    case 2: return 'Đã chọn gia sư';  // Selected
+    case 3: return 'Đã đóng';        // Closed
+    case 4: return 'Đã hủy';         // Cancelled
+    case 5: return 'Hết hạn';        // Expired
     default: return 'Không xác định';
   }
 }
 
 export function getClassRequestStatusColor(status: number): string {
+  // Map theo ClassRequestStatus enum:
+  // Open = 0, Reviewing = 1, Selected = 2, Closed = 3, Cancelled = 4, Expired = 5
   switch (status) {
-    case 0: return 'bg-gray-100 text-gray-800';
-    case 1: return 'bg-green-100 text-green-800';
-    case 2: return 'bg-blue-100 text-blue-800';
-    case 3: return 'bg-red-100 text-red-800';
-    case 4: return 'bg-yellow-100 text-yellow-800';
+    case 0: return 'bg-yellow-100 text-yellow-800';  // Open - Đang mở
+    case 1: return 'bg-orange-100 text-orange-800'; // Reviewing - Chờ duyệt
+    case 2: return 'bg-blue-100 text-blue-800';     // Selected - Đã chọn gia sư
+    case 3: return 'bg-gray-100 text-gray-800';      // Closed - Đã đóng
+    case 4: return 'bg-red-100 text-red-800';       // Cancelled - Đã hủy
+    case 5: return 'bg-gray-100 text-gray-800';      // Expired - Hết hạn
     default: return 'bg-gray-100 text-gray-800';
   }
 }

@@ -71,9 +71,9 @@ class ApiClient {
     if (!response.ok) {
       const error = new ApiError({
         status: response.status,
-        message: data.message || data.error || 'An error occurred',
+        message: data.message || data.error || data.title || 'An error occurred',
         code: data.code || 'UNKNOWN_ERROR',
-        details: data.details,
+        details: data.details || data.errors || data, // Include errors object from validation
       });
       // Debug logging for error
       if (process.env.NODE_ENV === 'development') {

@@ -16,13 +16,18 @@ import {
   mockTimeSlots,
   mockDaysOfWeek 
 } from '@/data/mockClassRequests';
-import { Home, Video, MapPin, DollarSign } from 'lucide-react';
+import { Home, Video, MapPin, DollarSign, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ClassRequestService } from '@/services/classRequestService';
+import { CreateClassRequestRequest, CreateClassRequestSlotRequest } from '@/types/requests';
+import { TeachingMode } from '@/types/enums';
+import { useCustomToast } from '@/hooks/useCustomToast';
 
 interface CreateClassRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingRequest?: any;
+  onSuccess?: () => void; // Callback khi tạo thành công
 }
 
 interface TimeSlotSelection {
@@ -30,44 +35,55 @@ interface TimeSlotSelection {
   slotId: number;
 }
 
-export function CreateClassRequestDialog({ open, onOpenChange, editingRequest }: CreateClassRequestDialogProps) {
+export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, onSuccess }: CreateClassRequestDialogProps) {
+  const { showSuccess, showError } = useCustomToast();
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form data - initialize with editingRequest if available
   const [subjectId, setSubjectId] = useState<string>(editingRequest?.subjectId?.toString() || '');
   const [gradeId, setGradeId] = useState<string>(editingRequest?.gradeId?.toString() || '');
-  const [description, setDescription] = useState(editingRequest?.description || '');
+  const [title, setTitle] = useState<string>(editingRequest?.title || '');
+  const [learningGoal, setLearningGoal] = useState<string>(editingRequest?.learningGoal || '');
+  const [tutorRequirement, setTutorRequirement] = useState<string>(editingRequest?.tutorRequirement || '');
   const [teachingMode, setTeachingMode] = useState<string>(editingRequest?.teachingMode?.toString() || '1'); // 0=Tại nhà, 1=Trực tuyến
   const [sessionPerWeek, setSessionPerWeek] = useState<string>(editingRequest?.sessionPerWeek?.toString() || '2');
   const [totalSessions, setTotalSessions] = useState<string>(editingRequest?.totalSessions?.toString() || '12');
   const [minPrice, setMinPrice] = useState<string>(editingRequest?.minPrice?.toString() || '150000');
   const [maxPrice, setMaxPrice] = useState<string>(editingRequest?.maxPrice?.toString() || '200000');
   const [location, setLocation] = useState(editingRequest?.location || '');
+  const [expectedStartDate, setExpectedStartDate] = useState<string>(editingRequest?.expectedStartDate || '');
   const [selectedSlots, setSelectedSlots] = useState<TimeSlotSelection[]>([]);
 
   // Reset form when editingRequest changes
   React.useEffect(() => {
-    if (editingRequest) {
-      setSubjectId(editingRequest.subjectId?.toString() || '');
-      setGradeId(editingRequest.gradeId?.toString() || '');
-      setDescription(editingRequest.description || '');
-      setTeachingMode(editingRequest.teachingMode?.toString() || '1');
-      setSessionPerWeek(editingRequest.sessionPerWeek?.toString() || '2');
-      setTotalSessions(editingRequest.totalSessions?.toString() || '12');
-      setMinPrice(editingRequest.minPrice?.toString() || '150000');
-      setMaxPrice(editingRequest.maxPrice?.toString() || '200000');
-      setLocation(editingRequest.location || '');
-    } else {
+      if (editingRequest) {
+        setSubjectId(editingRequest.subjectId?.toString() || '');
+        setGradeId(editingRequest.gradeId?.toString() || '');
+        setTitle(editingRequest.title || '');
+        setLearningGoal(editingRequest.learningGoal || '');
+        setTutorRequirement(editingRequest.tutorRequirement || '');
+        setTeachingMode(editingRequest.teachingMode?.toString() || '1');
+        setSessionPerWeek(editingRequest.sessionPerWeek?.toString() || '2');
+        setTotalSessions(editingRequest.totalSessions?.toString() || '12');
+        setMinPrice(editingRequest.minPrice?.toString() || '150000');
+        setMaxPrice(editingRequest.maxPrice?.toString() || '200000');
+        setLocation(editingRequest.location || '');
+        setExpectedStartDate(editingRequest.expectedStartDate || '');
+      } else {
       // Reset to defaults when creating new
       setSubjectId('');
       setGradeId('');
-      setDescription('');
+      setTitle('');
+      setLearningGoal('');
+      setTutorRequirement('');
       setTeachingMode('1');
       setSessionPerWeek('2');
       setTotalSessions('12');
       setMinPrice('150000');
       setMaxPrice('200000');
       setLocation('');
+      setExpectedStartDate('');
       setSelectedSlots([]);
     }
     setStep(1);
@@ -122,36 +138,121 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest }:
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = () => {
-    // Handle form submission
-    const action = editingRequest ? 'Cập nhật' : 'Tạo mới';
-    console.log(`${action} yêu cầu:`, {
-      id: editingRequest?.id,
-      subjectId,
-      gradeId,
-      description,
-      teachingMode,
-      sessionPerWeek,
-      totalSessions,
-      minPrice,
-      maxPrice,
-      location,
-      selectedSlots
-    });
-    
-    // Show success message
+  const handleSubmit = async () => {
     if (editingRequest) {
+      // TODO: Implement update
       toast.success('Cập nhật yêu cầu mở lớp thành công!');
-    } else {
-      toast.success('Tạo yêu cầu mở lớp thành công!');
+      setStep(1);
+      onOpenChange(false);
+      return;
     }
-    
-    // Reset and close
-    setStep(1);
-    onOpenChange(false);
+
+    // Tạo yêu cầu mới
+    setIsSubmitting(true);
+    try {
+      // Map selectedSlots to CreateClassRequestSlotRequest format
+      const slots: CreateClassRequestSlotRequest[] = selectedSlots.map(slot => {
+        const timeSlot = mockTimeSlots.find(t => t.id === slot.slotId);
+        return {
+          dayOfWeek: slot.dayOfWeek,
+          slotId: slot.slotId,
+          // Backend có thể cần startTime và endTime từ timeSlot
+        };
+      });
+
+      // Validate required fields
+      if (!title.trim()) {
+        showError('Lỗi', 'Vui lòng nhập tiêu đề yêu cầu');
+        return;
+      }
+      if (!learningGoal.trim()) {
+        showError('Lỗi', 'Vui lòng nhập mục tiêu học tập');
+        return;
+      }
+      if (!tutorRequirement.trim()) {
+        showError('Lỗi', 'Vui lòng nhập yêu cầu gia sư');
+        return;
+      }
+      if (!expectedStartDate) {
+        showError('Lỗi', 'Vui lòng chọn ngày bắt đầu dự kiến');
+        return;
+      }
+      const sessionsNum = parseInt(totalSessions);
+      if (isNaN(sessionsNum) || sessionsNum < 1 || sessionsNum > 100) {
+        showError('Lỗi', 'Số buổi phải từ 1 đến 100');
+        return;
+      }
+
+      const request: CreateClassRequestRequest = {
+        subjectId: parseInt(subjectId),
+        levelId: gradeId ? parseInt(gradeId) : undefined,
+        teachingMode: parseInt(teachingMode) as TeachingMode,
+        expectedTotalSessions: sessionsNum,
+        expectedSessions: sessionsNum, // Backend may use this field name
+        targetUnitPriceMin: minPrice ? parseInt(minPrice) : undefined,
+        targetUnitPriceMax: maxPrice ? parseInt(maxPrice) : undefined,
+        title: title.trim(),
+        learningGoal: learningGoal.trim(),
+        tutorRequirement: tutorRequirement.trim(),
+        expectedStartDate: expectedStartDate, // ISO date string
+        addressLine: location || undefined,
+        slots: slots,
+      };
+
+      console.log('[Create Request] Submitting:', request);
+      const response = await ClassRequestService.createClassRequest(request);
+      console.log('[Create Request] Response:', response);
+
+      if (response.success && response.data) {
+        showSuccess('Thành công', 'Tạo yêu cầu mở lớp thành công!');
+        console.log('[Create Request] Created request ID:', response.data.id);
+        // Reset form
+        setStep(1);
+        setSubjectId('');
+        setGradeId('');
+        setTitle('');
+        setLearningGoal('');
+        setTutorRequirement('');
+        setTeachingMode('1');
+        setSessionPerWeek('2');
+        setTotalSessions('12');
+        setMinPrice('150000');
+        setMaxPrice('200000');
+        setLocation('');
+        setExpectedStartDate('');
+        setSelectedSlots([]);
+        onOpenChange(false);
+        // Call callback để reload danh sách
+        if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        throw new Error(response.message || 'Tạo yêu cầu thất bại');
+      }
+    } catch (err: any) {
+      console.error('[Create Request] Error:', err);
+      // Kiểm tra nếu là lỗi 403 (Forbidden) - check status code
+      if (err.status === 403 || err.message?.includes('403') || err.message?.includes('Forbidden')) {
+        showError('Lỗi', 'Bạn không có quyền tạo yêu cầu. Vui lòng đăng nhập với tài khoản Learner.');
+      } else if (err.status === 400 && (err.details?.errors || err.details)) {
+        // Xử lý validation errors từ backend
+        const errors = err.details?.errors || err.details;
+        const errorMessages: string[] = [];
+        if (errors.Title) errorMessages.push(`Tiêu đề: ${Array.isArray(errors.Title) ? errors.Title.join(', ') : errors.Title}`);
+        if (errors.LearningGoal) errorMessages.push(`Mục tiêu học tập: ${Array.isArray(errors.LearningGoal) ? errors.LearningGoal.join(', ') : errors.LearningGoal}`);
+        if (errors.TutorRequirement) errorMessages.push(`Yêu cầu gia sư: ${Array.isArray(errors.TutorRequirement) ? errors.TutorRequirement.join(', ') : errors.TutorRequirement}`);
+        if (errors.ExpectedSessions) errorMessages.push(`Số buổi: ${Array.isArray(errors.ExpectedSessions) ? errors.ExpectedSessions.join(', ') : errors.ExpectedSessions}`);
+        if (errors.ExpectedStartDate) errorMessages.push(`Ngày bắt đầu: ${Array.isArray(errors.ExpectedStartDate) ? errors.ExpectedStartDate.join(', ') : errors.ExpectedStartDate}`);
+        showError('Lỗi validation', errorMessages.length > 0 ? errorMessages.join('\n') : 'Vui lòng kiểm tra lại thông tin đã nhập');
+      } else {
+        showError('Lỗi', err.message || 'Không thể tạo yêu cầu. Vui lòng thử lại.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const canProceedStep1 = subjectId && gradeId && description.length >= 50;
+  const canProceedStep1 = subjectId && gradeId && title.trim().length > 0 && learningGoal.trim().length > 0 && tutorRequirement.trim().length > 0 && expectedStartDate && totalSessions && parseInt(totalSessions) >= 1 && parseInt(totalSessions) <= 100;
   const canProceedStep2 = teachingMode && minPrice && maxPrice && parseInt(maxPrice) >= parseInt(minPrice);
   const canSubmit = selectedSlots.length > 0;
 
@@ -227,17 +328,36 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest }:
             </div>
 
             <div>
-              <Label htmlFor="description">Mô tả chi tiết yêu cầu *</Label>
-              <Textarea
-                id="description"
-                placeholder="Mô tả chi tiết về nhu cầu học tập, những khó khăn hiện tại, mục tiêu mong muốn... (Tối thiểu 50 ký tự)"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="mt-2 min-h-[150px]"
+              <Label htmlFor="title">Tiêu đề yêu cầu *</Label>
+              <Input
+                id="title"
+                placeholder="Ví dụ: Tìm gia sư dạy Toán lớp 12"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="mt-2"
               />
-              <p className="text-sm text-gray-500 mt-1">
-                {description.length}/50 ký tự tối thiểu
-              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="learningGoal">Mục tiêu học tập *</Label>
+              <Textarea
+                id="learningGoal"
+                placeholder="Ví dụ: Ôn thi THPT Quốc gia, nâng cao điểm số, củng cố kiến thức cơ bản..."
+                value={learningGoal}
+                onChange={(e) => setLearningGoal(e.target.value)}
+                className="mt-2 min-h-[100px]"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="tutorRequirement">Yêu cầu gia sư *</Label>
+              <Textarea
+                id="tutorRequirement"
+                placeholder="Ví dụ: Có kinh nghiệm dạy THPT, nhiệt tình, có phương pháp dạy phù hợp..."
+                value={tutorRequirement}
+                onChange={(e) => setTutorRequirement(e.target.value)}
+                className="mt-2 min-h-[100px]"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -255,16 +375,29 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest }:
               </div>
 
               <div>
-                <Label htmlFor="totalSessions">Tổng số buổi</Label>
+                <Label htmlFor="totalSessions">Tổng số buổi * (1-100)</Label>
                 <Input
                   id="totalSessions"
                   type="number"
                   min="1"
+                  max="100"
                   value={totalSessions}
                   onChange={(e) => setTotalSessions(e.target.value)}
                   className="mt-2"
                 />
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="expectedStartDate">Ngày bắt đầu dự kiến *</Label>
+              <Input
+                id="expectedStartDate"
+                type="date"
+                value={expectedStartDate}
+                onChange={(e) => setExpectedStartDate(e.target.value)}
+                className="mt-2"
+                min={new Date().toISOString().split('T')[0]} // Không cho chọn ngày trong quá khứ
+              />
             </div>
           </div>
         )}
@@ -467,10 +600,17 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest }:
             ) : (
               <Button
                 onClick={handleSubmit}
-                disabled={!canSubmit}
+                disabled={!canSubmit || isSubmitting}
                 className="bg-[#257180] hover:bg-[#1f5a66]"
               >
-                {editingRequest ? 'Cập nhật yêu cầu' : 'Tạo yêu cầu'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Đang tạo...
+                  </>
+                ) : (
+                  editingRequest ? 'Cập nhật yêu cầu' : 'Tạo yêu cầu'
+                )}
               </Button>
             )}
           </div>

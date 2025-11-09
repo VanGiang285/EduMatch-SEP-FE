@@ -291,9 +291,14 @@ export interface CreateClassRequestRequest {
   subDistrictId?: number;
   addressLine?: string;
   expectedTotalSessions: number;
+  expectedSessions?: number; // Alias for expectedTotalSessions (backend may use this)
   targetUnitPriceMin?: number;
   targetUnitPriceMax?: number;
   description?: string;
+  title?: string; // Required by backend
+  learningGoal?: string; // Required by backend
+  tutorRequirement?: string; // Required by backend
+  expectedStartDate?: string; // Required by backend (ISO date string)
   slots: CreateClassRequestSlotRequest[];
 }
 

@@ -9,6 +9,7 @@ export interface ClassRequestDetailDto {
   id: number;
   learnerEmail: string;
   title: string;
+  description?: string; // Mô tả chi tiết yêu cầu
   subjectName: string;
   level: string;
   learningGoal: string;
@@ -36,6 +37,7 @@ export interface ClassRequestDetailDto {
 export interface ClassRequestItemDto {
   id: number;
   learnerName: string;
+  learnerEmail?: string; // Email của learner (nếu có)
   avatarUrl?: string;
   title: string;
   subjectName: string;

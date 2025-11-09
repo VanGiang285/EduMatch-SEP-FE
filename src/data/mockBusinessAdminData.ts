@@ -750,12 +750,12 @@ export const getVerifyStatusColor = (status: number): string => {
 
 export const getClassRequestStatusText = (status: number): string => {
   const statusMap: Record<number, string> = {
-    0: 'Chờ duyệt',
-    1: 'Đã duyệt',
-    2: 'Đã chọn gia sư',
-    3: 'Đã đóng',
-    4: 'Đã hủy',
-    5: 'Hết hạn',
+    0: 'Đang mở',        // Open
+    1: 'Chờ duyệt',      // Reviewing
+    2: 'Đã chọn gia sư', // Selected
+    3: 'Đã đóng',        // Closed
+    4: 'Đã hủy',         // Cancelled
+    5: 'Hết hạn',        // Expired
   };
   return statusMap[status] || 'Không xác định';
 };
