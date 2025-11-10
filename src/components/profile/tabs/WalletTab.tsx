@@ -876,7 +876,7 @@ export function WalletTab() {
                     className="!h-auto min-h-[2.5rem] py-2 border-gray-300 focus:border-[#257180] focus:ring-[#257180] items-start [&>*[data-slot=select-value]]:text-left [&>*[data-slot=select-value]]:truncate [&>*[data-slot=select-value]]:block [&>*[data-slot=select-value]]:w-full [&>*[data-slot=select-value]]:py-0.5"
                   >
                     <SelectValue placeholder="Chọn tài khoản ngân hàng" />
-                  </SelectTrigger>
+                </SelectTrigger>
                   <SelectContent className="max-h-[300px] w-full">
                     {bankAccounts.map((account) => (
                       <SelectItem 
@@ -939,7 +939,7 @@ export function WalletTab() {
 
             {withdrawAmount && Number(withdrawAmount) > currentBalance && (
               <p className="text-sm text-red-700 whitespace-nowrap">
-                Số tiền rút vượt quá số dư khả dụng
+                  Số tiền rút vượt quá số dư khả dụng
               </p>
             )}
 
