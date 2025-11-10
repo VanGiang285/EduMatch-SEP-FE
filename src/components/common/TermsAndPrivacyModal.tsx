@@ -272,7 +272,7 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="max-w-5xl max-h-[95vh] p-0 bg-white">
+      <DialogContent className="!max-w-5xl sm:!max-w-5xl max-h-[95vh] p-0 bg-white">
         <DialogHeader className="p-6 pb-4 border-b bg-gray-50">
           <DialogTitle className="flex items-center gap-3 text-2xl font-bold text-black">
             {icon}
@@ -299,4 +299,4 @@ export function TermsAndPrivacyModal({ type, children }: TermsAndPrivacyModalPro
       </DialogContent>
     </Dialog>
   );
-}
+}

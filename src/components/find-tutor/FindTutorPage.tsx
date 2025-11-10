@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { SelectWithSearch, SelectWithSearchItem } from '../ui/form/select-with-search';
 import { Separator } from '../ui/layout/separator';
+import { Slider } from '../ui/form/slider';
 import { FormatService } from '@/lib/format';
 import {
   Pagination,
@@ -32,12 +33,36 @@ import {
   PaginationPrevious,
 } from '../ui/navigation/pagination';
 import { useFindTutor } from '@/hooks/useFindTutor';
+import { EnumHelpers, TeachingMode } from '@/types/enums';
+import { FavoriteTutorService } from '@/services/favoriteTutorService';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCustomToast } from '@/hooks/useCustomToast';
+
+// Helper function để convert string enum từ API sang TeachingMode enum
+function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
+  if (typeof mode === 'number') {
+    return mode as TeachingMode;
+  }
+  if (typeof mode === 'string') {
+    switch (mode) {
+      case 'Offline': return TeachingMode.Offline;
+      case 'Online': return TeachingMode.Online;
+      case 'Hybrid': return TeachingMode.Hybrid;
+      default: return TeachingMode.Offline;
+    }
+  }
+  return mode as TeachingMode;
+}
+
 export function FindTutorPage() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const { showWarning } = useCustomToast();
   const {
     tutors,
     subjects,
-    institutions,
+    levels,
+    certificateTypes,
     isLoadingTutors,
     isLoadingMasterData,
     error,
@@ -49,13 +74,15 @@ export function FindTutorPage() {
   const [videoKey, setVideoKey] = useState(0);
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedCertificate, setSelectedCertificate] = useState('all');
-  const [selectedInstitution, setSelectedInstitution] = useState('all');
+  const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [selectedTeachingMode, setSelectedTeachingMode] = useState('all');
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
   const [selectedSort, setSelectedSort] = useState('recommended');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set());
+  const [loadingFavorite, setLoadingFavorite] = useState<Set<number>>(new Set());
   const tutorsPerPage = 6;
   
   // Note: Using client-side filtering instead of API filtering
@@ -69,9 +96,9 @@ export function FindTutorPage() {
     if (searchQuery.trim()) {
       const keyword = searchQuery.trim().toLowerCase();
       filtered = filtered.filter(tutor => {
-        const userName = tutor.userName?.toLowerCase() || '';
-        const bio = tutor.bio?.toLowerCase() || '';
-        const email = tutor.userEmail?.toLowerCase() || '';
+        const userName = (tutor.userName || '').toLowerCase();
+        const bio = (tutor.bio || '').toLowerCase();
+        const email = (tutor.userEmail || '').toLowerCase();
         
         return userName.includes(keyword) || 
                bio.includes(keyword) || 
@@ -95,10 +122,10 @@ export function FindTutorPage() {
       );
     }
 
-    // Filter by institution
-    if (selectedInstitution !== 'all') {
+    // Filter by level
+    if (selectedLevel !== 'all') {
       filtered = filtered.filter(tutor => 
-        tutor.tutorEducations?.some(edu => edu.institution?.id?.toString() === selectedInstitution)
+        tutor.tutorSubjects?.some(ts => ts.level?.id?.toString() === selectedLevel)
       );
     }
 
@@ -119,9 +146,25 @@ export function FindTutorPage() {
 
     // Filter by teaching mode
     if (selectedTeachingMode !== 'all') {
-      filtered = filtered.filter(tutor => 
-        tutor.teachingModes?.toString() === selectedTeachingMode
-      );
+      filtered = filtered.filter(tutor => {
+        const modeValue = getTeachingModeValue(tutor.teachingModes);
+        return modeValue.toString() === selectedTeachingMode;
+      });
+    }
+
+    // Filter by price range
+    if (priceRange[0] > 0 || priceRange[1] < 1000000) {
+      const [minRange, maxRange] = priceRange;
+      filtered = filtered.filter(tutor => {
+        if (!tutor.tutorSubjects || tutor.tutorSubjects.length === 0) return false;
+        
+        const prices = tutor.tutorSubjects.map(ts => ts.hourlyRate || 0);
+        const tutorMinPrice = Math.min(...prices);
+        const tutorMaxPrice = Math.max(...prices);
+        
+        // Filter if any price in the tutor's range overlaps with the selected range
+        return tutorMinPrice <= maxRange && tutorMaxPrice >= minRange;
+      });
     }
 
     // Sort tutors
@@ -143,11 +186,11 @@ export function FindTutorPage() {
     }
 
     return filtered;
-  }, [tutors, searchQuery, selectedSubject, selectedCertificate, selectedInstitution, selectedCity, selectedTeachingMode, selectedSort]);
+  }, [tutors, searchQuery, selectedSubject, selectedCertificate, selectedLevel, selectedCity, selectedTeachingMode, priceRange, selectedSort]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedSubject, selectedCertificate, selectedInstitution, selectedCity, selectedTeachingMode, selectedSort]);
+  }, [searchQuery, selectedSubject, selectedCertificate, selectedLevel, selectedCity, selectedTeachingMode, priceRange, selectedSort]);
 
   // Reset certificate filter when subject changes
   useEffect(() => {
@@ -202,61 +245,128 @@ export function FindTutorPage() {
   const currentTutors = filteredAndSortedTutors.slice(indexOfFirstTutor, indexOfLastTutor);
   const currentTutor = filteredAndSortedTutors.find(t => t.id === hoveredTutor) || filteredAndSortedTutors[0];
 
+  // Check favorite status for all tutors when they load (only if authenticated)
+  useEffect(() => {
+    const checkFavoriteStatuses = async () => {
+      // Reset favorites when not authenticated or no tutors
+      if (tutors.length === 0 || !isAuthenticated) {
+        setFavoriteTutors(new Set());
+        return;
+      }
+      
+      const favoriteChecks = tutors.map(async (tutor) => {
+        try {
+          const response = await FavoriteTutorService.isFavorite(tutor.id);
+          // Ensure response.data is a boolean - check for explicit true
+          const isFavorite = response.data === true;
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`Tutor ${tutor.id} favorite status:`, response.data, '→ isFavorite:', isFavorite);
+          }
+          return { tutorId: tutor.id, isFavorite };
+        } catch (error) {
+          console.error(`Error checking favorite status for tutor ${tutor.id}:`, error);
+          return { tutorId: tutor.id, isFavorite: false };
+        }
+      });
+
+      const results = await Promise.all(favoriteChecks);
+      const favoriteSet = new Set<number>();
+      results.forEach(({ tutorId, isFavorite }) => {
+        // Only add if explicitly true
+        if (isFavorite === true) {
+          favoriteSet.add(tutorId);
+        }
+      });
+      setFavoriteTutors(favoriteSet);
+    };
+
+    checkFavoriteStatuses();
+  }, [tutors, isAuthenticated]);
+
   // Reset video when currentTutor changes
   useEffect(() => {
     setVideoKey(prev => prev + 1);
   }, [currentTutor?.id]);
+  
   const handleViewTutorProfile = (tutorId: number) => {
     router.push(`/tutor/${tutorId}`);
   };
-  const handleToggleFavorite = (tutorId: number, e: React.MouseEvent) => {
+  
+  const handleToggleFavorite = async (tutorId: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
+    
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      showWarning(
+        'Vui lòng đăng nhập',
+        'Bạn cần đăng nhập để thêm gia sư vào danh sách yêu thích.'
+      );
+      router.push('/login');
+      return;
+    }
+    
+    // Optimistic update
+    const isCurrentlyFavorite = favoriteTutors.has(tutorId);
     setFavoriteTutors(prev => {
       const newFavorites = new Set(prev);
-      if (newFavorites.has(tutorId)) {
+      if (isCurrentlyFavorite) {
         newFavorites.delete(tutorId);
       } else {
         newFavorites.add(tutorId);
       }
       return newFavorites;
     });
+
+    // Set loading state
+    setLoadingFavorite(prev => new Set(prev).add(tutorId));
+
+    try {
+      if (isCurrentlyFavorite) {
+        await FavoriteTutorService.removeFromFavorite(tutorId);
+      } else {
+        await FavoriteTutorService.addToFavorite(tutorId);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      // Revert optimistic update on error
+      setFavoriteTutors(prev => {
+        const newFavorites = new Set(prev);
+        if (isCurrentlyFavorite) {
+          newFavorites.add(tutorId);
+        } else {
+          newFavorites.delete(tutorId);
+        }
+        return newFavorites;
+      });
+    } finally {
+      setLoadingFavorite(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(tutorId);
+        return newSet;
+      });
+    }
   };
   return (
     <div className="min-h-screen bg-gray-50 pt-16">
-      {/* Title Section */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Title */}
-          <div className="mb-6">
-            <h1 className="text-gray-900 mb-2 text-4xl font-bold">
-              Tìm gia sư trực tuyến
-            </h1>
-            <p className="text-gray-600">
-              Kết nối với hơn 1,000+ gia sư chuyên nghiệp
-            </p>
-          </div>
-        </div>
-      </div>
-      
       {/* Search and Filters Section - Sticky */}
       <div className="bg-white border-b border-gray-200 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          {/* Search Bar and Filters */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            {/* Search Bar */}
+            <div className="relative flex-1 min-w-[150px] max-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Tìm theo tên gia sư..."
+                placeholder="Tìm gia sư..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 text-base border-gray-300"
+                className="pl-10 h-10 text-sm border-gray-300"
               />
             </div>
-          </div>
 
-          {/* Horizontal Filters */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {/* Filters */}
+            <div className="flex-1 min-w-[140px]">
             <SelectWithSearch 
               value={selectedSubject} 
               onValueChange={setSelectedSubject}
@@ -270,7 +380,9 @@ export function FindTutorPage() {
                 </SelectWithSearchItem>
               ))}
             </SelectWithSearch>
+            </div>
 
+            <div className="flex-1 min-w-[140px]">
             <SelectWithSearch 
               value={selectedCertificate} 
               onValueChange={setSelectedCertificate}
@@ -278,47 +390,31 @@ export function FindTutorPage() {
               disabled={isLoadingMasterData}
             >
               <SelectWithSearchItem value="all">Tất cả chứng chỉ</SelectWithSearchItem>
-              {(() => {
-                // Nếu đã chọn subject, chỉ hiển thị chứng chỉ của subject đó
-                if (selectedSubject !== 'all') {
-                  const selectedSubjectData = subjects.find(s => s.id.toString() === selectedSubject);
-                  const availableCertificates = selectedSubjectData?.certificateTypes || [];
-                  
-                  return availableCertificates.map((cert) => (
+              {certificateTypes.map((cert) => (
                     <SelectWithSearchItem key={cert.id} value={cert.id.toString()}>
                       {cert.code ? `${cert.code} - ${cert.name}` : cert.name}
                     </SelectWithSearchItem>
-                  ));
-                }
-                
-                // Nếu chưa chọn subject, hiển thị tất cả chứng chỉ unique
-                const allCertificates = subjects.flatMap(s => s.certificateTypes || []);
-                const uniqueCertificates = allCertificates.filter((cert, index, self) => 
-                  index === self.findIndex(c => c.id === cert.id)
-                );
-                
-                return uniqueCertificates.map((cert) => (
-                  <SelectWithSearchItem key={cert.id} value={cert.id.toString()}>
-                    {cert.code ? `${cert.code} - ${cert.name}` : cert.name}
-                  </SelectWithSearchItem>
-                ));
-              })()}
+              ))}
             </SelectWithSearch>
+            </div>
 
+            <div className="flex-1 min-w-[140px]">
             <SelectWithSearch 
-              value={selectedInstitution} 
-              onValueChange={setSelectedInstitution}
-              placeholder="Trường học"
+              value={selectedLevel} 
+              onValueChange={setSelectedLevel}
+              placeholder="Lớp"
               disabled={isLoadingMasterData}
             >
-              <SelectWithSearchItem value="all">Tất cả trường học</SelectWithSearchItem>
-              {institutions.map((institution) => (
-                <SelectWithSearchItem key={institution.id} value={institution.id.toString()}>
-                  {institution.name}
+              <SelectWithSearchItem value="all">Tất cả lớp</SelectWithSearchItem>
+              {levels.map((level) => (
+                <SelectWithSearchItem key={level.id} value={level.id.toString()}>
+                  {level.name}
                 </SelectWithSearchItem>
               ))}
             </SelectWithSearch>
+            </div>
 
+            <div className="flex-1 min-w-[140px]">
             <SelectWithSearch 
               value={selectedCity} 
               onValueChange={setSelectedCity}
@@ -332,7 +428,9 @@ export function FindTutorPage() {
               <SelectWithSearchItem value="haiphong">Hải Phòng</SelectWithSearchItem>
               <SelectWithSearchItem value="cantho">Cần Thơ</SelectWithSearchItem>
             </SelectWithSearch>
+            </div>
 
+            <div className="flex-1 min-w-[140px]">
             <SelectWithSearch 
               value={selectedTeachingMode}
               onValueChange={setSelectedTeachingMode}
@@ -342,7 +440,9 @@ export function FindTutorPage() {
               <SelectWithSearchItem value="1">Trực tuyến</SelectWithSearchItem>
               <SelectWithSearchItem value="0">Tại nhà</SelectWithSearchItem>
             </SelectWithSearch>
+            </div>
 
+            <div className="flex-1 min-w-[140px]">
             <SelectWithSearch 
               value={selectedSort}
               onValueChange={setSelectedSort}
@@ -354,6 +454,34 @@ export function FindTutorPage() {
               <SelectWithSearchItem value="price-high">Giá cao - thấp</SelectWithSearchItem>
               <SelectWithSearchItem value="experience">Kinh nghiệm</SelectWithSearchItem>
             </SelectWithSearch>
+            </div>
+
+          </div>
+
+          {/* Price Range Slider */}
+          <div className="mt-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-semibold text-gray-800">
+                Khoảng giá (₫/giờ)
+              </label>
+              <div className="flex items-center gap-2 text-sm bg-white px-3 py-1.5 rounded-md border border-gray-300 shadow-sm">
+                <span className="font-medium text-[#257180]">
+                  {FormatService.formatVND(priceRange[0])}
+                </span>
+                <span className="text-gray-400">-</span>
+                <span className="font-medium text-[#257180]">
+                  {FormatService.formatVND(priceRange[1])}
+                </span>
+              </div>
+            </div>
+            <Slider
+              value={priceRange}
+              onValueChange={(value) => setPriceRange(value as [number, number])}
+              min={0}
+              max={1000000}
+              step={10000}
+              className="w-full [&_.bg-primary]:bg-[#257180]"
+            />
           </div>
 
         </div>
@@ -415,7 +543,7 @@ export function FindTutorPage() {
                         {tutor.avatarUrl ? (
                           <img 
                             src={tutor.avatarUrl} 
-                            alt={tutor.userName}
+                            alt={tutor.userName || tutor.userEmail || 'Gia sư'}
                             className="w-full h-full object-cover rounded-lg"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
@@ -430,7 +558,7 @@ export function FindTutorPage() {
                           className={`w-full h-full rounded-lg flex items-center justify-center text-2xl font-bold text-[#257180] bg-[#F2E5BF] ${tutor.avatarUrl ? 'hidden' : 'flex'}`}
                           style={{ display: tutor.avatarUrl ? 'none' : 'flex' }}
                         >
-                          {tutor.userName.slice(0, 2).toUpperCase()}
+                          {(tutor.userName || tutor.userEmail || 'U').slice(0, 2).toUpperCase()}
                         </div>
                       </div>
                     </div>
@@ -440,7 +568,7 @@ export function FindTutorPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
                             <h2 className="text-black text-xl sm:text-2xl font-bold">
-                              {tutor.userName}
+                              {tutor.userName || tutor.userEmail || 'Gia sư'}
                             </h2>
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
@@ -460,8 +588,13 @@ export function FindTutorPage() {
                           size="sm" 
                           className="p-2 -mt-1 hover:bg-[#FD8B51] hover:text-white"
                           onClick={(e) => handleToggleFavorite(tutor.id, e)}
+                          disabled={loadingFavorite.has(tutor.id)}
                         >
-                          <Heart className={`w-5 h-5 transition-colors duration-200 ${favoriteTutors.has(tutor.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                          {loadingFavorite.has(tutor.id) ? (
+                            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                          ) : (
+                            <Heart className={`w-5 h-5 transition-colors duration-200 ${favoriteTutors.has(tutor.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                          )}
                         </Button>
                       </div>
                       {/* Subjects */}
@@ -493,10 +626,7 @@ export function FindTutorPage() {
                     </div>
                     <Separator orientation="vertical" className="h-4" />
                     <span>
-                      {tutor.teachingModes === 0 ? 'Dạy trực tiếp' : 
-                       tutor.teachingModes === 1 ? 'Dạy Online' : 
-                       tutor.teachingModes === 2 ? 'Dạy Online + Trực tiếp' : 
-                       'Chưa xác định'}
+                      {EnumHelpers.getTeachingModeLabel(getTeachingModeValue(tutor.teachingModes))}
                     </span>
                     {tutor.tutorEducations && tutor.tutorEducations.length > 0 && (
                       <>
@@ -525,7 +655,7 @@ export function FindTutorPage() {
                                   : `${FormatService.formatVND(minPrice)} - ${FormatService.formatVND(maxPrice)}`
                                 }
                               </span>
-                              <span className="text-base text-gray-600">VNĐ/giờ</span>
+                              <span className="text-base text-gray-600">/giờ</span>
                             </div>
                           );
                         })()
@@ -534,7 +664,7 @@ export function FindTutorPage() {
                           <span className="text-3xl text-black font-bold">
                             {FormatService.formatVND(0)}
                           </span>
-                          <span className="text-base text-gray-600">VNĐ/giờ</span>
+                          <span className="text-base text-gray-600">/giờ</span>
                         </div>
                       )}
                     </div>
@@ -606,7 +736,7 @@ export function FindTutorPage() {
           </div>
           {/* Right Side - Video Preview (Simple & Sticky) */}
           <div className="hidden lg:block lg:col-span-4">
-            <div className="sticky top-64 z-30">
+            <div className="sticky top-72 z-30">
               {/* Video Card */}
               <Card key={`preview-${currentTutor?.id}-${videoKey}`} className="overflow-hidden bg-white border-[#257180]/20 shadow-lg">
                 <CardContent className="p-0">

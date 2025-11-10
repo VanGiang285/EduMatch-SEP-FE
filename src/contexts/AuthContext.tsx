@@ -3,9 +3,20 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { User } from '@/types';
 import { AuthService } from '@/services';
 import { ErrorHandler } from '@/lib/error-handler';
-import { STORAGE_KEYS, ROLE_ID_MAP, USER_ROLES } from '@/constants';
+import { STORAGE_KEYS, ROLE_ID_MAP, ROLE_NAME_TO_ROLE_MAP, USER_ROLES } from '@/constants';
 import { TokenManager } from '@/lib/tokenManager';
 import { apiClient } from '@/lib/api';
+import { CurrentUserResponse } from '@/services/authService';
+
+// Helper function to determine role from API response
+function determineRoleFromResponse(responseData: CurrentUserResponse): typeof USER_ROLES[keyof typeof USER_ROLES] {
+  if (responseData.roleId) {
+    return ROLE_ID_MAP[Number(responseData.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER;
+  } else if (responseData.roleName) {
+    return (ROLE_NAME_TO_ROLE_MAP[responseData.roleName] || USER_ROLES.LEARNER) as typeof USER_ROLES[keyof typeof USER_ROLES];
+  }
+  return USER_ROLES.LEARNER;
+}
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -25,7 +36,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Token refresh callbacks
   const handleTokenRefresh = useCallback(async () => {
     try {
       console.log('🔄 Refreshing token...');
@@ -34,7 +44,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { accessToken } = response.data;
         localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken);
         
-        // Cập nhật timer cho token mới
         TokenManager.saveTokenAndUpdateTimer(
           accessToken,
           handleTokenRefresh,
@@ -53,15 +62,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const handleTokenRefreshFailed = useCallback(() => {
     console.log('🚪 Token refresh failed, logging out user');
-    // Dừng token refresh timer
     TokenManager.stopTokenRefreshTimer();
     
-    // Clear auth data
     AuthService.clearStoredData();
     setUser(null);
   }, []);
 
-  // Setup ApiClient callbacks
   useEffect(() => {
     apiClient.setTokenRefreshCallbacks(handleTokenRefresh, handleTokenRefreshFailed);
   }, [handleTokenRefresh, handleTokenRefreshFailed]);
@@ -73,7 +79,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (isAuthenticated && storedUser) {
           setUser(storedUser);
           
-          // Bắt đầu token refresh timer cho user đã login
           const currentToken = TokenManager.getCurrentToken();
           if (currentToken) {
             TokenManager.saveTokenAndUpdateTimer(
@@ -86,12 +91,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           try {
             const response = await AuthService.getCurrentUser();
             if (response.success && response.data) {
+              const role = determineRoleFromResponse(response.data);
+              
               const userData: User = {
                 id: response.data.email,
                 email: response.data.email,
                 name: response.data.name || response.data.email,
                 fullName: response.data.name,
-                role: ROLE_ID_MAP[Number(response.data.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER,
+                role: role,
                 avatar: response.data.avatarUrl || undefined,
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -99,7 +106,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setUser(userData);
               AuthService.storeUserData(userData, localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) || '');
               
-              // Set role in cookies for middleware
               document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}`;
             }
           } catch (error) {
@@ -134,7 +140,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           createdAt: new Date(),
           updatedAt: new Date(),
         };
-        // Set role in cookies for middleware IMMEDIATELY
         document.cookie = `userRole=${tempUser.role}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
         document.cookie = `accessToken=${accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
         
@@ -144,7 +149,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(tempUser);
         AuthService.storeUserData(tempUser, accessToken);
         
-        // Bắt đầu token refresh timer
         TokenManager.saveTokenAndUpdateTimer(
           accessToken,
           handleTokenRefresh,
@@ -154,16 +158,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (rememberMe) {
           localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, 'true');
         }
-        // Get user details immediately (no setTimeout)
         try {
           const userResponse = await AuthService.getCurrentUser();
           if (userResponse.success && userResponse.data) {
+            const role = determineRoleFromResponse(userResponse.data);
+            
             const userData: User = {
               id: userResponse.data.email,
               email: userResponse.data.email,
               name: userResponse.data.name || userResponse.data.email,
               fullName: userResponse.data.name,
-              role: ROLE_ID_MAP[Number(userResponse.data.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER,
+              role: role,
               avatar: userResponse.data.avatarUrl || undefined,
               createdAt: new Date(),
               updatedAt: new Date(),
@@ -171,7 +176,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(userData);
             AuthService.storeUserData(userData, accessToken);
             
-            // Update role in cookies for middleware
             document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
             
             console.log('🔍 AuthContext - User details updated:', userData);
@@ -193,7 +197,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
       
-      // Dừng token refresh timer
       TokenManager.stopTokenRefreshTimer();
       
       await AuthService.logout();
@@ -204,7 +207,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setLoading(false);
       
-      // Clear role cookie
       document.cookie = 'userRole=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     }
   }, []);
@@ -213,8 +215,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       const response = await AuthService.register({ fullName, email, password });
       if (response.success) {
-        // Registration successful, user needs to verify email
-        // Don't set user state yet, wait for email verification
       } else {
         throw new Error(response.error?.message || 'Registration failed');
       }
@@ -234,11 +234,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken);
         const userResponse = await AuthService.getCurrentUser();
         if (userResponse.success && userResponse.data) {
+          const role = determineRoleFromResponse(userResponse.data);
+          
           const userData: User = {
             id: userResponse.data.email,
             email: userResponse.data.email,
             name: userResponse.data.name || userResponse.data.email,
-            role: ROLE_ID_MAP[Number(userResponse.data.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER,
+            role: role,
             avatar: userResponse.data.avatarUrl || undefined,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -306,11 +308,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken);
         const userResponse = await AuthService.getCurrentUser();
         if (userResponse.success && userResponse.data) {
+          const role = determineRoleFromResponse(userResponse.data);
+          
           const userData: User = {
             id: userResponse.data.email,
             email: userResponse.data.email,
             name: userResponse.data.name || userResponse.data.email,
-            role: ROLE_ID_MAP[Number(userResponse.data.roleId) as keyof typeof ROLE_ID_MAP] || USER_ROLES.LEARNER,
+            role: role,
             avatar: userResponse.data.avatarUrl || undefined,
             createdAt: new Date(),
             updatedAt: new Date(),

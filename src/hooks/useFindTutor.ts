@@ -1,33 +1,38 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FindTutorService, FindTutorProfile, TutorFilter } from '@/services/findTutorService';
-import { MasterDataService, SubjectDto, LevelDto, EducationInstitutionDto } from '@/services/masterDataService';
+import { TutorService } from '@/services/tutorService';
+import { FindTutorService } from '@/services/findTutorService';
+import { SubjectService } from '@/services/subjectService';
+import { CertificateService } from '@/services/certificateService';
+import { TutorProfileDto, TutorFilterDto, SubjectDto, LevelDto, EducationInstitutionDto, CertificateTypeDto } from '@/types/backend';
 
 export interface UseFindTutorReturn {
-  tutors: FindTutorProfile[];
+  tutors: TutorProfileDto[];
   subjects: SubjectDto[];
   levels: LevelDto[];
   institutions: EducationInstitutionDto[];
+  certificateTypes: CertificateTypeDto[];
   isLoadingTutors: boolean;
   isLoadingMasterData: boolean;
   error: string | null;
-  filters: TutorFilter;
-  setFilters: (filters: Partial<TutorFilter>) => void;
+  filters: TutorFilterDto;
+  setFilters: (filters: Partial<TutorFilterDto>) => void;
   searchTutors: () => Promise<void>;
   loadAllTutors: () => Promise<void>;
   clearError: () => void;
 }
 
 export function useFindTutor(): UseFindTutorReturn {
-  const [tutors, setTutors] = useState<FindTutorProfile[]>([]);
+  const [tutors, setTutors] = useState<TutorProfileDto[]>([]);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   const [levels, setLevels] = useState<LevelDto[]>([]);
   const [institutions, setInstitutions] = useState<EducationInstitutionDto[]>([]);
+  const [certificateTypes, setCertificateTypes] = useState<CertificateTypeDto[]>([]);
   
   const [isLoadingTutors, setIsLoadingTutors] = useState(false);
   const [isLoadingMasterData, setIsLoadingMasterData] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const [filters, setFiltersState] = useState<TutorFilter>({
+  const [filters, setFiltersState] = useState<TutorFilterDto>({
     page: 1,
     pageSize: 10,
   });
@@ -46,10 +51,11 @@ export function useFindTutor(): UseFindTutorReturn {
     setError(null);
     
     try {
-      const [subjectsRes, levelsRes, institutionsRes] = await Promise.all([
-        MasterDataService.getAllSubjects(),
-        MasterDataService.getAllLevels(),
-        MasterDataService.getAllEducationInstitutions(),
+      const [subjectsRes, levelsRes, institutionsRes, certificateTypesRes] = await Promise.all([
+        SubjectService.getAllSubjects(),
+        CertificateService.getAllLevels(),
+        CertificateService.getAllInstitutions(),
+        CertificateService.getAllCertificateTypes(),
       ]);
 
       if (subjectsRes.success && subjectsRes.data) {
@@ -63,27 +69,13 @@ export function useFindTutor(): UseFindTutorReturn {
       if (institutionsRes.success && institutionsRes.data) {
         setInstitutions(institutionsRes.data);
       }
+
+      if (certificateTypesRes.success && certificateTypesRes.data) {
+        setCertificateTypes(certificateTypesRes.data);
+      }
     } catch (err) {
       console.error('Error loading master data:', err);
-      setSubjects([
-        { id: 1, subjectName: 'Toán học', isActive: true, createdAt: '', updatedAt: '' },
-        { id: 2, subjectName: 'Tiếng Anh', isActive: true, createdAt: '', updatedAt: '' },
-        { id: 3, subjectName: 'Vật lý', isActive: true, createdAt: '', updatedAt: '' },
-        { id: 4, subjectName: 'Hóa học', isActive: true, createdAt: '', updatedAt: '' },
-        { id: 5, subjectName: 'Sinh học', isActive: true, createdAt: '', updatedAt: '' },
-        { id: 6, subjectName: 'Ngữ văn', isActive: true, createdAt: '', updatedAt: '' },
-      ]);
-      setLevels([
-        { id: 1, name: 'Tiểu học', isActive: true, createdAt: '', updatedAt: '' },
-        { id: 2, name: 'THCS', isActive: true, createdAt: '', updatedAt: '' },
-        { id: 3, name: 'THPT', isActive: true, createdAt: '', updatedAt: '' },
-        { id: 4, name: 'Đại học', isActive: true, createdAt: '', updatedAt: '' },
-      ]);
-      setInstitutions([
-        { id: 1, code: 'SPHN', name: 'Đại học Sư phạm Hà Nội', institutionType: 'University', isActive: true, createdAt: '', updatedAt: '' },
-        { id: 2, code: 'BKHN', name: 'Đại học Bách khoa Hà Nội', institutionType: 'University', isActive: true, createdAt: '', updatedAt: '' },
-        { id: 3, code: 'KHTN', name: 'Đại học Khoa học Tự nhiên', institutionType: 'University', isActive: true, createdAt: '', updatedAt: '' },
-      ]);
+      setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
     } finally {
       setIsLoadingMasterData(false);
     }
@@ -94,7 +86,7 @@ export function useFindTutor(): UseFindTutorReturn {
     setError(null);
     
     try {
-      const response = await FindTutorService.getAllTutors();
+      const response = await TutorService.getAllTutors();
       
       if (response.success && response.data) {
         setTutors(response.data);
@@ -133,9 +125,9 @@ export function useFindTutor(): UseFindTutorReturn {
     }
   }, [filters]);
 
-  const setFilters = useCallback((newFilters: Partial<TutorFilter>) => {
+  const setFilters = useCallback((newFilters: Partial<TutorFilterDto>) => {
     setFiltersState(() => {
-      const cleanFilters: TutorFilter = {
+      const cleanFilters: TutorFilterDto = {
         page: 1,
         pageSize: 10,
         ...newFilters,
@@ -153,6 +145,7 @@ export function useFindTutor(): UseFindTutorReturn {
     subjects,
     levels,
     institutions,
+    certificateTypes,
     isLoadingTutors,
     isLoadingMasterData,
     error,

@@ -11,6 +11,26 @@ import { Separator } from '../ui/layout/separator';
 import { Star, Heart, MapPin, Clock, Calendar as CalendarIcon, MessageCircle, Video, Shield, Users, Globe, CheckCircle2, Play, ArrowLeft, Loader2, GraduationCap, Medal, ChevronLeft, ChevronRight } from 'lucide-react';
 import { FormatService } from '@/lib/format';
 import { useTutorDetail } from '@/hooks/useTutorDetail';
+import { EnumHelpers, TeachingMode } from '@/types/enums';
+import { FavoriteTutorService } from '@/services/favoriteTutorService';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCustomToast } from '@/hooks/useCustomToast';
+
+// Helper function để convert string enum từ API sang TeachingMode enum
+function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
+  if (typeof mode === 'number') {
+    return mode as TeachingMode;
+  }
+  if (typeof mode === 'string') {
+    switch (mode) {
+      case 'Offline': return TeachingMode.Offline;
+      case 'Online': return TeachingMode.Online;
+      case 'Hybrid': return TeachingMode.Hybrid;
+      default: return TeachingMode.Offline;
+    }
+  }
+  return mode as TeachingMode;
+}
 interface Review {
   id: number;
   studentName: string;
@@ -28,10 +48,13 @@ interface TutorDetailProfilePageProps {
 
 export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps) {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const { showWarning } = useCustomToast();
   const { tutor, isLoading, error, loadTutorDetail, clearError } = useTutorDetail();
   
   // const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isFavorite, setIsFavorite] = useState(false);
+  const [loadingFavorite, setLoadingFavorite] = useState(false);
   // const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   
   // Availability calendar states
@@ -182,6 +205,32 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       loadTutorDetail(tutorId);
     }
   }, [tutorId, loadTutorDetail]);
+
+  // Check favorite status when tutor loads (only if authenticated)
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      // Reset favorite when not authenticated or no tutorId
+      if (!tutorId || !isAuthenticated) {
+        setIsFavorite(false);
+        return;
+      }
+      
+      try {
+        const response = await FavoriteTutorService.isFavorite(tutorId);
+        // Ensure response.data is a boolean - check for explicit true
+        const isFavorite = response.data === true;
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Tutor ${tutorId} favorite status:`, response.data, '→ isFavorite:', isFavorite);
+        }
+        setIsFavorite(isFavorite);
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+        setIsFavorite(false);
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [tutorId, isAuthenticated]);
   
   const reviews: Review[] = [];
   const formatDate = (date: Date) => {
@@ -321,10 +370,44 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setIsFavorite(!isFavorite)}
+                        onClick={async () => {
+                          // Check if user is authenticated
+                          if (!isAuthenticated) {
+                            showWarning(
+                              'Vui lòng đăng nhập',
+                              'Bạn cần đăng nhập để thêm gia sư vào danh sách yêu thích.'
+                            );
+                            router.push('/login');
+                            return;
+                          }
+
+                          const newFavoriteState = !isFavorite;
+                          // Optimistic update
+                          setIsFavorite(newFavoriteState);
+                          setLoadingFavorite(true);
+
+                          try {
+                            if (newFavoriteState) {
+                              await FavoriteTutorService.addToFavorite(tutorId);
+                            } else {
+                              await FavoriteTutorService.removeFromFavorite(tutorId);
+                            }
+                          } catch (error) {
+                            console.error('Error toggling favorite:', error);
+                            // Revert optimistic update on error
+                            setIsFavorite(!newFavoriteState);
+                          } finally {
+                            setLoadingFavorite(false);
+                          }
+                        }}
                         className="p-2 hover:bg-[#FD8B51] hover:text-white"
+                        disabled={loadingFavorite}
                       >
-                        <Heart className={`w-6 h-6 transition-colors duration-200 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                        {loadingFavorite ? (
+                          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                        ) : (
+                          <Heart className={`w-6 h-6 transition-colors duration-200 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                        )}
                       </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -343,7 +426,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <Globe className="w-4 h-4" />
-                        <span>{tutor.teachingModes === 0 ? 'Dạy trực tiếp' : tutor.teachingModes === 1 ? 'Dạy Online' : tutor.teachingModes === 2 ? 'Dạy Online + Trực tiếp' : 'Chưa xác định'}</span>
+                        <span>{EnumHelpers.getTeachingModeLabel(getTeachingModeValue(tutor.teachingModes))}</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <Users className="w-4 h-4" />
@@ -419,7 +502,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                             {tutor.tutorSubjects.map((tutorSubject, idx) => (
                               <li key={idx} className="flex items-start gap-2">
                                 <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                                 <span>{tutorSubject.subject?.subjectName} - {tutorSubject.level?.levelName}</span>
+                                 <span>{tutorSubject.subject?.subjectName} - {tutorSubject.level?.name}</span>
                               </li>
                             ))}
                           </ul>
@@ -432,19 +515,10 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     <div>
                       <h3 className="text-gray-900 mb-3 font-bold">Hình thức dạy học</h3>
                       <div className="flex flex-wrap gap-2">
-                        {tutor.teachingModes !== undefined && (
-                          <>
-                            {tutor.teachingModes === 0 && (
-                              <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
-                                Dạy trực tiếp
-                              </Badge>
-                            )}
-                            {tutor.teachingModes === 1 && (
-                              <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
-                                Dạy Online
-                              </Badge>
-                            )}
-                            {tutor.teachingModes === 2 && (
+                        {tutor.teachingModes !== undefined && (() => {
+                          const modeValue = getTeachingModeValue(tutor.teachingModes);
+                          if (modeValue === TeachingMode.Hybrid) {
+                            return (
                               <>
                                 <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
                                   Dạy Online
@@ -453,14 +527,14 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                                   Dạy trực tiếp
                                 </Badge>
                               </>
-                            )}
-                            {tutor.teachingModes === undefined && (
-                              <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
-                                Chưa xác định
-                          </Badge>
-                            )}
-                          </>
-                        )}
+                            );
+                          }
+                          return (
+                            <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
+                              {EnumHelpers.getTeachingModeLabel(modeValue)}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                     </div>
                   </CardContent>
@@ -829,7 +903,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Hình thức:</span>
-                      <span className="font-medium">{tutor.teachingModes === 0 ? 'Dạy trực tiếp' : tutor.teachingModes === 1 ? 'Dạy Online' : tutor.teachingModes === 2 ? 'Dạy Online + Trực tiếp' : 'Chưa xác định'}</span>
+                      <span className="font-medium">{EnumHelpers.getTeachingModeLabel(getTeachingModeValue(tutor.teachingModes))}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Tham gia:</span>

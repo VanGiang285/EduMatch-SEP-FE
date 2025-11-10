@@ -1,153 +1,74 @@
 import { apiClient, replaceUrlParams } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
-import { 
-  GetTutorsRequest,
-  TutorsResponse,
-  TutorResponse,
-  CreateTutorRequest,
-  ApiResponse,
-  PaginatedApiResponse
-} from '@/types/api';
-import { Tutor, TutorProfile } from '@/types';
+import { ApiResponse } from '@/types/api';
+import { TutorProfileDto, TutorCertificateDto, TutorEducationDto } from '@/types/backend';
+import { TutorProfileUpdateRequest, UpdateTutorStatusRequest, VerifyUpdateRequest } from '@/types/requests';
+import { TutorStatus } from '@/types/enums';
+
 export class TutorService {
-  static async getTutors(params?: GetTutorsRequest): Promise<PaginatedApiResponse<Tutor>> {
-    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.GET_ALL, params)
-      .then(res => ({
-        ...res,
-        data: res.data?.tutors?.map(tutor => ({
-          ...tutor,
-          createdAt: new Date(tutor.createdAt),
-          updatedAt: new Date(tutor.updatedAt)
-        })),
-        pagination: res.data?.pagination
-      }));
+  // Lấy danh sách gia sư theo trạng thái
+  static async getTutorsByStatus(status: TutorStatus): Promise<ApiResponse<TutorProfileDto[]>> {
+    return apiClient.get<TutorProfileDto[]>(API_ENDPOINTS.TUTORS.GET_BY_STATUS, { status });
   }
-  static async getTutorById(id: string): Promise<ApiResponse<TutorProfile>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.TUTORS.GET_BY_ID, { tutorId: id });
-    return apiClient.get<TutorResponse>(endpoint)
-      .then(res => ({
-        ...res,
-        data: res.data?.tutor ? {
-          ...res.data.tutor,
-          createdAt: new Date(res.data.tutor.createdAt),
-          updatedAt: new Date(res.data.tutor.updatedAt),
-          user: {} as any,
-          reviews: [],
-          bookings: [],
-          isActive: res.data.tutor.isActive,
-          totalEarnings: 0,
-          responseTime: 0
-        } : undefined
-      }));
+
+  // Lấy tất cả gia sư trong hệ thống
+  static async getAllTutors(): Promise<ApiResponse<TutorProfileDto[]>> {
+    return apiClient.get<TutorProfileDto[]>(API_ENDPOINTS.TUTORS.GET_ALL);
   }
-  static async searchTutors(params: GetTutorsRequest): Promise<PaginatedApiResponse<Tutor>> {
-    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.GET_ALL, params)
-      .then(res => ({
-        ...res,
-        data: res.data?.tutors?.map(tutor => ({
-          ...tutor,
-          createdAt: new Date(tutor.createdAt),
-          updatedAt: new Date(tutor.updatedAt)
-        })),
-        pagination: res.data?.pagination
-      }));
+
+  // Lấy thông tin chi tiết gia sư theo ID (bao gồm certificates, educations, subjects, availabilities)
+  static async getTutorById(tutorId: number): Promise<ApiResponse<TutorProfileDto>> {
+    const url = replaceUrlParams(API_ENDPOINTS.TUTORS.GET_BY_ID, { tutorId: tutorId.toString() });
+    return apiClient.get<TutorProfileDto>(url);
   }
-  static async createTutor(tutorData: CreateTutorRequest): Promise<ApiResponse<Tutor>> {
-    return apiClient.post<TutorResponse>(API_ENDPOINTS.TUTORS.BECOME_TUTOR, tutorData)
-      .then(res => ({
-        ...res,
-        data: res.data?.tutor ? {
-          ...res.data.tutor,
-          createdAt: new Date(res.data.tutor.createdAt),
-          updatedAt: new Date(res.data.tutor.updatedAt)
-        } : undefined
-      }));
+
+  // Lấy tất cả chứng chỉ và bằng cấp của gia sư
+  static async getTutorVerifications(tutorId: number): Promise<ApiResponse<{
+    certificates: TutorCertificateDto[];
+    educations: TutorEducationDto[];
+  }>> {
+    const url = replaceUrlParams(API_ENDPOINTS.TUTORS.GET_VERIFICATIONS, { tutorId: tutorId.toString() });
+    return apiClient.get<{ certificates: TutorCertificateDto[]; educations: TutorEducationDto[]; }>(url);
   }
-  static async updateTutor(): Promise<ApiResponse<Tutor>> {
-    // TODO: Implement when UPDATE endpoint is available
-    throw new Error('Update tutor endpoint not implemented yet');
+
+  // Cập nhật thông tin cơ bản của gia sư (bio, teaching experience, video, teaching modes)
+  static async updateTutorProfile(request: TutorProfileUpdateRequest): Promise<ApiResponse<TutorProfileDto>> {
+    return apiClient.put<TutorProfileDto>(API_ENDPOINTS.TUTORS.UPDATE_PROFILE, request);
   }
-  static async deleteTutor(): Promise<ApiResponse<void>> {
-    // TODO: Implement when DELETE endpoint is available
-    throw new Error('Delete tutor endpoint not implemented yet');
+
+  // Cập nhật trạng thái gia sư (Pending, Approved, Rejected, Suspended, Deactivated)
+  static async updateTutorStatus(tutorId: number, request: UpdateTutorStatusRequest): Promise<ApiResponse<TutorProfileDto>> {
+    const url = replaceUrlParams(API_ENDPOINTS.TUTORS.UPDATE_STATUS, { tutorId: tutorId.toString() });
+    return apiClient.put<TutorProfileDto>(url, request);
   }
-  static async getTutorAvailability(): Promise<ApiResponse<any[]>> {
-    // TODO: Implement when AVAILABILITY endpoint is available
-    throw new Error('Get tutor availability endpoint not implemented yet');
+
+  // Phê duyệt gia sư và xác thực tất cả chứng chỉ, bằng cấp trong một lần
+  static async approveAndVerifyAll(tutorId: number): Promise<ApiResponse<TutorProfileDto>> {
+    const url = replaceUrlParams(API_ENDPOINTS.TUTORS.APPROVE_AND_VERIFY_ALL, { tutorId: tutorId.toString() });
+    return apiClient.put<TutorProfileDto>(url);
   }
-  static async updateTutorAvailability(): Promise<ApiResponse<any[]>> {
-    // TODO: Implement when AVAILABILITY endpoint is available
-    throw new Error('Update tutor availability endpoint not implemented yet');
+
+  // Xác thực nhiều chứng chỉ cùng lúc
+  static async verifyCertificateBatch(tutorId: number, updates: VerifyUpdateRequest[]): Promise<ApiResponse<TutorCertificateDto[]>> {
+    const url = replaceUrlParams(API_ENDPOINTS.TUTORS.VERIFY_CERTIFICATE_BATCH, { tutorId: tutorId.toString() });
+    return apiClient.put<TutorCertificateDto[]>(url, updates);
   }
-  static async getFeaturedTutors(limit = 6): Promise<PaginatedApiResponse<Tutor>> {
-    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.GET_ALL, { 
-      featured: true, 
-      limit 
-    }).then(res => ({
-      ...res,
-      data: res.data?.tutors?.map(tutor => ({
-        ...tutor,
-        createdAt: new Date(tutor.createdAt),
-        updatedAt: new Date(tutor.updatedAt)
-      })),
-      pagination: res.data?.pagination
-    }));
+
+  // Xác thực nhiều bằng cấp học vấn cùng lúc
+  static async verifyEducationBatch(tutorId: number, updates: VerifyUpdateRequest[]): Promise<ApiResponse<TutorEducationDto[]>> {
+    const url = replaceUrlParams(API_ENDPOINTS.TUTORS.VERIFY_EDUCATION_BATCH, { tutorId: tutorId.toString() });
+    return apiClient.put<TutorEducationDto[]>(url, updates);
   }
-  static async getTutorsBySubject(subject: string, params?: GetTutorsRequest): Promise<PaginatedApiResponse<Tutor>> {
-    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.GET_ALL, { 
-      ...params, 
-      subjects: [subject] 
-    }).then(res => ({
-      ...res,
-      data: res.data?.tutors?.map(tutor => ({
-        ...tutor,
-        createdAt: new Date(tutor.createdAt),
-        updatedAt: new Date(tutor.updatedAt)
-      })),
-      pagination: res.data?.pagination
-    }));
+
+  // Lấy tutor profile theo email (QUAN TRỌNG!)
+  static async getTutorByEmail(email: string): Promise<ApiResponse<TutorProfileDto>> {
+    const url = replaceUrlParams(API_ENDPOINTS.MANAGE_TUTOR_PROFILES.GET_BY_EMAIL, { email });
+    return apiClient.get<TutorProfileDto>(url);
   }
-  static async getTutorsByLocation(location: string, params?: GetTutorsRequest): Promise<PaginatedApiResponse<Tutor>> {
-    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.GET_ALL, { 
-      ...params, 
-      location 
-    }).then(res => ({
-      ...res,
-      data: res.data?.tutors?.map(tutor => ({
-        ...tutor,
-        createdAt: new Date(tutor.createdAt),
-        updatedAt: new Date(tutor.updatedAt)
-      })),
-      pagination: res.data?.pagination
-    }));
-  }
-  static async getTutorsByRating(minRating: number, params?: GetTutorsRequest): Promise<PaginatedApiResponse<Tutor>> {
-    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.GET_ALL, { 
-      ...params, 
-      minRating 
-    }).then(res => ({
-      ...res,
-      data: res.data?.tutors?.map(tutor => ({
-        ...tutor,
-        createdAt: new Date(tutor.createdAt),
-        updatedAt: new Date(tutor.updatedAt)
-      })),
-      pagination: res.data?.pagination
-    }));
-  }
-  static async getTutorsByPriceRange(minPrice: number, maxPrice: number, params?: GetTutorsRequest): Promise<PaginatedApiResponse<Tutor>> {
-    return apiClient.get<TutorsResponse>(API_ENDPOINTS.TUTORS.GET_ALL, { 
-      ...params, 
-      minHourlyRate: minPrice,
-      maxHourlyRate: maxPrice
-    }).then(res => ({
-      ...res,
-      data: res.data?.tutors?.map(tutor => ({
-        ...tutor,
-        createdAt: new Date(tutor.createdAt),
-        updatedAt: new Date(tutor.updatedAt)
-      })),
-      pagination: res.data?.pagination
-    }));
+
+  // Lấy tutor profile theo ID (full với relations)
+  static async getTutorByIdFull(id: number): Promise<ApiResponse<TutorProfileDto>> {
+    const url = replaceUrlParams(API_ENDPOINTS.MANAGE_TUTOR_PROFILES.GET_BY_ID, { id: id.toString() });
+    return apiClient.get<TutorProfileDto>(url);
   }
 }

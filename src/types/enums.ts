@@ -17,123 +17,79 @@ export enum DayOfWeekEnum {
   Saturday = 6
 }
 
-/**
- * Enum cho giới tính
- * Tương ứng với Gender enum trong Backend
- */
 export enum Gender {
-  Unknown = 0, // Không xác định
-  Male = 1,    // Nam
-  Female = 2,  // Nữ
-  Other = 3    // Giới tính khác
+  Unknown = 0,
+  Male = 1,   
+  Female = 2,  
+  Other = 3   
 }
 
-/**
- * Enum cho loại trường học
- * Tương ứng với InstitutionType enum trong Backend
- */
 export enum InstitutionType {
-  Vocational = 0,  // Trung cấp / Vocational
-  College = 1,     // Cao đẳng / College
-  University = 2,  // Đại học / University
-  Other = 3        // Khác / Other types
+  Vocational = 0,  
+  College = 1,     
+  University = 2,  
+  Other = 3        
 }
 
-/**
- * Enum cho trạng thái lịch trống của gia sư
- * Tương ứng với TutorAvailabilityStatus enum trong Backend
- */
 export enum TutorAvailabilityStatus {
-  Available = 0,   // Lịch trống, có thể được đặt
-  Booked = 1,      // Lịch đã được học viên đặt nhưng chưa diễn ra
-  InProgress = 2,  // Đang có buổi học diễn ra hoặc đã được xác nhận học
-  Cancelled = 3    // Lịch đã bị hủy bởi tutor hoặc hệ thống
+  Available = 0,   
+  Booked = 1,      
+  InProgress = 2,  
+  Cancelled = 3    
 }
 
-/**
- * Enum cho phương thức dạy
- * Tương ứng với TeachingMode enum trong Backend
- */
 export enum TeachingMode {
-  Offline = 0, // Dạy trực tiếp
-  Online = 1,  // Dạy online
-  Hybrid = 2   // Kết hợp
+  Offline = 0, 
+  Online = 1, 
+  Hybrid = 2   
 }
 
-/**
- * Enum cho trạng thái gia sư
- * Tương ứng với TutorStatus enum trong Backend
- */
 export enum TutorStatus {
-  Pending = 0,     // Chờ duyệt
-  Approved = 1,    // Đã duyệt
-  Rejected = 2,    // Bị từ chối
-  Suspended = 3,   // Tạm khóa
-  Deactivated = 4  // Ngừng hoạt động
+  Pending = 0,     
+  Approved = 1,    
+  Rejected = 2,    
+  Suspended = 3,   
+  Deactivated = 4  
 }
 
-/**
- * Enum cho trạng thái xác minh
- * Tương ứng với VerifyStatus enum trong Backend
- */
 export enum VerifyStatus {
-  Pending = 0,   // Chờ duyệt
-  Verified = 1,  // Đã xác minh
-  Rejected = 2,  // Bị từ chối
-  Expired = 3,   // Hết hạn
-  Removed = 4    // Đã xóa / thu hồi
+  Pending = 0,   
+  Verified = 1,  
+  Rejected = 2,  
+  Expired = 3,  
+  Removed = 4    
 }
 
-/**
- * Enum cho trạng thái thanh toán
- * Tương ứng với PaymentStatus trong DB
- */
 export enum PaymentStatus {
-  Unpaid = 0,    // Chưa thanh toán
-  Paid = 1,      // Đã thanh toán
-  Refunded = 2   // Hoàn tiền
+  Unpaid = 0,    
+  Paid = 1,      
+  Refunded = 2   
 }
 
-/**
- * Enum cho trạng thái booking
- * Tương ứng với BookingStatus trong DB
- */
 export enum BookingStatus {
-  Pending = 0,    // Chờ xác nhận
-  Confirmed = 1,  // Đã xác nhận
-  Completed = 2,  // Hoàn thành
-  Cancelled = 3   // Đã hủy
+  Pending = 0,   
+  Confirmed = 1, 
+  Completed = 2,  
+  Cancelled = 3   
 }
 
-/**
- * Enum cho trạng thái schedule
- * Tương ứng với ScheduleStatus trong DB
- */
 export enum ScheduleStatus {
-  Upcoming = 0,   // Sắp diễn ra
-  InProgress = 1, // Đang học
-  Completed = 2,  // Hoàn thành
-  Cancelled = 3,  // Đã hủy
-  Absent = 4      // Vắng mặt
+  Upcoming = 0,  
+  InProgress = 1, 
+  Completed = 2,  
+  Cancelled = 3, 
+  Absent = 4     
 }
 
-/**
- * Enum cho trạng thái class request
- * Tương ứng với ClassRequestStatus trong DB
- */
 export enum ClassRequestStatus {
-  Open = 0,       // Mở
-  Reviewing = 1,  // Đang xem xét
-  Selected = 2,   // Đã chọn
-  Closed = 3,     // Đóng
-  Cancelled = 4,  // Hủy
-  Expired = 5     // Hết hạn
+  Open = 0,       
+  Reviewing = 1,  
+  Selected = 2,   
+  Closed = 3,    
+  Cancelled = 4, 
+  Expired = 5    
 }
 
-/**
- * Enum cho trạng thái class application
- * Tương ứng với ClassApplicationStatus trong DB
- */
 export enum ClassApplicationStatus {
   Applied = 0,    // Đã ứng tuyển
   UnderReview = 1, // Được xem xét

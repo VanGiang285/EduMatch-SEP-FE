@@ -52,6 +52,19 @@ export const ROLE_LABELS = {
   system_admin: 'Quản trị viên hệ thống'
 } as const;
 
+// Map từ roleName (API) sang role string (system)
+export const ROLE_NAME_TO_ROLE_MAP: Record<string, string> = {
+  'Học viên': 'learner',
+  'Learner': 'learner',
+  'Gia sư': 'tutor',
+  'Tutor': 'tutor',
+  'Business Admin': 'business_admin',
+  'Quản trị viên kinh doanh': 'business_admin',
+  'System Admin': 'system_admin',
+  'Quản trị viên hệ thống': 'system_admin',
+  'System Administrator': 'system_admin',
+};
+
 // Enum constants tương ứng với Backend
 export const GENDER_OPTIONS = [
   { value: 0, label: 'Không xác định' },
@@ -139,6 +152,7 @@ export const SUBJECT_LEVELS = {
   ADULT: 'Người lớn',
 } as const;
 export const API_ENDPOINTS = {
+  // ==================== AUTH ====================
   AUTH: {
     LOGIN: '/api/user/login',
     REGISTER: '/api/user/register',
@@ -150,29 +164,46 @@ export const API_ENDPOINTS = {
     GET_CURRENT_USER: '/api/user/me',
   },
   
+  // ==================== USER PROFILES ====================
   USER_PROFILES: {
     GET_BY_EMAIL: '/api/userprofiles/:email',
-    UPDATE_BY_EMAIL: '/api/userprofiles/:email',
+    UPDATE: '/api/userprofiles/update-user-profile',
   },
   
+  // ==================== TUTORS ====================
   TUTORS: {
-    BECOME_TUTOR: '/api/tutors/become-tutor',
-    UPDATE_EDUCATION: '/api/tutors/update-education/:id',
-    UPDATE_CERTIFICATE: '/api/tutors/update-certificate/:id',
-    UPDATE_TUTOR_SUBJECT: '/api/tutors/update-tutor-subject/:id',
-    VERIFY_EDUCATION_BATCH: '/api/tutors/update-verify-education-list/:tutorId',
-    VERIFY_CERTIFICATE_BATCH: '/api/tutors/update-verify-certificate-list/:tutorId',
-    GET_BY_STATUS: '/api/tutors/get-all-tutor-by-status',
-    GET_ALL: '/api/tutors/get-all-tutor',
-    GET_VERIFICATIONS: '/api/tutors/get-all-tutor-certificate-education/:tutorId',
-    GET_BY_ID: '/api/tutors/get-tutor-by-id/:tutorId',
+    // Become Tutor
+    BECOME_TUTOR: '/api/Tutors/become-tutor',
+    
+    // Get Tutors
+    GET_BY_STATUS: '/api/Tutors/get-all-tutor-by-status',
+    GET_ALL: '/api/Tutors/get-all-tutor',
+    GET_BY_ID: '/api/Tutors/get-tutor-by-id/:tutorId',
+    GET_VERIFICATIONS: '/api/Tutors/get-all-tutor-certificate-education/:tutorId',
+    
+    // Update Tutor
+    UPDATE_PROFILE: '/api/Tutors/update-tutor-profile',
+    UPDATE_STATUS: '/api/Tutors/update-tutor-status/:tutorId',
+    APPROVE_AND_VERIFY_ALL: '/api/Tutors/approve-and-verify-all/:tutorId',
+    
+    // Verify batch
+    VERIFY_EDUCATION_BATCH: '/api/Tutors/verify-list-education/:tutorId',
+    VERIFY_CERTIFICATE_BATCH: '/api/Tutors/verify-list-certificate/:tutorId',
   },
   
+  // ==================== MANAGE TUTOR PROFILES ====================
+  MANAGE_TUTOR_PROFILES: {
+    GET_BY_ID: '/api/ManageTutorProfiles/:id',
+    GET_BY_EMAIL: '/api/ManageTutorProfiles/email/:email',
+  },
+  
+  // ==================== FIND TUTORS ====================
   FIND_TUTORS: {
-    GET_ALL: '/api/tutors/get-all-tutor',
-    SEARCH: '/api/tutors/get-all-tutor',
+    GET_ALL: '/api/findtutor',
+    SEARCH: '/api/findtutor/search',
   },
   
+  // ==================== ADMIN ====================
   ADMIN: {
     GET_USER_BY_ROLE: '/api/admin/role/:roleId',
     GET_ALL_USERS: '/api/admin/getAllUsers',
@@ -182,38 +213,122 @@ export const API_ENDPOINTS = {
     CREATE_ADMIN: '/api/admin/create-admin',
   },
   
+  // ==================== SUBJECTS ====================
   SUBJECTS: {
-    GET_ALL: '/api/subject/get-all-subject',
-    GET_BY_ID: '/api/subject/get-subject-by-id/:id',
+    GET_ALL: '/api/Subject/get-all-subject',
+    GET_BY_ID: '/api/Subject/get-subject-by-id/:id',
+    GET_TUTOR_SUBJECTS: '/api/Subject/get-:tutorId-list-subject',
+    CREATE_TUTOR_SUBJECT: '/api/Subject/create-:tutorId-subject',
+    UPDATE_TUTOR_SUBJECT: '/api/Subject/update-:tutorId-subject',
+    DELETE_TUTOR_SUBJECT: '/api/Subject/delete-:tutorId-subject',
   },
   
+  // ==================== LEVELS ====================
   LEVELS: {
-    GET_ALL: '/api/level/get-all-level',
+    GET_ALL: '/api/Level/get-all-level',
   },
   
+  // ==================== CERTIFICATES ====================
   CERTIFICATES: {
-    GET_ALL_WITH_SUBJECTS: '/api/certificate/get-all-certificatetypes-with-subjects',
+    // Certificate Type endpoints
+    GET_ALL: '/api/CertificateType/get-all-certificate-types',
+    GET_BY_VERIFY_STATUS: '/api/CertificateType/get-certificate-types-by-verify-status/:verifyStatus',
+    CREATE: '/api/CertificateType/create-certificate-type',
+    ADD_SUBJECTS: '/api/CertificateType/add-subjects-to-certificate-type/:certificateTypeId',
+    VERIFY: '/api/CertificateType/verify-certificate-type/:certificateTypeId',
+    DELETE: '/api/CertificateType/delete-certificate-type/:certificateTypeId',
+    
+    // Tutor Certificate endpoints
+    GET_TUTOR_CERTIFICATES: '/api/Certificate/get-:tutorId-list-certificate',
+    CREATE_TUTOR_CERTIFICATE: '/api/Certificate/create-:tutorId-certificate',
+    UPDATE_TUTOR_CERTIFICATE: '/api/Certificate/update-:tutorId-certificate',
+    DELETE_TUTOR_CERTIFICATE: '/api/Certificate/delete-:tutorId-certificate',
+    GET_ALL_WITH_SUBJECTS: '/api/Certificate/get-all-certificatetypes-with-subjects',
   },
   
+  // ==================== EDUCATION ====================
   EDUCATION: {
-    GET_ALL_INSTITUTIONS: '/api/education/get-all-education-institution',
+    GET_ALL_INSTITUTIONS: '/api/Education/get-all-education-institution',
+    GET_INSTITUTIONS_BY_VERIFY_STATUS: '/api/Education/get-education-institutions-by-verify-status/:verifyStatus',
+    CREATE_INSTITUTION: '/api/Education/create-education-institution',
+    VERIFY_INSTITUTION: '/api/Education/verify-education-institution/:educationInstitutionId',
+    
+    GET_TUTOR_EDUCATIONS: '/api/Education/get-:tutorId-list-education',
+    CREATE_TUTOR_EDUCATION: '/api/Education/create-:tutorId-education',
+    UPDATE_TUTOR_EDUCATION: '/api/Education/update-:tutorId-education',
+    DELETE_TUTOR_EDUCATION: '/api/Education/delete-:tutorId-education',
   },
   
+  // ==================== TUTOR AVAILABILITY ====================
+  AVAILABILITY: {
+    CREATE_LIST: '/api/TutorAvailability/tutor-availability-create-list',
+    UPDATE_LIST: '/api/TutorAvailability/tutor-availability-update-list',
+    DELETE_LIST: '/api/TutorAvailability/tutor-availability-delete-list',
+    GET_ALL: '/api/TutorAvailability/tutor-availability-get-all/:tutorId',
+    GET_BY_STATUS: '/api/TutorAvailability/tutor-availability-get-list-by-status/:tutorId/:status',
+  },
+  
+  // ==================== TIME SLOTS ====================
   TIME_SLOTS: {
-    GET_ALL: '/api/timeslots/get-all-time-slots',
+    GET_ALL: '/api/TimeSlots/get-all-time-slots',
   },
   
+  // ==================== CLASS REQUESTS ====================
+  CLASS_REQUESTS: {
+    CREATE: '/api/ClassRequests/Create',
+    GET_BY_ID: '/api/ClassRequests/:id',
+    LIST_PENDING: '/api/ClassRequests/ListPending',
+    LIST_OPEN: '/api/ClassRequests/ListOpen',
+    LIST_PENDING_BY_LEARNER: '/api/ClassRequests/ListPendingByLearnerEmail',
+    LIST_OPEN_BY_LEARNER: '/api/ClassRequests/ListOpenByLearnerEmail',
+    LIST_EXPIRED_BY_LEARNER: '/api/ClassRequests/ListExpiredByLearnerEmail',
+    LIST_REJECTED_BY_LEARNER: '/api/ClassRequests/ListRejectedByLearnerEmail',
+    LIST_CANCELED_BY_LEARNER: '/api/ClassRequests/ListCanceledByLearnerEmail',
+    UPDATE: '/api/ClassRequests/Update/:id',
+    CANCEL: '/api/ClassRequests/Cancel/:id',
+    DELETE: '/api/ClassRequests/Delete/:id',
+    APPROVE_OR_REJECT: '/api/ClassRequests/ApproveOrReject/:id',
+  },
+  
+  // ==================== TUTOR APPLICATIONS ====================
+  TUTOR_APPLICATIONS: {
+    APPLY: '/api/TutorApplications/apply',
+    GET_BY_CLASS_REQUEST: '/api/TutorApplications/class-request/:classRequestId',
+    GET_TUTOR_APPLIED: '/api/TutorApplications/tutor/applied',
+    GET_TUTOR_CANCELED: '/api/TutorApplications/tutor/canceled',
+    EDIT: '/api/TutorApplications/edit',
+    CANCEL: '/api/TutorApplications/cancel/:id',
+  },
+  
+  // ==================== CHAT ====================
   CHAT: {
     GET_ROOMS: '/api/chat/rooms/:email',
     GET_MESSAGES: '/api/chat/messages/:roomId',
   },
   
-  CLOUD_MEDIA: {
-    UPLOAD: '/api/CloudMedia/upload',
-    UPLOAD_FROM_URL: '/api/CloudMedia/upload-from-url',
-    DELETE: '/api/CloudMedia/:publicId',
+  // ==================== FAVORITE TUTORS ====================
+  FAVORITE_TUTORS: {
+    ADD: '/api/favoritetutor/add/:tutorId',
+    REMOVE: '/api/favoritetutor/remove/:tutorId',
+    IS_FAVORITE: '/api/favoritetutor/is-favorite/:tutorId',
+    LIST: '/api/favoritetutor/list',
   },
   
+  // ==================== GOOGLE AUTH (for Meeting) ====================
+  GOOGLE_AUTH: {
+    AUTHORIZE: '/api/googleauth/authorize',
+    CALLBACK: '/api/googleauth/callback',
+    CREATE_MEETING: '/api/googleauth/create',
+  },
+  
+  // ==================== CLOUD MEDIA ====================
+  CLOUD_MEDIA: {
+    UPLOAD: '/api/cloudmedia/upload',
+    UPLOAD_FROM_URL: '/api/cloudmedia/upload-from-url',
+    DELETE: '/api/cloudmedia/:publicId',
+  },
+  
+  // ==================== BOOKINGS ====================
   BOOKINGS: {
     LIST: '/api/bookings',
     DETAIL: '/api/bookings/:id',
@@ -223,6 +338,8 @@ export const API_ENDPOINTS = {
     CANCEL: '/api/bookings/:id/cancel',
     CONFIRM: '/api/bookings/:id/confirm',
   },
+  
+  // ==================== REVIEWS ====================
   REVIEWS: {
     LIST: '/api/reviews',
     DETAIL: '/api/reviews/:id',
@@ -230,12 +347,25 @@ export const API_ENDPOINTS = {
     UPDATE: '/api/reviews/:id',
     DELETE: '/api/reviews/:id',
   },
-  USERS: {
-    PROFILE: '/api/User/me',
-    UPDATE: '/api/users/profile',
-    CHANGE_PASSWORD: '/api/users/change-password',
-    UPLOAD_AVATAR: '/api/users/upload-avatar',
+  
+  // ==================== WALLET & PAYMENT (MỚI) ====================
+  WALLET: {
+    GET_BALANCE: '/api/wallet/balance',
+    GET_TRANSACTIONS: '/api/wallet/transactions',
+    CREATE_DEPOSIT: '/api/wallet/deposit',
+    CREATE_WITHDRAWAL: '/api/wallet/withdrawal',
+    GET_WITHDRAWALS: '/api/wallet/withdrawals',
+    PROCESS_WITHDRAWAL: '/api/wallet/process-withdrawal/:withdrawalId',
+    
+    // Bank Accounts
+    GET_BANK_ACCOUNTS: '/api/wallet/bank-accounts',
+    CREATE_BANK_ACCOUNT: '/api/wallet/bank-account',
+    UPDATE_BANK_ACCOUNT: '/api/wallet/bank-account/:id',
+    DELETE_BANK_ACCOUNT: '/api/wallet/bank-account/:id',
+    SET_DEFAULT_BANK_ACCOUNT: '/api/wallet/bank-account/:id/set-default',
   },
+  
+  // ==================== UPLOAD ====================
   UPLOAD: {
     IMAGE: '/api/upload/image',
     DOCUMENT: '/api/upload/document',

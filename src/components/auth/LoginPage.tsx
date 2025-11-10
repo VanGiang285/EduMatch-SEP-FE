@@ -5,12 +5,12 @@ import { Checkbox } from "../ui/form/checkbox";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { GoogleSignInButton } from "./GoogleSignInButton";
 import { Eye, EyeOff } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCustomToast } from "@/hooks/useCustomToast";
 import { AuthService } from "@/services/authService";
-import { USER_ROLES } from "@/constants";
+import { ROLE_NAME_TO_ROLE_MAP, USER_ROLES } from "@/constants";
 interface LoginPageProps {
   onSwitchToRegister: () => void;
   onForgotPassword?: () => void;
@@ -22,41 +22,10 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [loginSuccess, setLoginSuccess] = useState(false);
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const { showSuccess, showInfo } = useCustomToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  // useEffect để lắng nghe user changes sau khi login thành công
-  useEffect(() => {
-    if (loginSuccess && user && user.role) {
-      console.log('🔍 useEffect - User changed:', user);
-      console.log('🔍 useEffect - User role:', user.role);
-      
-      const redirectTo = searchParams.get('redirect');
-      if (redirectTo) {
-        console.log('🔍 useEffect - Redirecting to:', redirectTo);
-        router.push(redirectTo);
-        setLoginSuccess(false); // Reset flag after redirect
-        return;
-      }
-      
-      // Redirect based on role
-      if (user.role === USER_ROLES.SYSTEM_ADMIN) {
-        console.log('🔍 useEffect - Redirecting to System Admin...');
-        router.push('/system-admin/users');
-      } else if (user.role === USER_ROLES.BUSINESS_ADMIN) {
-        console.log('🔍 useEffect - Redirecting to Business Admin...');
-        router.push('/business-admin/dashboard');
-      } else {
-        console.log('🔍 useEffect - Redirecting to home page...');
-        router.push('/');
-      }
-      
-      setLoginSuccess(false); // Reset flag after redirect
-    }
-  }, [loginSuccess, user, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,10 +57,47 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
       await login(trimmedEmail, trimmedPassword, rememberMe);
       showSuccess("Đăng nhập thành công!");
       
-      // Set login success flag - useEffect sẽ handle redirect
-      setLoginSuccess(true);
+      // Get current user to check role and redirect immediately
+      try {
+        const userResponse = await AuthService.getCurrentUser();
+        if (userResponse.success && userResponse.data) {
+          // Determine role from roleId or roleName
+          let role = USER_ROLES.LEARNER;
+          if (userResponse.data.roleId) {
+            // If roleId exists, use it
+            const roleId = Number(userResponse.data.roleId);
+            if (roleId === 4) role = USER_ROLES.SYSTEM_ADMIN;
+            else if (roleId === 3) role = USER_ROLES.BUSINESS_ADMIN;
+            else if (roleId === 2) role = USER_ROLES.TUTOR;
+            else if (roleId === 1) role = USER_ROLES.LEARNER;
+          } else if (userResponse.data.roleName) {
+            // If roleName exists, map it to role string
+            role = (ROLE_NAME_TO_ROLE_MAP[userResponse.data.roleName] || USER_ROLES.LEARNER) as typeof USER_ROLES[keyof typeof USER_ROLES];
+          }
+          
+          const redirectTo = searchParams.get('redirect');
+          
+          // Redirect based on role or redirect param
+          if (redirectTo) {
+            router.push(redirectTo);
+            return;
+          }
+          
+          // Redirect based on role
+          if (role === USER_ROLES.SYSTEM_ADMIN) {
+            router.push('/system-admin/users');
+          } else if (role === USER_ROLES.BUSINESS_ADMIN) {
+            router.push('/business-admin/dashboard');
+          } else {
+            router.push('/');
+          }
+        }
+      } catch (userError) {
+        console.warn('Failed to get user details for redirect:', userError);
+        // Fallback to home page if getCurrentUser fails
+        router.push('/');
+      }
     } catch (error: any) {
-      setLoginSuccess(false); // Reset login success flag
       let errorMessage = "Đăng nhập thất bại";
       
       // Xử lý error message từ nhiều nguồn khác nhau

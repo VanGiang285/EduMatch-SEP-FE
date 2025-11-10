@@ -114,3 +114,5 @@ Backend/
 env.example
 
 DB.sql
+
+.cursor/

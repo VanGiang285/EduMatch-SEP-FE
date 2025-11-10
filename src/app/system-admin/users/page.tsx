@@ -1,9 +1,5 @@
-import SystemAdminUserManagement from '@/components/system-admin/SystemAdminUserManagement';
+import { ManageUsers } from '@/components/system-admin/ManageUsers';
 
 export default function SystemAdminUsersPage() {
-  return (
-    <div className="max-w-7xl mx-auto">
-      <SystemAdminUserManagement />
-    </div>
-  );
+  return <ManageUsers />;
 }

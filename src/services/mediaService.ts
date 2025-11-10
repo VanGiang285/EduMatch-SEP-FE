@@ -42,6 +42,18 @@ export class MediaService {
     formData.append('OwnerEmail', request.ownerEmail);
     formData.append('MediaType', request.mediaType);
 
+    // Debug logging
+    if (process.env.NODE_ENV === 'development') {
+      console.log('MediaService.uploadFile - File:', request.file.name, request.file.type, request.file.size);
+      console.log('MediaService.uploadFile - OwnerEmail:', request.ownerEmail);
+      console.log('MediaService.uploadFile - MediaType:', request.mediaType);
+      console.log('MediaService.uploadFile - Endpoint:', API_ENDPOINTS.CLOUD_MEDIA.UPLOAD);
+      // Check FormData contents
+      for (const [key, value] of formData.entries()) {
+        console.log(`FormData[${key}]:`, value instanceof File ? `${value.name} (${value.size} bytes)` : value);
+      }
+    }
+
     return apiClient.post<UploadToCloudResponse>(
       API_ENDPOINTS.CLOUD_MEDIA.UPLOAD,
       formData

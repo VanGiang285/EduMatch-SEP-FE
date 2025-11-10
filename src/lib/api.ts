@@ -71,9 +71,9 @@ class ApiClient {
     if (!response.ok) {
       const error = new ApiError({
         status: response.status,
-        message: data.message || data.error || 'An error occurred',
+        message: data.message || data.error || data.title || 'An error occurred',
         code: data.code || 'UNKNOWN_ERROR',
-        details: data.details,
+        details: data.details || data.errors || data, // Include errors object from validation
       });
       // Debug logging for error
       if (process.env.NODE_ENV === 'development') {
@@ -83,7 +83,7 @@ class ApiClient {
     }
            return {
              success: true,
-             data: data.data || data,
+             data: data.data !== undefined ? data.data : data,
              error: undefined,
              message: data.message,
            };
@@ -118,8 +118,18 @@ class ApiClient {
     // Debug logging
     if (process.env.NODE_ENV === 'development') {
       console.log('Making request to:', url);
-      console.log('Request config:', config);
+      console.log('Request method:', config.method);
+      console.log('Request headers:', config.headers);
       console.log('Authorization header:', (config.headers as any)?.Authorization);
+      if (isFormData) {
+        console.log('Request body is FormData');
+        const formData = options.body as FormData;
+        for (const [key, value] of formData.entries()) {
+          console.log(`  FormData[${key}]:`, value instanceof File ? `${value.name} (${value.size} bytes, ${value.type})` : value);
+        }
+      } else {
+        console.log('Request body:', options.body);
+      }
     }
     try {
       const response = await fetch(url, config);
