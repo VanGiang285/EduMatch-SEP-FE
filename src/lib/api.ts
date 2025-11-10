@@ -148,7 +148,10 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
-    const url = `${this.baseURL}${endpoint}`;
+    // Check if endpoint is a Next.js API route (starts with /api/auth/)
+    // Next.js API routes should be called without baseURL (relative to current domain)
+    const isNextJsApiRoute = endpoint.startsWith('/api/auth/');
+    const url = isNextJsApiRoute ? endpoint : `${this.baseURL}${endpoint}`;
     const isFormData = options.body instanceof FormData;
     const headers = this.getHeaders(options.headers as Record<string, string>, isFormData);
     const config: RequestInit = {
