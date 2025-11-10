@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
 import { Label } from '@/components/ui/form/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
-import { Camera, Save, Loader2 } from 'lucide-react';
+import { Camera, Save, Loader2, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserProfileService } from '@/services/userProfileService';
 import { useCustomToast } from '@/hooks/useCustomToast';
@@ -20,7 +20,10 @@ export function ProfileTab() {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [originalData, setOriginalData] = useState<UserProfileDto | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     userName: '',
     email: '',
@@ -33,6 +36,7 @@ export function ProfileTab() {
     subDistrictName: '',
     addressLine: '',
     avatarUrl: '',
+    avatarUrlPublicId: '',
   });
 
   // Load user profile data
@@ -67,10 +71,14 @@ export function ProfileTab() {
             subDistrictName: profile.subDistrict?.name || '',
             addressLine: profile.addressLine || '',
             avatarUrl: profile.avatarUrl || '',
+            avatarUrlPublicId: profile.avatarUrlPublicId || '',
           });
+          // Set avatar preview
+          if (profile.avatarUrl) {
+            setAvatarPreview(profile.avatarUrl);
+          }
         }
       } catch (error) {
-        console.error('Error loading user profile:', error);
         showError('Lỗi', 'Không thể tải thông tin người dùng. Vui lòng thử lại.');
       } finally {
         setIsLoading(false);
@@ -98,9 +106,77 @@ export function ProfileTab() {
         subDistrictName: originalData.subDistrict?.name || '',
         addressLine: originalData.addressLine || '',
         avatarUrl: originalData.avatarUrl || '',
+        avatarUrlPublicId: originalData.avatarUrlPublicId || '',
       });
+      // Reset avatar preview
+      setAvatarPreview(originalData.avatarUrl || null);
+      setSelectedAvatarFile(null);
     }
     setIsEditing(false);
+  };
+
+  // Handle avatar file selection
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showError('Lỗi', 'Vui lòng chọn file ảnh hợp lệ (JPG, PNG, etc.)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showError('Lỗi', 'Kích thước file không được vượt quá 5MB');
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    setSelectedAvatarFile(file);
+
+    // Upload avatar immediately
+    if (!user?.email) {
+      showError('Lỗi', 'Không tìm thấy thông tin người dùng.');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const uploadResponse = await UserProfileService.uploadAvatar(file, user.email);
+      if (uploadResponse.success && uploadResponse.data) {
+        setFormData({
+          ...formData,
+          avatarUrl: uploadResponse.data.avatarUrl,
+          avatarUrlPublicId: uploadResponse.data.avatarUrlPublicId || '',
+        });
+        showSuccess('Thành công', 'Tải ảnh đại diện thành công.');
+      } else {
+        throw new Error(uploadResponse.message || uploadResponse.error || 'Upload thất bại');
+      }
+    } catch (error: any) {
+      showError('Lỗi', error.message || 'Không thể tải ảnh lên. Vui lòng thử lại.');
+      setAvatarPreview(formData.avatarUrl || null);
+      setSelectedAvatarFile(null);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  // Remove avatar
+  const handleRemoveAvatar = () => {
+    setFormData({
+      ...formData,
+      avatarUrl: '',
+      avatarUrlPublicId: '',
+    });
+    setAvatarPreview(null);
+    setSelectedAvatarFile(null);
   };
 
   const handleSave = async () => {
@@ -119,6 +195,7 @@ export function ProfileTab() {
         cityId: formData.cityId ? parseInt(formData.cityId) : undefined,
         subDistrictId: formData.subDistrictId ? parseInt(formData.subDistrictId) : undefined,
         avatarUrl: formData.avatarUrl || undefined,
+        avatarUrlPublicId: formData.avatarUrlPublicId || undefined,
       };
 
       const response = await UserProfileService.updateUserProfile(updateRequest);
@@ -127,11 +204,11 @@ export function ProfileTab() {
         setOriginalData(response.data);
         showSuccess('Thành công', 'Cập nhật thông tin thành công.');
         setIsEditing(false);
+        setSelectedAvatarFile(null);
       } else {
         throw new Error(response.message || 'Cập nhật thất bại');
       }
     } catch (error: any) {
-      console.error('Error updating user profile:', error);
       showError('Lỗi', error.message || 'Không thể cập nhật thông tin. Vui lòng thử lại.');
     } finally {
       setIsSaving(false);
@@ -185,17 +262,17 @@ export function ProfileTab() {
         )}
       </div>
 
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="hover:shadow-md transition-shadow bg-white">
         <CardHeader>
           <CardTitle className="text-gray-900">Ảnh đại diện</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-6">
             <div className="relative flex-shrink-0">
-              <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-[#F2E5BF]">
-                {formData.avatarUrl || user?.avatar ? (
+              <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-[#F2E5BF] border-2 border-gray-200">
+                {avatarPreview || formData.avatarUrl || user?.avatar ? (
                   <img 
-                    src={formData.avatarUrl || user?.avatar} 
+                    src={avatarPreview || formData.avatarUrl || user?.avatar || ''} 
                     alt={formData.userName}
                     className="w-full h-full object-cover rounded-lg"
                     onError={(e) => {
@@ -208,25 +285,62 @@ export function ProfileTab() {
                   />
                 ) : null}
                 <div 
-                  className={`w-full h-full rounded-lg flex items-center justify-center text-2xl font-bold text-[#257180] bg-[#F2E5BF] ${formData.avatarUrl || user?.avatar ? 'hidden' : 'flex'}`}
-                  style={{ display: formData.avatarUrl || user?.avatar ? 'none' : 'flex' }}
+                  className={`w-full h-full rounded-lg flex items-center justify-center text-2xl font-bold text-[#257180] bg-[#F2E5BF] ${avatarPreview || formData.avatarUrl || user?.avatar ? 'hidden' : 'flex'}`}
+                  style={{ display: avatarPreview || formData.avatarUrl || user?.avatar ? 'none' : 'flex' }}
                 >
                   {(formData.userName || user?.name || user?.email || 'U').slice(0, 2).toUpperCase()}
                 </div>
               </div>
             </div>
             {isEditing && (
-              <Button variant="outline" disabled>
-                <Camera className="h-4 w-4 mr-2" />
-                Tải ảnh lên
-                <span className="ml-2 text-xs text-gray-500">(Tính năng đang phát triển)</span>
-              </Button>
+              <div className="flex flex-col gap-2">
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarFileChange}
+                    className="hidden"
+                    id="avatar-upload"
+                    disabled={isUploadingAvatar}
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => document.getElementById('avatar-upload')?.click()}
+                    disabled={isUploadingAvatar}
+                    className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                  >
+                    {isUploadingAvatar ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Đang tải...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="h-4 w-4 mr-2" />
+                        Tải ảnh lên
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {(avatarPreview || formData.avatarUrl) && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleRemoveAvatar}
+                    disabled={isUploadingAvatar}
+                    className="text-red-600 hover:text-white hover:bg-red-600 hover:border-red-600"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Xóa ảnh
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </CardContent>
       </Card>
 
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="hover:shadow-md transition-shadow bg-white">
         <CardHeader>
           <CardTitle className="text-gray-900">Thông tin cơ bản</CardTitle>
         </CardHeader>
@@ -298,7 +412,7 @@ export function ProfileTab() {
         </CardContent>
       </Card>
 
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="hover:shadow-md transition-shadow bg-white">
         <CardHeader>
           <CardTitle className="text-gray-900">Địa chỉ</CardTitle>
         </CardHeader>

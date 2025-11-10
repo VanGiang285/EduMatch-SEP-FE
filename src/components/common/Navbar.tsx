@@ -39,6 +39,8 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
 
   // Check if user is admin (system or business)
   const isAdmin = user && (user.role === USER_ROLES.SYSTEM_ADMIN || user.role === USER_ROLES.BUSINESS_ADMIN);
+  // Check if user is tutor
+  const isTutor = user && user.role === USER_ROLES.TUTOR;
 
   const handleLogout = async () => {
     try {
@@ -187,13 +189,15 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                           <User className="h-4 w-4 mr-2" />
                           Thông tin người dùng
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => router.push('/profile?tab=tutorProfile')}
-                          className="cursor-pointer"
-                            >
-                          <GraduationCap className="h-4 w-4 mr-2" />
-                          Hồ sơ gia sư
-                        </DropdownMenuItem>
+                        {isTutor && (
+                          <DropdownMenuItem
+                            onClick={() => router.push('/profile?tab=tutorProfile')}
+                            className="cursor-pointer"
+                          >
+                            <GraduationCap className="h-4 w-4 mr-2" />
+                            Hồ sơ gia sư
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=schedule')}
                           className="cursor-pointer"
@@ -392,16 +396,18 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                       <User className="w-4 h-4" />
                       <span className="text-sm">Thông tin người dùng</span>
                     </button>
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        router.push('/profile?tab=tutorProfile');
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
-                    >
-                      <GraduationCap className="w-4 h-4" />
-                      <span className="text-sm">Hồ sơ gia sư</span>
-                    </button>
+                    {isTutor && (
+                      <button
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          router.push('/profile?tab=tutorProfile');
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                      >
+                        <GraduationCap className="w-4 h-4" />
+                        <span className="text-sm">Hồ sơ gia sư</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setMobileMenuOpen(false);
