@@ -54,7 +54,19 @@ export async function POST(request: NextRequest) {
     });
 
     // Get response data
-    const data = await response.json();
+    let data: any;
+    try {
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        data = { message: text || 'Token refresh failed' };
+      }
+    } catch (error) {
+      console.error('Failed to parse response:', error);
+      data = { message: 'Failed to parse response' };
+    }
     
     // Get Set-Cookie header from backend response (if any)
     const setCookieHeader = response.headers.get('Set-Cookie');
