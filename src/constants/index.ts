@@ -157,7 +157,7 @@ export const API_ENDPOINTS = {
     LOGIN: '/api/user/login',
     REGISTER: '/api/user/register',
     LOGOUT: '/api/user/logout',
-    REFRESH: '/api/user/refresh-token',
+    REFRESH: '/api/auth/refresh-token', // Use Next.js API route proxy
     VERIFY_EMAIL: '/api/user/verify-email',
     RESEND_VERIFY: '/api/user/resend-verify',
     GOOGLE_LOGIN: '/api/user/signIn-google',
