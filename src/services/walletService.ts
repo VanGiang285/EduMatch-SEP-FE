@@ -1,8 +1,8 @@
 import { apiClient, replaceUrlParams } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
 import { ApiResponse } from '@/types/api';
-import { WalletDto, WalletTransactionDto, DepositDto, WithdrawalDto, UserBankAccountDto } from '@/types/backend';
-import { CreateDepositRequest, CreateWithdrawalRequest, CreateUserBankAccountRequest, ProcessWithdrawalRequest } from '@/types/requests';
+import { WalletDto, WalletTransactionDto, WithdrawalDto, UserBankAccountDto, BankDto } from '@/types/backend';
+import { CreateDepositRequest, CreateWithdrawalRequest, CreateUserBankAccountRequest } from '@/types/requests';
 
 export class WalletService {
   // Lấy số dư ví của user hiện tại
@@ -15,25 +15,51 @@ export class WalletService {
     return apiClient.get<WalletTransactionDto[]>(API_ENDPOINTS.WALLET.GET_TRANSACTIONS);
   }
 
-  // Tạo yêu cầu nạp tiền (PayOS/MoMo/VNPay)
-  static async createDeposit(request: CreateDepositRequest): Promise<ApiResponse<DepositDto>> {
-    return apiClient.post<DepositDto>(API_ENDPOINTS.WALLET.CREATE_DEPOSIT, request);
+  // Tạo yêu cầu nạp tiền qua VNPay
+  // Response trả về paymentUrl (string) để redirect user đến trang thanh toán VNPay
+  static async createDeposit(request: CreateDepositRequest): Promise<ApiResponse<string>> {
+    return apiClient.post<string>(API_ENDPOINTS.WALLET.CREATE_DEPOSIT_VNPAY, request);
+  }
+
+  // Hủy yêu cầu nạp tiền
+  static async cancelDeposit(depositId: number): Promise<ApiResponse<void>> {
+    const url = replaceUrlParams(API_ENDPOINTS.WALLET.CANCEL_DEPOSIT, { id: depositId.toString() });
+    return apiClient.post<void>(url);
   }
 
   // Tạo yêu cầu rút tiền
-  static async createWithdrawal(request: CreateWithdrawalRequest): Promise<ApiResponse<WithdrawalDto>> {
-    return apiClient.post<WithdrawalDto>(API_ENDPOINTS.WALLET.CREATE_WITHDRAWAL, request);
+  // Response trả về message (string) thông báo thành công
+  static async createWithdrawal(request: CreateWithdrawalRequest): Promise<ApiResponse<string>> {
+    return apiClient.post<string>(API_ENDPOINTS.WALLET.CREATE_WITHDRAWAL, request);
   }
 
-  // Lấy danh sách yêu cầu rút tiền (admin)
-  static async getWithdrawals(): Promise<ApiResponse<WithdrawalDto[]>> {
-    return apiClient.get<WithdrawalDto[]>(API_ENDPOINTS.WALLET.GET_WITHDRAWALS);
+  // Lấy danh sách yêu cầu rút tiền của user hiện tại
+  static async getMyWithdrawals(): Promise<ApiResponse<WithdrawalDto[]>> {
+    return apiClient.get<WithdrawalDto[]>(API_ENDPOINTS.WALLET.GET_MY_WITHDRAWALS);
   }
 
-  // Xử lý yêu cầu rút tiền (admin duyệt/từ chối)
-  static async processWithdrawal(withdrawalId: number, request: ProcessWithdrawalRequest): Promise<ApiResponse<WithdrawalDto>> {
-    const url = replaceUrlParams(API_ENDPOINTS.WALLET.PROCESS_WITHDRAWAL, { withdrawalId: withdrawalId.toString() });
-    return apiClient.put<WithdrawalDto>(url, request);
+  // Lấy danh sách yêu cầu rút tiền đang chờ duyệt (admin)
+  static async getPendingWithdrawals(): Promise<ApiResponse<WithdrawalDto[]>> {
+    return apiClient.get<WithdrawalDto[]>(API_ENDPOINTS.WALLET.GET_PENDING_WITHDRAWALS);
+  }
+
+  // Duyệt yêu cầu rút tiền (admin)
+  // Response trả về message (string) thông báo thành công
+  static async approveWithdrawal(withdrawalId: number): Promise<ApiResponse<string>> {
+    const url = replaceUrlParams(API_ENDPOINTS.WALLET.APPROVE_WITHDRAWAL, { id: withdrawalId.toString() });
+    return apiClient.post<string>(url);
+  }
+
+  // Từ chối yêu cầu rút tiền (admin)
+  // Cần gửi body với { Reason: string }
+  static async rejectWithdrawal(withdrawalId: number, rejectReason: string): Promise<ApiResponse<string>> {
+    const url = replaceUrlParams(API_ENDPOINTS.WALLET.REJECT_WITHDRAWAL, { id: withdrawalId.toString() });
+    return apiClient.post<string>(url, { Reason: rejectReason });
+  }
+
+  // Lấy danh sách ngân hàng
+  static async getAllBanks(): Promise<ApiResponse<BankDto[]>> {
+    return apiClient.get<BankDto[]>(API_ENDPOINTS.WALLET.GET_BANKS);
   }
 
   // Lấy danh sách tài khoản ngân hàng
@@ -46,22 +72,10 @@ export class WalletService {
     return apiClient.post<UserBankAccountDto>(API_ENDPOINTS.WALLET.CREATE_BANK_ACCOUNT, request);
   }
 
-  // Cập nhật tài khoản ngân hàng
-  static async updateBankAccount(id: number, request: Partial<CreateUserBankAccountRequest>): Promise<ApiResponse<UserBankAccountDto>> {
-    const url = replaceUrlParams(API_ENDPOINTS.WALLET.UPDATE_BANK_ACCOUNT, { id: id.toString() });
-    return apiClient.put<UserBankAccountDto>(url, request);
-  }
-
   // Xóa tài khoản ngân hàng
   static async deleteBankAccount(id: number): Promise<ApiResponse<void>> {
     const url = replaceUrlParams(API_ENDPOINTS.WALLET.DELETE_BANK_ACCOUNT, { id: id.toString() });
     return apiClient.delete<void>(url);
-  }
-
-  // Đặt tài khoản ngân hàng làm mặc định
-  static async setDefaultBankAccount(id: number): Promise<ApiResponse<UserBankAccountDto>> {
-    const url = replaceUrlParams(API_ENDPOINTS.WALLET.SET_DEFAULT_BANK_ACCOUNT, { id: id.toString() });
-    return apiClient.put<UserBankAccountDto>(url);
   }
 
   // Format số tiền sang VND

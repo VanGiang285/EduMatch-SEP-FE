@@ -350,19 +350,26 @@ export const API_ENDPOINTS = {
   
   // ==================== WALLET & PAYMENT (MỚI) ====================
   WALLET: {
-    GET_BALANCE: '/api/wallet/balance',
-    GET_TRANSACTIONS: '/api/wallet/transactions',
-    CREATE_DEPOSIT: '/api/wallet/deposit',
-    CREATE_WITHDRAWAL: '/api/wallet/withdrawal',
-    GET_WITHDRAWALS: '/api/wallet/withdrawals',
-    PROCESS_WITHDRAWAL: '/api/wallet/process-withdrawal/:withdrawalId',
+    // Wallets
+    GET_BALANCE: '/api/Wallets/my-wallet',
+    GET_TRANSACTIONS: '/api/Wallets/my-transactions',
+    
+    // Deposits
+    CREATE_DEPOSIT_VNPAY: '/api/Deposits/create-vnpay-request',
+    CANCEL_DEPOSIT: '/api/Deposits/:id/cancel',
+    
+    // Withdrawals
+    CREATE_WITHDRAWAL: '/api/Withdrawals/create-request',
+    GET_MY_WITHDRAWALS: '/api/Withdrawals/my-requests',
+    GET_PENDING_WITHDRAWALS: '/api/Withdrawals/pending',
+    APPROVE_WITHDRAWAL: '/api/Withdrawals/:id/approve',
+    REJECT_WITHDRAWAL: '/api/Withdrawals/:id/reject',
     
     // Bank Accounts
-    GET_BANK_ACCOUNTS: '/api/wallet/bank-accounts',
-    CREATE_BANK_ACCOUNT: '/api/wallet/bank-account',
-    UPDATE_BANK_ACCOUNT: '/api/wallet/bank-account/:id',
-    DELETE_BANK_ACCOUNT: '/api/wallet/bank-account/:id',
-    SET_DEFAULT_BANK_ACCOUNT: '/api/wallet/bank-account/:id/set-default',
+    GET_BANKS: '/api/Banks',
+    GET_BANK_ACCOUNTS: '/api/UserBankAccounts/my-accounts',
+    CREATE_BANK_ACCOUNT: '/api/UserBankAccounts',
+    DELETE_BANK_ACCOUNT: '/api/UserBankAccounts/:id',
   },
   
   // ==================== UPLOAD ====================

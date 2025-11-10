@@ -318,15 +318,20 @@ export interface DepositDto {
   wallet?: WalletDto;
 }
 
+export interface BankDto {
+  id: number;
+  code: string;
+  name: string;
+  shortName: string;
+  logoUrl?: string;
+}
+
 export interface UserBankAccountDto {
   id: number;
-  userEmail: string;
-  bankCode: string;
-  bankName: string;
   accountNumber: string;
   accountHolderName: string;
   isDefault: boolean;
-  createdAt: string;
+  bank: BankDto;
 }
 
 export interface WithdrawalDto {

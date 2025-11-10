@@ -258,8 +258,7 @@ export interface UpdateBookingRequest {
 // ==================== WALLET REQUESTS ====================
 
 export interface CreateDepositRequest {
-  amount: number;
-  paymentGateway: string; // "PayOS" | "MoMo" | "VNPay"
+  amount: number; // Range: 50,000 - 5,000,000 VND
 }
 
 export interface CreateWithdrawalRequest {
@@ -268,11 +267,9 @@ export interface CreateWithdrawalRequest {
 }
 
 export interface CreateUserBankAccountRequest {
-  bankCode: string;
-  bankName: string;
+  bankId: number;
   accountNumber: string;
   accountHolderName: string;
-  isDefault?: boolean;
 }
 
 export interface ProcessWithdrawalRequest {
