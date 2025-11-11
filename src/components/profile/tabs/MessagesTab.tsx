@@ -1,58 +1,148 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/layout/card';
 import { Badge } from '@/components/ui/basic/badge';
 import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
 import { ScrollArea } from '@/components/ui/layout/scroll-area';
-import { MessageCircle, Send, Search, MoreVertical } from 'lucide-react';
-import { mockMessages } from '@/data/mockLearnerData';
+import { MessageCircle, Send, Search, MoreVertical, Loader2 } from 'lucide-react';
+import { useChat } from '@/hooks/useChat';
+import { sendMessage, markMessagesAsRead } from '@/services/signalRService';
+import { ChatService } from '@/services/chatService';
+import { ChatRoomDto, ChatMessageDto } from '@/types/backend';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCustomToast } from '@/hooks/useCustomToast';
+import { FormatService } from '@/lib/format';
 
 export function MessagesTab() {
-  const [selectedConversation, setSelectedConversation] = useState<number | null>(1);
+  const { user } = useAuth();
+  const { showError } = useCustomToast();
+  const { messages, setMessages, addMessage, isConnected } = useChat();
+  const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
   const [messageText, setMessageText] = useState('');
+  const [chatRooms, setChatRooms] = useState<ChatRoomDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Mock conversation messages
-  const conversationMessages = [
-    {
-      id: 1,
-      senderId: 1,
-      senderName: 'Nguyễn Thị Mai',
-      message: 'Chào em! Thầy có thể giúp gì cho em?',
-      timestamp: '10:30',
-      isMine: false,
-    },
-    {
-      id: 2,
-      senderId: 'me',
-      senderName: 'Tôi',
-      message: 'Thầy ơi, em muốn hỏi về bài tập tuần trước ạ',
-      timestamp: '10:32',
-      isMine: true,
-    },
-    {
-      id: 3,
-      senderId: 1,
-      senderName: 'Nguyễn Thị Mai',
-      message: 'Được em, thầy nghe đây',
-      timestamp: '10:33',
-      isMine: false,
-    },
-    {
-      id: 4,
-      senderId: 'me',
-      senderName: 'Tôi',
-      message: 'Em có thể học vào buổi tối thứ 3 được không ạ?',
-      timestamp: '10:35',
-      isMine: true,
-    },
-  ];
+  const currentUserEmail = user?.email || "";
 
-  const handleSendMessage = () => {
-    if (!messageText.trim()) return;
-    console.log('Send message:', messageText);
-    setMessageText('');
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current && scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector(
+        '[data-radix-scroll-area-viewport]'
+      );
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    }
+  }, [messages]);
+
+  // Load chat rooms
+  useEffect(() => {
+    if (!currentUserEmail) return;
+
+    const loadChatRooms = async () => {
+      setLoading(true);
+      try {
+        const response = await ChatService.getChatRooms(currentUserEmail);
+        if (response.success && response.data) {
+          // Ensure data is an array
+          const rooms = Array.isArray(response.data) ? response.data : [];
+          setChatRooms(rooms);
+          if (rooms.length > 0 && !selectedConversation) {
+            setSelectedConversation(rooms[0].id);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load chat rooms:", error);
+        showError("Lỗi", "Không thể tải danh sách phòng chat. Vui lòng thử lại.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadChatRooms();
+  }, [currentUserEmail, showError]);
+
+  // Load messages when conversation is selected
+  useEffect(() => {
+    if (!selectedConversation || !currentUserEmail) {
+      setMessages([]);
+      return;
+    }
+
+    const loadMessages = async () => {
+      try {
+        const response = await ChatService.getMessages(selectedConversation);
+        if (response.success && response.data) {
+          setMessages(response.data || []);
+          
+          // Mark messages as read
+          const room = chatRooms.find(r => r.id === selectedConversation);
+          if (room && room.tutor?.userEmail) {
+            try {
+              await markMessagesAsRead(selectedConversation, room.tutor.userEmail);
+            } catch (err) {
+              console.error("Failed to mark messages as read:", err);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load messages:", error);
+        showError("Lỗi", "Không thể tải tin nhắn. Vui lòng thử lại.");
+      }
+    };
+
+    loadMessages();
+  }, [selectedConversation, currentUserEmail, chatRooms, setMessages, showError]);
+
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!messageText.trim() || sending || !selectedConversation) return;
+    if (!currentUserEmail) {
+      showError("Lỗi", "Vui lòng đăng nhập để gửi tin nhắn.");
+      return;
+    }
+
+    const room = chatRooms.find(r => r.id === selectedConversation);
+    if (!room) {
+      showError("Lỗi", "Không tìm thấy phòng chat.");
+      return;
+    }
+
+    const receiverEmail = room.tutor?.userEmail || "";
+    if (!receiverEmail) {
+      showError("Lỗi", "Không tìm thấy thông tin người nhận.");
+      return;
+    }
+
+    setSending(true);
+    try {
+      await sendMessage(selectedConversation, receiverEmail, messageText.trim());
+      
+      // Optimistically add message
+      const tempMessage: ChatMessageDto = {
+        id: Date.now(),
+        chatRoomId: selectedConversation,
+        senderEmail: currentUserEmail,
+        receiverEmail: receiverEmail,
+        messageText: messageText.trim(),
+        sentAt: new Date().toISOString(),
+        isRead: false,
+      };
+      addMessage(tempMessage);
+      
+      setMessageText('');
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      showError("Lỗi", "Không thể gửi tin nhắn. Vui lòng thử lại.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -77,69 +167,89 @@ export function MessagesTab() {
             </div>
 
             <ScrollArea className="flex-1">
-              <div className="divide-y divide-gray-200">
-                {mockMessages.map((conversation) => (
-                  <div
-                    key={conversation.id}
-                    className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      selectedConversation === conversation.id ? 'bg-blue-50' : ''
-                    }`}
-                    onClick={() => setSelectedConversation(conversation.id)}
-                  >
-                    <div className="flex gap-3">
-                      <div className="relative flex-shrink-0">
-                        <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-[#F2E5BF]">
-                          {conversation.tutorAvatar ? (
-                            <img 
-                              src={conversation.tutorAvatar} 
-                              alt={conversation.tutorName}
-                              className="w-full h-full object-cover rounded-lg"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                                if (fallback) {
-                                  fallback.style.display = 'flex';
-                                }
-                              }}
-                            />
-                          ) : null}
-                          <div 
-                            className={`w-full h-full rounded-lg flex items-center justify-center text-sm font-bold text-[#257180] bg-[#F2E5BF] ${conversation.tutorAvatar ? 'hidden' : 'flex'}`}
-                            style={{ display: conversation.tutorAvatar ? 'none' : 'flex' }}
-                          >
-                            {conversation.tutorName ? conversation.tutorName.slice(0, 2).toUpperCase() : 'GS'}
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#257180]" />
+                </div>
+              ) : chatRooms.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <MessageCircle className="h-12 w-12 text-gray-300 mb-3" />
+                  <p className="text-gray-500">Chưa có cuộc trò chuyện nào</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {chatRooms.map((room) => {
+                    const tutorName = room.tutor?.userName || room.tutor?.userEmail || "Gia sư";
+                    const tutorAvatar = room.tutor?.avatarUrl;
+                    const lastMessage = room.lastMessage;
+                    const unreadCount = lastMessage && !lastMessage.isRead && lastMessage.receiverEmail === currentUserEmail ? 1 : 0;
+                    
+                    return (
+                      <div
+                        key={room.id}
+                        className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                          selectedConversation === room.id ? 'bg-blue-50' : ''
+                        }`}
+                        onClick={() => setSelectedConversation(room.id)}
+                      >
+                        <div className="flex gap-3">
+                          <div className="relative flex-shrink-0">
+                            <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-[#F2E5BF]">
+                              {tutorAvatar ? (
+                                <img 
+                                  src={tutorAvatar} 
+                                  alt={tutorName}
+                                  className="w-full h-full object-cover rounded-lg"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                    if (fallback) {
+                                      fallback.style.display = 'flex';
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <div 
+                                className={`w-full h-full rounded-lg flex items-center justify-center text-sm font-bold text-[#257180] bg-[#F2E5BF] ${tutorAvatar ? 'hidden' : 'flex'}`}
+                                style={{ display: tutorAvatar ? 'none' : 'flex' }}
+                              >
+                                {tutorName ? tutorName.slice(0, 2).toUpperCase() : 'GS'}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <p className={`truncate ${unreadCount > 0 ? 'font-semibold' : 'font-medium'}`}>
+                                {tutorName}
+                              </p>
+                              {lastMessage && (
+                                <span className="text-xs text-gray-500 whitespace-nowrap">
+                                  {FormatService.formatTime(lastMessage.sentAt)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className={`text-sm text-gray-600 truncate ${
+                                unreadCount > 0 ? 'font-medium' : ''
+                              }`}>
+                                {lastMessage?.messageText || "Chưa có tin nhắn"}
+                              </p>
+                              {unreadCount > 0 && (
+                                <Badge 
+                                  variant="default" 
+                                  className="bg-[#257180] text-white h-5 min-w-5 px-1.5 text-xs"
+                                >
+                                  {unreadCount}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <p className={`truncate ${!conversation.isRead ? 'font-semibold' : 'font-medium'}`}>
-                            {conversation.tutorName}
-                          </p>
-                          <span className="text-xs text-gray-500 whitespace-nowrap">
-                            {conversation.timestamp}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <p className={`text-sm text-gray-600 truncate ${
-                            !conversation.isRead ? 'font-medium' : ''
-                          }`}>
-                            {conversation.lastMessage}
-                          </p>
-                          {conversation.unreadCount > 0 && (
-                            <Badge 
-                              variant="default" 
-                              className="bg-[#257180] text-white h-5 min-w-5 px-1.5 text-xs"
-                            >
-                              {conversation.unreadCount}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </ScrollArea>
           </div>
 
@@ -152,33 +262,46 @@ export function MessagesTab() {
                   <div className="flex items-center gap-3">
                     <div className="relative flex-shrink-0">
                       <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#F2E5BF]">
-                        {mockMessages.find(m => m.id === selectedConversation)?.tutorAvatar ? (
-                          <img 
-                            src={mockMessages.find(m => m.id === selectedConversation)?.tutorAvatar} 
-                            alt={mockMessages.find(m => m.id === selectedConversation)?.tutorName}
-                            className="w-full h-full object-cover rounded-lg"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                              if (fallback) {
-                                fallback.style.display = 'flex';
-                              }
-                            }}
-                          />
-                        ) : null}
-                        <div 
-                          className={`w-full h-full rounded-lg flex items-center justify-center text-xs font-bold text-[#257180] bg-[#F2E5BF] ${mockMessages.find(m => m.id === selectedConversation)?.tutorAvatar ? 'hidden' : 'flex'}`}
-                          style={{ display: mockMessages.find(m => m.id === selectedConversation)?.tutorAvatar ? 'none' : 'flex' }}
-                        >
-                          {mockMessages.find(m => m.id === selectedConversation)?.tutorName ? mockMessages.find(m => m.id === selectedConversation)!.tutorName.slice(0, 2).toUpperCase() : 'GS'}
-                        </div>
+                        {(() => {
+                          const room = chatRooms.find(r => r.id === selectedConversation);
+                          const tutorAvatar = room?.tutor?.avatarUrl;
+                          const tutorName = room?.tutor?.userName || room?.tutor?.userEmail || "Gia sư";
+                          return (
+                            <>
+                              {tutorAvatar ? (
+                                <img 
+                                  src={tutorAvatar} 
+                                  alt={tutorName}
+                                  className="w-full h-full object-cover rounded-lg"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                    if (fallback) {
+                                      fallback.style.display = 'flex';
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <div 
+                                className={`w-full h-full rounded-lg flex items-center justify-center text-xs font-bold text-[#257180] bg-[#F2E5BF] ${tutorAvatar ? 'hidden' : 'flex'}`}
+                                style={{ display: tutorAvatar ? 'none' : 'flex' }}
+                              >
+                                {tutorName ? tutorName.slice(0, 2).toUpperCase() : 'GS'}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div>
                       <p className="font-semibold">
-                        {mockMessages.find(m => m.id === selectedConversation)?.tutorName}
+                        {chatRooms.find(r => r.id === selectedConversation)?.tutor?.userName || 
+                         chatRooms.find(r => r.id === selectedConversation)?.tutor?.userEmail || 
+                         "Gia sư"}
                       </p>
-                      <p className="text-xs text-gray-500">Đang hoạt động</p>
+                      <p className="text-xs text-gray-500">
+                        {isConnected ? "Đang hoạt động" : "Đang kết nối..."}
+                      </p>
                     </div>
                   </div>
                   <Button variant="ghost" size="icon">
@@ -187,37 +310,48 @@ export function MessagesTab() {
                 </div>
 
                 {/* Messages */}
-                <ScrollArea className="flex-1 p-4">
+                <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
                   <div className="space-y-4">
-                    {conversationMessages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${msg.isMine ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div className={`max-w-[70%] ${msg.isMine ? 'order-2' : 'order-1'}`}>
-                          <div
-                            className={`rounded-lg p-3 ${
-                              msg.isMine
-                                ? 'bg-[#257180] text-white'
-                                : 'bg-gray-100 text-gray-900'
-                            }`}
-                          >
-                            <p>{msg.message}</p>
-                          </div>
-                          <p className={`text-xs text-gray-500 mt-1 ${
-                            msg.isMine ? 'text-right' : 'text-left'
-                          }`}>
-                            {msg.timestamp}
-                          </p>
-                        </div>
+                    {messages.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <MessageCircle className="h-12 w-12 text-gray-300 mb-3" />
+                        <p className="text-gray-500">Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</p>
                       </div>
-                    ))}
+                    ) : (
+                      messages.map((msg) => {
+                        const isMine = msg.senderEmail === currentUserEmail;
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div className={`max-w-[70%] ${isMine ? 'order-2' : 'order-1'}`}>
+                              <div
+                                className={`rounded-lg p-3 ${
+                                  isMine
+                                    ? 'bg-[#257180] text-white'
+                                    : 'bg-gray-100 text-gray-900'
+                                }`}
+                              >
+                                <p className="text-sm break-words">{msg.messageText}</p>
+                              </div>
+                              <p className={`text-xs text-gray-500 mt-1 ${
+                                isMine ? 'text-right' : 'text-left'
+                              }`}>
+                                {FormatService.formatDateTime(msg.sentAt)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                    <div ref={messagesEndRef} />
                   </div>
                 </ScrollArea>
 
                 {/* Message Input */}
                 <div className="p-4 border-t border-gray-200">
-                  <div className="flex gap-2">
+                  <form onSubmit={handleSendMessage} className="flex gap-2">
                     <Input
                       placeholder="Nhập tin nhắn..."
                       value={messageText}
@@ -228,11 +362,21 @@ export function MessagesTab() {
                           handleSendMessage();
                         }
                       }}
+                      disabled={sending || !isConnected}
                     />
-                    <Button onClick={handleSendMessage} size="lg" className="bg-[#257180] hover:bg-[#257180]/90 text-white">
-                      <Send className="h-4 w-4" />
+                    <Button 
+                      type="submit"
+                      disabled={sending || !messageText.trim() || !isConnected} 
+                      size="lg" 
+                      className="bg-[#257180] hover:bg-[#257180]/90 text-white"
+                    >
+                      {sending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
                     </Button>
-                  </div>
+                  </form>
                 </div>
               </>
             ) : (

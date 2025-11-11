@@ -246,17 +246,17 @@ export interface ScheduleDto {
 // ==================== WALLET & PAYMENT ====================
 
 export enum WalletTransactionType {
-  DEBIT = 0,  // Rút/Trừ tiền
-  CREDIT = 1  // Nạp/Cộng tiền
+  DEBIT = 0,  
+  CREDIT = 1  
 }
 
 export enum WalletTransactionReason {
-  DEPOSIT = 0,              // Nạp tiền
-  WITHDRAWAL = 1,           // Rút tiền
-  PAYMENT_BOOKING = 2,      // Thanh toán booking
-  REFUND_BOOKING = 3,       // Hoàn tiền booking
-  RECEIVE_FROM_BOOKING = 4, // Nhận tiền từ booking
-  PLATFORM_FEE = 5          // Thu phí nền tảng
+  DEPOSIT = 0,           
+  WITHDRAWAL = 1,          
+  PAYMENT_BOOKING = 2,     
+  REFUND_BOOKING = 3,       
+  RECEIVE_FROM_BOOKING = 4, 
+  PLATFORM_FEE = 5         
 }
 
 export enum WalletTransactionStatus {
@@ -272,11 +272,11 @@ export enum DepositStatus {
 }
 
 export enum WithdrawalStatus {
-  PENDING = 0,         // Chờ duyệt
-  APPROVED = 1,        // Đã duyệt (Đang xử lý)
-  REJECTED = 2,        // Bị từ chối
-  COMPLETED = 3,       // Hoàn thành
-  FAILED = 4           // Thất bại
+  PENDING = 0,         
+  APPROVED = 1,        
+  REJECTED = 2,       
+  COMPLETED = 3,       
+  FAILED = 4           
 }
 
 export interface WalletDto {
