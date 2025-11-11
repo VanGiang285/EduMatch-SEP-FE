@@ -3,7 +3,14 @@ import { TutorService } from '@/services/tutorService';
 import { FindTutorService } from '@/services/findTutorService';
 import { SubjectService } from '@/services/subjectService';
 import { CertificateService } from '@/services/certificateService';
-import { TutorProfileDto, TutorFilterDto, SubjectDto, LevelDto, EducationInstitutionDto, CertificateTypeDto } from '@/types/backend';
+import {
+  TutorProfileDto,
+  TutorFilterDto,
+  SubjectDto,
+  LevelDto,
+  EducationInstitutionDto,
+  CertificateTypeDto,
+} from '@/types/backend';
 
 export interface UseFindTutorReturn {
   tutors: TutorProfileDto[];
@@ -25,13 +32,17 @@ export function useFindTutor(): UseFindTutorReturn {
   const [tutors, setTutors] = useState<TutorProfileDto[]>([]);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   const [levels, setLevels] = useState<LevelDto[]>([]);
-  const [institutions, setInstitutions] = useState<EducationInstitutionDto[]>([]);
-  const [certificateTypes, setCertificateTypes] = useState<CertificateTypeDto[]>([]);
-  
+  const [institutions, setInstitutions] = useState<EducationInstitutionDto[]>(
+    []
+  );
+  const [certificateTypes, setCertificateTypes] = useState<
+    CertificateTypeDto[]
+  >([]);
+
   const [isLoadingTutors, setIsLoadingTutors] = useState(false);
   const [isLoadingMasterData, setIsLoadingMasterData] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [filters, setFiltersState] = useState<TutorFilterDto>({
     page: 1,
     pageSize: 10,
@@ -49,23 +60,24 @@ export function useFindTutor(): UseFindTutorReturn {
   const loadMasterData = useCallback(async () => {
     setIsLoadingMasterData(true);
     setError(null);
-    
+
     try {
-      const [subjectsRes, levelsRes, institutionsRes, certificateTypesRes] = await Promise.all([
-        SubjectService.getAllSubjects(),
-        CertificateService.getAllLevels(),
-        CertificateService.getAllInstitutions(),
-        CertificateService.getAllCertificateTypes(),
-      ]);
+      const [subjectsRes, levelsRes, institutionsRes, certificateTypesRes] =
+        await Promise.all([
+          SubjectService.getAllSubjects(),
+          CertificateService.getAllLevels(),
+          CertificateService.getAllInstitutions(),
+          CertificateService.getAllCertificateTypes(),
+        ]);
 
       if (subjectsRes.success && subjectsRes.data) {
         setSubjects(subjectsRes.data);
       }
-      
+
       if (levelsRes.success && levelsRes.data) {
         setLevels(levelsRes.data);
       }
-      
+
       if (institutionsRes.success && institutionsRes.data) {
         setInstitutions(institutionsRes.data);
       }
@@ -84,10 +96,10 @@ export function useFindTutor(): UseFindTutorReturn {
   const loadAllTutors = useCallback(async () => {
     setIsLoadingTutors(true);
     setError(null);
-    
+
     try {
       const response = await TutorService.getAllTutors();
-      
+
       if (response.success && response.data) {
         setTutors(response.data);
       } else {
@@ -106,10 +118,10 @@ export function useFindTutor(): UseFindTutorReturn {
   const searchTutors = useCallback(async () => {
     setIsLoadingTutors(true);
     setError(null);
-    
+
     try {
       const response = await FindTutorService.searchTutors(filters);
-      
+
       if (response.success && response.data) {
         setTutors(response.data);
       } else {
