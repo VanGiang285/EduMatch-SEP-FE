@@ -2,25 +2,17 @@ import { useEffect, useState, useCallback } from "react";
 import { connection, startSignalR } from "@/services/signalRService";
 import * as signalR from "@microsoft/signalr";
 import { ChatMessageDto } from "@/types/backend";
-
 export interface UseChatReturn {
   messages: ChatMessageDto[];
   setMessages: React.Dispatch<React.SetStateAction<ChatMessageDto[]>>;
   addMessage: (message: ChatMessageDto) => void;
   isConnected: boolean;
 }
-
-/**
- * Hook to manage chat messages and SignalR connection
- */
 export function useChat(): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [isConnected, setIsConnected] = useState(false);
-
-  // Add message to the list
   const addMessage = useCallback((message: ChatMessageDto) => {
     setMessages((prevMessages) => {
-      // Check if message already exists (avoid duplicates)
       const exists = prevMessages.some((msg) => msg.id === message.id);
       if (exists) {
         return prevMessages;
@@ -28,48 +20,50 @@ export function useChat(): UseChatReturn {
       return [...prevMessages, message];
     });
   }, []);
-
   useEffect(() => {
-    // Start SignalR connection
-    startSignalR().catch((err) => {
-      console.error("Failed to start SignalR:", err);
-    });
-
-    // Handle connection state changes
     const handleConnectionStateChange = () => {
-      setIsConnected(connection.state === signalR.HubConnectionState.Connected);
+      const isConnectedNow = connection.state === signalR.HubConnectionState.Connected;
+      setIsConnected(isConnectedNow);
     };
-
-    // Listen for connection state changes
-    connection.onclose(() => {
+    const handleClose = () => {
       setIsConnected(false);
-    });
-
-    connection.onreconnecting(() => {
+    };
+    const handleReconnecting = () => {
       setIsConnected(false);
-    });
-
-    connection.onreconnected(() => {
+    };
+    const handleReconnected = () => {
       setIsConnected(true);
-    });
-
-    // Initial connection state
+    };
+    connection.onclose(handleClose);
+    connection.onreconnecting(handleReconnecting);
+    connection.onreconnected(handleReconnected);
+    const initializeConnection = async () => {
+      try {
+        await startSignalR();
+        handleConnectionStateChange();
+        setTimeout(() => {
+          handleConnectionStateChange();
+        }, 200);
+      } catch (err) {
+        console.error("Failed to start SignalR:", err);
+        setIsConnected(false);
+      }
+    };
+    initializeConnection();
     handleConnectionStateChange();
-
-    // Listen for new messages
+    const stateCheckInterval = setInterval(() => {
+      handleConnectionStateChange();
+    }, 500); 
     const handleReceiveMessage = (messageObject: ChatMessageDto) => {
       console.log("📨 Received new message:", messageObject);
       addMessage(messageObject);
     };
-
     connection.on("ReceiveMessage", handleReceiveMessage);
-
-    // Cleanup
     return () => {
+      clearInterval(stateCheckInterval);
       connection.off("ReceiveMessage", handleReceiveMessage);
     };
   }, [addMessage]);
-
   return {
     messages,
     setMessages,
@@ -77,12 +71,3 @@ export function useChat(): UseChatReturn {
     isConnected,
   };
 }
-
-
-
-
-
-
-
-
-

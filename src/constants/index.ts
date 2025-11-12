@@ -304,6 +304,7 @@ export const API_ENDPOINTS = {
   CHAT: {
     GET_ROOMS: '/api/chat/rooms/:email',
     GET_MESSAGES: '/api/chat/messages/:roomId',
+    GET_OR_CREATE_ROOM: '/api/chat/room',
   },
   
   // ==================== FAVORITE TUTORS ====================

@@ -1,5 +1,4 @@
 ﻿"use client";
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
@@ -19,7 +18,6 @@ import { ChatRoomDto, ChatMessageDto } from "@/types/backend";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomToast } from "@/hooks/useCustomToast";
 import { FormatService } from "@/lib/format";
-
 interface ChatModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -28,7 +26,6 @@ interface ChatModalProps {
   tutorName?: string;
   tutorAvatar?: string;
 }
-
 export function ChatModal({
   open,
   onOpenChange,
@@ -46,10 +43,11 @@ export function ChatModal({
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-
+  const showErrorRef = useRef(showError);
   const currentUserEmail = user?.email || "";
-
-  // Scroll to bottom when messages change
+  useEffect(() => {
+    showErrorRef.current = showError;
+  }, [showError]);
   useEffect(() => {
     if (messagesEndRef.current && scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector(
@@ -60,71 +58,43 @@ export function ChatModal({
       }
     }
   }, [messages]);
-
-  // Load chat room and messages when modal opens
   useEffect(() => {
     if (!open || !currentUserEmail) return;
-
     let isMounted = true;
-
     const loadChatRoom = async () => {
       setLoading(true);
       try {
-        // Get all chat rooms for current user
-        const roomsResponse = await ChatService.getChatRooms(currentUserEmail);
-        
+        const roomResponse = await ChatService.getOrCreateChatRoom(tutorId, currentUserEmail);
         if (!isMounted) return;
-
-        // Debug: Log response structure
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Chat rooms response:', roomsResponse);
-          console.log('Response data type:', typeof roomsResponse.data);
-          console.log('Is array:', Array.isArray(roomsResponse.data));
-        }
-
-        if (roomsResponse.success && roomsResponse.data) {
-          // Ensure data is an array
-          const rooms = Array.isArray(roomsResponse.data) 
-            ? roomsResponse.data 
-            : [];
-          
-          // Find room with this tutor
-          const room = rooms.find(
-            (r) => r.tutorId === tutorId
-          );
-
-          if (room) {
-            setChatRoom(room);
-            // Load messages for this room
-            const messagesResponse = await ChatService.getMessages(room.id);
-            if (messagesResponse.success && messagesResponse.data) {
-              const messages = Array.isArray(messagesResponse.data)
-                ? messagesResponse.data
-                : [];
-              setMessages(messages);
-              // Mark messages as read
-              if (room.id && tutorEmail) {
-                try {
-                  await markMessagesAsRead(room.id, tutorEmail);
-                } catch (err) {
-                  console.error("Failed to mark messages as read:", err);
-                }
+        if (roomResponse.success && roomResponse.data) {
+          const room = roomResponse.data;
+          setChatRoom(room);
+          const messagesResponse = await ChatService.getMessages(room.id);
+          if (!isMounted) return;
+          if (messagesResponse.success && messagesResponse.data) {
+            const messages = Array.isArray(messagesResponse.data)
+              ? messagesResponse.data
+              : [];
+            setMessages(messages);
+            if (room.id && tutorEmail) {
+              try {
+                await markMessagesAsRead(room.id, tutorEmail);
+              } catch (err) {
+                console.error("Failed to mark messages as read:", err);
               }
             }
           } else {
-            // Room doesn't exist yet, will be created when first message is sent
-            setChatRoom(null);
             setMessages([]);
           }
         } else {
-          // No rooms found or response failed
           setChatRoom(null);
           setMessages([]);
+          showErrorRef.current("Lỗi", "Không thể tải phòng chat. Vui lòng thử lại.");
         }
       } catch (error) {
         if (!isMounted) return;
         console.error("Failed to load chat room:", error);
-        showError("Lỗi", "Không thể tải phòng chat. Vui lòng thử lại.");
+        showErrorRef.current("Lỗi", "Không thể tải phòng chat. Vui lòng thử lại.");
         setChatRoom(null);
         setMessages([]);
       } finally {
@@ -133,15 +103,11 @@ export function ChatModal({
         }
       }
     };
-
     loadChatRoom();
-
     return () => {
       isMounted = false;
     };
-  }, [open, currentUserEmail, tutorId, tutorEmail, setMessages, showError]);
-
-  // Reset when modal closes
+  }, [open, currentUserEmail, tutorId, tutorEmail, setMessages]);
   useEffect(() => {
     if (!open) {
       setMessages([]);
@@ -149,50 +115,38 @@ export function ChatModal({
       setMessageText("");
     }
   }, [open, setMessages]);
-
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!messageText.trim() || sending) return;
     if (!currentUserEmail) {
-      showError("Lỗi", "Vui lòng đăng nhập để gửi tin nhắn.");
+      showErrorRef.current("Lỗi", "Vui lòng đăng nhập để gửi tin nhắn.");
       return;
     }
-
     setSending(true);
     try {
-      // If room doesn't exist, we'll use tutorId as roomId temporarily
-      // Backend should create the room when first message is sent
-      // For now, we'll use 0 or a placeholder - backend should handle room creation
-      const roomId = chatRoom?.id || 0;
-
-      // Send message via SignalR
-      // Note: Backend should create room automatically if it doesn't exist
-      await sendMessage(roomId, tutorEmail, messageText.trim());
-
-      // Optimistically add message to UI
-      // The actual message will come back via SignalR ReceiveMessage event
-      const tempMessage: ChatMessageDto = {
-        id: Date.now(), // Temporary ID
-        chatRoomId: roomId,
-        senderEmail: currentUserEmail,
-        receiverEmail: tutorEmail,
-        messageText: messageText.trim(),
-        sentAt: new Date().toISOString(),
-        isRead: false,
-      };
-      addMessage(tempMessage);
-
+      let roomId = chatRoom?.id;
+      if (!roomId) {
+        const roomResponse = await ChatService.getOrCreateChatRoom(tutorId, currentUserEmail);
+        if (roomResponse.success && roomResponse.data) {
+          setChatRoom(roomResponse.data);
+          roomId = roomResponse.data.id;
+        } else {
+          throw new Error("Failed to create chat room");
+        }
+      }
+      if (!roomId) {
+        throw new Error("Chat room ID is required");
+      }
+      await sendMessage(roomId, currentUserEmail, tutorEmail, messageText.trim());
       setMessageText("");
     } catch (error) {
       console.error("Failed to send message:", error);
-      showError("Lỗi", "Không thể gửi tin nhắn. Vui lòng thử lại.");
+      showErrorRef.current("Lỗi", "Không thể gửi tin nhắn. Vui lòng thử lại.");
     } finally {
       setSending(false);
     }
   };
-
   const displayName = tutorName || tutorEmail || "Gia sư";
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -239,8 +193,7 @@ export function ChatModal({
         <DialogDescription className="sr-only">
           Realtime conversation with tutor {displayName}
         </DialogDescription>
-
-        {/* Messages Area */}
+        {}
         <div className="flex-1 overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center h-full">
@@ -291,8 +244,7 @@ export function ChatModal({
             </ScrollArea>
           )}
         </div>
-
-        {/* Message Input */}
+        {}
         <div className="px-6 py-4 border-t border-gray-200">
           <form onSubmit={handleSendMessage} className="flex gap-2">
             <Input
@@ -326,4 +278,3 @@ export function ChatModal({
     </Dialog>
   );
 }
-

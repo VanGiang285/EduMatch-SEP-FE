@@ -37,7 +37,7 @@ import { EnumHelpers, TeachingMode } from '@/types/enums';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
-import { ChatModal } from '@/components/chat/ChatModal';
+import { useChatContext } from '@/contexts/ChatContext';
 
 // Helper function để convert string enum từ API sang TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
@@ -84,13 +84,7 @@ export function FindTutorPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set());
   const [loadingFavorite, setLoadingFavorite] = useState<Set<number>>(new Set());
-  const [chatModalOpen, setChatModalOpen] = useState(false);
-  const [selectedTutorForChat, setSelectedTutorForChat] = useState<{
-    tutorId: number;
-    tutorEmail: string;
-    tutorName?: string;
-    tutorAvatar?: string;
-  } | null>(null);
+  const { openChatWithTutor } = useChatContext();
   const tutorsPerPage = 6;
   
   // Note: Using client-side filtering instead of API filtering
@@ -355,7 +349,7 @@ export function FindTutorPage() {
     }
   };
 
-  const handleOpenChat = (tutor: typeof currentTutors[0], e: React.MouseEvent) => {
+  const handleOpenChat = async (tutor: typeof currentTutors[0], e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
     
     // Check if user is authenticated
@@ -368,14 +362,13 @@ export function FindTutorPage() {
       return;
     }
 
-    // Open chat modal
-    setSelectedTutorForChat({
-      tutorId: tutor.id,
-      tutorEmail: tutor.userEmail || "",
-      tutorName: tutor.userName,
-      tutorAvatar: tutor.avatarUrl,
-    });
-    setChatModalOpen(true);
+    // Open floating chat with tutor
+    await openChatWithTutor(
+      tutor.id,
+      tutor.userEmail || "",
+      tutor.userName,
+      tutor.avatarUrl
+    );
   };
   return (
     <div className="min-h-screen bg-gray-50 pt-16">
@@ -847,16 +840,6 @@ export function FindTutorPage() {
       </div>
 
       {/* Chat Modal */}
-      {selectedTutorForChat && (
-        <ChatModal
-          open={chatModalOpen}
-          onOpenChange={setChatModalOpen}
-          tutorId={selectedTutorForChat.tutorId}
-          tutorEmail={selectedTutorForChat.tutorEmail}
-          tutorName={selectedTutorForChat.tutorName}
-          tutorAvatar={selectedTutorForChat.tutorAvatar}
-        />
-      )}
     </div>
   );
 }

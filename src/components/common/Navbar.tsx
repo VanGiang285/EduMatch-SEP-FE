@@ -111,10 +111,10 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                <div className="flex items-center space-x-1">
                  <MessageDropdown 
                    onViewAll={() => {
-                     onNavigateToMessages?.();
+                     // Callback is optional, navigation is handled in MessageDropdown
                    }}
-                   onMessageClick={(id) => {
-                     onNavigateToMessages?.();
+                   onMessageClick={(roomId) => {
+                     // Callback is optional, navigation is handled in MessageDropdown
                    }}
                  />
                  <NotificationDropdown 

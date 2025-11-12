@@ -20,6 +20,13 @@ export async function POST(request: NextRequest) {
     // Get refresh token cookie from request
     const refreshTokenCookie = request.cookies.get('refresh_token');
     
+    // Debug logging
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Refresh token request received');
+      console.log('Cookies:', request.cookies.getAll().map(c => c.name));
+      console.log('Refresh token cookie exists:', !!refreshTokenCookie);
+    }
+    
     if (!refreshTokenCookie) {
       return NextResponse.json(
         {
@@ -44,14 +51,24 @@ export async function POST(request: NextRequest) {
       .map(cookie => `${cookie.name}=${cookie.value}`)
       .join('; ');
     
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 Forwarding refresh token request to backend:', backendUrl);
+      console.log('Cookie header length:', cookieHeader.length);
+    }
+    
     const response = await fetch(backendUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Cookie': cookieHeader, // Forward all cookies to backend
       },
-      // Don't use credentials: 'include' here as we're manually setting Cookie header
+      // Note: Using manual Cookie header instead of credentials: 'include'
+      // because we're proxying from Next.js to backend
     });
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📥 Backend response status:', response.status);
+    }
 
     // Get response data
     let data: any;

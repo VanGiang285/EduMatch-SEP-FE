@@ -5,6 +5,13 @@ import { ClassRequestDto } from '@/types/backend';
 import { CreateClassRequestRequest, UpdateClassRequestRequest, IsApprovedClassRequestDto, CancelClassRequestDto } from '@/types/requests';
 
 // Temporary types - sẽ được thêm vào backend.ts sau
+export interface ClassRequestSlotDto {
+  id: number;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+}
+
 export interface ClassRequestDetailDto {
   id: number;
   learnerEmail: string;
@@ -31,7 +38,7 @@ export interface ClassRequestDetailDto {
   approvedBy?: string;
   rejectionReason?: string;
   cancelReason?: string;
-  slots?: any[];
+  slots?: ClassRequestSlotDto[];
 }
 
 export interface ClassRequestItemDto {

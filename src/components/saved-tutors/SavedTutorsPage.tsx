@@ -40,6 +40,7 @@ import { TutorProfileDto } from '@/types/backend';
 import { EnumHelpers, TeachingMode } from '@/types/enums';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
+import { useChatContext } from '@/contexts/ChatContext';
 
 // Helper function to convert string enum from API to TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
@@ -82,6 +83,7 @@ export function SavedTutorsPage() {
   const [isLoadingTutors, setIsLoadingTutors] = useState(true);
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set());
   const [loadingFavorite, setLoadingFavorite] = useState<Set<number>>(new Set());
+  const { openChatWithTutor } = useChatContext();
   const tutorsPerPage = 6;
 
   const buildDetailedTutorList = useCallback(async (baseTutors: TutorProfileDto[]): Promise<TutorProfileDto[]> => {
@@ -290,6 +292,28 @@ export function SavedTutorsPage() {
       setHoveredTutor(filteredAndSortedTutors[0].id);
     }
   }, [filteredAndSortedTutors, hoveredTutor]);
+
+  const handleOpenChat = async (tutor: TutorProfileDto, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      showWarning(
+        'Vui lòng đăng nhập',
+        'Bạn cần đăng nhập để nhắn tin với gia sư.'
+      );
+      router.push('/login');
+      return;
+    }
+
+    // Open floating chat with tutor
+    await openChatWithTutor(
+      tutor.id,
+      tutor.userEmail || "",
+      tutor.userName,
+      tutor.avatarUrl
+    );
+  };
 
   // Update hoveredTutor when filtered results change
   useEffect(() => {
@@ -724,7 +748,12 @@ export function SavedTutorsPage() {
                             )}
                           </div>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="lg" className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
+                            <Button 
+                              variant="outline" 
+                              size="lg" 
+                              className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                              onClick={(e) => handleOpenChat(tutor, e)}
+                            >
                               <MessageCircle className="w-4 h-4 mr-2" />
                               Nhắn tin
                             </Button>

@@ -88,6 +88,12 @@ export interface UserProfileDto {
   longitude?: number;
   province?: ProvinceDto;
   subDistrict?: SubDistrictDto;
+  userEmailNavigation?: {
+    email: string;
+    userName?: string;
+    phone?: string;
+    [key: string]: any;
+  };
 }
 
 export interface ManageUserDto {
