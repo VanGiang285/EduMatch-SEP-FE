@@ -90,7 +90,15 @@ export function WalletTab() {
         const sortedTransactions = [...response.data].sort((a, b) => {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
-        setTransactions(sortedTransactions);
+
+        const normalizedTransactions: WalletTransactionDto[] = sortedTransactions.map((transaction) => ({
+          ...transaction,
+          transactionType: WalletService.normalizeTransactionType(transaction.transactionType as number | string),
+          reason: WalletService.normalizeTransactionReason(transaction.reason as number | string),
+          status: WalletService.normalizeTransactionStatus(transaction.status as number | string),
+        }));
+
+        setTransactions(normalizedTransactions);
       } else {
         throw new Error(response.error?.message || 'Failed to fetch transactions');
       }
