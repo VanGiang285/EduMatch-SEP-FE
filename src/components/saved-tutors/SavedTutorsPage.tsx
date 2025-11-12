@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
@@ -35,6 +35,7 @@ import {
 } from '../ui/navigation/pagination';
 import { useFindTutor } from '@/hooks/useFindTutor';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
+import { TutorService } from '@/services/tutorService';
 import { TutorProfileDto } from '@/types/backend';
 import { EnumHelpers, TeachingMode } from '@/types/enums';
 import { useAuth } from '@/contexts/AuthContext';
@@ -83,6 +84,38 @@ export function SavedTutorsPage() {
   const [loadingFavorite, setLoadingFavorite] = useState<Set<number>>(new Set());
   const tutorsPerPage = 6;
 
+  const buildDetailedTutorList = useCallback(async (baseTutors: TutorProfileDto[]): Promise<TutorProfileDto[]> => {
+    if (!baseTutors || baseTutors.length === 0) {
+      return [];
+    }
+
+    const detailResults = await Promise.all(
+      baseTutors.map(async (tutor) => {
+        const email = tutor.userEmail;
+        if (!email) {
+          return tutor;
+        }
+
+        try {
+          const response = await TutorService.getTutorByEmail(email);
+          if (response.success && response.data) {
+            return response.data;
+          }
+        } catch (error) {
+          console.error('Error fetching tutor detail by email:', email, error);
+        }
+
+        return tutor;
+      })
+    );
+
+    const uniqueTutors = new Map<number, TutorProfileDto>();
+    detailResults.forEach((tutor) => {
+      uniqueTutors.set(tutor.id, tutor);
+    });
+    return Array.from(uniqueTutors.values());
+  }, []);
+
   // Load favorite tutors from API (only if authenticated)
   useEffect(() => {
     const loadFavoriteTutors = async () => {
@@ -98,8 +131,9 @@ export function SavedTutorsPage() {
         const response = await FavoriteTutorService.getFavoriteTutors();
         if (response.success) {
           const tutors = response.data || [];
-          setSavedTutors(tutors);
-          setFavoriteTutors(new Set(tutors.map(t => t.id)));
+          const detailedTutors = await buildDetailedTutorList(tutors);
+          setSavedTutors(detailedTutors);
+          setFavoriteTutors(new Set(detailedTutors.map(t => t.id)));
         } else {
           console.error('Failed to load favorite tutors:', response.message);
           setSavedTutors([]);
@@ -317,16 +351,18 @@ export function SavedTutorsPage() {
         // Reload the list if adding (shouldn't happen in saved tutors page, but just in case)
         const response = await FavoriteTutorService.getFavoriteTutors();
         const tutors = response.data || [];
-        setSavedTutors(tutors);
-        setFavoriteTutors(new Set(tutors.map(t => t.id)));
+        const detailedTutors = await buildDetailedTutorList(tutors);
+        setSavedTutors(detailedTutors);
+        setFavoriteTutors(new Set(detailedTutors.map(t => t.id)));
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
       // Reload on error to revert
       const response = await FavoriteTutorService.getFavoriteTutors();
       const tutors = response.data || [];
-      setSavedTutors(tutors);
-      setFavoriteTutors(new Set(tutors.map(t => t.id)));
+      const detailedTutors = await buildDetailedTutorList(tutors);
+      setSavedTutors(detailedTutors);
+      setFavoriteTutors(new Set(detailedTutors.map(t => t.id)));
     } finally {
       setLoadingFavorite(prev => {
         const newSet = new Set(prev);

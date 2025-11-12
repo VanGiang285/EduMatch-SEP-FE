@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/feedback/dialog";
@@ -194,7 +195,10 @@ export function ChatModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[600px] flex flex-col p-0">
+      <DialogContent
+        className="max-w-2xl h-[600px] flex flex-col p-0"
+        aria-describedby={undefined}
+      >
         <DialogHeader className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="relative flex-shrink-0">
@@ -232,6 +236,9 @@ export function ChatModal({
             </div>
           </div>
         </DialogHeader>
+        <DialogDescription className="sr-only">
+          Realtime conversation with tutor {displayName}
+        </DialogDescription>
 
         {/* Messages Area */}
         <div className="flex-1 overflow-hidden">
