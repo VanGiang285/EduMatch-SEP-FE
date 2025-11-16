@@ -53,7 +53,8 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
     { id: 'wallet', label: 'Ví', icon: Wallet },
     { id: 'notifications', label: 'Thông báo', icon: Bell, badge: unreadNotifications },
     { id: 'messages', label: 'Tin nhắn', icon: MessageCircle },
-    { id: 'settings', label: 'Cài đặt', icon: Settings },
+    { id: 'settings', label: 'Cài đặt', icon: Settings }
+
   ];
 
   const renderTabContent = () => {
@@ -99,11 +100,10 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
                     <Button
                       key={item.id}
                       variant="ghost"
-                      className={`w-full justify-start mb-1 ${
-                        isActive
-                          ? 'bg-[#257180]/10 text-[#257180] hover:bg-[#257180]/20 hover:text-[#257180]'
-                          : 'hover:bg-gray-100'
-                      }`}
+                      className={`w-full justify-start mb-1 ${isActive
+                        ? 'bg-[#257180]/10 text-[#257180] hover:bg-[#257180]/20 hover:text-[#257180]'
+                        : 'hover:bg-gray-100'
+                        }`}
                       onClick={() => setActiveTab(item.id)}
                     >
                       <Icon className={`h-4 w-4 mr-3 ${isActive ? 'text-[#257180]' : 'text-gray-500'}`} />

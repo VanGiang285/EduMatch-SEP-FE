@@ -43,13 +43,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (response.success && response.data) {
         const { accessToken } = response.data;
         localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken);
-        
+
         TokenManager.saveTokenAndUpdateTimer(
           accessToken,
           handleTokenRefresh,
           handleTokenRefreshFailed
         );
-        
+
         console.log('✅ Token refreshed successfully');
       } else {
         throw new Error('Token refresh failed');
@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const handleTokenRefreshFailed = useCallback(() => {
     console.log('🚪 Token refresh failed, logging out user');
     TokenManager.stopTokenRefreshTimer();
-    
+
     AuthService.clearStoredData();
     setUser(null);
   }, []);
@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const isAuthenticated = AuthService.isAuthenticated();
         if (isAuthenticated && storedUser) {
           setUser(storedUser);
-          
+
           const currentToken = TokenManager.getCurrentToken();
           if (currentToken) {
             TokenManager.saveTokenAndUpdateTimer(
@@ -87,12 +87,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               handleTokenRefreshFailed
             );
           }
-          
+
           try {
             const response = await AuthService.getCurrentUser();
             if (response.success && response.data) {
               const role = determineRoleFromResponse(response.data);
-              
+
               const userData: User = {
                 id: response.data.email,
                 email: response.data.email,
@@ -105,7 +105,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               };
               setUser(userData);
               AuthService.storeUserData(userData, localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) || '');
-              
+
               document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}`;
             }
           } catch (error) {
@@ -142,19 +142,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
         document.cookie = `userRole=${tempUser.role}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
         document.cookie = `accessToken=${accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
-        
+
         console.log('🔍 AuthContext - User set after login:', tempUser);
         console.log('🔍 AuthContext - isAuthenticated will be:', !!tempUser);
-        
+
         setUser(tempUser);
         AuthService.storeUserData(tempUser, accessToken);
-        
+
         TokenManager.saveTokenAndUpdateTimer(
           accessToken,
           handleTokenRefresh,
           handleTokenRefreshFailed
         );
-        
+
         if (rememberMe) {
           localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, 'true');
         }
@@ -162,7 +162,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const userResponse = await AuthService.getCurrentUser();
           if (userResponse.success && userResponse.data) {
             const role = determineRoleFromResponse(userResponse.data);
-            
+
             const userData: User = {
               id: userResponse.data.email,
               email: userResponse.data.email,
@@ -175,9 +175,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             };
             setUser(userData);
             AuthService.storeUserData(userData, accessToken);
-            
+
             document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
-            
+
             console.log('🔍 AuthContext - User details updated:', userData);
           }
         } catch (error) {
@@ -196,9 +196,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       TokenManager.stopTokenRefreshTimer();
-      
+
       await AuthService.logout();
     } catch (error) {
       ErrorHandler.logError(error, 'AuthProvider.logout');
@@ -206,7 +206,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       AuthService.clearStoredData();
       setUser(null);
       setLoading(false);
-      
+
       document.cookie = 'userRole=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     }
   }, []);
@@ -235,7 +235,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userResponse = await AuthService.getCurrentUser();
         if (userResponse.success && userResponse.data) {
           const role = determineRoleFromResponse(userResponse.data);
-          
+
           const userData: User = {
             id: userResponse.data.email,
             email: userResponse.data.email,
@@ -247,10 +247,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           };
           setUser(userData);
           AuthService.storeUserData(userData, accessToken);
-          
+
           // Set role in cookies for middleware
           document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}`;
-          
+
           // Bắt đầu token refresh timer cho Google login
           TokenManager.saveTokenAndUpdateTimer(
             accessToken,
@@ -309,7 +309,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userResponse = await AuthService.getCurrentUser();
         if (userResponse.success && userResponse.data) {
           const role = determineRoleFromResponse(userResponse.data);
-          
+
           const userData: User = {
             id: userResponse.data.email,
             email: userResponse.data.email,
@@ -321,7 +321,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           };
           setUser(userData);
           AuthService.storeUserData(userData, accessToken);
-          
+
           // Set role in cookies for middleware
           document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}`;
         }
@@ -345,10 +345,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const clearAuth = useCallback(() => {
     // Dừng token refresh timer
     TokenManager.stopTokenRefreshTimer();
-    
+
     AuthService.clearStoredData();
     setUser(null);
-    
+
     // Clear role cookie
     document.cookie = 'userRole=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   }, []);
