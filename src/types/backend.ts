@@ -13,7 +13,7 @@ import {
   PaymentStatus,
   ScheduleStatus,
   TutorAvailabilityStatus,
-  DayOfWeekEnum
+  DayOfWeekEnum,
 } from './enums';
 
 // ==================== COMMON ====================
@@ -122,8 +122,8 @@ export interface TutorProfileDto {
   teachingExp?: string;
   videoIntroUrl?: string;
   videoIntroPublicId?: string;
-  teachingModes: TeachingMode;
-  status: TutorStatus;
+  teachingModes: TeachingMode | string;
+  status: TutorStatus | string;
   verifiedBy?: string;
   verifiedAt?: string;
   createdAt: string;
@@ -142,6 +142,7 @@ export interface TutorSubjectDto {
   levelId?: number;
   level?: LevelDto;
   subject?: SubjectDto;
+  tutorEmail?: string;
   tutor?: TutorProfileDto;
 }
 
@@ -219,11 +220,13 @@ export interface BookingDto {
   totalSessions: number;
   unitPrice: number;
   totalAmount: number;
-  paymentStatus: PaymentStatus;
+  paymentStatus: PaymentStatus | string;
   refundedAmount: number;
-  status: BookingStatus;
+  status: BookingStatus | string;
   createdAt: string;
   updatedAt?: string;
+  systemFee?: SystemFeeDto;
+  systemFeeAmount: number;
   learner?: UserDto;
   tutorSubject?: TutorSubjectDto;
   schedules?: ScheduleDto[];
@@ -233,7 +236,7 @@ export interface ScheduleDto {
   id: number;
   availabilitiId: number;
   bookingId: number;
-  status: ScheduleStatus;
+  status: ScheduleStatus | string;
   attendanceNote?: string;
   isRefunded: boolean;
   refundedAt?: string;
@@ -241,42 +244,67 @@ export interface ScheduleDto {
   updatedAt?: string;
   availability?: TutorAvailabilityDto;
   booking?: BookingDto;
+  meetingSession?: MeetingSessionDto;
+}
+
+export interface SystemFeeDto {
+  id: number;
+  name: string;
+  percentage?: number;
+  fixedAmount?: number;
+  effectiveFrom: string;
+  effectiveTo?: string;
+  isActive?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface MeetingSessionDto {
+  id: number;
+  scheduleId: number;
+  meetLink: string;
+  meetCode?: string;
+  startTime: string;
+  endTime: string;
+  meetingType: number; // MeetingType enum
+  createdAt: string;
+  updatedAt?: string;
 }
 
 // ==================== WALLET & PAYMENT ====================
 
 export enum WalletTransactionType {
-  DEBIT = 0,  // Rút/Trừ tiền
-  CREDIT = 1  // Nạp/Cộng tiền
+  DEBIT = 0, // Rút/Trừ tiền
+  CREDIT = 1, // Nạp/Cộng tiền
 }
 
 export enum WalletTransactionReason {
-  DEPOSIT = 0,              // Nạp tiền
-  WITHDRAWAL = 1,           // Rút tiền
-  PAYMENT_BOOKING = 2,      // Thanh toán booking
-  REFUND_BOOKING = 3,       // Hoàn tiền booking
+  DEPOSIT = 0, // Nạp tiền
+  WITHDRAWAL = 1, // Rút tiền
+  PAYMENT_BOOKING = 2, // Thanh toán booking
+  REFUND_BOOKING = 3, // Hoàn tiền booking
   RECEIVE_FROM_BOOKING = 4, // Nhận tiền từ booking
-  PLATFORM_FEE = 5          // Thu phí nền tảng
+  PLATFORM_FEE = 5, // Thu phí nền tảng
 }
 
 export enum WalletTransactionStatus {
   PENDING = 0,
   COMPLETED = 1,
-  FAILED = 2
+  FAILED = 2,
 }
 
 export enum DepositStatus {
   PENDING = 0,
   COMPLETED = 1,
-  FAILED = 2
+  FAILED = 2,
 }
 
 export enum WithdrawalStatus {
-  PENDING = 0,         // Chờ duyệt
-  APPROVED = 1,        // Đã duyệt (Đang xử lý)
-  REJECTED = 2,        // Bị từ chối
-  COMPLETED = 3,       // Hoàn thành
-  FAILED = 4           // Thất bại
+  PENDING = 0, // Chờ duyệt
+  APPROVED = 1, // Đã duyệt (Đang xử lý)
+  REJECTED = 2, // Bị từ chối
+  COMPLETED = 3, // Hoàn thành
+  FAILED = 4, // Thất bại
 }
 
 export interface WalletDto {
@@ -436,4 +464,3 @@ export interface TutorFilterDto {
   page?: number;
   pageSize?: number;
 }
-
