@@ -185,7 +185,7 @@ export function ScheduleTab() {
                       {daySchedules.slice(0, 2).map((schedule) => {
                         const slot = schedule.availability?.slot;
                         const status = EnumHelpers.parseScheduleStatus(schedule.status);
-                        const isOnline = !!schedule.meetingSession;
+                        const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
                         const color =
                           status === ScheduleStatus.Completed
                             ? 'bg-green-500'
@@ -198,7 +198,7 @@ export function ScheduleTab() {
                           <div
                             key={schedule.id}
                             className={`text-[10px] px-1 py-0.5 rounded ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'} truncate`}
-                            title={slot ? `${slot.startTime} - ${slot.endTime}${isOnline ? ' (Online)' : ''}` : ''}
+                            title={slot ? `${slot.startTime} - ${slot.endTime}${isOnline ? ' (Zoom Meeting)' : ''}` : ''}
                           >
                             {slot ? (
                               <div className="flex items-center gap-0.5">
@@ -254,7 +254,7 @@ export function ScheduleTab() {
                     const tutorSubject = booking?.tutorSubject;
                     const subject = tutorSubject?.subject;
                     const level = tutorSubject?.level;
-                    const isOnline = !!schedule.meetingSession;
+                    const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
 
                     return (
                       <Card key={schedule.id} className="border-l-4 border-l-[#257180]">
@@ -268,7 +268,7 @@ export function ScheduleTab() {
                                 {isOnline ? (
                                   <Badge className="bg-blue-500 text-white border-blue-600">
                                     <Video className="h-3 w-3 mr-1" />
-                                    Online
+                                    Zoom Meeting
                                   </Badge>
                                 ) : (
                                   <Badge className="bg-gray-500 text-white border-gray-600">
@@ -282,7 +282,7 @@ export function ScheduleTab() {
                                 {level && <span className="text-sm font-normal text-gray-500 ml-2">- {level.name}</span>}
                               </h5>
                               <p className="text-sm text-gray-600 mb-2">
-                                Gia sư: {tutor?.userName || 'Chưa có thông tin'}
+                                Gia sư: {user?.email || 'Chưa có thông tin'}
                               </p>
                               {slot && (
                                 <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
@@ -290,8 +290,9 @@ export function ScheduleTab() {
                                   <span>{slot.startTime} - {slot.endTime}</span>
                                 </div>
                               )}
-                              {isOnline && schedule.meetingSession && (
+                              {schedule.meetingSession?.meetLink && (
                                 <div className="mt-2">
+                                  <div className="text-xs text-gray-500 mb-0.5">Link Zoom Meeting</div>
                                   <a
                                     href={schedule.meetingSession.meetLink}
                                     target="_blank"
@@ -299,7 +300,9 @@ export function ScheduleTab() {
                                     className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium hover:underline"
                                   >
                                     <Video className="h-4 w-4" />
-                                    Tham gia lớp học online
+                                    <span className="truncate max-w-[220px]" title={schedule.meetingSession.meetLink}>
+                                      {schedule.meetingSession.meetLink}
+                                    </span>
                                   </a>
                                 </div>
                               )}
@@ -428,7 +431,7 @@ export function ScheduleTab() {
                   ? new Date(availability.startDate)
                   : null;
 
-                const isOnline = !!schedule.meetingSession;
+                const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
 
                 // Tính endDate từ startDate + slot.endTime
                 let endDate: Date | null = null;
@@ -470,7 +473,7 @@ export function ScheduleTab() {
                                 {isOnline ? (
                                   <Badge className="bg-blue-500 text-white border-blue-600">
                                     <Video className="h-3 w-3 mr-1" />
-                                    Online
+                                    Zoom Meeting
                                   </Badge>
                                 ) : (
                                   <Badge className="bg-gray-500 text-white border-gray-600">
@@ -499,7 +502,7 @@ export function ScheduleTab() {
                                   )}
                                 </h3>
                                 <p className="text-gray-600 text-sm mt-1">
-                                  Gia sư: {tutor?.userName || 'Chưa có thông tin'}
+                                  Gia sư: {user?.email || 'Chưa có thông tin'}
                                 </p>
                               </div>
 
@@ -554,31 +557,14 @@ export function ScheduleTab() {
                                     <div className="flex-1">
                                       <div className="text-xs text-gray-500">Địa điểm</div>
                                       <div className="text-gray-900 font-medium line-clamp-1">
-                                        {tutor.addressLine}
+                                        {tutor.province?.name}
                                       </div>
                                     </div>
                                   </div>
                                 )}
 
-                                {isOnline && schedule.meetingSession && (
-                                  <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
-                                    <div className="bg-blue-50 rounded-lg p-2">
-                                      <Video className="h-5 w-5 text-blue-600" />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="text-xs text-gray-500">Link lớp học</div>
-                                      <a
-                                        href={schedule.meetingSession.meetLink}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-600 hover:text-blue-800 font-medium hover:underline inline-flex items-center gap-1"
-                                      >
-                                        Tham gia lớp học online
-                                        <Video className="h-4 w-4" />
-                                      </a>
-                                    </div>
-                                  </div>
-                                )}
+
+
                               </div>
 
                               <div className="mt-4 flex gap-2">

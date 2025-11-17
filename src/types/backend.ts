@@ -244,6 +244,7 @@ export interface ScheduleDto {
   updatedAt?: string;
   availability?: TutorAvailabilityDto;
   booking?: BookingDto;
+  hasMeetingSession?: boolean;
   meetingSession?: MeetingSessionDto;
 }
 

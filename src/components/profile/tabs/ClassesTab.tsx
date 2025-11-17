@@ -374,7 +374,7 @@ export function ClassesTab() {
                     ? new Date(availability.startDate)
                     : null;
 
-                  const isOnline = !!schedule.meetingSession;
+                  const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
 
                   // Tính endDate từ startDate + slot.endTime
                   let endDate: Date | null = null;
