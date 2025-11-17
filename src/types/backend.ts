@@ -384,6 +384,31 @@ export interface WithdrawalDto {
   userBankAccount?: UserBankAccountDto;
 }
 
+export interface AdminWithdrawalDto {
+  id: number;
+  amount: number;
+  status: WithdrawalStatus | string;
+  createdAt: string;
+  userBankAccount: UserBankAccountDto;
+  wallet: WalletDto;
+}
+
+export interface SystemWalletDashboardDto {
+  platformRevenueBalance: number;
+  totalTutorLockedBalance: number;
+  totalUserAvailableBalance: number;
+}
+
+// ==================== NOTIFICATIONS ====================
+
+export interface NotificationDto {
+  id: number;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  linkUrl?: string;
+}
+
 // ==================== CHAT ====================
 
 export interface ChatRoomDto {

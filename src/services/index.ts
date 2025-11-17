@@ -19,3 +19,5 @@ export * from './tutorManagementService';
 export * from './userService';
 export * from './classRequestService';
 export * from './tutorApplicationService';
+export * from './notificationService';
+export * from './systemFeeService';

@@ -255,6 +255,23 @@ export interface UpdateBookingRequest {
   paymentStatus?: number; // PaymentStatus
 }
 
+// ==================== SYSTEM FEE REQUESTS ====================
+
+export interface SystemFeeCreateRequest {
+  name: string;
+  percentage?: number;
+  fixedAmount?: number;
+  isActive?: boolean;
+}
+
+export interface SystemFeeUpdateRequest {
+  id: number;
+  name: string;
+  percentage?: number;
+  fixedAmount?: number;
+  isActive?: boolean;
+}
+
 // ==================== WALLET REQUESTS ====================
 
 export interface CreateDepositRequest {

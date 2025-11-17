@@ -1,7 +1,7 @@
 import { apiClient, replaceUrlParams } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
 import { ApiResponse } from '@/types/api';
-import { WalletDto, WalletTransactionDto, WithdrawalDto, UserBankAccountDto, BankDto, WalletTransactionType, WalletTransactionReason, WalletTransactionStatus, WithdrawalStatus } from '@/types/backend';
+import { WalletDto, WalletTransactionDto, WithdrawalDto, UserBankAccountDto, BankDto, WalletTransactionType, WalletTransactionReason, WalletTransactionStatus, WithdrawalStatus, AdminWithdrawalDto, SystemWalletDashboardDto } from '@/types/backend';
 import { CreateDepositRequest, CreateWithdrawalRequest, CreateUserBankAccountRequest } from '@/types/requests';
 
 export class WalletService {
@@ -27,10 +27,30 @@ export class WalletService {
     return apiClient.post<void>(url);
   }
 
+  // Dọn dẹp các yêu cầu nạp đã hết hạn (admin)
+  static async cleanupExpiredDeposits(): Promise<ApiResponse<string>> {
+    return apiClient.post<string>(API_ENDPOINTS.WALLET.CLEANUP_EXPIRED_DEPOSITS);
+  }
+
   // Tạo yêu cầu rút tiền
   // Response trả về message (string) thông báo thành công
   static async createWithdrawal(request: CreateWithdrawalRequest): Promise<ApiResponse<string>> {
     return apiClient.post<string>(API_ENDPOINTS.WALLET.CREATE_WITHDRAWAL, request);
+  }
+
+  // Lấy ví hệ thống (admin)
+  static async getSystemWallet(): Promise<ApiResponse<WalletDto>> {
+    return apiClient.get<WalletDto>(API_ENDPOINTS.ADMIN_WALLET.GET_SYSTEM_WALLET);
+  }
+
+  // Lấy lịch sử giao dịch của ví hệ thống (admin)
+  static async getSystemWalletTransactions(): Promise<ApiResponse<WalletTransactionDto[]>> {
+    return apiClient.get<WalletTransactionDto[]>(API_ENDPOINTS.ADMIN_WALLET.GET_SYSTEM_TRANSACTIONS);
+  }
+
+  // Lấy dữ liệu dashboard ví hệ thống (admin)
+  static async getSystemWalletDashboard(): Promise<ApiResponse<SystemWalletDashboardDto>> {
+    return apiClient.get<SystemWalletDashboardDto>(API_ENDPOINTS.ADMIN_WALLET.GET_DASHBOARD);
   }
 
   static normalizeTransactionType(type: number | string): WalletTransactionType {
@@ -119,8 +139,8 @@ export class WalletService {
   }
 
   // Lấy danh sách yêu cầu rút tiền đang chờ duyệt (admin)
-  static async getPendingWithdrawals(): Promise<ApiResponse<WithdrawalDto[]>> {
-    return apiClient.get<WithdrawalDto[]>(API_ENDPOINTS.WALLET.GET_PENDING_WITHDRAWALS);
+  static async getPendingWithdrawals(): Promise<ApiResponse<AdminWithdrawalDto[]>> {
+    return apiClient.get<AdminWithdrawalDto[]>(API_ENDPOINTS.WALLET.GET_PENDING_WITHDRAWALS);
   }
 
   // Duyệt yêu cầu rút tiền (admin)
