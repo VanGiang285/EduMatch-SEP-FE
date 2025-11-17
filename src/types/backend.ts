@@ -102,7 +102,8 @@ export interface ManageUserDto {
   phone?: string;
   isEmailConfirmed?: boolean;
   loginProvider: string;
-  createdAt: string;
+  createdAt?: string;
+  createAt?: string; // Backend uses createAt (without 'd')
   isActive?: boolean;
   roleId: number;
   roleName: string;

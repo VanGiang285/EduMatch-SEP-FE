@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
@@ -21,24 +21,6 @@ import {
   SelectValue,
 } from '@/components/ui/form/select';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/navigation/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/feedback/alert-dialog';
-import {
   Pagination,
   PaginationContent,
   PaginationEllipsis,
@@ -51,194 +33,131 @@ import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { 
   Users, 
   Search, 
-  MoreHorizontal, 
   UserPlus,
   CheckCircle,
   XCircle,
-  Ban,
-  RotateCcw,
-  Eye,
   Filter,
-  Trash2
+  Loader2
 } from 'lucide-react';
 import { CreateBusinessAdminDialog } from './CreateBusinessAdminDialog';
-
-// Mock data
-const initialUsers = [
-  {
-    userId: 1,
-    fullName: 'Trần Thị Hoa',
-    email: 'hoa.tran@gmail.com',
-    phoneNumber: '0901234567',
-    avatarUrl: '',
-    status: 1, // Active
-    roles: [
-      { roleType: 0, roleName: 'Học viên', isPrimary: true },
-    ],
-    createdAt: '2024-01-15',
-  },
-  {
-    userId: 2,
-    fullName: 'Nguyễn Văn Nam',
-    email: 'nam.nguyen@gmail.com',
-    phoneNumber: '0912345678',
-    avatarUrl: '',
-    status: 1,
-    roles: [
-      { roleType: 0, roleName: 'Học viên', isPrimary: true },
-      { roleType: 1, roleName: 'Gia sư', isPrimary: false },
-    ],
-    createdAt: '2024-02-20',
-  },
-  {
-    userId: 3,
-    fullName: 'Phạm Minh Tuấn',
-    email: 'tuan.pham@gmail.com',
-    phoneNumber: '0923456789',
-    avatarUrl: '',
-    status: 2, // Suspended
-    roles: [
-      { roleType: 1, roleName: 'Gia sư', isPrimary: true },
-    ],
-    createdAt: '2024-03-10',
-  },
-  {
-    userId: 4,
-    fullName: 'Lê Thị Mai',
-    email: 'mai.le@gmail.com',
-    phoneNumber: '0934567890',
-    avatarUrl: '',
-    status: 0, // Inactive
-    roles: [
-      { roleType: 0, roleName: 'Học viên', isPrimary: true },
-    ],
-    createdAt: '2024-04-05',
-  },
-  {
-    userId: 5,
-    fullName: 'Hoàng Văn Đức',
-    email: 'duc.hoang@edumatch.vn',
-    phoneNumber: '0945678901',
-    avatarUrl: '',
-    status: 1,
-    roles: [
-      { roleType: 2, roleName: 'System Admin', isPrimary: true },
-    ],
-    createdAt: '2023-12-01',
-  },
-  {
-    userId: 6,
-    fullName: 'Võ Thị Lan',
-    email: 'lan.vo@edumatch.vn',
-    phoneNumber: '0956789012',
-    avatarUrl: '',
-    status: 1,
-    roles: [
-      { roleType: 3, roleName: 'Business Admin', isPrimary: true },
-    ],
-    createdAt: '2024-01-01',
-  },
-  {
-    userId: 7,
-    fullName: 'Đỗ Minh Quang',
-    email: 'quang.do@gmail.com',
-    phoneNumber: '0967890123',
-    avatarUrl: '',
-    status: 3, // Deleted
-    roles: [
-      { roleType: 0, roleName: 'Học viên', isPrimary: true },
-    ],
-    createdAt: '2024-02-15',
-  },
-  {
-    userId: 8,
-    fullName: 'Bùi Thị Thảo',
-    email: 'thao.bui@gmail.com',
-    phoneNumber: '0978901234',
-    avatarUrl: '',
-    status: 1,
-    roles: [
-      { roleType: 1, roleName: 'Gia sư', isPrimary: true },
-    ],
-    createdAt: '2024-03-20',
-  },
-  {
-    userId: 9,
-    fullName: 'Phan Văn Long',
-    email: 'long.phan@gmail.com',
-    phoneNumber: '0989012345',
-    avatarUrl: '',
-    status: 2,
-    roles: [
-      { roleType: 0, roleName: 'Học viên', isPrimary: true },
-      { roleType: 1, roleName: 'Gia sư', isPrimary: false },
-    ],
-    createdAt: '2024-04-10',
-  },
-];
+import { AdminService } from '@/services/adminService';
+import { ManageUserDto } from '@/types/backend';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCustomToast } from '@/hooks/useCustomToast';
 
 export function ManageUsers() {
-  const [users, setUsers] = useState(initialUsers);
+  const { user } = useAuth();
+  const { showSuccess, showError } = useCustomToast();
+  const [users, setUsers] = useState<ManageUserDto[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<ManageUserDto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(8);
-  const [alertDialog, setAlertDialog] = useState<{
-    open: boolean;
-    title: string;
-    description: string;
-    action: () => void;
-  } | null>(null);
+  const [itemsPerPage] = useState(10);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActivating, setIsActivating] = useState<string | null>(null);
+  const [isDeactivating, setIsDeactivating] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Get status badge
-  const getStatusBadge = (status: number) => {
-    switch (status) {
-      case 0:
-        return <Badge variant="secondary" className="bg-gray-100 text-gray-800 border-gray-200">Chưa kích hoạt</Badge>;
-      case 1:
-        return <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">Hoạt động</Badge>;
-      case 2:
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">Tạm khóa</Badge>;
-      case 3:
-        return <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">Đã xóa</Badge>;
-      default:
-        return <Badge variant="secondary">Không xác định</Badge>;
+  // Load users from API
+  useEffect(() => {
+    const loadUsers = async () => {
+      setIsLoading(true);
+      try {
+        const response = await AdminService.getAllUsers();
+        if (response.success && response.data) {
+          // Filter out current system admin and ensure data has required fields
+          const filtered = response.data
+            .filter(u => u.email !== user?.email || u.roleId !== 4)
+            .map(u => ({
+              ...u,
+              // Ensure roleId exists - map from roleName if needed
+              roleId: u.roleId || (u.roleName === 'Learner' ? 1 : 
+                                  u.roleName === 'Tutor' ? 2 :
+                                  u.roleName === 'Business Admin' ? 3 :
+                                  u.roleName === 'System Admin' ? 4 : 1),
+              // Ensure isActive is boolean
+              isActive: u.isActive !== undefined ? u.isActive : true
+            }));
+          setUsers(filtered);
+        } else {
+          showError('Lỗi', response.message || 'Không thể tải danh sách người dùng');
+        }
+      } catch (error: any) {
+        console.error('Error loading users:', error);
+        showError('Lỗi', 'Không thể tải danh sách người dùng. Vui lòng thử lại.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (user) {
+      loadUsers();
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
-  // Get role badge color
-  const getRoleBadgeColor = (roleType: number) => {
-    switch (roleType) {
-      case 0:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 1:
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 2:
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 3:
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+  // Filter and sort users
+  useEffect(() => {
+    let filtered = [...users];
+
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(u => 
+        (u.userName?.toLowerCase().includes(term) || false) ||
+        u.email.toLowerCase().includes(term) ||
+        (u.phone?.toLowerCase().includes(term) || false)
+      );
     }
-  };
 
-  // Filter users
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch = 
-      user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesRole = filterRole === 'all' || 
-      user.roles.some(role => role.roleType === parseInt(filterRole));
-    
-    const matchesStatus = filterStatus === 'all' || 
-      user.status === parseInt(filterStatus);
+    // Role filter
+    if (filterRole !== 'all') {
+      const roleId = parseInt(filterRole);
+      if (!isNaN(roleId)) {
+        filtered = filtered.filter(u => {
+          // Compare both roleId and roleName for safety
+          return u.roleId === roleId || 
+                 (roleId === 1 && u.roleName === 'Learner') ||
+                 (roleId === 2 && u.roleName === 'Tutor') ||
+                 (roleId === 3 && (u.roleName === 'Business Admin' || u.roleName === 'BusinessAdmin')) ||
+                 (roleId === 4 && (u.roleName === 'System Admin' || u.roleName === 'SystemAdmin'));
+        });
+      }
+    }
 
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+    // Status filter
+    if (filterStatus !== 'all') {
+      if (filterStatus === 'active') {
+        // Only show users with isActive === true
+        filtered = filtered.filter(u => u.isActive === true);
+      } else if (filterStatus === 'inactive') {
+        // Show users with isActive === false, undefined, or null
+        filtered = filtered.filter(u => u.isActive !== true);
+      }
+    }
+
+    // Sort by create date (newest first by default)
+    filtered.sort((a, b) => {
+      const dateA = a.createAt || a.createdAt || '';
+      const dateB = b.createAt || b.createdAt || '';
+      
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+      
+      const timeA = new Date(dateA).getTime();
+      const timeB = new Date(dateB).getTime();
+      
+      return sortOrder === 'newest' ? timeB - timeA : timeA - timeB;
+    });
+
+    setFilteredUsers(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [users, searchTerm, filterRole, filterStatus, sortOrder]);
 
   // Pagination
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
@@ -246,80 +165,108 @@ export function ManageUsers() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
-  // Reset to page 1 when filters change
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterRole, filterStatus]);
-
-  // Show success message
-  const showSuccess = (message: string) => {
-    setSuccessMessage(message);
-    setTimeout(() => setSuccessMessage(''), 3000);
+  // Get status badge
+  const getStatusBadge = (isActive: boolean | undefined) => {
+    if (isActive === true) {
+      return <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">Hoạt động</Badge>;
+    } else {
+      return <Badge variant="secondary" className="bg-gray-100 text-gray-800 border-gray-200">Chưa kích hoạt</Badge>;
+    }
   };
 
-  // Actions
-  const handleActivateUser = (userId: number) => {
-    setUsers(users.map(u => 
-      u.userId === userId ? { ...u, status: 1 } : u
-    ));
-    showSuccess('Đã kích hoạt tài khoản thành công');
+  // Get role badge color
+  const getRoleBadgeColor = (roleId: number) => {
+    switch (roleId) {
+      case 1: // Learner
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 2: // Tutor
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 3: // Business Admin
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 4: // System Admin
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
   };
 
-  const handleDeactivateUser = (userId: number) => {
-    setAlertDialog({
-      open: true,
-      title: 'Xác nhận vô hiệu hóa tài khoản',
-      description: 'Người dùng sẽ không thể đăng nhập sau khi bị vô hiệu hóa. Bạn có chắc chắn muốn tiếp tục?',
-      action: () => {
+  // Get role name
+  const getRoleName = (roleId: number) => {
+    switch (roleId) {
+      case 1: return 'Học viên';
+      case 2: return 'Gia sư';
+      case 3: return 'Business Admin';
+      case 4: return 'System Admin';
+      default: return 'Không xác định';
+    }
+  };
+
+  // Handle activate user
+  const handleActivateUser = async (email: string) => {
+    setIsActivating(email);
+    try {
+      const response = await AdminService.activateUser(email);
+      if (response.success) {
         setUsers(users.map(u => 
-          u.userId === userId ? { ...u, status: 0 } : u
+          u.email === email ? { ...u, isActive: true } : u
         ));
-        showSuccess('Đã vô hiệu hóa tài khoản');
-        setAlertDialog(null);
+        showSuccess('Thành công', 'Đã kích hoạt tài khoản thành công');
+        setSuccessMessage('Đã kích hoạt tài khoản thành công');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        showError('Lỗi', response.message || 'Không thể kích hoạt tài khoản');
       }
-    });
+    } catch (error: any) {
+      console.error('Error activating user:', error);
+      showError('Lỗi', 'Không thể kích hoạt tài khoản. Vui lòng thử lại.');
+    } finally {
+      setIsActivating(null);
+    }
   };
 
-  const handleSuspendUser = (userId: number) => {
-    setAlertDialog({
-      open: true,
-      title: 'Xác nhận tạm khóa tài khoản',
-      description: 'Tài khoản sẽ bị tạm khóa và người dùng không thể truy cập hệ thống. Bạn có muốn tiếp tục?',
-      action: () => {
+  // Handle deactivate user
+  const handleDeactivateUser = async (email: string) => {
+    setIsDeactivating(email);
+    try {
+      const response = await AdminService.deactivateUser(email);
+      if (response.success) {
         setUsers(users.map(u => 
-          u.userId === userId ? { ...u, status: 2 } : u
+          u.email === email ? { ...u, isActive: false } : u
         ));
-        showSuccess('Đã tạm khóa tài khoản');
-        setAlertDialog(null);
+        showSuccess('Thành công', 'Đã vô hiệu hóa tài khoản thành công');
+        setSuccessMessage('Đã vô hiệu hóa tài khoản thành công');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        showError('Lỗi', response.message || 'Không thể vô hiệu hóa tài khoản');
       }
-    });
+    } catch (error: any) {
+      console.error('Error deactivating user:', error);
+      showError('Lỗi', 'Không thể vô hiệu hóa tài khoản. Vui lòng thử lại.');
+    } finally {
+      setIsDeactivating(null);
+    }
   };
 
-  const handleRestoreUser = (userId: number) => {
-    setUsers(users.map(u => 
-      u.userId === userId ? { ...u, status: 1 } : u
-    ));
-    showSuccess('Đã khôi phục tài khoản');
-  };
-
-  const handleDeleteUser = (userId: number) => {
-    setAlertDialog({
-      open: true,
-      title: 'Xác nhận xóa tài khoản',
-      description: 'Tài khoản sẽ bị đánh dấu là đã xóa. Bạn có chắc chắn muốn xóa tài khoản này?',
-      action: () => {
-        setUsers(users.map(u => 
-          u.userId === userId ? { ...u, status: 3 } : u
-        ));
-        showSuccess('Đã xóa tài khoản');
-        setAlertDialog(null);
+  // Handle create admin success
+  const handleCreateAdmin = () => {
+    // Reload users after creating admin
+    const loadUsers = async () => {
+      try {
+        const response = await AdminService.getAllUsers();
+        if (response.success && response.data) {
+          const filtered = response.data.filter(u => 
+            u.email !== user?.email || u.roleId !== 4
+          );
+          setUsers(filtered);
+          showSuccess('Thành công', 'Đã tạo tài khoản Business Admin thành công');
+          setSuccessMessage('Đã tạo tài khoản Business Admin thành công');
+          setTimeout(() => setSuccessMessage(''), 3000);
+        }
+      } catch (error) {
+        console.error('Error reloading users:', error);
       }
-    });
-  };
-
-  const handleCreateAdmin = (adminData: any) => {
-    setUsers([adminData, ...users]);
-    showSuccess('Đã tạo tài khoản Business Admin thành công');
+    };
+    loadUsers();
   };
 
   return (
@@ -353,7 +300,7 @@ export function ManageUsers() {
       )}
 
       {/* Filters */}
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="hover:shadow-md transition-shadow bg-white">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             {/* Search */}
@@ -361,7 +308,7 @@ export function ManageUsers() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Tìm kiếm theo tên hoặc email..."
+                  placeholder="Tìm kiếm theo tên, email hoặc số điện thoại..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -377,10 +324,10 @@ export function ManageUsers() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả vai trò</SelectItem>
-                <SelectItem value="0">Học viên</SelectItem>
-                <SelectItem value="1">Gia sư</SelectItem>
-                <SelectItem value="2">System Admin</SelectItem>
+                <SelectItem value="1">Học viên</SelectItem>
+                <SelectItem value="2">Gia sư</SelectItem>
                 <SelectItem value="3">Business Admin</SelectItem>
+                <SelectItem value="4">System Admin</SelectItem>
               </SelectContent>
             </Select>
 
@@ -392,10 +339,20 @@ export function ManageUsers() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                <SelectItem value="0">Chưa kích hoạt</SelectItem>
-                <SelectItem value="1">Hoạt động</SelectItem>
-                <SelectItem value="2">Tạm khóa</SelectItem>
-                <SelectItem value="3">Đã xóa</SelectItem>
+                <SelectItem value="active">Hoạt động</SelectItem>
+                <SelectItem value="inactive">Chưa kích hoạt</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Sort by Date */}
+            <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'newest' | 'oldest')}>
+              <SelectTrigger className="w-full md:w-[200px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Sắp xếp" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Mới nhất trước</SelectItem>
+                <SelectItem value="oldest">Cũ nhất trước</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -403,7 +360,7 @@ export function ManageUsers() {
       </Card>
 
       {/* Users Table */}
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="hover:shadow-md transition-shadow bg-white">
         <CardHeader className="border-b border-gray-200 bg-gray-50">
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-[#257180]" />
@@ -414,23 +371,31 @@ export function ManageUsers() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-[#257180]" />
+              <span className="ml-2 text-gray-600">Đang tải danh sách người dùng...</span>
+            </div>
+          ) : (
+            <>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50 border-b border-gray-200">
-                  <TableHead className="w-[80px] text-left font-semibold text-gray-900">ID</TableHead>
-                  <TableHead className="w-[200px] text-left font-semibold text-gray-900">Tên người dùng</TableHead>
-                  <TableHead className="text-left font-semibold text-gray-900">Email</TableHead>
-                  <TableHead className="text-left font-semibold text-gray-900">Vai trò</TableHead>
-                  <TableHead className="text-left font-semibold text-gray-900">Trạng thái</TableHead>
-                  <TableHead className="text-left font-semibold text-gray-900">Ngày tạo</TableHead>
-                  <TableHead className="text-center font-semibold text-gray-900 w-[120px]">Hành động</TableHead>
+                      <TableHead className="w-[60px] text-left font-semibold text-gray-900">STT</TableHead>
+                      <TableHead className="w-[180px] text-left font-semibold text-gray-900">Tên người dùng</TableHead>
+                      <TableHead className="w-[220px] text-left font-semibold text-gray-900">Email</TableHead>
+                      <TableHead className="w-[130px] text-left font-semibold text-gray-900">Số điện thoại</TableHead>
+                      <TableHead className="w-[140px] text-left font-semibold text-gray-900">Vai trò</TableHead>
+                      <TableHead className="w-[120px] text-left font-semibold text-gray-900">Trạng thái</TableHead>
+                      <TableHead className="w-[120px] text-left font-semibold text-gray-900">Ngày tạo</TableHead>
+                      <TableHead className="text-center font-semibold text-gray-900 w-[180px]">Hành động</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedUsers.length === 0 ? (
                   <TableRow className="border-b border-gray-200">
-                    <TableCell colSpan={7} className="text-center py-12 text-gray-500">
+                        <TableCell colSpan={8} className="text-center py-12 text-gray-500">
                       <div className="flex flex-col items-center gap-2">
                         <Users className="h-12 w-12 text-gray-300" />
                         <p>Không tìm thấy người dùng nào</p>
@@ -439,103 +404,104 @@ export function ManageUsers() {
                   </TableRow>
                 ) : (
                   paginatedUsers.map((user, index) => (
-                    <TableRow key={user.userId} className="hover:bg-gray-50 border-b border-gray-200">
+                        <TableRow key={user.email} className="hover:bg-gray-50 border-b border-gray-200">
                       <TableCell className="text-left">
                         <span className="font-mono text-sm text-gray-600">{startIndex + index + 1}</span>
                       </TableCell>
                       <TableCell className="text-left">
-                        <p className="font-medium text-gray-900">{user.fullName}</p>
+                            <div className="flex items-center gap-3 min-w-0 max-w-[180px]">
+                              {user.avatarUrl ? (
+                                <img 
+                                  src={user.avatarUrl} 
+                                  alt={user.userName || user.email}
+                                  className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-[#F2E5BF] flex items-center justify-center text-sm font-semibold text-[#257180] flex-shrink-0">
+                                  {(user.userName || user.email || 'U').charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <p className="font-medium text-gray-900 truncate min-w-0" title={user.userName || user.email}>
+                                {user.userName || user.email}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left text-sm text-gray-700 max-w-[220px]">
+                            <span className="truncate block min-w-0" title={user.email}>
+                              {user.email}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-left text-sm text-gray-700 max-w-[130px]">
+                            <span className="truncate block min-w-0" title={user.phone || '-'}>
+                              {user.phone || '-'}
+                            </span>
                       </TableCell>
-                      <TableCell className="text-left text-sm text-gray-700">{user.email}</TableCell>
                       <TableCell className="text-left">
-                        <div className="flex flex-wrap gap-1">
-                          {user.roles.map((role, idx) => (
                             <Badge 
-                              key={idx} 
                               variant="secondary" 
-                              className={`text-xs ${getRoleBadgeColor(role.roleType)}`}
+                              className={`text-xs ${getRoleBadgeColor(user.roleId)}`}
+                              title={user.roleName || getRoleName(user.roleId)}
                             >
-                              {role.roleName}
+                              {user.roleName || getRoleName(user.roleId)}
                             </Badge>
-                          ))}
-                        </div>
                       </TableCell>
                       <TableCell className="text-left">
-                        {getStatusBadge(user.status)}
+                            {getStatusBadge(user.isActive)}
                       </TableCell>
-                      <TableCell className="text-left text-sm text-gray-700">
-                        {new Date(user.createdAt).toLocaleDateString('vi-VN')}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center">
-                          <DropdownMenu modal={false}>
-                            <DropdownMenuTrigger asChild>
-                              <button className="h-8 w-8 p-0 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors">
-                                <MoreHorizontal className="h-4 w-4 text-gray-600" />
-                              </button>
-                            </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48 bg-white border border-[#FD8B51] z-[9999]">
-                            <DropdownMenuLabel>Hành động</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="cursor-pointer">
-                              <Eye className="mr-2 h-4 w-4" />
-                              Xem chi tiết
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            
-                            {user.status === 0 && (
-                              <DropdownMenuItem 
-                                onClick={() => handleActivateUser(user.userId)}
-                                className="cursor-pointer text-green-600 focus:text-green-600 focus:bg-green-50"
-                              >
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Kích hoạt
-                              </DropdownMenuItem>
+                          <TableCell className="text-left text-sm text-gray-700">
+                            {(user.createAt || user.createdAt) ? (
+                              new Date(user.createAt || user.createdAt || '').toLocaleDateString('vi-VN', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit'
+                              })
+                            ) : (
+                              <span className="text-gray-400">-</span>
                             )}
-                            
-                            {user.status === 1 && (
-                              <>
-                                <DropdownMenuItem 
-                                  onClick={() => handleDeactivateUser(user.userId)}
-                                  className="cursor-pointer text-orange-600 focus:text-orange-600 focus:bg-orange-50"
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {user.isActive ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeactivateUser(user.email)}
+                                  disabled={isDeactivating === user.email || isActivating === user.email}
+                                  className="text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700"
                                 >
-                                  <XCircle className="mr-2 h-4 w-4" />
+                                  {isDeactivating === user.email ? (
+                                    <>
+                                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                      Đang xử lý...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <XCircle className="w-3 h-3 mr-1" />
                                   Vô hiệu hóa
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => handleSuspendUser(user.userId)}
-                                  className="cursor-pointer text-yellow-600 focus:text-yellow-600 focus:bg-yellow-50"
-                                >
-                                  <Ban className="mr-2 h-4 w-4" />
-                                  Tạm khóa
-                                </DropdownMenuItem>
                               </>
                             )}
-                            
-                            {(user.status === 2 || user.status === 3) && (
-                              <DropdownMenuItem 
-                                onClick={() => handleRestoreUser(user.userId)}
-                                className="cursor-pointer text-blue-600 focus:text-blue-600 focus:bg-blue-50"
-                              >
-                                <RotateCcw className="mr-2 h-4 w-4" />
-                                Khôi phục
-                              </DropdownMenuItem>
-                            )}
-
-                            {user.status !== 3 && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  onClick={() => handleDeleteUser(user.userId)}
-                                  className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleActivateUser(user.email)}
+                                  disabled={isActivating === user.email || isDeactivating === user.email}
+                                  className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
                                 >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Xóa tài khoản
-                                </DropdownMenuItem>
+                                  {isActivating === user.email ? (
+                                    <>
+                                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                      Đang xử lý...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="w-3 h-3 mr-1" />
+                                      Kích hoạt
                               </>
                             )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                                </Button>
+                              )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -595,6 +561,8 @@ export function ManageUsers() {
                 </PaginationContent>
               </Pagination>
             </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -605,32 +573,6 @@ export function ManageUsers() {
         onOpenChange={setShowCreateDialog}
         onCreateSuccess={handleCreateAdmin}
       />
-
-      {/* Confirmation Dialog */}
-      {alertDialog && (
-        <AlertDialog open={alertDialog.open} onOpenChange={() => setAlertDialog(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{alertDialog.title}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {alertDialog.description}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setAlertDialog(null)}>
-                Hủy
-              </AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={alertDialog.action}
-                className="bg-[#257180] hover:bg-[#257180]/90 text-white"
-              >
-                Xác nhận
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
     </div>
   );
 }
-
