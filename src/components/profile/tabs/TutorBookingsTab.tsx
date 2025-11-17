@@ -199,6 +199,26 @@ export function TutorBookingsTab() {
     ).length;
   };
 
+  const getActiveSessions = (booking: BookingDto) => {
+    if (!booking.schedules) return 0;
+    return booking.schedules.filter(
+      (s) => {
+        const status = EnumHelpers.parseScheduleStatus(s.status);
+        return status === ScheduleStatus.Upcoming || status === ScheduleStatus.InProgress;
+      }
+    ).length;
+  };
+
+  const getFinishedSessions = (booking: BookingDto) => {
+    if (!booking.schedules) return 0;
+    return booking.schedules.filter(
+      (s) => {
+        const status = EnumHelpers.parseScheduleStatus(s.status);
+        return status !== ScheduleStatus.Upcoming && status !== ScheduleStatus.InProgress;
+      }
+    ).length;
+  };
+
   const handleViewDetail = async (bookingId: number) => {
     setSelectedBookingId(bookingId);
     const booking = bookings.find((b) => b.id === bookingId);
@@ -221,13 +241,15 @@ export function TutorBookingsTab() {
       active: bookings.filter(
         (b) =>
           EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Confirmed &&
-          getCompletedSessions(b) < b.totalSessions
+          getActiveSessions(b) > 0
       ).length,
       pending: bookings.filter(
         (b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Pending
       ).length,
       completed: bookings.filter(
-        (b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Completed
+        (b) =>
+          EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Confirmed &&
+          getFinishedSessions(b) === b.totalSessions
       ).length,
       cancelled: bookings.filter(
         (b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Cancelled
@@ -242,10 +264,14 @@ export function TutorBookingsTab() {
     if (filter === "active")
       return (
         parsedStatus === BookingStatus.Confirmed &&
-        getCompletedSessions(booking) < booking.totalSessions
+        getActiveSessions(booking) > 0
       );
     if (filter === "pending") return parsedStatus === BookingStatus.Pending;
-    if (filter === "completed") return parsedStatus === BookingStatus.Completed;
+    if (filter === "completed")
+      return (
+        parsedStatus === BookingStatus.Confirmed &&
+        getFinishedSessions(booking) === booking.totalSessions
+      );
     if (filter === "cancelled") return parsedStatus === BookingStatus.Cancelled;
     return true;
   });
@@ -509,8 +535,8 @@ export function TutorBookingsTab() {
               const subject = tutorSubject?.subject;
               const level = tutorSubject?.level;
               const nextSession = getNextSession(booking);
-              const completedSessions = getCompletedSessions(booking);
-              const progress = (completedSessions / booking.totalSessions) * 100;
+              const finishedSessions = getFinishedSessions(booking);
+              const progress = (finishedSessions / booking.totalSessions) * 100;
 
               return (
                 <Card
@@ -585,7 +611,7 @@ export function TutorBookingsTab() {
                           <div className="flex justify-between text-sm mb-2">
                             <span className="text-gray-600">Tiến độ</span>
                             <span className="font-medium">
-                              {completedSessions}/{booking.totalSessions} buổi
+                              {finishedSessions}/{booking.totalSessions} buổi
                             </span>
                           </div>
                           <Progress value={progress} className="h-2" />
