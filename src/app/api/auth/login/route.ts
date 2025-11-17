@@ -2,68 +2,44 @@ import { NextRequest, NextResponse } from 'next/server';
 import { APP_CONFIG } from '@/constants/config';
 
 /**
- * Next.js API Route Proxy for Refresh Token
+ * Next.js API Route Proxy for Login
  * 
  * This route acts as a proxy between frontend and backend to handle
- * refresh token requests. Since backend sets cookie with SameSite=Strict,
- * we need to proxy through Next.js (same domain) to forward the cookie.
+ * login requests. This ensures that cookies (especially refresh_token)
+ * are set from the same domain (localhost:3000) instead of the backend domain.
  * 
  * Flow:
- * 1. Frontend calls /api/auth/refresh-token (same domain)
- * 2. Next.js receives request with cookie from browser
- * 3. Next.js forwards request + cookie to backend
- * 4. Backend processes and returns new access token
- * 5. Next.js forwards response back to frontend
+ * 1. Frontend calls /api/auth/login (same domain)
+ * 2. Next.js receives request and forwards to backend
+ * 3. Backend processes login and sets refresh_token cookie
+ * 4. Next.js receives response with Set-Cookie header
+ * 5. Next.js forwards Set-Cookie header to browser (same domain)
+ * 6. Browser stores cookie with localhost:3000 domain
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get refresh token cookie from request
-    const refreshTokenCookie = request.cookies.get('refresh_token');
+    // Get request body
+    const body = await request.json();
     
     // Debug logging
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 Refresh token request received');
-      console.log('Cookies:', request.cookies.getAll().map(c => c.name));
-      console.log('Refresh token cookie exists:', !!refreshTokenCookie);
-    }
-    
-    if (!refreshTokenCookie) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            status: 401,
-            message: 'No refresh token found',
-            code: 'NO_REFRESH_TOKEN'
-          }
-        },
-        { status: 401 }
-      );
+      console.log('🔍 Login request received');
+      console.log('Email:', body.email);
     }
 
-    // Forward request to backend with cookie
-    const backendUrl = `${APP_CONFIG.API_BASE_URL}/api/user/refresh-token`;
-    
-    // Build cookie header to forward to backend
-    // Get all cookies from request and forward them
-    const allCookies = request.cookies.getAll();
-    const cookieHeader = allCookies
-      .map(cookie => `${cookie.name}=${cookie.value}`)
-      .join('; ');
+    // Forward request to backend
+    const backendUrl = `${APP_CONFIG.API_BASE_URL}/api/user/login`;
     
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔄 Forwarding refresh token request to backend:', backendUrl);
-      console.log('Cookie header length:', cookieHeader.length);
+      console.log('🔄 Forwarding login request to backend:', backendUrl);
     }
     
     const response = await fetch(backendUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': cookieHeader, // Forward all cookies to backend
       },
-      // Note: Using manual Cookie header instead of credentials: 'include'
-      // because we're proxying from Next.js to backend
+      body: JSON.stringify(body),
     });
     
     if (process.env.NODE_ENV === 'development') {
@@ -78,33 +54,40 @@ export async function POST(request: NextRequest) {
         data = await response.json();
       } else {
         const text = await response.text();
-        data = { message: text || 'Token refresh failed' };
+        data = { message: text || 'Login failed' };
       }
     } catch (error) {
       console.error('Failed to parse response:', error);
       data = { message: 'Failed to parse response' };
     }
     
-    // Get Set-Cookie header from backend response (if any)
+    // Get Set-Cookie header from backend response (refresh_token cookie)
     const setCookieHeader = response.headers.get('Set-Cookie');
     
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Set-Cookie header exists:', !!setCookieHeader);
+      if (setCookieHeader) {
+        console.log('Set-Cookie header:', setCookieHeader.substring(0, 100) + '...');
+      }
+    }
+    
     // Convert backend response to frontend ApiResponse format
-    // Backend returns: { accessToken: string, expiresAt: string }
+    // Backend returns: { accessToken: string, accessTokenExpiresAt: string, tokenType: string, message: string }
     // Frontend expects: { success: boolean, data: LoginResponse, error?: ApiError }
     const apiResponse = {
       success: response.ok,
       data: response.ok ? {
         accessToken: data.accessToken || data.accessToken,
-        accessTokenExpiresAt: data.expiresAt || data.accessTokenExpiresAt,
-        tokenType: 'Bearer',
-        message: 'Token refreshed successfully'
+        accessTokenExpiresAt: data.accessTokenExpiresAt || data.accessTokenExpiresAt,
+        tokenType: data.tokenType || 'Bearer',
+        message: data.message || 'Login successful!'
       } : undefined,
       error: !response.ok ? {
         status: response.status,
-        message: data.message || 'Token refresh failed',
-        code: 'REFRESH_TOKEN_FAILED'
+        message: data.message || 'Login failed',
+        code: 'LOGIN_FAILED'
       } : undefined,
-      message: response.ok ? 'Token refreshed successfully' : undefined
+      message: response.ok ? data.message : undefined
     };
     
     // Create Next.js response
@@ -113,7 +96,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Forward Set-Cookie header from backend to browser
-    // Remove Domain attribute to ensure cookie is set with localhost domain
+    // This ensures cookie is set with localhost:3000 domain instead of api.edumatch.cloud
     if (setCookieHeader) {
       // Parse the cookie to remove Domain attribute
       // Backend sets: refresh_token=xxx; HttpOnly; Secure; SameSite=None; Domain=api.edumatch.cloud; Expires=...
@@ -121,6 +104,7 @@ export async function POST(request: NextRequest) {
       const cookieParts = setCookieHeader.split(';');
       
       // Filter out Domain attribute and rebuild cookie string
+      // Browser will automatically use the current domain (localhost:3000) when Domain is not specified
       const modifiedCookieParts = cookieParts
         .map(part => part.trim())
         .filter(part => {
@@ -132,7 +116,8 @@ export async function POST(request: NextRequest) {
       const finalCookie = modifiedCookieParts.join('; ');
       
       if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Setting refresh token cookie without Domain attribute (will use localhost)');
+        console.log('✅ Setting cookie without Domain attribute (will use localhost)');
+        console.log('Cookie (first 100 chars):', finalCookie.substring(0, 100) + '...');
       }
       
       nextResponse.headers.set('Set-Cookie', finalCookie);
@@ -140,7 +125,7 @@ export async function POST(request: NextRequest) {
 
     return nextResponse;
   } catch (error: any) {
-    console.error('Refresh token proxy error:', error);
+    console.error('Login proxy error:', error);
     return NextResponse.json(
       {
         success: false,

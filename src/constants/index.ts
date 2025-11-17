@@ -154,7 +154,7 @@ export const SUBJECT_LEVELS = {
 export const API_ENDPOINTS = {
   // ==================== AUTH ====================
   AUTH: {
-    LOGIN: '/api/user/login',
+    LOGIN: '/api/auth/login', // Use Next.js API route proxy
     REGISTER: '/api/user/register',
     LOGOUT: '/api/user/logout',
     REFRESH: '/api/auth/refresh-token', // Use Next.js API route proxy
