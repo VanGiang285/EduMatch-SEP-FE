@@ -96,6 +96,13 @@ export function ConfirmDialog({
             variant={getConfirmButtonVariant()}
             onClick={handleConfirm}
             disabled={loading}
+            className={
+              type === 'error'
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : type === 'success'
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : undefined
+            }
           >
             {loading ? (
               <>

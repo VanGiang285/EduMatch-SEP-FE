@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/basic/button';
 import { User, Calendar, BookOpen, Wallet, MessageCircle, Settings, GraduationCap, FileText, Bell } from 'lucide-react';
 import { ProfileTab } from './tabs/ProfileTab';
 import { ScheduleTab } from './tabs/ScheduleTab';
+import { TutorScheduleTab } from './tabs/TutorScheduleTab';
 import { ClassesTab } from './tabs/ClassesTab';
+import { TutorBookingsTab } from './tabs/TutorBookingsTab';
 import { WalletTab } from './tabs/WalletTab';
 import { MessagesTab } from './tabs/MessagesTab';
 import { SettingsTab } from './tabs/SettingsTab';
@@ -47,13 +49,14 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
   const menuItems = [
     { id: 'profile', label: 'Thông tin người dùng', icon: User },
     ...(isTutor ? [{ id: 'tutorProfile', label: 'Hồ sơ gia sư', icon: GraduationCap }] : []),
-    { id: 'schedule', label: 'Lịch học', icon: Calendar },
-    { id: 'classes', label: 'Lớp học', icon: BookOpen },
+    { id: 'schedule', label: isTutor ? 'Lịch dạy' : 'Lịch học', icon: Calendar },
+    { id: 'classes', label: isTutor ? 'Lịch đặt' : 'Lớp học', icon: BookOpen },
     { id: 'classRequests', label: 'Yêu cầu mở lớp', icon: FileText },
     { id: 'wallet', label: 'Ví', icon: Wallet },
     { id: 'notifications', label: 'Thông báo', icon: Bell, badge: unreadNotifications },
     { id: 'messages', label: 'Tin nhắn', icon: MessageCircle },
-    { id: 'settings', label: 'Cài đặt', icon: Settings },
+    { id: 'settings', label: 'Cài đặt', icon: Settings }
+
   ];
 
   const renderTabContent = () => {
@@ -63,9 +66,9 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
       case 'tutorProfile':
         return <TutorProfileTab />;
       case 'schedule':
-        return <ScheduleTab />;
+        return isTutor ? <TutorScheduleTab /> : <ScheduleTab />;
       case 'classes':
-        return <ClassesTab />;
+        return isTutor ? <TutorBookingsTab /> : <ClassesTab />;
       case 'classRequests':
         return <ClassRequestsTab />;
       case 'wallet':
@@ -99,11 +102,10 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
                     <Button
                       key={item.id}
                       variant="ghost"
-                      className={`w-full justify-start mb-1 ${
-                        isActive
-                          ? 'bg-[#257180]/10 text-[#257180] hover:bg-[#257180]/20 hover:text-[#257180]'
-                          : 'hover:bg-gray-100'
-                      }`}
+                      className={`w-full justify-start mb-1 ${isActive
+                        ? 'bg-[#257180]/10 text-[#257180] hover:bg-[#257180]/20 hover:text-[#257180]'
+                        : 'hover:bg-gray-100'
+                        }`}
                       onClick={() => setActiveTab(item.id)}
                     >
                       <Icon className={`h-4 w-4 mr-3 ${isActive ? 'text-[#257180]' : 'text-gray-500'}`} />

@@ -11,6 +11,7 @@ export * from './walletService';
 export * from './chatService';
 export * from './favoriteTutorService';
 export * from './bookingService';
+export * from './scheduleService';
 export * from './reviewService';
 export * from './masterDataService';
 export * from './mediaService';

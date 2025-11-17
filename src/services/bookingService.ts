@@ -1,189 +1,175 @@
 import { apiClient, replaceUrlParams } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
-import { 
-  GetBookingsRequest,
-  BookingsResponse,
-  CreateBookingRequest,
-  BookingResponse,
-  UpdateBookingRequest,
-  ApiResponse,
-  PaginatedApiResponse
-} from '@/types/api';
-import { Booking, BookingWithDetails } from '@/types';
+import { ApiResponse } from '@/types/api';
+import { BookingDto, ScheduleDto } from '@/types/backend';
+import { BookingStatus, PaymentStatus } from '@/types/enums';
+
+export interface PagedResult<T> {
+  items: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+}
+
+export interface BookingWithSchedulesCreateRequest {
+  booking: {
+    learnerEmail: string;
+    tutorSubjectId: number;
+    totalSessions?: number;
+  };
+  schedules: Array<{
+    availabilitiId: number;
+    bookingId?: number; // Will be set by backend
+    attendanceNote?: string;
+    isOnline?: boolean;
+  }>;
+}
+
+export interface BookingUpdateRequest {
+  id: number;
+  learnerEmail?: string;
+  tutorSubjectId?: number;
+  totalSessions?: number;
+}
+
 export class BookingService {
-  static async getBookings(params?: GetBookingsRequest): Promise<PaginatedApiResponse<Booking>> {
-    return apiClient.get<BookingsResponse>(API_ENDPOINTS.BOOKINGS.LIST, params)
-      .then(res => ({
-        ...res,
-        data: res.data?.bookings?.map(booking => ({
-          ...booking,
-          startTime: new Date(booking.startTime),
-          endTime: new Date(booking.endTime),
-          createdAt: new Date(booking.createdAt),
-          updatedAt: new Date(booking.updatedAt)
-        })),
-        pagination: res.data?.pagination
-      }));
+  /**
+   * Lấy Booking theo Id
+   */
+  static async getById(id: number): Promise<ApiResponse<BookingDto>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.GET_BY_ID, { id: id.toString() });
+    return apiClient.get<BookingDto>(endpoint);
   }
-  static async getBookingById(id: string): Promise<ApiResponse<BookingWithDetails>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.DETAIL, { id });
-    return apiClient.get<BookingResponse>(endpoint)
-      .then(res => ({
-        ...res,
-        data: res.data?.booking ? {
-          ...res.data.booking,
-          startTime: new Date(res.data.booking.startTime),
-          endTime: new Date(res.data.booking.endTime),
-          createdAt: new Date(res.data.booking.createdAt),
-          updatedAt: new Date(res.data.booking.updatedAt),
-          student: {} as any,
-          tutor: {} as any,
-          reviews: []
-        } : undefined
-      }));
+
+  /**
+   * Lấy danh sách Booking theo LearnerEmail có phân trang
+   */
+  static async getAllByLearnerEmailPaging(
+    email: string,
+    params?: {
+      status?: BookingStatus;
+      tutorSubjectId?: number;
+      page?: number;
+      pageSize?: number;
+    }
+  ): Promise<ApiResponse<PagedResult<BookingDto>>> {
+    return apiClient.get<PagedResult<BookingDto>>(
+      API_ENDPOINTS.BOOKINGS.GET_ALL_BY_LEARNER_EMAIL_PAGING,
+      {
+        email,
+        status: params?.status,
+        tutorSubjectId: params?.tutorSubjectId,
+        page: params?.page || 1,
+        pageSize: params?.pageSize || 10,
+      }
+    );
   }
-  static async createBooking(bookingData: CreateBookingRequest): Promise<ApiResponse<Booking>> {
-    return apiClient.post<BookingResponse>(API_ENDPOINTS.BOOKINGS.CREATE, bookingData)
-      .then(res => ({
-        ...res,
-        data: res.data?.booking ? {
-          ...res.data.booking,
-          startTime: new Date(res.data.booking.startTime),
-          endTime: new Date(res.data.booking.endTime),
-          createdAt: new Date(res.data.booking.createdAt),
-          updatedAt: new Date(res.data.booking.updatedAt)
-        } : undefined
-      }));
+
+  /**
+   * Lấy danh sách Booking theo LearnerEmail (không phân trang)
+   */
+  static async getAllByLearnerEmailNoPaging(
+    email: string,
+    params?: {
+      status?: BookingStatus;
+      tutorSubjectId?: number;
+    }
+  ): Promise<ApiResponse<BookingDto[]>> {
+    return apiClient.get<BookingDto[]>(
+      API_ENDPOINTS.BOOKINGS.GET_ALL_BY_LEARNER_EMAIL_NO_PAGING,
+      {
+        email,
+        status: params?.status,
+        tutorSubjectId: params?.tutorSubjectId,
+      }
+    );
   }
-  static async updateBooking(id: string, bookingData: UpdateBookingRequest): Promise<ApiResponse<Booking>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.UPDATE, { id });
-    return apiClient.put<BookingResponse>(endpoint, bookingData)
-      .then(res => ({
-        ...res,
-        data: res.data?.booking ? {
-          ...res.data.booking,
-          startTime: new Date(res.data.booking.startTime),
-          endTime: new Date(res.data.booking.endTime),
-          createdAt: new Date(res.data.booking.createdAt),
-          updatedAt: new Date(res.data.booking.updatedAt)
-        } : undefined
-      }));
+
+  /**
+   * Lấy danh sách Booking theo TutorId có phân trang
+   */
+  static async getAllByTutorIdPaging(
+    tutorId: number,
+    params?: {
+      status?: BookingStatus;
+      tutorSubjectId?: number;
+      page?: number;
+      pageSize?: number;
+    }
+  ): Promise<ApiResponse<PagedResult<BookingDto>>> {
+    return apiClient.get<PagedResult<BookingDto>>(
+      API_ENDPOINTS.BOOKINGS.GET_ALL_BY_TUTOR_ID_PAGING,
+      {
+        tutorId,
+        status: params?.status,
+        tutorSubjectId: params?.tutorSubjectId,
+        page: params?.page || 1,
+        pageSize: params?.pageSize || 10,
+      }
+    );
   }
-  static async cancelBooking(id: string): Promise<ApiResponse<void>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.CANCEL, { id });
-    return apiClient.post<void>(endpoint);
+
+  /**
+   * Lấy danh sách Booking theo TutorId (không phân trang)
+   */
+  static async getAllByTutorIdNoPaging(
+    tutorId: number,
+    params?: {
+      status?: BookingStatus;
+      tutorSubjectId?: number;
+    }
+  ): Promise<ApiResponse<BookingDto[]>> {
+    return apiClient.get<BookingDto[]>(
+      API_ENDPOINTS.BOOKINGS.GET_ALL_BY_TUTOR_ID_NO_PAGING,
+      {
+        tutorId,
+        status: params?.status,
+        tutorSubjectId: params?.tutorSubjectId,
+      }
+    );
   }
-  static async confirmBooking(id: string): Promise<ApiResponse<void>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.CONFIRM, { id });
-    return apiClient.post<void>(endpoint);
+
+  /**
+   * Tạo Booking mới với Schedules
+   */
+  static async createBooking(
+    request: BookingWithSchedulesCreateRequest
+  ): Promise<ApiResponse<BookingDto>> {
+    return apiClient.post<BookingDto>(API_ENDPOINTS.BOOKINGS.CREATE, request);
   }
-  static async deleteBooking(id: string): Promise<ApiResponse<void>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.DELETE, { id });
-    return apiClient.delete<void>(endpoint);
+
+  /**
+   * Cập nhật Booking
+   */
+  static async updateBooking(
+    request: BookingUpdateRequest
+  ): Promise<ApiResponse<BookingDto>> {
+    return apiClient.put<BookingDto>(API_ENDPOINTS.BOOKINGS.UPDATE, request);
   }
-  static async getUserBookings(userId: string, params?: GetBookingsRequest): Promise<PaginatedApiResponse<Booking>> {
-    return apiClient.get<BookingsResponse>(API_ENDPOINTS.BOOKINGS.LIST, { 
-      ...params, 
-      studentId: userId 
-    }).then(res => ({
-      ...res,
-      data: res.data?.bookings?.map(booking => ({
-        ...booking,
-        startTime: new Date(booking.startTime),
-        endTime: new Date(booking.endTime),
-        createdAt: new Date(booking.createdAt),
-        updatedAt: new Date(booking.updatedAt)
-      })),
-      pagination: res.data?.pagination
-    }));
+
+  /**
+   * Cập nhật PaymentStatus của Booking
+   */
+  static async updatePaymentStatus(
+    id: number,
+    paymentStatus: PaymentStatus
+  ): Promise<ApiResponse<BookingDto>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.UPDATE_PAYMENT_STATUS, {
+      id: id.toString(),
+    });
+    return apiClient.put<BookingDto>(endpoint, paymentStatus);
   }
-  static async getTutorBookings(tutorId: string, params?: GetBookingsRequest): Promise<PaginatedApiResponse<Booking>> {
-    return apiClient.get<BookingsResponse>(API_ENDPOINTS.BOOKINGS.LIST, { 
-      ...params, 
-      tutorId 
-    }).then(res => ({
-      ...res,
-      data: res.data?.bookings?.map(booking => ({
-        ...booking,
-        startTime: new Date(booking.startTime),
-        endTime: new Date(booking.endTime),
-        createdAt: new Date(booking.createdAt),
-        updatedAt: new Date(booking.updatedAt)
-      })),
-      pagination: res.data?.pagination
-    }));
+
+  /**
+   * Cập nhật Status của Booking
+   */
+  static async updateStatus(
+    id: number,
+    status: BookingStatus
+  ): Promise<ApiResponse<BookingDto>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.UPDATE_STATUS, {
+      id: id.toString(),
+    });
+    return apiClient.put<BookingDto>(endpoint, status);
   }
-  static async getBookingsByStatus(status: string, params?: GetBookingsRequest): Promise<PaginatedApiResponse<Booking>> {
-    return apiClient.get<BookingsResponse>(API_ENDPOINTS.BOOKINGS.LIST, { 
-      ...params, 
-      status 
-    }).then(res => ({
-      ...res,
-      data: res.data?.bookings?.map(booking => ({
-        ...booking,
-        startTime: new Date(booking.startTime),
-        endTime: new Date(booking.endTime),
-        createdAt: new Date(booking.createdAt),
-        updatedAt: new Date(booking.updatedAt)
-      })),
-      pagination: res.data?.pagination
-    }));
-  }
-  static async getBookingsByDateRange(
-    startDate: string, 
-    endDate: string, 
-    params?: GetBookingsRequest
-  ): Promise<PaginatedApiResponse<Booking>> {
-    return apiClient.get<BookingsResponse>(API_ENDPOINTS.BOOKINGS.LIST, { 
-      ...params, 
-      startDate,
-      endDate
-    }).then(res => ({
-      ...res,
-      data: res.data?.bookings?.map(booking => ({
-        ...booking,
-        startTime: new Date(booking.startTime),
-        endTime: new Date(booking.endTime),
-        createdAt: new Date(booking.createdAt),
-        updatedAt: new Date(booking.updatedAt)
-      })),
-      pagination: res.data?.pagination
-    }));
-  }
-  static async getUpcomingBookings(params?: GetBookingsRequest): Promise<PaginatedApiResponse<Booking>> {
-    const now = new Date().toISOString();
-    return apiClient.get<BookingsResponse>(API_ENDPOINTS.BOOKINGS.LIST, { 
-      ...params, 
-      startDate: now,
-      status: 'confirmed'
-    }).then(res => ({
-      ...res,
-      data: res.data?.bookings?.map(booking => ({
-        ...booking,
-        startTime: new Date(booking.startTime),
-        endTime: new Date(booking.endTime),
-        createdAt: new Date(booking.createdAt),
-        updatedAt: new Date(booking.updatedAt)
-      })),
-      pagination: res.data?.pagination
-    }));
-  }
-  static async getPastBookings(params?: GetBookingsRequest): Promise<PaginatedApiResponse<Booking>> {
-    const now = new Date().toISOString();
-    return apiClient.get<BookingsResponse>(API_ENDPOINTS.BOOKINGS.LIST, { 
-      ...params, 
-      endDate: now,
-      status: 'completed'
-    }).then(res => ({
-      ...res,
-      data: res.data?.bookings?.map(booking => ({
-        ...booking,
-        startTime: new Date(booking.startTime),
-        endTime: new Date(booking.endTime),
-        createdAt: new Date(booking.createdAt),
-        updatedAt: new Date(booking.updatedAt)
-      })),
-      pagination: res.data?.pagination
-    }));
-  }
-}
+}

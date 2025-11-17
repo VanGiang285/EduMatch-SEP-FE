@@ -331,13 +331,29 @@ export const API_ENDPOINTS = {
   
   // ==================== BOOKINGS ====================
   BOOKINGS: {
-    LIST: '/api/bookings',
-    DETAIL: '/api/bookings/:id',
-    CREATE: '/api/bookings',
-    UPDATE: '/api/bookings/:id',
-    DELETE: '/api/bookings/:id',
-    CANCEL: '/api/bookings/:id/cancel',
-    CONFIRM: '/api/bookings/:id/confirm',
+    GET_BY_ID: '/api/Booking/get-by-id/:id',
+    GET_ALL_BY_LEARNER_EMAIL_PAGING: '/api/Booking/get-all-by-learner-email-paging',
+    GET_ALL_BY_LEARNER_EMAIL_NO_PAGING: '/api/Booking/get-all-by-learner-email-no-paging',
+    GET_ALL_BY_TUTOR_ID_PAGING: '/api/Booking/get-all-by-tutor-id-paging',
+    GET_ALL_BY_TUTOR_ID_NO_PAGING: '/api/Booking/get-all-by-tutor-id-no-paging',
+    CREATE: '/api/Booking/create-booking',
+    UPDATE: '/api/Booking/update-booking',
+    UPDATE_PAYMENT_STATUS: '/api/Booking/update-payment-status/:id',
+    UPDATE_STATUS: '/api/Booking/update-status/:id',
+  },
+  
+  // ==================== SCHEDULES ====================
+  SCHEDULES: {
+    GET_BY_ID: '/api/Schedule/get-by-id/:id',
+    GET_BY_AVAILABILITY_ID: '/api/Schedule/get-by-availability-id/:availabilitiId',
+    GET_ALL_PAGING: '/api/Schedule/get-all-paging',
+    GET_ALL_NO_PAGING: '/api/Schedule/get-all-no-paging',
+    CREATE: '/api/Schedule/create-schedule',
+    CREATE_LIST: '/api/Schedule/create-schedule-list',
+    UPDATE: '/api/Schedule/update-schedule',
+    CANCEL_ALL_BY_BOOKING: '/api/Schedule/cancel-all-by-booking/:bookingId',
+    GET_ALL_BY_LEARNER_EMAIL: '/api/Schedule/get-all-by-learner-email',
+    GET_ALL_BY_TUTOR_EMAIL: '/api/Schedule/get-all-by-tutor-email',
   },
   
   // ==================== REVIEWS ====================
