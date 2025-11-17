@@ -168,6 +168,8 @@ export const API_ENDPOINTS = {
   USER_PROFILES: {
     GET_BY_EMAIL: '/api/userprofiles/:email',
     UPDATE: '/api/userprofiles/update-user-profile',
+    GET_PROVINCES: '/api/UserProfiles/provinves',
+    GET_SUB_DISTRICTS: '/api/UserProfiles/subDistricts/:provinceId',
   },
   
   // ==================== TUTORS ====================

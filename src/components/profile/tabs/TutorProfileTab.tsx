@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { TutorService, CertificateService, SubjectService } from '@/services';
+import { LocationService, ProvinceDto, SubDistrictDto } from '@/services/locationService';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { TutorProfileDto, TutorEducationDto, TutorCertificateDto, TutorSubjectDto } from '@/types/backend';
 import { TutorProfileUpdateRequest, TutorEducationCreateRequest, TutorCertificateCreateRequest, TutorSubjectCreateRequest, TutorEducationUpdateRequest, TutorCertificateUpdateRequest, TutorSubjectUpdateRequest } from '@/types/requests';
@@ -84,6 +85,9 @@ export function TutorProfileTab() {
   const [isSaving, setIsSaving] = useState(false);
   const [tutorProfile, setTutorProfile] = useState<TutorProfileDto | null>(null);
   const [tutorId, setTutorId] = useState<number | null>(null);
+  const [provinces, setProvinces] = useState<ProvinceDto[]>([]);
+  const [subDistricts, setSubDistricts] = useState<SubDistrictDto[]>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   
   // Modal states
   const [showEducationModal, setShowEducationModal] = useState(false);
@@ -274,10 +278,55 @@ export function TutorProfileTab() {
     loadMasterData();
   }, []);
 
-  const cities = [
-    'Hà Nội', 'Hồ Chí Minh', 'Đà Nẵng', 'Hải Phòng', 'Cần Thơ', 'Biên Hòa',
-    'Hải Dương', 'Thủ Dầu Một', 'Nam Định', 'Quy Nhơn'
-  ];
+  // Load provinces on mount
+  useEffect(() => {
+    const loadProvinces = async () => {
+      setIsLoadingLocations(true);
+      try {
+        const response = await LocationService.getAllProvinces();
+        if (response.success && response.data) {
+          setProvinces(response.data);
+        }
+      } catch (error) {
+        console.error('Error loading provinces:', error);
+      } finally {
+        setIsLoadingLocations(false);
+      }
+    };
+    loadProvinces();
+  }, []);
+
+  // Load sub-districts when cityId changes
+  useEffect(() => {
+    const loadSubDistricts = async () => {
+      if (!profileData.basic.cityId || profileData.basic.cityId === 0) {
+        setSubDistricts([]);
+        return;
+      }
+      
+      const provinceId = profileData.basic.cityId;
+      if (provinceId <= 0) {
+        setSubDistricts([]);
+        return;
+      }
+
+      setIsLoadingLocations(true);
+      try {
+        const response = await LocationService.getSubDistrictsByProvinceId(provinceId);
+        if (response.success && response.data) {
+          setSubDistricts(response.data);
+        } else {
+          setSubDistricts([]);
+        }
+      } catch (error) {
+        console.error('Error loading sub-districts:', error);
+        setSubDistricts([]);
+      } finally {
+        setIsLoadingLocations(false);
+      }
+    };
+    loadSubDistricts();
+  }, [profileData.basic.cityId]);
 
   const institutionTypes = [
     { value: 0, label: 'Trung cấp' },
@@ -464,6 +513,8 @@ export function TutorProfileTab() {
         teachingExp: profileData.tutorProfile.teachingExp,
         videoIntroUrl: profileData.tutorProfile.videoIntroUrl,
         teachingModes: profileData.tutorProfile.teachingModes,
+        provinceId: profileData.basic.cityId && profileData.basic.cityId > 0 ? profileData.basic.cityId : undefined,
+        subDistrictId: profileData.basic.subDistrictId && profileData.basic.subDistrictId > 0 ? profileData.basic.subDistrictId : undefined,
       };
 
       const response = await TutorService.updateTutorProfile(updateRequest);
@@ -1048,30 +1099,59 @@ export function TutorProfileTab() {
                   <div className="space-y-2">
                     <Label htmlFor="city">Tỉnh/Thành phố</Label>
                     <Select 
-                      value={profileData.basic.cityName}
-                      onValueChange={(value) => updateProfileData('basic', { cityName: value })}
+                      value={profileData.basic.cityId?.toString() || ''}
+                      onValueChange={(value) => {
+                        const provinceId = parseInt(value);
+                        const provinceName = provinces.find(p => p.id === provinceId)?.name || '';
+                        updateProfileData('basic', { 
+                          cityId: provinceId,
+                          cityName: provinceName,
+                          subDistrictId: 0,
+                          subDistrictName: '',
+                        });
+                      }}
                       disabled={!isEditing}
                     >
                       <SelectTrigger className={!isEditing ? "disabled:text-black disabled:opacity-100" : ""}>
-                        <SelectValue />
+                        <SelectValue placeholder={isLoadingLocations ? "Đang tải..." : "Chọn tỉnh/thành phố"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {cities.map((city) => (
-                          <SelectItem key={city} value={city}>{city}</SelectItem>
+                        {provinces.map((province) => (
+                          <SelectItem key={province.id} value={province.id.toString()}>
+                            {province.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="subDistrict">Quận/Huyện</Label>
-                    <Input
-                      id="subDistrict"
-                      value={profileData.basic.subDistrictName}
-                      onChange={(e) => updateProfileData('basic', { subDistrictName: e.target.value })}
-                      disabled={!isEditing}
-                      placeholder="Ví dụ: Quận Ba Đình"
-                      className={!isEditing ? "disabled:text-black disabled:opacity-100" : ""}
-                    />
+                    <Select
+                      value={profileData.basic.subDistrictId?.toString() || ''}
+                      onValueChange={(value) => {
+                        const subDistrictId = parseInt(value);
+                        const subDistrictName = subDistricts.find(d => d.id === subDistrictId)?.name || '';
+                        updateProfileData('basic', { 
+                          subDistrictId: subDistrictId,
+                          subDistrictName: subDistrictName,
+                        });
+                      }}
+                      disabled={!isEditing || !profileData.basic.cityId || isLoadingLocations}
+                    >
+                      <SelectTrigger className={!isEditing ? "disabled:text-black disabled:opacity-100" : ""}>
+                        <SelectValue placeholder={
+                          isLoadingLocations ? "Đang tải..." :
+                          profileData.basic.cityId ? "Chọn quận/huyện" : "Chọn tỉnh trước"
+                        } />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subDistricts.map((district) => (
+                          <SelectItem key={district.id} value={district.id.toString()}>
+                            {district.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="space-y-2">

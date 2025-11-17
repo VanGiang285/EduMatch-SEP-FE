@@ -75,6 +75,8 @@ export interface TutorProfileUpdateRequest {
   videoIntroPublicId?: string;
   teachingModes?: TeachingMode;
   status?: TutorStatus;
+  provinceId?: number;
+  subDistrictId?: number;
 }
 
 export interface UpdateTutorStatusRequest {
