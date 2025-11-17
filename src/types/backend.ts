@@ -194,6 +194,34 @@ export interface TutorEducationDto {
   tutor?: TutorProfileDto;
 }
 
+export interface TutorApplicationItemDto {
+  applicationId: number;
+  tutorId: number;
+  tutorName: string;
+  avatarUrl?: string;
+  message: string;
+  appliedAt: string;
+}
+
+export interface TutorAppliedItemDto {
+  id: number;
+  classRequestId: number;
+  learnerName: string;
+  avatarUrl?: string;
+  title: string;
+  subjectName: string;
+  level: string;
+  mode: string;
+  expectedStartDate?: string;
+  expectedSessions: number;
+  targetUnitPriceMin?: number;
+  targetUnitPriceMax?: number;
+  message: string;
+  classRequestStatus: string;
+  tutorApplicationStatus: number;
+  appliedAt: string;
+}
+
 export interface CertificateTypeDto {
   id: number;
   code: string;

@@ -213,11 +213,11 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                           {isTutor ? 'Lịch đặt' : 'Lớp học'}
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => router.push('/profile?tab=classRequests')}
+                          onClick={() => router.push(isTutor ? '/profile?tab=tutorApplications' : '/profile?tab=classRequests')}
                           className="cursor-pointer"
                         >
                           <FileText className="h-4 w-4 mr-2" />
-                          Yêu cầu mở lớp
+                          {isTutor ? 'Ứng tuyển lớp dạy' : 'Yêu cầu mở lớp'}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=wallet')}
@@ -431,12 +431,12 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                     <button
                       onClick={() => {
                         setMobileMenuOpen(false);
-                        router.push('/profile?tab=classRequests');
+                        router.push(isTutor ? '/profile?tab=tutorApplications' : '/profile?tab=classRequests');
                       }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
                     >
                       <FileText className="w-4 h-4" />
-                      <span className="text-sm">Yêu cầu mở lớp</span>
+                      <span className="text-sm">{isTutor ? 'Ứng tuyển lớp dạy' : 'Yêu cầu mở lớp'}</span>
                     </button>
                     <button
                       onClick={() => {

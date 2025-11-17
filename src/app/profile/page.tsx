@@ -20,6 +20,7 @@ function ProfileContent() {
         'schedule': 'schedule',
         'classes': 'classes',
         'classRequests': 'classRequests',
+        'tutorApplications': 'tutorApplications',
         'wallet': 'wallet',
         'notifications': 'notifications',
         'messages': 'messages',

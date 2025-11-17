@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
@@ -18,6 +19,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/feedback/dialog';
 import {
   Select,
@@ -34,21 +36,23 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
-import { Search, Eye, Plus, MapPin, Calendar, ArrowUpDown, Users, Edit, Trash2, Loader2, Clock, BookOpen, GraduationCap, Target, UserCheck, FileText } from 'lucide-react';
+import { Search, Eye, Plus, MapPin, ArrowUpDown, Users, Edit, Trash2, Loader2, Clock, BookOpen, GraduationCap, FileText, Star } from 'lucide-react';
 import { 
   getClassRequestStatusText,
   getClassRequestStatusColor,
 } from '@/data/mockClassRequests';
 import { CreateClassRequestDialog } from '@/components/class-requests/CreateClassRequestDialog';
 import { ClassRequestService, ClassRequestItemDto, ClassRequestDetailDto } from '@/services/classRequestService';
-import { TutorApplicationService, TutorApplicationItemDto } from '@/services/tutorApplicationService';
+import { TutorApplicationService } from '@/services/tutorApplicationService';
+import { TutorApplicationItemDto, TutorProfileDto } from '@/types/backend';
 import { useCustomToast } from '@/hooks/useCustomToast';
-import { ClassRequestStatus, TeachingMode } from '@/types/enums';
+import { ClassRequestStatus, TeachingMode, EnumHelpers, DayOfWeekEnum } from '@/types/enums';
 import { FormatService } from '@/lib/format';
+import { TutorService } from '@/services/tutorService';
 
 const ITEMS_PER_PAGE = 8;
 
-type SortField = 'id' | 'subjectName' | 'createdAt';
+type SortField = 'createdAt';
 type SortOrder = 'asc' | 'desc';
 
 // Map status filter value to ClassRequestStatus enum
@@ -66,6 +70,7 @@ const getStatusFromFilter = (filter: string): ClassRequestStatus | null => {
 
 export function ClassRequestsTab() {
   const { showSuccess, showError } = useCustomToast();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all'); // Default: Tất cả trạng thái
   const [currentPage, setCurrentPage] = useState(1);
@@ -83,6 +88,8 @@ export function ClassRequestsTab() {
   const [loadingApplicants, setLoadingApplicants] = useState(false);
   const [requests, setRequests] = useState<ClassRequestItemDto[]>([]);
   const [applicants, setApplicants] = useState<TutorApplicationItemDto[]>([]);
+  const [tutorDetails, setTutorDetails] = useState<Record<number, TutorProfileDto>>({});
+  const [loadingTutorProfiles, setLoadingTutorProfiles] = useState(false);
 
   // Helper để parse status number
   const getStatusNumber = (status: string | number | null | undefined): number => {
@@ -267,6 +274,51 @@ export function ClassRequestsTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRequest?.id, showDetailDialog]);
 
+  useEffect(() => {
+    if (!showDetailDialog || applicants.length === 0) return;
+    const missingIds = applicants
+      .map((applicant) => applicant.tutorId)
+      .filter((id) => !tutorDetails[id]);
+    if (missingIds.length === 0) return;
+    let isMounted = true;
+    setLoadingTutorProfiles(true);
+    const fetchDetails = async () => {
+      try {
+        const results = await Promise.all(
+          missingIds.map(async (id) => {
+            const response = await TutorService.getTutorById(id);
+            if (response.success && response.data) {
+              return { id, profile: response.data };
+            }
+            return null;
+          })
+        );
+        if (!isMounted) return;
+        setTutorDetails((prev) => {
+          const next = { ...prev };
+          results.forEach((item) => {
+            if (item) {
+              next[item.id] = item.profile;
+            }
+          });
+          return next;
+        });
+      } catch (error) {
+        if (isMounted) {
+          showError('Lỗi', 'Không thể tải thông tin gia sư');
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingTutorProfiles(false);
+        }
+      }
+    };
+    fetchDetails();
+    return () => {
+      isMounted = false;
+    };
+  }, [applicants, showDetailDialog, tutorDetails, showError]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -284,34 +336,16 @@ export function ClassRequestsTab() {
       return matchesSearch;
     });
 
-    // Sort
     filtered.sort((a, b) => {
-      let aValue: any, bValue: any;
-      
-      switch (sortField) {
-        case 'id':
-          aValue = a.id;
-          bValue = b.id;
-          break;
-        case 'subjectName':
-          aValue = (a.subjectName || '').toLowerCase();
-          bValue = (b.subjectName || '').toLowerCase();
-          break;
-        case 'createdAt':
-          aValue = new Date(a.createdAt).getTime();
-          bValue = new Date(b.createdAt).getTime();
-          break;
-        default:
-          return 0;
-      }
-
+      const aValue = new Date(a.createdAt).getTime();
+      const bValue = new Date(b.createdAt).getTime();
       if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
 
     return filtered;
-  }, [requests, searchTerm, sortField, sortOrder]);
+  }, [requests, searchTerm, sortOrder]);
 
   // Pagination
   const totalPages = Math.ceil(filteredRequests.length / ITEMS_PER_PAGE);
@@ -331,6 +365,10 @@ export function ClassRequestsTab() {
     } catch (err: any) {
       showError('Lỗi', 'Không thể tải thông tin chi tiết');
     }
+  };
+
+  const handleViewTutorProfile = (tutorId: number) => {
+    router.push(`/tutor/${tutorId}`);
   };
 
   const handleEdit = (request: any) => {
@@ -479,31 +517,21 @@ export function ClassRequestsTab() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50 border-b border-gray-200">
-                  <TableHead className="w-[80px]">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleSort('id')} 
-                      className="h-8 px-2 text-[#257180] hover:bg-[#FD8B51] hover:text-white"
-                    >
-                      ID <ArrowUpDown className="ml-1 h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleSort('subjectName')} 
-                      className="h-8 px-2 text-[#257180] hover:bg-[#FD8B51] hover:text-white"
-                    >
-                      Môn học <ArrowUpDown className="ml-1 h-3 w-3" />
-                    </Button>
-                  </TableHead>
+                  <TableHead className="w-[70px] text-center">ID</TableHead>
+                  <TableHead>Môn học</TableHead>
                   <TableHead>Hình thức</TableHead>
-                  <TableHead>Địa điểm</TableHead>
-                  <TableHead>Số buổi</TableHead>
                   <TableHead>Mức giá</TableHead>
-                  <TableHead>Ứng tuyển</TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSort('createdAt')}
+                      className="h-8 px-2 text-[#257180] hover:bg-[#FD8B51] hover:text-white"
+                    >
+                      Ngày tạo
+                      <ArrowUpDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </TableHead>
                   <TableHead>Trạng thái</TableHead>
                   <TableHead className="text-right">Thao tác</TableHead>
                 </TableRow>
@@ -511,45 +539,33 @@ export function ClassRequestsTab() {
               <TableBody>
                 {loading ? (
                   <TableRow className="border-b border-gray-200">
-                    <TableCell colSpan={9} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-[#257180]" />
                       <p className="text-gray-500 mt-2">Đang tải...</p>
                     </TableCell>
                   </TableRow>
                 ) : paginatedRequests.length === 0 ? (
                   <TableRow className="border-b border-gray-200">
-                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                       Không tìm thấy yêu cầu nào
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedRequests.map((request) => {
+                  paginatedRequests.map((request, index) => {
                     const statusNum = getStatusNumber(request.status);
                     return (
                     <TableRow key={request.id} className="hover:bg-gray-50 border-b border-gray-200">
-                      <TableCell>
-                        <span className="font-mono text-sm text-gray-600">{request.id}</span>
+                      <TableCell className="text-center font-mono text-sm text-gray-600">
+                        {startIndex + index + 1}
                       </TableCell>
                       <TableCell>
                         <div>
-                            <p className="font-medium text-gray-900">{request.subjectName || 'N/A'}</p>
-                            <p className="text-xs text-gray-500">{request.level || 'N/A'}</p>
+                            <p className="font-medium text-gray-900">{request.subjectName || 'N/A'} - {request.level || 'N/A'}</p>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20">
                             {getModeText(request.mode)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        <div>
-                            <p>N/A</p>
-                            <p className="text-xs text-gray-500"></p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20">
-                            {request.expectedSessions || 0} buổi
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">
@@ -569,10 +585,7 @@ export function ClassRequestsTab() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1 text-sm">
-                          <Users className="h-4 w-4 text-gray-400" />
-                            <span className="font-medium text-[#257180]">-</span>
-                        </div>
+                        {FormatService.formatDate(request.createdAt)}
                       </TableCell>
                       <TableCell>
                           <Badge className={getClassRequestStatusColor(statusNum)}>
@@ -637,78 +650,78 @@ export function ClassRequestsTab() {
 
       {/* Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="!max-w-6xl sm:!max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white">
           <DialogHeader>
-            <DialogTitle>Chi tiết yêu cầu mở lớp</DialogTitle>
+            <DialogTitle className="text-2xl sm:text-3xl font-bold text-gray-900">
+              {selectedRequest ? (selectedRequest.title || `${selectedRequest.subjectName || ''} ${selectedRequest.level || ''}`.trim()) : 'Chi tiết yêu cầu mở lớp'}
+            </DialogTitle>
+            <DialogDescription className="text-sm sm:text-base text-gray-600">
+              Thông tin chi tiết về yêu cầu và danh sách gia sư ứng tuyển
+            </DialogDescription>
           </DialogHeader>
           
           {loadingDetail ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-[#257180]" />
-              <p className="ml-3 text-gray-600">Đang tải thông tin chi tiết...</p>
+              <Loader2 className="w-8 h-8 animate-spin text-[#257180]" />
+              <span className="ml-2 text-gray-600">Đang tải thông tin...</span>
             </div>
           ) : selectedRequest ? (
-            <div className="space-y-6">
-              {/* Header Info */}
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-2xl font-semibold text-gray-900">{selectedRequest.title || 'Yêu cầu mở lớp'}</h3>
-                  <p className="text-gray-600 mt-1">Yêu cầu #{selectedRequest.id}</p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
+              {/* Left Column: Request Details */}
+              <div className="space-y-6 lg:col-span-2">
+                {/* Header Info */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const statusNum = getStatusNumber(selectedRequest.status);
+                      return (
+                        <>
+                          <Badge className={getClassRequestStatusColor(statusNum)}>
+                            {getClassRequestStatusText(statusNum)}
+                          </Badge>
+                          {statusNum === ClassRequestStatus.Reviewing && (
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="lg"
+                                onClick={() => handleEdit(selectedRequest)}
+                                className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Chỉnh sửa
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="lg"
+                                onClick={() => handleDeleteClick(selectedRequest as any)}
+                                className="text-red-600 hover:text-white hover:bg-red-600 hover:border-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Xóa
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  {(() => {
-                    const statusNum = getStatusNumber(selectedRequest.status);
-                    return (
-                      <>
-                        <Badge className={getClassRequestStatusColor(statusNum)}>
-                          {getClassRequestStatusText(statusNum)}
-                  </Badge>
-                        {statusNum === ClassRequestStatus.Reviewing && (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        onClick={() => handleEdit(selectedRequest)}
-                        className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Chỉnh sửa
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="lg"
-                              onClick={() => handleDeleteClick(selectedRequest as any)}
-                        className="text-red-600 hover:text-white hover:bg-red-600 hover:border-red-600"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Xóa
-                      </Button>
-                    </div>
-                  )}
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column */}
-                <div className="lg:col-span-2 space-y-6">
-                  {/* Description - Mô tả chi tiết */}
-                  {selectedRequest.description && (
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex items-start gap-3">
-                        <FileText className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-600 mb-2">Mô tả chi tiết yêu cầu</p>
-                          <p className="text-gray-900 whitespace-pre-wrap break-words">{selectedRequest.description}</p>
-                        </div>
+                {/* Description - Mô tả chi tiết */}
+                {selectedRequest.description && (
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-start gap-3">
+                      <FileText className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-600 mb-2">Mô tả chi tiết yêu cầu</p>
+                        <p className="text-gray-900 whitespace-pre-wrap break-words">{selectedRequest.description}</p>
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Class Info */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                {/* Class Info */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="min-w-0">
                       <p className="text-sm text-gray-600 flex items-center gap-1">
                         <BookOpen className="h-4 w-4 flex-shrink-0" />
@@ -723,41 +736,19 @@ export function ClassRequestsTab() {
                       </p>
                       <p className="font-medium text-gray-900 mt-1 break-words">{selectedRequest.level || 'N/A'}</p>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm text-gray-600">Hình thức</p>
-                      <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20 mt-1">
-                        {getModeText(selectedRequest.mode)}
-                      </Badge>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm text-gray-600">Số buổi học</p>
-                      <p className="font-medium text-gray-900 mt-1 break-words">{selectedRequest.expectedSessions || 0} buổi</p>
-                    </div>
                     <div className="sm:col-span-2 min-w-0">
                       <p className="text-sm text-gray-600 flex items-center gap-1">
-                        <Target className="h-4 w-4 flex-shrink-0" />
+                        <BookOpen className="h-4 w-4 flex-shrink-0" />
                         Mục tiêu học tập
                       </p>
                       <p className="font-medium text-gray-900 mt-1 break-words whitespace-pre-wrap">{selectedRequest.learningGoal || 'Chưa có'}</p>
                     </div>
                     <div className="sm:col-span-2 min-w-0">
                       <p className="text-sm text-gray-600 flex items-center gap-1">
-                        <UserCheck className="h-4 w-4 flex-shrink-0" />
+                        <GraduationCap className="h-4 w-4 flex-shrink-0" />
                         Yêu cầu gia sư
                       </p>
                       <p className="font-medium text-gray-900 mt-1 break-words whitespace-pre-wrap">{selectedRequest.tutorRequirement || 'Chưa có'}</p>
-                      </div>
-                    <div className="sm:col-span-2 min-w-0">
-                      <p className="text-sm text-gray-600">Mức giá mong muốn</p>
-                      <p className="font-medium text-[#257180] mt-1 break-words">
-                        {selectedRequest.targetUnitPriceMin && selectedRequest.targetUnitPriceMax ? (
-                          <>
-                            {FormatService.formatVND(selectedRequest.targetUnitPriceMin)} - {FormatService.formatVND(selectedRequest.targetUnitPriceMax)}/buổi
-                          </>
-                        ) : (
-                          'Chưa có'
-                        )}
-                      </p>
                     </div>
                     {selectedRequest.expectedStartDate && (
                       <div className="min-w-0">
@@ -770,10 +761,54 @@ export function ClassRequestsTab() {
                         </p>
                       </div>
                     )}
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-600">Hình thức</p>
+                      <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20 mt-1">
+                        {getModeText(selectedRequest.mode)}
+                      </Badge>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-600">Số buổi học</p>
+                      <p className="font-medium text-gray-900 mt-1 break-words">{selectedRequest.expectedSessions || 0} buổi</p>
+                    </div>
+                    {selectedRequest.targetUnitPriceMin && selectedRequest.targetUnitPriceMax && (
+                      <div className="sm:col-span-2 min-w-0">
+                        <p className="text-sm text-gray-600">Mức giá mong muốn</p>
+                        <p className="font-medium text-[#257180] mt-1 break-words">
+                          {FormatService.formatVND(selectedRequest.targetUnitPriceMin)} - {FormatService.formatVND(selectedRequest.targetUnitPriceMax)}/buổi
+                        </p>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Location */}
-                  <div className="p-4 border border-[#257180]/20 rounded-lg">
+                {/* Slots */}
+                {selectedRequest.slots && selectedRequest.slots.length > 0 && (
+                  <div className="p-4 bg-white rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-600 flex items-center gap-1 mb-3">
+                      <Clock className="h-4 w-4 text-[#257180]" />
+                      Thời gian học dự kiến
+                    </p>
+                    <div className="space-y-2">
+                      {selectedRequest.slots.map((slot) => (
+                        <div
+                          key={slot.id}
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-gray-50 border border-gray-100 rounded-md"
+                        >
+                          <div className="flex items-center gap-2 text-sm text-gray-700">
+                            <span className="font-medium text-gray-900">{EnumHelpers.getDayOfWeekLabel(slot.dayOfWeek as DayOfWeekEnum)}</span>
+                          </div>
+                          <div className="text-sm font-semibold text-[#257180]">
+                            {slot.startTime?.slice(0, 5)} - {slot.endTime?.slice(0, 5)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Location */}
+                {((selectedRequest.addressLine && selectedRequest.addressLine !== 'string') || selectedRequest.subDistrictName || selectedRequest.provinceName) && (
+                  <div className="p-4 border border-gray-200 rounded-lg">
                     <div className="flex items-start gap-3">
                       <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -789,189 +824,123 @@ export function ClassRequestsTab() {
                       </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Dates */}
-                  <div className="grid grid-cols-2 gap-4 p-4 border border-[#257180]/20 rounded-lg">
-                    <div>
-                      <p className="text-sm text-gray-600">Ngày tạo</p>
-                      <p className="font-medium text-gray-900 mt-1">
-                        {FormatService.formatDate(selectedRequest.createdAt)}
-                      </p>
-                    </div>
-                    {selectedRequest.updatedAt && (
-                    <div>
-                        <p className="text-sm text-gray-600">Ngày cập nhật</p>
-                        <p className="font-medium text-gray-900 mt-1">
-                          {FormatService.formatDate(selectedRequest.updatedAt)}
-                      </p>
-                    </div>
-                    )}
-                    {selectedRequest.approvedAt && (
-                      <div>
-                        <p className="text-sm text-gray-600">Ngày duyệt</p>
-                        <p className="font-medium text-gray-900 mt-1">
-                          {FormatService.formatDate(selectedRequest.approvedAt)}
-                        </p>
-                      </div>
-                    )}
-                    {selectedRequest.approvedBy && (
-                      <div>
-                        <p className="text-sm text-gray-600">Người duyệt</p>
-                        <p className="font-medium text-gray-900 mt-1">{selectedRequest.approvedBy}</p>
-                      </div>
-                    )}
-                    {selectedRequest.rejectionReason && (
-                      <div className="col-span-2 min-w-0">
-                        <p className="text-sm text-red-600">Lý do từ chối</p>
-                        <p className="font-medium text-red-800 mt-1 break-words whitespace-pre-wrap">{selectedRequest.rejectionReason}</p>
-                      </div>
-                    )}
-                    {selectedRequest.cancelReason && (
-                      <div className="col-span-2 min-w-0">
-                        <p className="text-sm text-red-600">Lý do hủy</p>
-                        <p className="font-medium text-red-800 mt-1 break-words whitespace-pre-wrap">{selectedRequest.cancelReason}</p>
-                      </div>
-                    )}
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-4 p-4 border border-gray-200 rounded-lg">
+                  <div>
+                    <p className="text-sm text-gray-600">Ngày tạo</p>
+                    <p className="font-medium text-gray-900 mt-1">
+                      {FormatService.formatDate(selectedRequest.createdAt)}
+                    </p>
                   </div>
-                </div>
-
-                {/* Right Column - Stats */}
-                <div className="space-y-4">
-                  <Card className="border-[#257180]/20">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Calendar className="h-5 w-5" />
-                        Thống kê
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="p-3 bg-green-50 rounded-lg">
-                        <p className="text-sm text-green-700 mb-1">Gia sư ứng tuyển</p>
-                        <p className="text-2xl font-semibold text-green-800">{applicants.length}</p>
-                      </div>
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <p className="text-sm text-blue-700 mb-1">Tổng số buổi</p>
-                        <p className="text-2xl font-semibold text-blue-800">{selectedRequest.expectedSessions || 0}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {selectedRequest.updatedAt && (
+                    <div>
+                      <p className="text-sm text-gray-600">Ngày cập nhật</p>
+                      <p className="font-medium text-gray-900 mt-1">
+                        {FormatService.formatDate(selectedRequest.updatedAt)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Tutor Applications List */}
-              {(() => {
-                const statusNum = getStatusNumber(selectedRequest.status);
-                if (statusNum === ClassRequestStatus.Open && applicants.length > 0) {
-                  return (
-                    <Card className="border border-gray-200">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-[#257180]" />
-                          Gia sư ứng tuyển ({applicants.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                        {loadingApplicants ? (
-                          <div className="flex items-center justify-center py-8">
-                            <Loader2 className="h-6 w-6 animate-spin text-[#257180]" />
-                            <p className="ml-3 text-gray-600">Đang tải danh sách gia sư...</p>
-                          </div>
-                        ) : (
-                    <div className="space-y-4">
-                            {applicants.map((applicant) => (
-                              <div key={applicant.applicationId} className="border border-[#257180]/20 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex items-start gap-4">
-                            <div className="relative flex-shrink-0">
-                              <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-[#F2E5BF]">
-                                      {applicant.avatarUrl ? (
-                                  <img 
-                                          src={applicant.avatarUrl} 
-                                    alt={applicant.tutorName}
-                                    className="w-full h-full object-cover rounded-lg"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                                      if (fallback) {
-                                        fallback.style.display = 'flex';
-                                      }
-                                    }}
-                                  />
-                                ) : null}
-                                <div 
-                                        className={`w-full h-full rounded-lg flex items-center justify-center text-lg font-bold text-[#257180] bg-[#F2E5BF] ${applicant.avatarUrl ? 'hidden' : 'flex'}`}
-                                        style={{ display: applicant.avatarUrl ? 'none' : 'flex' }}
-                                >
-                                  {applicant.tutorName ? applicant.tutorName.substring(0, 2).toUpperCase() : 'GS'}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between mb-2">
-                                <div>
-                                        <h4 className="text-xl font-semibold text-gray-900">{applicant.tutorName}</h4>
-                                        <p className="text-sm text-gray-500">ID: {applicant.tutorId}</p>
-                                </div>
-                              </div>
-                              
-                                    {applicant.message && (
-                              <div className="bg-gray-50 p-3 rounded-lg mb-3">
-                                        <p className="text-sm text-gray-700">{applicant.message}</p>
-                              </div>
-                                    )}
-                              
-                              <div className="flex items-center justify-between">
-                                <p className="text-xs text-gray-500">
-                                        Ứng tuyển: {FormatService.formatDate(applicant.appliedAt)}
-                                </p>
-                                <div className="flex gap-2">
-                                        <Button 
-                                          variant="outline" 
-                                          size="lg" 
-                                          className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-                                          onClick={() => {
-                                            handleViewTutorProfile(applicant.tutorId);
-                                          }}
-                                        >
-                                    Xem hồ sơ
-                                  </Button>
-                                        <Button 
-                                          size="lg" 
-                                          className="bg-[#257180] hover:bg-[#257180]/90 text-white"
-                                          onClick={() => {
-                                            // TODO: Implement select tutor
-                                          }}
-                                        >
-                                    Chọn gia sư
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                        )}
-                  </CardContent>
-                </Card>
-                  );
-                }
-                return null;
-              })()}
+              {/* Right Column: Applicants */}
+              <div className="border-l-2 border-gray-200 pl-6 lg:col-span-1">
+                <h4 className="text-xl font-semibold mb-5 flex items-center gap-2 text-gray-900">
+                  <GraduationCap className="h-6 w-6 text-[#257180]" />
+                  Gia sư ứng tuyển ({applicants.length})
+                </h4>
 
-              {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  onClick={() => setShowDetailDialog(false)}
-                  className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-                >
-                  Đóng
-                </Button>
+                {loadingApplicants ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#257180]" />
+                  </div>
+                ) : applicants.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600">Chưa có gia sư nào ứng tuyển</p>
+                    <p className="text-gray-500 mt-1 text-sm">Hãy quay lại sau nhé!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2">
+                    {applicants.map((applicant) => {
+                      const tutorProfile = tutorDetails[applicant.tutorId];
+                      const educationLabel = tutorProfile && tutorProfile.tutorEducations && tutorProfile.tutorEducations.length > 0
+                        ? tutorProfile.tutorEducations[0].institution?.name || 'Chưa cập nhật'
+                        : 'Chưa cập nhật';
+                      const ratingValue = tutorProfile ? 5.0 : 5.0;
+                      return (
+                        <Card key={applicant.applicationId} className="border border-gray-200 hover:border-[#FD8B51]/30 transition-all">
+                          <CardContent className="p-4">
+                            <div className="flex gap-3 mb-3">
+                              <div className="relative flex-shrink-0">
+                                <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-[#F2E5BF] border-2 border-gray-200">
+                                  {applicant.avatarUrl ? (
+                                    <img 
+                                      src={applicant.avatarUrl} 
+                                      alt={applicant.tutorName}
+                                      className="w-full h-full object-cover rounded-lg"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                        if (fallback) {
+                                          fallback.style.display = 'flex';
+                                        }
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div 
+                                    className={`w-full h-full rounded-lg flex items-center justify-center text-lg font-bold text-[#257180] bg-[#F2E5BF] ${applicant.avatarUrl ? 'hidden' : 'flex'}`}
+                                    style={{ display: applicant.avatarUrl ? 'none' : 'flex' }}
+                                  >
+                                    {applicant.tutorName?.slice(0, 2).toUpperCase() || 'GS'}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h5 className="text-lg font-semibold mb-1 truncate">{applicant.tutorName}</h5>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-xs text-gray-600">Đánh giá: {ratingValue.toFixed(1)}</span>
+                                </div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <GraduationCap className="w-4 h-4 text-gray-500" />
+                                  <span className="text-xs text-gray-600">Học vấn: {educationLabel}</span>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Ứng tuyển: {FormatService.formatDate(applicant.appliedAt)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="mb-3 min-w-0">
+                              <p className="text-gray-500 text-xs mb-1">Thư ứng tuyển:</p>
+                              <p className="text-gray-700 leading-relaxed text-sm break-words whitespace-pre-wrap">{applicant.message}</p>
+                            </div>
+
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="flex-1 hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51] text-xs"
+                                onClick={() => handleViewTutorProfile(applicant.tutorId)}
+                              >
+                                Xem hồ sơ
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )})}
+                  </div>
+                )}
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Không tìm thấy thông tin chi tiết</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/basic/button';
-import { User, Calendar, BookOpen, Wallet, MessageCircle, Settings, GraduationCap, FileText, Bell } from 'lucide-react';
+import { User, Calendar, BookOpen, Wallet, MessageCircle, Settings, GraduationCap, FileText, Bell, ClipboardList } from 'lucide-react';
 import { ProfileTab } from './tabs/ProfileTab';
 import { ScheduleTab } from './tabs/ScheduleTab';
 import { TutorScheduleTab } from './tabs/TutorScheduleTab';
@@ -14,6 +14,7 @@ import { SettingsTab } from './tabs/SettingsTab';
 import { TutorProfileTab } from './tabs/TutorProfileTab';
 import { ClassRequestsTab } from './tabs/ClassRequestsTab';
 import { NotificationsTab } from './tabs/NotificationsTab';
+import { TutorApplicationsTab } from './tabs/TutorApplicationsTab';
 import { Badge } from '@/components/ui/basic/badge';
 import { mockNotifications } from '@/data/mockLearnerData';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,6 +42,18 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
     }
   }, [activeTab, user]);
 
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+    if (user.role === USER_ROLES.TUTOR && activeTab === 'classRequests') {
+      setActiveTab('tutorApplications');
+    }
+    if (user.role !== USER_ROLES.TUTOR && activeTab === 'tutorApplications') {
+      setActiveTab('classRequests');
+    }
+  }, [activeTab, user]);
+
   const unreadNotifications = mockNotifications.filter(n => !n.isRead).length;
 
   // Check if user is a tutor
@@ -51,7 +64,8 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
     ...(isTutor ? [{ id: 'tutorProfile', label: 'Hồ sơ gia sư', icon: GraduationCap }] : []),
     { id: 'schedule', label: isTutor ? 'Lịch dạy' : 'Lịch học', icon: Calendar },
     { id: 'classes', label: isTutor ? 'Lịch đặt' : 'Lớp học', icon: BookOpen },
-    { id: 'classRequests', label: 'Yêu cầu mở lớp', icon: FileText },
+    ...(!isTutor ? [{ id: 'classRequests', label: 'Yêu cầu mở lớp', icon: FileText }] : []),
+    ...(isTutor ? [{ id: 'tutorApplications', label: 'Ứng tuyển lớp dạy', icon: ClipboardList }] : []),
     { id: 'wallet', label: 'Ví', icon: Wallet },
     { id: 'notifications', label: 'Thông báo', icon: Bell, badge: unreadNotifications },
     { id: 'messages', label: 'Tin nhắn', icon: MessageCircle },
@@ -70,7 +84,9 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
       case 'classes':
         return isTutor ? <TutorBookingsTab /> : <ClassesTab />;
       case 'classRequests':
-        return <ClassRequestsTab />;
+        return isTutor ? <TutorApplicationsTab /> : <ClassRequestsTab />;
+      case 'tutorApplications':
+        return isTutor ? <TutorApplicationsTab /> : <ClassRequestsTab />;
       case 'wallet':
         return <WalletTab />;
       case 'notifications':
