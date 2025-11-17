@@ -26,6 +26,7 @@ import { BookingStatus, PaymentStatus, ScheduleStatus, TeachingMode } from '@/ty
 import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomToast } from '@/hooks/useCustomToast';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useSchedules } from '@/hooks/useSchedules';
 import { useLearnerBookings } from '@/hooks/useLearnerBookings';
@@ -34,12 +35,13 @@ import { vi } from 'date-fns/locale';
 
 export function ClassesTab() {
   const { user } = useAuth();
-  const { showError } = useCustomToast();
+  const { showError, showSuccess } = useCustomToast();
   const { bookings, loading, loadBookings } = useLearnerBookings();
   const [allBookings, setAllBookings] = useState<BookingDto[]>([]); // Lưu tất cả bookings để tính counts
   const [filter, setFilter] = useState<string>('all');
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
+  const [cancelDialogBookingId, setCancelDialogBookingId] = useState<number | null>(null);
   const { tutorProfiles, loadTutorProfiles, getTutorProfile, loadTutorProfile } = useTutorProfiles();
   const { schedules, loading: loadingSchedules, loadSchedules, clearSchedules } = useSchedules();
 
@@ -211,6 +213,27 @@ export function ClassesTab() {
     ).length;
   };
 
+  const handleCancelBooking = async (bookingId: number) => {
+    try {
+      const response = await BookingService.updateStatus(bookingId, BookingStatus.Cancelled);
+      if (response.success) {
+        showSuccess && showSuccess('Đã hủy booking thành công');
+        // Reload bookings của learner
+        if (user?.email) {
+          await loadBookings(user.email);
+        }
+        // Nếu đang ở detail của booking vừa hủy thì quay về list
+        if (selectedBookingId === bookingId) {
+          handleBackToList();
+        }
+      } else {
+        showError('Không thể hủy booking', response.error?.message);
+      }
+    } catch (error: any) {
+      showError('Lỗi khi hủy booking', error.message);
+    }
+  };
+
   // Tính toán counts cho từng trạng thái dựa trên tất cả bookings
   const bookingCounts = useMemo(() => {
     return {
@@ -247,18 +270,8 @@ export function ClassesTab() {
     return true;
   });
 
-  // Render detail view
+  // Render detail view: chỉ hiện danh sách buổi học của booking
   if (selectedBookingId && selectedBooking) {
-    const tutorSubject = selectedBooking.tutorSubject;
-    const tutorEmail = tutorSubject?.tutorEmail;
-    const tutor = tutorEmail ? getTutorProfile(tutorEmail) : tutorSubject?.tutor;
-    const subject = tutorSubject?.subject;
-    const level = tutorSubject?.level;
-    const completedSessions = schedules.filter(
-      (s) => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Completed
-    ).length;
-    const progress = (completedSessions / selectedBooking.totalSessions) * 100;
-
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -267,76 +280,11 @@ export function ClassesTab() {
             Quay lại
           </Button>
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900">Chi tiết lớp học</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">
+              Lịch học của đơn #{selectedBookingId}
+            </h2>
           </div>
         </div>
-
-        {/* Booking Info */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="flex gap-4 flex-1">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={tutor?.avatarUrl} alt={tutor?.userName || 'Gia sư'} />
-                  <AvatarFallback>
-                    {tutor?.userName?.[0]?.toUpperCase() || 'GS'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <h3 className="font-semibold text-lg text-gray-900">
-                          {subject?.subjectName || 'Môn học'}
-                        </h3>
-                        {level && (
-                          <Badge variant="outline" className="text-sm">
-                            {level.name}
-                          </Badge>
-                        )}
-                        <Badge className={getPaymentStatusColor(selectedBooking.paymentStatus)}>
-                          {EnumHelpers.getPaymentStatusLabel(selectedBooking.paymentStatus)}
-                        </Badge>
-                      </div>
-                      <p className="text-gray-600 text-sm truncate">
-                        Gia sư: {tutor?.userName || 'Chưa có thông tin'}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap sm:flex-col gap-2 items-start sm:items-end">
-                      <Badge className={getBookingStatusColor(selectedBooking.status)}>
-                        {EnumHelpers.getBookingStatusLabel(selectedBooking.status)}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="lg:w-80 space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Tiến độ</span>
-                    <span className="font-medium">
-                      {completedSessions}/{selectedBooking.totalSessions} buổi
-                    </span>
-                  </div>
-                  <Progress value={progress} className="h-2" />
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Tổng tiền:</span>
-                    <span className="text-lg font-semibold text-[#257180]">
-                      {formatCurrency(selectedBooking.totalAmount)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>Giá/buổi: {formatCurrency(selectedBooking.unitPrice)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Schedules List */}
         <div>
@@ -689,6 +637,22 @@ export function ClassesTab() {
                           <div className="flex justify-between text-xs text-gray-500">
                             <span>Giá/buổi: {formatCurrency(booking.unitPrice)}</span>
                           </div>
+
+                          {EnumHelpers.parseBookingStatus(booking.status) === BookingStatus.Pending && (
+                            <div className="pt-2 border-t border-gray-200">
+                              <Button
+                                size="sm"
+                                className="w-full bg-red-600 hover:bg-red-700 text-white"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCancelDialogBookingId(booking.id);
+                                }}
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Hủy đơn
+                              </Button>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex gap-2">
@@ -724,6 +688,26 @@ export function ClassesTab() {
           )}
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={cancelDialogBookingId !== null}
+        onOpenChange={(open) => {
+          if (!open) setCancelDialogBookingId(null);
+        }}
+        title="Xác nhận hủy đơn"
+        description="Bạn có chắc chắn muốn hủy booking này không?"
+        confirmText="Hủy đơn"
+        cancelText="Đóng"
+        type="error"
+        onConfirm={async () => {
+          const id = cancelDialogBookingId;
+          setCancelDialogBookingId(null);
+          if (id != null) {
+            await handleCancelBooking(id);
+          }
+        }}
+        onCancel={() => setCancelDialogBookingId(null)}
+      />
     </div>
   );
 }

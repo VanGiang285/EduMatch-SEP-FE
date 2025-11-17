@@ -31,6 +31,7 @@ import { useTutorBookings } from '@/hooks/useTutorBookings';
 import { useLearnerProfiles } from '@/hooks/useLearnerProfiles';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 
 export function TutorBookingsTab() {
   const { user } = useAuth();
@@ -39,6 +40,7 @@ export function TutorBookingsTab() {
   const [filter, setFilter] = useState<string>('all');
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ bookingId: number | null; status: BookingStatus | null }>({ bookingId: null, status: null });
   const { schedules, loading: loadingSchedules, loadSchedules, clearSchedules } = useSchedules();
   const { learnerProfiles, loadLearnerProfiles, getLearnerProfile } = useLearnerProfiles();
 
@@ -625,7 +627,7 @@ export function TutorBookingsTab() {
                               className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleUpdateStatus(booking.id, BookingStatus.Confirmed);
+                                setConfirmDialog({ bookingId: booking.id, status: BookingStatus.Confirmed });
                               }}
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
@@ -636,7 +638,7 @@ export function TutorBookingsTab() {
                               className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleUpdateStatus(booking.id, BookingStatus.Cancelled);
+                                setConfirmDialog({ bookingId: booking.id, status: BookingStatus.Cancelled });
                               }}
                             >
                               <XCircle className="h-4 w-4 mr-2" />
@@ -678,6 +680,38 @@ export function TutorBookingsTab() {
           )}
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={confirmDialog.bookingId !== null && confirmDialog.status !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDialog({ bookingId: null, status: null });
+        }}
+        title={
+          confirmDialog.status === BookingStatus.Confirmed
+            ? 'Xác nhận chấp nhận đơn'
+            : 'Xác nhận hủy đơn'
+        }
+        description={
+          confirmDialog.status === BookingStatus.Confirmed
+            ? 'Bạn có chắc chắn muốn chấp nhận booking này không?'
+            : 'Bạn có chắc chắn muốn hủy booking này không?'
+        }
+        confirmText={
+          confirmDialog.status === BookingStatus.Confirmed
+            ? 'Chấp nhận'
+            : 'Hủy đơn'
+        }
+        cancelText="Đóng"
+        type={confirmDialog.status === BookingStatus.Confirmed ? 'success' : 'error'}
+        onConfirm={async () => {
+          const { bookingId, status } = confirmDialog;
+          setConfirmDialog({ bookingId: null, status: null });
+          if (bookingId !== null && status !== null) {
+            await handleUpdateStatus(bookingId, status);
+          }
+        }}
+        onCancel={() => setConfirmDialog({ bookingId: null, status: null })}
+      />
     </div>
   );
 }
