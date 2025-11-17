@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/layout/card';
 import { Badge } from '@/components/ui/basic/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
@@ -21,102 +21,70 @@ import {
   XCircle,
 } from 'lucide-react';
 import { BookingService } from '@/services';
-import { BookingDto, ScheduleDto } from '@/types/backend';
+import { BookingDto } from '@/types/backend';
 import { BookingStatus, PaymentStatus, ScheduleStatus, TeachingMode } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useSchedules } from '@/hooks/useSchedules';
+import { useLearnerBookings } from '@/hooks/useLearnerBookings';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
 export function ClassesTab() {
   const { user } = useAuth();
   const { showError } = useCustomToast();
-  const [bookings, setBookings] = useState<BookingDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { bookings, loading, loadBookings } = useLearnerBookings();
+  const [allBookings, setAllBookings] = useState<BookingDto[]>([]); // Lưu tất cả bookings để tính counts
   const [filter, setFilter] = useState<string>('all');
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
   const { tutorProfiles, loadTutorProfiles, getTutorProfile, loadTutorProfile } = useTutorProfiles();
   const { schedules, loading: loadingSchedules, loadSchedules, clearSchedules } = useSchedules();
 
+  // Load tất cả bookings một lần khi component mount hoặc user thay đổi
   useEffect(() => {
     if (user?.email) {
-      loadBookings();
+      // Load tất cả bookings (không filter) để tính counts
+      loadBookings(user.email);
     }
-  }, [user?.email, filter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email]);
+
+  // Cập nhật allBookings khi bookings thay đổi (chỉ khi load tất cả, không filter)
+  useEffect(() => {
+    // Chỉ cập nhật khi allBookings đang rỗng hoặc khi có dữ liệu mới
+    if (allBookings.length === 0 && bookings.length > 0) {
+      setAllBookings(bookings);
+    } else if (bookings.length > allBookings.length) {
+      // Nếu bookings nhiều hơn allBookings, có thể là load tất cả
+      setAllBookings(bookings);
+    }
+  }, [bookings, allBookings.length]);
+
+  // Load tutor profiles khi có bookings
+  useEffect(() => {
+    if (allBookings.length > 0) {
+      const tutorEmails = new Set<string>();
+      allBookings.forEach((booking) => {
+        const tutorEmail = booking.tutorSubject?.tutorEmail;
+        if (tutorEmail) {
+          tutorEmails.add(tutorEmail);
+        }
+      });
+
+      if (tutorEmails.size > 0) {
+        loadTutorProfiles(Array.from(tutorEmails));
+      }
+    }
+  }, [allBookings, loadTutorProfiles]);
 
   useEffect(() => {
     if (selectedBookingId) {
       loadBookingDetail();
     }
   }, [selectedBookingId]);
-
-  const loadBookings = async () => {
-    if (!user?.email) return;
-
-    try {
-      setLoading(true);
-      const params: {
-        status?: BookingStatus;
-        page?: number;
-        pageSize?: number;
-      } = {};
-
-      if (filter !== 'all') {
-        switch (filter) {
-          case 'active':
-            params.status = BookingStatus.Confirmed;
-            break;
-          case 'pending':
-            params.status = BookingStatus.Pending;
-            break;
-          case 'completed':
-            params.status = BookingStatus.Completed;
-            break;
-          case 'cancelled':
-            params.status = BookingStatus.Cancelled;
-            break;
-        }
-      }
-
-      const response = await BookingService.getAllByLearnerEmailPaging(
-        user.email,
-        {
-          ...params,
-          page: 1,
-          pageSize: 100,
-        }
-      );
-
-      if (response.success && response.data) {
-        const bookingsData = response.data.items || [];
-        setBookings(bookingsData);
-
-        // Lấy tất cả tutorEmail unique từ bookings
-        const tutorEmails = new Set<string>();
-        bookingsData.forEach((booking) => {
-          const tutorEmail = booking.tutorSubject?.tutorEmail;
-          if (tutorEmail) {
-            tutorEmails.add(tutorEmail);
-          }
-        });
-
-        // Load tutor profiles cho tất cả email
-        if (tutorEmails.size > 0) {
-          await loadTutorProfiles(Array.from(tutorEmails));
-        }
-      } else {
-        showError('Không thể tải danh sách lớp học', response.error?.message);
-      }
-    } catch (error: any) {
-      showError('Lỗi khi tải danh sách lớp học', error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
 
   const loadBookingDetail = async () => {
@@ -243,7 +211,29 @@ export function ClassesTab() {
     ).length;
   };
 
-  const filteredBookings = bookings.filter((booking) => {
+  // Tính toán counts cho từng trạng thái dựa trên tất cả bookings
+  const bookingCounts = useMemo(() => {
+    return {
+      all: allBookings.length,
+      active: allBookings.filter(
+        (b) =>
+          EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Confirmed &&
+          getCompletedSessions(b) < b.totalSessions
+      ).length,
+      pending: allBookings.filter(
+        (b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Pending
+      ).length,
+      completed: allBookings.filter(
+        (b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Completed
+      ).length,
+      cancelled: allBookings.filter(
+        (b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Cancelled
+      ).length,
+    };
+  }, [allBookings]);
+
+  // Filter bookings để hiển thị dựa trên filter hiện tại
+  const filteredBookings = allBookings.filter((booking) => {
     if (filter === 'all') return true;
     const parsedStatus = EnumHelpers.parseBookingStatus(booking.status);
     if (filter === 'active')
@@ -551,29 +541,35 @@ export function ClassesTab() {
 
       <Tabs value={filter} onValueChange={setFilter}>
         <TabsList>
-          <TabsTrigger value="all">Tất cả ({bookings.length})</TabsTrigger>
-          <TabsTrigger value="active">
-            Đang học (
-            {
-              bookings.filter(
-                (b) =>
-                  EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Confirmed &&
-                  getCompletedSessions(b) < b.totalSessions
-              ).length
-            }
-            )
+          <TabsTrigger
+            value="all"
+            className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+          >
+            Tất cả ({bookingCounts.all})
           </TabsTrigger>
-          <TabsTrigger value="pending">
-            Chờ xác nhận (
-            {bookings.filter((b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Pending).length})
+          <TabsTrigger
+            value="active"
+            className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+          >
+            Đang học ({bookingCounts.active})
           </TabsTrigger>
-          <TabsTrigger value="completed">
-            Hoàn thành (
-            {bookings.filter((b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Completed).length})
+          <TabsTrigger
+            value="pending"
+            className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+          >
+            Chờ xác nhận ({bookingCounts.pending})
           </TabsTrigger>
-          <TabsTrigger value="cancelled">
-            Đã hủy (
-            {bookings.filter((b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Cancelled).length})
+          <TabsTrigger
+            value="completed"
+            className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+          >
+            Hoàn thành ({bookingCounts.completed})
+          </TabsTrigger>
+          <TabsTrigger
+            value="cancelled"
+            className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+          >
+            Đã hủy ({bookingCounts.cancelled})
           </TabsTrigger>
         </TabsList>
 
