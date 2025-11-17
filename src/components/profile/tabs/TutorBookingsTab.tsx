@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/layout/card';
 import { Badge } from '@/components/ui/basic/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
@@ -19,7 +19,6 @@ import {
   XCircle,
   ArrowLeft,
   Clock,
-  AlertCircle,
 } from 'lucide-react';
 import { BookingService } from '@/services';
 import { BookingDto } from '@/types/backend';
@@ -53,33 +52,12 @@ export function TutorBookingsTab() {
 
   useEffect(() => {
     // Chỉ load bookings khi đã có tutorId hợp lệ và không đang loading tutorId
-    // Không load nếu đang loading bookings (tránh loop)
+    // Luôn load tất cả bookings của tutor, filter sẽ xử lý ở FE
     if (tutorId && tutorId > 0 && !loadingTutorId && !loading) {
-      const params: {
-        status?: BookingStatus;
-      } = {};
-
-      if (filter !== 'all') {
-        switch (filter) {
-          case 'active':
-            params.status = BookingStatus.Confirmed;
-            break;
-          case 'pending':
-            params.status = BookingStatus.Pending;
-            break;
-          case 'completed':
-            params.status = BookingStatus.Completed;
-            break;
-          case 'cancelled':
-            params.status = BookingStatus.Cancelled;
-            break;
-        }
-      }
-
-      loadBookings(params);
+      loadBookings();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tutorId, filter, loadingTutorId]); // Không thêm loading vào dependency để tránh loop
+  }, [tutorId, loadingTutorId]); // Không thêm loading/filter vào dependency để tránh loop
 
   // Load learner profiles khi có bookings
   useEffect(() => {
@@ -234,32 +212,44 @@ export function TutorBookingsTab() {
     clearSchedules();
   };
 
+  // Tính toán counts cho từng trạng thái (memo hóa)
+  const bookingCounts = useMemo(() => {
+    return {
+      all: bookings.length,
+      active: bookings.filter(
+        (b) =>
+          EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Confirmed &&
+          getCompletedSessions(b) < b.totalSessions
+      ).length,
+      pending: bookings.filter(
+        (b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Pending
+      ).length,
+      completed: bookings.filter(
+        (b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Completed
+      ).length,
+      cancelled: bookings.filter(
+        (b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Cancelled
+      ).length,
+    };
+  }, [bookings]);
+
+  // Lọc bookings để hiển thị theo filter hiện tại
   const filteredBookings = bookings.filter((booking) => {
-    if (filter === 'all') return true;
+    if (filter === "all") return true;
     const parsedStatus = EnumHelpers.parseBookingStatus(booking.status);
-    if (filter === 'active')
+    if (filter === "active")
       return (
         parsedStatus === BookingStatus.Confirmed &&
         getCompletedSessions(booking) < booking.totalSessions
       );
-    if (filter === 'pending') return parsedStatus === BookingStatus.Pending;
-    if (filter === 'completed') return parsedStatus === BookingStatus.Completed;
-    if (filter === 'cancelled') return parsedStatus === BookingStatus.Cancelled;
+    if (filter === "pending") return parsedStatus === BookingStatus.Pending;
+    if (filter === "completed") return parsedStatus === BookingStatus.Completed;
+    if (filter === "cancelled") return parsedStatus === BookingStatus.Cancelled;
     return true;
   });
 
-  // Render detail view
+  // Render detail view: chỉ hiện bảng lịch / buổi học của booking được chọn
   if (selectedBookingId && selectedBooking) {
-    const learnerEmail = selectedBooking.learnerEmail;
-    const learnerProfile = getLearnerProfile(learnerEmail);
-    const tutorSubject = selectedBooking.tutorSubject;
-    const subject = tutorSubject?.subject;
-    const level = tutorSubject?.level;
-    const completedSessions = schedules.filter(
-      (s) => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Completed
-    ).length;
-    const progress = (completedSessions / selectedBooking.totalSessions) * 100;
-
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -268,118 +258,11 @@ export function TutorBookingsTab() {
             Quay lại
           </Button>
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900">Chi tiết đặt lịch</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">
+              Lịch học của đơn #{selectedBookingId}
+            </h2>
           </div>
         </div>
-
-        {/* Booking Info */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="flex gap-4 flex-1">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage
-                    src={learnerProfile?.avatarUrl}
-                    alt={learnerEmail || 'Học viên'}
-                  />
-                  <AvatarFallback>
-                    {learnerEmail?.[0]?.toUpperCase() || 'HV'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-lg text-gray-900">
-                          {subject?.subjectName || 'Môn học'}
-                        </h3>
-                        {level && (
-                          <Badge variant="outline" className="text-sm">
-                            {level.name}
-                          </Badge>
-                        )}
-                        <Badge className={getPaymentStatusColor(selectedBooking.paymentStatus)}>
-                          {EnumHelpers.getPaymentStatusLabel(selectedBooking.paymentStatus)}
-                        </Badge>
-                      </div>
-                      <p className="text-gray-600 text-sm">
-                        Học viên: {learnerEmail || 'Chưa có thông tin'}
-                      </p>
-
-                    </div>
-                    <div className="flex flex-col gap-2 items-end">
-                      <Badge className={getBookingStatusColor(selectedBooking.status)}>
-                        {EnumHelpers.getBookingStatusLabel(selectedBooking.status)}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="lg:w-80 space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Tiến độ</span>
-                    <span className="font-medium">
-                      {completedSessions}/{selectedBooking.totalSessions} buổi
-                    </span>
-                  </div>
-                  <Progress value={progress} className="h-2" />
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Tổng tiền:</span>
-                    <span className="text-lg font-semibold text-[#257180]">
-                      {formatCurrency(selectedBooking.totalAmount)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>Giá/buổi: {formatCurrency(selectedBooking.unitPrice)}</span>
-                  </div>
-                  {selectedBooking.systemFeeAmount && selectedBooking.systemFeeAmount > 0 && (
-                    <>
-                      <div className="flex justify-between text-xs text-gray-500 pt-1 border-t border-gray-200">
-                        <span>Phí hệ thống:</span>
-                        <span className="font-medium text-gray-700">
-                          {formatCurrency(selectedBooking.systemFeeAmount)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm font-semibold text-green-600 pt-1 border-t border-gray-300">
-                        <span>Số tiền nhận được:</span>
-                        <span>
-                          {formatCurrency(selectedBooking.totalAmount - selectedBooking.systemFeeAmount)}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {EnumHelpers.parseBookingStatus(selectedBooking.status) === BookingStatus.Pending && (
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                      onClick={() => handleUpdateStatus(selectedBooking.id, BookingStatus.Confirmed)}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Chấp nhận
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="flex-1"
-                      onClick={() => handleUpdateStatus(selectedBooking.id, BookingStatus.Cancelled)}
-                    >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Hủy
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Schedules List */}
         <div>
@@ -416,7 +299,7 @@ export function TutorBookingsTab() {
                   const scheduleDate = availability?.startDate
                     ? new Date(availability.startDate)
                     : null;
-                  const isOnline = !!schedule.meetingSession;
+                  const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
 
                   let endDate: Date | null = null;
                   if (availability?.endDate) {
@@ -457,7 +340,7 @@ export function TutorBookingsTab() {
                                   {isOnline ? (
                                     <Badge className="bg-blue-500 text-white border-blue-600">
                                       <Video className="h-3 w-3 mr-1" />
-                                      Online
+                                      Zoom Meeting
                                     </Badge>
                                   ) : (
                                     <Badge className="bg-gray-500 text-white border-gray-600">
@@ -510,21 +393,23 @@ export function TutorBookingsTab() {
                                     </div>
                                   )}
 
-                                  {isOnline && schedule.meetingSession && (
+                                  {schedule.meetingSession?.meetLink && (
                                     <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
                                       <div className="bg-blue-50 rounded-lg p-2">
                                         <Video className="h-5 w-5 text-blue-600" />
                                       </div>
-                                      <div className="flex-1">
-                                        <div className="text-xs text-gray-500">Link lớp học</div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-xs text-gray-500">Link Zoom Meeting</div>
                                         <a
                                           href={schedule.meetingSession.meetLink}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="text-blue-600 hover:text-blue-800 font-medium hover:underline inline-flex items-center gap-1"
+                                          className="text-blue-600 hover:text-blue-800 font-medium hover:underline inline-flex items-center gap-1 max-w-full"
+                                          title={schedule.meetingSession.meetLink}
                                         >
-                                          Tham gia lớp học online
-                                          <Video className="h-4 w-4" />
+                                          <span className="truncate break-all">
+                                            {schedule.meetingSession.meetLink}
+                                          </span>
                                         </a>
                                       </div>
                                     </div>
@@ -563,30 +448,41 @@ export function TutorBookingsTab() {
       </div>
 
       <Tabs value={filter} onValueChange={setFilter}>
-        <TabsList>
-          <TabsTrigger value="all">Tất cả ({bookings.length})</TabsTrigger>
-          <TabsTrigger value="active">
+        <TabsList className="w-full overflow-x-auto flex flex-wrap sm:flex-nowrap gap-2">
+          <TabsTrigger
+            value="all"
+            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+          >
+            Tất cả ({bookingCounts.all})
+          </TabsTrigger>
+          <TabsTrigger
+            value="active"
+            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+          >
             Đang học (
-            {
-              bookings.filter(
-                (b) =>
-                  EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Confirmed &&
-                  getCompletedSessions(b) < b.totalSessions
-              ).length
-            }
+            {bookingCounts.active}
             )
           </TabsTrigger>
-          <TabsTrigger value="pending">
+          <TabsTrigger
+            value="pending"
+            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+          >
             Chờ xác nhận (
-            {bookings.filter((b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Pending).length})
+            {bookingCounts.pending})
           </TabsTrigger>
-          <TabsTrigger value="completed">
+          <TabsTrigger
+            value="completed"
+            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+          >
             Hoàn thành (
-            {bookings.filter((b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Completed).length})
+            {bookingCounts.completed})
           </TabsTrigger>
-          <TabsTrigger value="cancelled">
+          <TabsTrigger
+            value="cancelled"
+            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+          >
             Đã hủy (
-            {bookings.filter((b) => EnumHelpers.parseBookingStatus(b.status) === BookingStatus.Cancelled).length})
+            {bookingCounts.cancelled})
           </TabsTrigger>
         </TabsList>
 
@@ -615,7 +511,11 @@ export function TutorBookingsTab() {
               const progress = (completedSessions / booking.totalSessions) * 100;
 
               return (
-                <Card key={booking.id} className="hover:shadow-md transition-shadow">
+                <Card
+                  key={booking.id}
+                  className="hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => handleViewDetail(booking.id)}
+                >
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row gap-6">
                       {/* Learner Info */}
@@ -630,8 +530,8 @@ export function TutorBookingsTab() {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                            <div className="min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <h3 className="font-semibold text-lg">
                                   {subject?.subjectName || 'Môn học'}
@@ -646,7 +546,7 @@ export function TutorBookingsTab() {
                                 Học viên: {learnerEmail || 'Chưa có thông tin'}
                               </p>
                             </div>
-                            <div className="flex flex-col gap-2 items-end">
+                            <div className="flex flex-wrap sm:flex-col gap-2 items-start sm:items-end">
                               <Badge className={getBookingStatusColor(booking.status)}>
                                 {EnumHelpers.getBookingStatusLabel(booking.status)}
                               </Badge>
@@ -723,16 +623,21 @@ export function TutorBookingsTab() {
                             <Button
                               size="sm"
                               className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                              onClick={() => handleUpdateStatus(booking.id, BookingStatus.Confirmed)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUpdateStatus(booking.id, BookingStatus.Confirmed);
+                              }}
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
                               Chấp nhận
                             </Button>
                             <Button
                               size="sm"
-                              variant="destructive"
-                              className="flex-1"
-                              onClick={() => handleUpdateStatus(booking.id, BookingStatus.Cancelled)}
+                              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUpdateStatus(booking.id, BookingStatus.Cancelled);
+                              }}
                             >
                               <XCircle className="h-4 w-4 mr-2" />
                               Hủy
@@ -745,6 +650,10 @@ export function TutorBookingsTab() {
                             variant="outline"
                             size="lg"
                             className="flex-1 hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // TODO: mở chat
+                            }}
                           >
                             <MessageCircle className="h-4 w-4 mr-2" />
                             Nhắn tin
@@ -752,7 +661,10 @@ export function TutorBookingsTab() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleViewDetail(booking.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewDetail(booking.id);
+                            }}
                           >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>

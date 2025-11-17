@@ -259,9 +259,9 @@ export function ScheduleTab() {
                     return (
                       <Card key={schedule.id} className="border-l-4 border-l-[#257180]">
                         <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2 flex-wrap">
                                 <Badge className={getScheduleStatusColor(schedule.status)}>
                                   {EnumHelpers.getScheduleStatusLabel(schedule.status)}
                                 </Badge>
@@ -279,7 +279,11 @@ export function ScheduleTab() {
                               </div>
                               <h5 className="font-semibold text-gray-900 mb-1">
                                 {subject?.subjectName || 'Môn học'}
-                                {level && <span className="text-sm font-normal text-gray-500 ml-2">- {level.name}</span>}
+                                {level && (
+                                  <span className="text-sm font-normal text-gray-500 ml-2">
+                                    - {level.name}
+                                  </span>
+                                )}
                               </h5>
                               <p className="text-sm text-gray-600 mb-2">
                                 Gia sư: {user?.email || 'Chưa có thông tin'}
@@ -287,7 +291,9 @@ export function ScheduleTab() {
                               {slot && (
                                 <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
                                   <Clock className="h-4 w-4 text-[#257180]" />
-                                  <span>{slot.startTime} - {slot.endTime}</span>
+                                  <span>
+                                    {slot.startTime} - {slot.endTime}
+                                  </span>
                                 </div>
                               )}
                               {schedule.meetingSession?.meetLink && (
@@ -309,7 +315,7 @@ export function ScheduleTab() {
                               {!isOnline && tutor?.addressLine && (
                                 <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
                                   <MapPin className="h-4 w-4" />
-                                  <span>{tutor.addressLine}</span>
+                                  <span className="break-words">{tutor.addressLine}</span>
                                 </div>
                               )}
                             </div>
