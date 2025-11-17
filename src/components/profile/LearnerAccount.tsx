@@ -16,8 +16,8 @@ import { ClassRequestsTab } from './tabs/ClassRequestsTab';
 import { NotificationsTab } from './tabs/NotificationsTab';
 import { TutorApplicationsTab } from './tabs/TutorApplicationsTab';
 import { Badge } from '@/components/ui/basic/badge';
-import { mockNotifications } from '@/data/mockLearnerData';
 import { useAuth } from '@/hooks/useAuth';
+import { useNotifications } from '@/hooks/useNotifications';
 import { USER_ROLES } from '@/constants';
 
 interface LearnerAccountProps {
@@ -54,7 +54,8 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
     }
   }, [activeTab, user]);
 
-  const unreadNotifications = mockNotifications.filter(n => !n.isRead).length;
+  // Get unread notifications count from API
+  const { unreadCount: unreadNotifications } = useNotifications(true, 1);
 
   // Check if user is a tutor
   const isTutor = user && user.role === USER_ROLES.TUTOR;

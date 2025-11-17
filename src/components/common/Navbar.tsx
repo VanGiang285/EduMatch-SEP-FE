@@ -125,8 +125,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                     onNavigateToNotifications?.();
                   }}
                   onMarkAllRead={() => {
-                    // TODO: Implement mark all as read
-                    console.log('Mark all notifications as read');
+                    // Mark all as read is handled in NotificationDropdown component
                   }}
                 />
                 <button
