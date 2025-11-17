@@ -37,6 +37,7 @@ import { EnumHelpers, TeachingMode } from '@/types/enums';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
+import { useChatContext } from '@/contexts/ChatContext';
 
 // Helper function để convert string enum từ API sang TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
@@ -83,6 +84,7 @@ export function FindTutorPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set());
   const [loadingFavorite, setLoadingFavorite] = useState<Set<number>>(new Set());
+  const { openChatWithTutor } = useChatContext();
   const tutorsPerPage = 6;
   
   // Note: Using client-side filtering instead of API filtering
@@ -345,6 +347,28 @@ export function FindTutorPage() {
         return newSet;
       });
     }
+  };
+
+  const handleOpenChat = async (tutor: typeof currentTutors[0], e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      showWarning(
+        'Vui lòng đăng nhập',
+        'Bạn cần đăng nhập để nhắn tin với gia sư.'
+      );
+      router.push('/login');
+      return;
+    }
+
+    // Open floating chat with tutor
+    await openChatWithTutor(
+      tutor.id,
+      tutor.userEmail || "",
+      tutor.userName,
+      tutor.avatarUrl
+    );
   };
   return (
     <div className="min-h-screen bg-gray-50 pt-16">
@@ -669,7 +693,12 @@ export function FindTutorPage() {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="lg" className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
+                      <Button 
+                        variant="outline" 
+                        size="lg" 
+                        className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                        onClick={(e) => handleOpenChat(tutor, e)}
+                      >
                         <MessageCircle className="w-4 h-4 mr-2" />
                         Nhắn tin
                       </Button>
@@ -809,6 +838,8 @@ export function FindTutorPage() {
           </div>
         </div>
       </div>
+
+      {/* Chat Modal */}
     </div>
   );
 }

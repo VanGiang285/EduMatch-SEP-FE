@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
@@ -35,10 +35,12 @@ import {
 } from '../ui/navigation/pagination';
 import { useFindTutor } from '@/hooks/useFindTutor';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
+import { TutorService } from '@/services/tutorService';
 import { TutorProfileDto } from '@/types/backend';
 import { EnumHelpers, TeachingMode } from '@/types/enums';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
+import { useChatContext } from '@/contexts/ChatContext';
 
 // Helper function to convert string enum from API to TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
@@ -81,7 +83,40 @@ export function SavedTutorsPage() {
   const [isLoadingTutors, setIsLoadingTutors] = useState(true);
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set());
   const [loadingFavorite, setLoadingFavorite] = useState<Set<number>>(new Set());
+  const { openChatWithTutor } = useChatContext();
   const tutorsPerPage = 6;
+
+  const buildDetailedTutorList = useCallback(async (baseTutors: TutorProfileDto[]): Promise<TutorProfileDto[]> => {
+    if (!baseTutors || baseTutors.length === 0) {
+      return [];
+    }
+
+    const detailResults = await Promise.all(
+      baseTutors.map(async (tutor) => {
+        const email = tutor.userEmail;
+        if (!email) {
+          return tutor;
+        }
+
+        try {
+          const response = await TutorService.getTutorByEmail(email);
+          if (response.success && response.data) {
+            return response.data;
+          }
+        } catch (error) {
+          console.error('Error fetching tutor detail by email:', email, error);
+        }
+
+        return tutor;
+      })
+    );
+
+    const uniqueTutors = new Map<number, TutorProfileDto>();
+    detailResults.forEach((tutor) => {
+      uniqueTutors.set(tutor.id, tutor);
+    });
+    return Array.from(uniqueTutors.values());
+  }, []);
 
   // Load favorite tutors from API (only if authenticated)
   useEffect(() => {
@@ -98,8 +133,9 @@ export function SavedTutorsPage() {
         const response = await FavoriteTutorService.getFavoriteTutors();
         if (response.success) {
           const tutors = response.data || [];
-          setSavedTutors(tutors);
-          setFavoriteTutors(new Set(tutors.map(t => t.id)));
+          const detailedTutors = await buildDetailedTutorList(tutors);
+          setSavedTutors(detailedTutors);
+          setFavoriteTutors(new Set(detailedTutors.map(t => t.id)));
         } else {
           console.error('Failed to load favorite tutors:', response.message);
           setSavedTutors([]);
@@ -257,6 +293,28 @@ export function SavedTutorsPage() {
     }
   }, [filteredAndSortedTutors, hoveredTutor]);
 
+  const handleOpenChat = async (tutor: TutorProfileDto, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      showWarning(
+        'Vui lòng đăng nhập',
+        'Bạn cần đăng nhập để nhắn tin với gia sư.'
+      );
+      router.push('/login');
+      return;
+    }
+
+    // Open floating chat with tutor
+    await openChatWithTutor(
+      tutor.id,
+      tutor.userEmail || "",
+      tutor.userName,
+      tutor.avatarUrl
+    );
+  };
+
   // Update hoveredTutor when filtered results change
   useEffect(() => {
     if (filteredAndSortedTutors.length > 0) {
@@ -317,16 +375,18 @@ export function SavedTutorsPage() {
         // Reload the list if adding (shouldn't happen in saved tutors page, but just in case)
         const response = await FavoriteTutorService.getFavoriteTutors();
         const tutors = response.data || [];
-        setSavedTutors(tutors);
-        setFavoriteTutors(new Set(tutors.map(t => t.id)));
+        const detailedTutors = await buildDetailedTutorList(tutors);
+        setSavedTutors(detailedTutors);
+        setFavoriteTutors(new Set(detailedTutors.map(t => t.id)));
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
       // Reload on error to revert
       const response = await FavoriteTutorService.getFavoriteTutors();
       const tutors = response.data || [];
-      setSavedTutors(tutors);
-      setFavoriteTutors(new Set(tutors.map(t => t.id)));
+      const detailedTutors = await buildDetailedTutorList(tutors);
+      setSavedTutors(detailedTutors);
+      setFavoriteTutors(new Set(detailedTutors.map(t => t.id)));
     } finally {
       setLoadingFavorite(prev => {
         const newSet = new Set(prev);
@@ -688,7 +748,12 @@ export function SavedTutorsPage() {
                             )}
                           </div>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="lg" className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
+                            <Button 
+                              variant="outline" 
+                              size="lg" 
+                              className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                              onClick={(e) => handleOpenChat(tutor, e)}
+                            >
                               <MessageCircle className="w-4 h-4 mr-2" />
                               Nhắn tin
                             </Button>

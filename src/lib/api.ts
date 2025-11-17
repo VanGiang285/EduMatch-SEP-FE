@@ -1,6 +1,7 @@
 import { ApiResponse, ApiError } from '@/types/api';
 import { APP_CONFIG } from '@/constants/config';
 import { STORAGE_KEYS } from '@/constants';
+import { TokenManager } from './tokenManager';
 class ApiClient {
   private baseURL: string;
   private defaultHeaders: Record<string, string>;
@@ -99,11 +100,51 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
+    // Check if token is expired or about to expire before making request
+    const token = this.getAuthToken();
+    if (token) {
+      const isExpired = TokenManager.isTokenExpired(token);
+      const shouldRefresh = TokenManager.shouldRefreshSoon(token);
+      
+      if (isExpired || shouldRefresh) {
+        // Token expired or about to expire, refresh it first
+        if (this.isRefreshing && this.refreshPromise) {
+          // Wait for ongoing refresh
+          try {
+            await this.refreshPromise;
+          } catch (error) {
+            // Refresh failed, will be handled below
+            console.warn('Token refresh in progress failed:', error);
+          }
+        } else if (!this.isRefreshing && this.onTokenRefresh) {
+          // Start refresh
+          this.isRefreshing = true;
+          this.refreshPromise = this.performTokenRefresh();
+          try {
+            await this.refreshPromise;
+            console.log('✅ Token refreshed successfully before request');
+          } catch (error) {
+            // Refresh failed
+            console.error('❌ Token refresh failed before request:', error);
+            // If token is completely expired, we should not proceed
+            // The request will likely fail with 401, which will be handled below
+            if (isExpired) {
+              console.warn('Token is expired and refresh failed, request may fail');
+            }
+          } finally {
+            this.isRefreshing = false;
+            this.refreshPromise = null;
+          }
+        }
+      }
+    }
+
     try {
       return await this.makeRequest<T>(endpoint, options);
     } catch (error) {
       // Handle 401 Unauthorized with auto-refresh
       if (error instanceof ApiError && error.status === 401) {
+        console.log('🔄 Received 401, attempting token refresh...');
         return await this.handleTokenRefresh<T>(endpoint, options);
       }
       throw error;
@@ -114,7 +155,10 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
-    const url = `${this.baseURL}${endpoint}`;
+    // Check if endpoint is a Next.js API route (starts with /api/auth/)
+    // Next.js API routes should be called without baseURL (relative to current domain)
+    const isNextJsApiRoute = endpoint.startsWith('/api/auth/');
+    const url = isNextJsApiRoute ? endpoint : `${this.baseURL}${endpoint}`;
     const isFormData = options.body instanceof FormData;
     const headers = this.getHeaders(
       options.headers as Record<string, string>,

@@ -10,7 +10,7 @@ import { SelectWithSearch, SelectWithSearchItem } from '../ui/form/select-with-s
 import { Textarea } from '../ui/form/textarea';
 import { Label } from '../ui/form/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { USER_ROLES } from '@/constants';
+import { USER_ROLES, DAY_OF_WEEK_OPTIONS } from '@/constants';
 import {
   Pagination,
   PaginationContent,
@@ -45,6 +45,33 @@ import { ClassRequestService, ClassRequestItemDto, ClassRequestDetailDto } from 
 import { TutorApplicationService, TutorApplicationItemDto } from '@/services/tutorApplicationService';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { TeachingMode, ClassRequestStatus } from '@/types/enums';
+
+const DAY_OF_WEEK_MAP: Record<number, string> = DAY_OF_WEEK_OPTIONS.reduce(
+  (acc, item) => {
+    acc[item.value] = item.label;
+    return acc;
+  },
+  {} as Record<number, string>
+);
+
+const getDayOfWeekLabel = (day: number | string | undefined): string => {
+  if (day === undefined || day === null) {
+    return 'Không xác định';
+  }
+  const dayNumber = typeof day === 'string' ? parseInt(day, 10) : day;
+  if (Number.isNaN(dayNumber)) {
+    return 'Không xác định';
+  }
+  return DAY_OF_WEEK_MAP[dayNumber] || 'Không xác định';
+};
+
+const formatSlotTime = (time?: string | null): string => {
+  if (!time) return '--:--';
+  if (time.length >= 5) {
+    return time.slice(0, 5);
+  }
+  return time;
+};
 
 export function ClassRequestsPage() {
   const router = useRouter();
@@ -753,6 +780,31 @@ export function ClassRequestsPage() {
                       </div>
                     )}
                   </div>
+
+                {/* Slots */}
+                {selectedRequestDetail.slots && selectedRequestDetail.slots.length > 0 && (
+                  <div className="p-4 bg-white rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-600 flex items-center gap-1 mb-3">
+                      <Clock className="h-4 w-4 text-[#257180]" />
+                      Thời gian học dự kiến
+                    </p>
+                    <div className="space-y-2">
+                      {selectedRequestDetail.slots.map((slot) => (
+                        <div
+                          key={slot.id}
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-gray-50 border border-gray-100 rounded-md"
+                        >
+                          <div className="flex items-center gap-2 text-sm text-gray-700">
+                            <span className="font-medium text-gray-900">{getDayOfWeekLabel(slot.dayOfWeek)}</span>
+                          </div>
+                          <div className="text-sm font-semibold text-[#257180]">
+                            {formatSlotTime(slot.startTime)} - {formatSlotTime(slot.endTime)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                   {/* Description */}
                   {(selectedRequestDetail.learningGoal || selectedRequestDetail.tutorRequirement) && (

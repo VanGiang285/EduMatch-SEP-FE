@@ -2,12 +2,17 @@
 import { ReactNode } from "react";
 import { Navbar } from "./Navbar";
 import { useRouter } from "next/navigation";
+import { useWallet } from "@/hooks/useWallet";
+
 interface PageWrapperProps {
   children: ReactNode;
   currentPage: string;
 }
+
 export function PageWrapper({ children, currentPage }: PageWrapperProps) {
   const router = useRouter();
+  const { balance } = useWallet();
+
   return (
     <>
       <Navbar
@@ -21,6 +26,7 @@ export function PageWrapper({ children, currentPage }: PageWrapperProps) {
         onNavigateToFavorites={() => router.push('/saved-tutors')}
         onNavigateToClassRequests={() => router.push('/class-requests')}
         currentPage={currentPage}
+        walletBalance={balance}
       />
       {children}
     </>
