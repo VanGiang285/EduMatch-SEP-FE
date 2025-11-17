@@ -7,8 +7,6 @@ import { useCustomToast } from './useCustomToast';
 
 interface LoadBookingsParams {
   status?: BookingStatus;
-  page?: number;
-  pageSize?: number;
 }
 
 /**
@@ -108,8 +106,6 @@ export function useTutorBookings() {
       const paramsKey = JSON.stringify({
         tutorId: currentTutorId,
         status: params?.status,
-        page: params?.page || 1,
-        pageSize: params?.pageSize || 100,
       });
 
       // Tránh gọi lại nếu đang loading hoặc params giống nhau
@@ -126,17 +122,15 @@ export function useTutorBookings() {
         lastLoadParamsRef.current = paramsKey;
         setLoading(true);
 
-        const response = await BookingService.getAllByTutorIdPaging(
+        const response = await BookingService.getAllByTutorIdNoPaging(
           currentTutorId,
           {
-            ...params,
-            page: params?.page || 1,
-            pageSize: params?.pageSize || 100,
+            status: params?.status,
           }
         );
 
         if (response.success && response.data) {
-          setBookings(response.data.items || []);
+          setBookings(response.data || []);
         } else {
           showErrorRef.current(
             'Không thể tải danh sách đặt lịch',

@@ -57,8 +57,6 @@ export function TutorBookingsTab() {
     if (tutorId && tutorId > 0 && !loadingTutorId && !loading) {
       const params: {
         status?: BookingStatus;
-        page?: number;
-        pageSize?: number;
       } = {};
 
       if (filter !== 'all') {
@@ -108,8 +106,6 @@ export function TutorBookingsTab() {
         // Reload bookings với filter hiện tại
         const params: {
           status?: BookingStatus;
-          page?: number;
-          pageSize?: number;
         } = {};
 
         if (filter !== 'all') {
