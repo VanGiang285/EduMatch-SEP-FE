@@ -283,9 +283,9 @@ export function ClassesTab() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <h3 className="font-semibold text-lg text-gray-900">
                           {subject?.subjectName || 'Môn học'}
                         </h3>
@@ -298,11 +298,11 @@ export function ClassesTab() {
                           {EnumHelpers.getPaymentStatusLabel(selectedBooking.paymentStatus)}
                         </Badge>
                       </div>
-                      <p className="text-gray-600 text-sm">
+                      <p className="text-gray-600 text-sm truncate">
                         Gia sư: {tutor?.userName || 'Chưa có thông tin'}
                       </p>
                     </div>
-                    <div className="flex flex-col gap-2 items-end">
+                    <div className="flex flex-wrap sm:flex-col gap-2 items-start sm:items-end">
                       <Badge className={getBookingStatusColor(selectedBooking.status)}>
                         {EnumHelpers.getBookingStatusLabel(selectedBooking.status)}
                       </Badge>
@@ -540,34 +540,34 @@ export function ClassesTab() {
       </div>
 
       <Tabs value={filter} onValueChange={setFilter}>
-        <TabsList>
+        <TabsList className="w-full overflow-x-auto flex flex-wrap sm:flex-nowrap gap-2">
           <TabsTrigger
             value="all"
-            className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
           >
             Tất cả ({bookingCounts.all})
           </TabsTrigger>
           <TabsTrigger
             value="active"
-            className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
           >
             Đang học ({bookingCounts.active})
           </TabsTrigger>
           <TabsTrigger
             value="pending"
-            className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
           >
             Chờ xác nhận ({bookingCounts.pending})
           </TabsTrigger>
           <TabsTrigger
             value="completed"
-            className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
           >
             Hoàn thành ({bookingCounts.completed})
           </TabsTrigger>
           <TabsTrigger
             value="cancelled"
-            className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
           >
             Đã hủy ({bookingCounts.cancelled})
           </TabsTrigger>
