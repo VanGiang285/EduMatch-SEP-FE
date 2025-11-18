@@ -286,7 +286,7 @@ export function ScheduleTab() {
                                 )}
                               </h5>
                               <p className="text-sm text-gray-600 mb-2">
-                                Gia sư: {user?.email || 'Chưa có thông tin'}
+                                Gia sư: {tutor?.userEmail || tutor?.userName || 'Chưa có thông tin'}
                               </p>
                               {slot && (
                                 <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
@@ -508,7 +508,7 @@ export function ScheduleTab() {
                                   )}
                                 </h3>
                                 <p className="text-gray-600 text-sm mt-1">
-                                  Gia sư: {user?.email || 'Chưa có thông tin'}
+                                  Gia sư: {tutor?.userEmail || tutor?.userName || 'Chưa có thông tin'}
                                 </p>
                               </div>
 
