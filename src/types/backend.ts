@@ -102,7 +102,8 @@ export interface ManageUserDto {
   phone?: string;
   isEmailConfirmed?: boolean;
   loginProvider: string;
-  createdAt: string;
+  createdAt?: string;
+  createAt?: string; // Backend uses createAt (without 'd')
   isActive?: boolean;
   roleId: number;
   roleName: string;
@@ -192,6 +193,34 @@ export interface TutorEducationDto {
   rejectReason?: string;
   institution?: EducationInstitutionDto;
   tutor?: TutorProfileDto;
+}
+
+export interface TutorApplicationItemDto {
+  applicationId: number;
+  tutorId: number;
+  tutorName: string;
+  avatarUrl?: string;
+  message: string;
+  appliedAt: string;
+}
+
+export interface TutorAppliedItemDto {
+  id: number;
+  classRequestId: number;
+  learnerName: string;
+  avatarUrl?: string;
+  title: string;
+  subjectName: string;
+  level: string;
+  mode: string;
+  expectedStartDate?: string;
+  expectedSessions: number;
+  targetUnitPriceMin?: number;
+  targetUnitPriceMax?: number;
+  message: string;
+  classRequestStatus: string;
+  tutorApplicationStatus: number;
+  appliedAt: string;
 }
 
 export interface CertificateTypeDto {
@@ -382,6 +411,31 @@ export interface WithdrawalDto {
   completedAt?: string;
   wallet?: WalletDto;
   userBankAccount?: UserBankAccountDto;
+}
+
+export interface AdminWithdrawalDto {
+  id: number;
+  amount: number;
+  status: WithdrawalStatus | string;
+  createdAt: string;
+  userBankAccount: UserBankAccountDto;
+  wallet: WalletDto;
+}
+
+export interface SystemWalletDashboardDto {
+  platformRevenueBalance: number;
+  totalTutorLockedBalance: number;
+  totalUserAvailableBalance: number;
+}
+
+// ==================== NOTIFICATIONS ====================
+
+export interface NotificationDto {
+  id: number;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  linkUrl?: string;
 }
 
 // ==================== CHAT ====================

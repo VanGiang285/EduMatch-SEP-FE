@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Camera, Save, Loader2, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserProfileService } from '@/services/userProfileService';
+import { LocationService, ProvinceDto, SubDistrictDto } from '@/services/locationService';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { Gender } from '@/types/enums';
 import { UserProfileDto } from '@/types/backend';
@@ -24,6 +25,9 @@ export function ProfileTab() {
   const [originalData, setOriginalData] = useState<UserProfileDto | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+  const [provinces, setProvinces] = useState<ProvinceDto[]>([]);
+  const [subDistricts, setSubDistricts] = useState<SubDistrictDto[]>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [formData, setFormData] = useState({
     userName: '',
     email: '',
@@ -38,6 +42,56 @@ export function ProfileTab() {
     avatarUrl: '',
     avatarUrlPublicId: '',
   });
+
+  // Load provinces on mount
+  useEffect(() => {
+    const loadProvinces = async () => {
+      setIsLoadingLocations(true);
+      try {
+        const response = await LocationService.getAllProvinces();
+        if (response.success && response.data) {
+          setProvinces(response.data);
+        }
+      } catch (error) {
+        console.error('Error loading provinces:', error);
+      } finally {
+        setIsLoadingLocations(false);
+      }
+    };
+    loadProvinces();
+  }, []);
+
+  // Load sub-districts when cityId changes
+  useEffect(() => {
+    const loadSubDistricts = async () => {
+      if (!formData.cityId) {
+        setSubDistricts([]);
+        return;
+      }
+      
+      const provinceId = parseInt(formData.cityId);
+      if (isNaN(provinceId) || provinceId <= 0) {
+        setSubDistricts([]);
+        return;
+      }
+
+      setIsLoadingLocations(true);
+      try {
+        const response = await LocationService.getSubDistrictsByProvinceId(provinceId);
+        if (response.success && response.data) {
+          setSubDistricts(response.data);
+        } else {
+          setSubDistricts([]);
+        }
+      } catch (error) {
+        console.error('Error loading sub-districts:', error);
+        setSubDistricts([]);
+      } finally {
+        setIsLoadingLocations(false);
+      }
+    };
+    loadSubDistricts();
+  }, [formData.cityId]);
 
   // Load user profile data
   useEffect(() => {
@@ -420,24 +474,59 @@ export function ProfileTab() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="city">Tỉnh/Thành phố</Label>
-              <Input
-                id="city"
-                value={formData.cityName}
-                disabled={true}
-                className="bg-gray-50"
-                placeholder="Tỉnh/Thành phố (chỉ đọc)"
-              />
+              <Select
+                value={formData.cityId}
+                onValueChange={(value) => {
+                  setFormData({
+                    ...formData,
+                    cityId: value,
+                    subDistrictId: '', // Reset district when province changes
+                    cityName: provinces.find(p => p.id.toString() === value)?.name || '',
+                    subDistrictName: '',
+                  });
+                }}
+                disabled={!isEditing}
+              >
+                <SelectTrigger id="city" className={!isEditing ? "bg-gray-50" : ""}>
+                  <SelectValue placeholder={isLoadingLocations ? "Đang tải..." : "Chọn tỉnh/thành phố"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {provinces.map((province) => (
+                    <SelectItem key={province.id} value={province.id.toString()}>
+                      {province.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="district">Quận/Huyện</Label>
-              <Input
-                id="district"
-                value={formData.subDistrictName}
-                disabled={true}
-                className="bg-gray-50"
-                placeholder="Quận/Huyện (chỉ đọc)"
-              />
+              <Select
+                value={formData.subDistrictId}
+                onValueChange={(value) => {
+                  setFormData({
+                    ...formData,
+                    subDistrictId: value,
+                    subDistrictName: subDistricts.find(d => d.id.toString() === value)?.name || '',
+                  });
+                }}
+                disabled={!isEditing || !formData.cityId || isLoadingLocations}
+              >
+                <SelectTrigger id="district" className={!isEditing ? "bg-gray-50" : ""}>
+                  <SelectValue placeholder={
+                    isLoadingLocations ? "Đang tải..." :
+                    formData.cityId ? "Chọn quận/huyện" : "Chọn tỉnh trước"
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {subDistricts.map((district) => (
+                    <SelectItem key={district.id} value={district.id.toString()}>
+                      {district.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2 md:col-span-2">
@@ -451,11 +540,6 @@ export function ProfileTab() {
               />
             </div>
           </div>
-          {isEditing && (
-            <p className="text-sm text-gray-500 mt-2">
-              Lưu ý: Tỉnh/Thành phố và Quận/Huyện hiện chỉ hiển thị. Địa chỉ chi tiết có thể được cập nhật.
-            </p>
-          )}
         </CardContent>
       </Card>
     </div>

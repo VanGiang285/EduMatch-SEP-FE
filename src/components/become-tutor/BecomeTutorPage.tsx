@@ -31,13 +31,13 @@ import {
   AlertCircle,
   Loader2
 } from "lucide-react";
-import { vietnamProvinces, getDistrictsByProvince } from "@/data/vietnam-locations";
 import { FormatService } from "@/lib/format";
 import { useBecomeTutor } from "@/hooks/useBecomeTutor";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBecomeTutorMasterData } from "@/hooks/useBecomeTutorMasterData";
 import { MediaService } from "@/services/mediaService";
 import { CertificateService } from "@/services/certificateService";
+import { LocationService, ProvinceDto, SubDistrictDto } from "@/services/locationService";
 import { BecomeTutorRequest } from "@/types/requests";
 import { TeachingMode, InstitutionType } from "@/types/enums";
 export function BecomeTutorPage() {
@@ -188,6 +188,9 @@ export function BecomeTutorPage() {
     }
   }, [user, isAuthenticated]);
 
+  const [provinces, setProvinces] = useState<ProvinceDto[]>([]);
+  const [subDistricts, setSubDistricts] = useState<SubDistrictDto[]>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [formData, setFormData] = useState({
     introduction: {
       fullName: '',
@@ -292,9 +295,57 @@ export function BecomeTutorPage() {
     { id: 8, title: 'Giá cả', description: 'Mức học phí' }
   ];
 
-  const availableDistricts = formData.introduction.province 
-    ? getDistrictsByProvince(formData.introduction.province)
-    : [];
+  // Load provinces on mount
+  useEffect(() => {
+    const loadProvinces = async () => {
+      setIsLoadingLocations(true);
+      try {
+        const response = await LocationService.getAllProvinces();
+        if (response.success && response.data) {
+          setProvinces(response.data);
+        }
+      } catch (error) {
+        console.error('Error loading provinces:', error);
+      } finally {
+        setIsLoadingLocations(false);
+      }
+    };
+    loadProvinces();
+  }, []);
+
+  // Load sub-districts when province changes
+  useEffect(() => {
+    const loadSubDistricts = async () => {
+      if (!formData.introduction.province) {
+        setSubDistricts([]);
+        return;
+      }
+      
+      const provinceId = parseInt(formData.introduction.province);
+      if (isNaN(provinceId) || provinceId <= 0) {
+        setSubDistricts([]);
+        return;
+      }
+
+      setIsLoadingLocations(true);
+      try {
+        const response = await LocationService.getSubDistrictsByProvinceId(provinceId);
+        if (response.success && response.data) {
+          setSubDistricts(response.data);
+        } else {
+          setSubDistricts([]);
+        }
+      } catch (error) {
+        console.error('Error loading sub-districts:', error);
+        setSubDistricts([]);
+      } finally {
+        setIsLoadingLocations(false);
+      }
+    };
+    loadSubDistricts();
+  }, [formData.introduction.province]);
+
+  const availableDistricts = subDistricts;
 
   const weekDays = [
     { key: 'monday', label: 'Thứ 2' },
@@ -1032,12 +1083,12 @@ export function BecomeTutorPage() {
       levels: []
     });
   };
-  const handleProvinceChange = (provinceCode: string) => {
+  const handleProvinceChange = (provinceId: string) => {
     setFormData(prev => ({
       ...prev,
       introduction: {
         ...prev.introduction,
-        province: provinceCode,
+        province: provinceId,
         district: '' // Reset district when province changes
       }
     }));
@@ -1153,14 +1204,15 @@ export function BecomeTutorPage() {
                           <SelectWithSearch
                             value={formData.introduction.province}
                             onValueChange={handleProvinceChange}
-                            placeholder="Chọn tỉnh/thành phố"
+                            placeholder={isLoadingLocations ? "Đang tải..." : "Chọn tỉnh/thành phố"}
+                            disabled={isLoadingLocations}
                             className="pl-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
                           >
-                            {vietnamProvinces.map((province) => (
+                            {provinces.map((province) => (
                               <SelectWithSearchItem 
-                                key={province.code} 
-                                value={province.code}
-                                onClick={() => handleProvinceChange(province.code)}
+                                key={province.id} 
+                                value={province.id.toString()}
+                                onClick={() => handleProvinceChange(province.id.toString())}
                               >
                                 {province.name}
                               </SelectWithSearchItem>
@@ -1175,15 +1227,18 @@ export function BecomeTutorPage() {
                           <SelectWithSearch
                             value={formData.introduction.district}
                             onValueChange={(value) => updateFormData('introduction', { district: value })}
-                            placeholder={formData.introduction.province ? "Chọn quận/huyện" : "Chọn tỉnh trước"}
-                            disabled={!formData.introduction.province}
+                            placeholder={
+                              isLoadingLocations ? "Đang tải..." :
+                              formData.introduction.province ? "Chọn quận/huyện" : "Chọn tỉnh trước"
+                            }
+                            disabled={!formData.introduction.province || isLoadingLocations}
                             className="pl-10 border-gray-300 focus:border-[#257180] focus:ring-[#257180] disabled:opacity-50"
                           >
                             {availableDistricts.map((district) => (
                               <SelectWithSearchItem 
-                                key={district.code} 
-                                value={district.code}
-                                onClick={() => updateFormData('introduction', { district: district.code })}
+                                key={district.id} 
+                                value={district.id.toString()}
+                                onClick={() => updateFormData('introduction', { district: district.id.toString() })}
                               >
                                 {district.name}
                               </SelectWithSearchItem>
@@ -2593,7 +2648,7 @@ export function BecomeTutorPage() {
                           <span>Vị trí:</span>
                           <span className="font-medium">
                             {formData.introduction.province && formData.introduction.district 
-                              ? `${vietnamProvinces.find(p => p.code === formData.introduction.province)?.name}, ${availableDistricts.find(d => d.code === formData.introduction.district)?.name}`
+                              ? `${provinces.find(p => p.id.toString() === formData.introduction.province)?.name}, ${availableDistricts.find(d => d.id.toString() === formData.introduction.district)?.name}`
                               : 'Chưa chọn'
                             }
                           </span>

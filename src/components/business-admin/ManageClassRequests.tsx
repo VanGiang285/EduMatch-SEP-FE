@@ -55,7 +55,8 @@ import {
   getDayOfWeekText,
 } from '@/data/mockBusinessAdminData';
 import { ClassRequestService, ClassRequestItemDto, ClassRequestDetailDto } from '@/services/classRequestService';
-import { TutorApplicationService, TutorApplicationItemDto } from '@/services/tutorApplicationService';
+import { TutorApplicationService } from '@/services/tutorApplicationService';
+import { TutorApplicationItemDto } from '@/types/backend';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { ClassRequestStatus, TeachingMode } from '@/types/enums';
 

@@ -273,9 +273,23 @@ export function MessagesTab() {
             });
           }
           const room = chatRooms.find(r => r.id === selectedConversation);
-          if (room && room.tutor?.userEmail && isMounted) {
+          if (room && isMounted && currentUserEmail) {
             try {
-              await markMessagesAsRead(selectedConversation, room.tutor.userEmail);
+              await markMessagesAsRead(selectedConversation, currentUserEmail);
+              setMessages(prev => prev.map(msg => {
+                if (msg.chatRoomId === selectedConversation && msg.receiverEmail === currentUserEmail && !msg.isRead) {
+                  return { ...msg, isRead: true };
+                }
+                return msg;
+              }));
+              setLastMessages(prev => {
+                const newMap = new Map(prev);
+                const existing = newMap.get(selectedConversation);
+                if (existing && existing.receiverEmail === currentUserEmail && !existing.isRead) {
+                  newMap.set(selectedConversation, { ...existing, isRead: true });
+                }
+                return newMap;
+              });
             } catch (err) {
               console.error("Failed to mark messages as read:", err);
             }

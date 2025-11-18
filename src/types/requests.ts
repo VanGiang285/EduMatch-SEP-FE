@@ -75,6 +75,8 @@ export interface TutorProfileUpdateRequest {
   videoIntroPublicId?: string;
   teachingModes?: TeachingMode;
   status?: TutorStatus;
+  provinceId?: number;
+  subDistrictId?: number;
 }
 
 export interface UpdateTutorStatusRequest {
@@ -253,6 +255,23 @@ export interface UpdateBookingRequest {
   id: number;
   status?: number; // BookingStatus
   paymentStatus?: number; // PaymentStatus
+}
+
+// ==================== SYSTEM FEE REQUESTS ====================
+
+export interface SystemFeeCreateRequest {
+  name: string;
+  percentage?: number;
+  fixedAmount?: number;
+  isActive?: boolean;
+}
+
+export interface SystemFeeUpdateRequest {
+  id: number;
+  name: string;
+  percentage?: number;
+  fixedAmount?: number;
+  isActive?: boolean;
 }
 
 // ==================== WALLET REQUESTS ====================

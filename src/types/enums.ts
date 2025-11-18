@@ -98,6 +98,11 @@ export enum ClassApplicationStatus {
   Selected = 4, // Được chọn
 }
 
+export enum TutorApplicationStatus {
+  Applied = 0,
+  Canceled = 1,
+}
+
 /**
  * Helper functions để convert enum values
  */
@@ -381,6 +386,29 @@ export const EnumHelpers = {
       default:
         return 'Không xác định';
     }
+  },
+
+  parseTutorApplicationStatus: (status: TutorApplicationStatus | string | number): TutorApplicationStatus => {
+    if (typeof status === 'number') {
+      return status as TutorApplicationStatus;
+    }
+    if (typeof status === 'string') {
+      if (status === 'Applied' || status === '0') {
+        return TutorApplicationStatus.Applied;
+      }
+      if (status === 'Canceled' || status === 'Cancelled' || status === '1') {
+        return TutorApplicationStatus.Canceled;
+      }
+    }
+    return TutorApplicationStatus.Applied;
+  },
+
+  getTutorApplicationStatusLabel: (status: TutorApplicationStatus | string | number): string => {
+    const parsedStatus = EnumHelpers.parseTutorApplicationStatus(status);
+    if (parsedStatus === TutorApplicationStatus.Applied) {
+      return 'Đang ứng tuyển';
+    }
+    return 'Đã hủy';
   },
 };
 

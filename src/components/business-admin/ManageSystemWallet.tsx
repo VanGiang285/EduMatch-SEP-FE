@@ -1,5 +1,5 @@
 ﻿'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
@@ -28,6 +28,18 @@ import {
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/feedback/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/navigation/tabs';
+import {
   BarChart,
   Bar,
   XAxis,
@@ -46,42 +58,182 @@ import {
   Search,
   ArrowUpRight,
   ArrowDownRight,
+  Loader2,
+  Plus,
+  Edit,
+  Settings,
 } from 'lucide-react';
 import { 
-  mockSystemWalletTransactions,
   formatCurrency,
-  mockDashboardStats,
 } from '@/data/mockBusinessAdminData';
+import { WalletService } from '@/services/walletService';
+import { SystemFeeService } from '@/services/systemFeeService';
+import { WalletDto, WalletTransactionDto, SystemWalletDashboardDto, SystemFeeDto } from '@/types/backend';
+import { WalletTransactionType, WalletTransactionReason } from '@/types/backend';
+import { SystemFeeCreateRequest, SystemFeeUpdateRequest } from '@/types/requests';
+import { useCustomToast } from '@/hooks/useCustomToast';
 
 const ITEMS_PER_PAGE = 20;
+const SYSTEM_FEE_ITEMS_PER_PAGE = 10;
 
 export function ManageSystemWallet() {
+  const { showSuccess, showError } = useCustomToast();
+  
+  // Wallet states
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoadingWallet, setIsLoadingWallet] = useState(true);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(true);
+  
+  const [systemWallet, setSystemWallet] = useState<WalletDto | null>(null);
+  const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
+  const [dashboard, setDashboard] = useState<SystemWalletDashboardDto | null>(null);
+
+  // System Fee states
+  const [systemFees, setSystemFees] = useState<SystemFeeDto[]>([]);
+  const [isLoadingSystemFees, setIsLoadingSystemFees] = useState(true);
+  const [systemFeePage, setSystemFeePage] = useState(1);
+  const [systemFeeTotalPages, setSystemFeeTotalPages] = useState(1);
+  const [showSystemFeeDialog, setShowSystemFeeDialog] = useState(false);
+  const [editingSystemFee, setEditingSystemFee] = useState<SystemFeeDto | null>(null);
+  const [isSavingSystemFee, setIsSavingSystemFee] = useState(false);
+  
+  // System Fee form
+  const [systemFeeForm, setSystemFeeForm] = useState<SystemFeeCreateRequest>({
+    name: '',
+    percentage: undefined,
+    fixedAmount: undefined,
+    isActive: true,
+  });
+
+  // Load wallet data
+  useEffect(() => {
+    const loadWalletData = async () => {
+      setIsLoadingWallet(true);
+      try {
+        const response = await WalletService.getSystemWallet();
+        if (response.success && response.data) {
+          setSystemWallet(response.data);
+        } else {
+          showError('Lỗi', response.message || 'Không thể tải thông tin ví hệ thống');
+        }
+      } catch (error: any) {
+        console.error('Error loading system wallet:', error);
+        showError('Lỗi', 'Không thể tải thông tin ví hệ thống. Vui lòng thử lại.');
+      } finally {
+        setIsLoadingWallet(false);
+      }
+    };
+
+    loadWalletData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load transactions
+  useEffect(() => {
+    const loadTransactions = async () => {
+      setIsLoadingTransactions(true);
+      try {
+        const response = await WalletService.getSystemWalletTransactions();
+        if (response.success && response.data) {
+          setTransactions(response.data);
+        } else {
+          showError('Lỗi', response.message || 'Không thể tải lịch sử giao dịch');
+        }
+      } catch (error: any) {
+        console.error('Error loading transactions:', error);
+        showError('Lỗi', 'Không thể tải lịch sử giao dịch. Vui lòng thử lại.');
+      } finally {
+        setIsLoadingTransactions(false);
+      }
+    };
+
+    loadTransactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load dashboard
+  useEffect(() => {
+    const loadDashboard = async () => {
+      setIsLoadingDashboard(true);
+      try {
+        const response = await WalletService.getSystemWalletDashboard();
+        if (response.success && response.data) {
+          setDashboard(response.data);
+        } else {
+          showError('Lỗi', response.message || 'Không thể tải dữ liệu dashboard');
+        }
+      } catch (error: any) {
+        console.error('Error loading dashboard:', error);
+        showError('Lỗi', 'Không thể tải dữ liệu dashboard. Vui lòng thử lại.');
+      } finally {
+        setIsLoadingDashboard(false);
+      }
+    };
+
+    loadDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load system fees
+  useEffect(() => {
+    const loadSystemFees = async () => {
+      setIsLoadingSystemFees(true);
+      try {
+        const response = await SystemFeeService.getAllPaging({
+          page: systemFeePage,
+          pageSize: SYSTEM_FEE_ITEMS_PER_PAGE,
+        });
+        if (response.success && response.data) {
+          setSystemFees(response.data.items || []);
+          setSystemFeeTotalPages(Math.ceil((response.data.totalCount || 0) / SYSTEM_FEE_ITEMS_PER_PAGE));
+        } else {
+          showError('Lỗi', response.message || 'Không thể tải danh sách phí hệ thống');
+        }
+      } catch (error: any) {
+        console.error('Error loading system fees:', error);
+        showError('Lỗi', 'Không thể tải danh sách phí hệ thống. Vui lòng thử lại.');
+      } finally {
+        setIsLoadingSystemFees(false);
+      }
+    };
+
+    loadSystemFees();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [systemFeePage]);
 
   // Calculate wallet stats
-  const currentBalance = mockDashboardStats.overview.totalRevenue;
-  const totalCredit = mockSystemWalletTransactions
-    .filter(t => t.transactionType === 1)
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalDebit = mockSystemWalletTransactions
-    .filter(t => t.transactionType === 0)
-    .reduce((sum, t) => sum + t.amount, 0);
+  const currentBalance = systemWallet?.balance || 0;
+  const totalCredit = useMemo(() => 
+    transactions
+      .filter(t => t.transactionType === WalletTransactionType.CREDIT)
+      .reduce((sum, t) => sum + t.amount, 0),
+    [transactions]
+  );
+  const totalDebit = useMemo(() => 
+    transactions
+      .filter(t => t.transactionType === WalletTransactionType.DEBIT)
+      .reduce((sum, t) => sum + t.amount, 0),
+    [transactions]
+  );
 
   // Filter transactions
-  const filteredTransactions = mockSystemWalletTransactions.filter((transaction) => {
-    const matchesSearch = 
-      (transaction.userName && transaction.userName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (transaction.tutorName && transaction.tutorName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (transaction.referenceCode && transaction.referenceCode.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesType = typeFilter === 'all' || 
-                       (typeFilter === 'credit' && transaction.transactionType === 1) ||
-                       (typeFilter === 'debit' && transaction.transactionType === 0);
-    
-    return matchesSearch && matchesType;
-  });
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((transaction) => {
+      const matchesSearch = 
+        (transaction.booking?.learnerEmail && transaction.booking.learnerEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (transaction.booking?.tutorEmail && transaction.booking.tutorEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (transaction.referenceCode && transaction.referenceCode.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesType = typeFilter === 'all' || 
+                         (typeFilter === 'credit' && transaction.transactionType === WalletTransactionType.CREDIT) ||
+                         (typeFilter === 'debit' && transaction.transactionType === WalletTransactionType.DEBIT);
+      
+      return matchesSearch && matchesType;
+    });
+  }, [transactions, searchTerm, typeFilter]);
 
   // Pagination
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
@@ -89,37 +241,107 @@ export function ManageSystemWallet() {
   const paginatedTransactions = filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   // Get transaction type text
-  const getTransactionTypeText = (type: number, reason: number) => {
-    if (type === 1) { // CREDIT
+  const getTransactionTypeText = (type: WalletTransactionType, reason: WalletTransactionReason) => {
+    if (type === WalletTransactionType.CREDIT) {
       const creditReasons: Record<number, string> = {
-        2: 'Thanh toán Booking',
-        5: 'Phí nền tảng',
+        [WalletTransactionReason.PAYMENT_BOOKING]: 'Thanh toán Booking',
+        [WalletTransactionReason.PLATFORM_FEE]: 'Phí nền tảng',
+        [WalletTransactionReason.DEPOSIT]: 'Nạp tiền',
       };
       return creditReasons[reason] || 'Nạp tiền';
-    } else { // DEBIT
+    } else {
       const debitReasons: Record<number, string> = {
-        4: 'Chi trả gia sư',
-        3: 'Hoàn tiền',
-        1: 'Rút tiền',
+        [WalletTransactionReason.RECEIVE_FROM_BOOKING]: 'Chi trả gia sư',
+        [WalletTransactionReason.REFUND_BOOKING]: 'Hoàn tiền',
+        [WalletTransactionReason.WITHDRAWAL]: 'Rút tiền',
       };
       return debitReasons[reason] || 'Trừ tiền';
     }
   };
 
-  // Monthly balance data (mock)
-  const monthlyBalanceData = [
-    { month: 'T1', balance: 35000000 },
-    { month: 'T2', balance: 38000000 },
-    { month: 'T3', balance: 42000000 },
-    { month: 'T4', balance: 41000000 },
-    { month: 'T5', balance: 45000000 },
-    { month: 'T6', balance: 47000000 },
-    { month: 'T7', balance: 46000000 },
-    { month: 'T8', balance: 48000000 },
-    { month: 'T9', balance: 49500000 },
-    { month: 'T10', balance: 51000000 },
-    { month: 'T11', balance: currentBalance, current: true },
-  ];
+  // Handle System Fee CRUD
+  const handleCreateSystemFee = () => {
+    setEditingSystemFee(null);
+    setSystemFeeForm({
+      name: '',
+      percentage: undefined,
+      fixedAmount: undefined,
+      isActive: true,
+    });
+    setShowSystemFeeDialog(true);
+  };
+
+  const handleEditSystemFee = (fee: SystemFeeDto) => {
+    setEditingSystemFee(fee);
+    setSystemFeeForm({
+      name: fee.name,
+      percentage: fee.percentage,
+      fixedAmount: fee.fixedAmount,
+      isActive: fee.isActive ?? true,
+    });
+    setShowSystemFeeDialog(true);
+  };
+
+  const handleSaveSystemFee = async () => {
+    if (!systemFeeForm.name.trim()) {
+      showError('Lỗi', 'Vui lòng nhập tên phí hệ thống');
+      return;
+    }
+
+    if (!systemFeeForm.percentage && !systemFeeForm.fixedAmount) {
+      showError('Lỗi', 'Vui lòng nhập phần trăm hoặc số tiền cố định');
+      return;
+    }
+
+    setIsSavingSystemFee(true);
+    try {
+      if (editingSystemFee) {
+        // Update
+        const request: SystemFeeUpdateRequest = {
+          id: editingSystemFee.id,
+          ...systemFeeForm,
+        };
+        const response = await SystemFeeService.updateSystemFee(request);
+        if (response.success) {
+          showSuccess('Thành công', 'Cập nhật phí hệ thống thành công');
+          setShowSystemFeeDialog(false);
+          // Reload system fees
+          const reloadResponse = await SystemFeeService.getAllPaging({
+            page: systemFeePage,
+            pageSize: SYSTEM_FEE_ITEMS_PER_PAGE,
+          });
+          if (reloadResponse.success && reloadResponse.data) {
+            setSystemFees(reloadResponse.data.items || []);
+          }
+        } else {
+          showError('Lỗi', response.message || 'Không thể cập nhật phí hệ thống');
+        }
+      } else {
+        // Create
+        const response = await SystemFeeService.createSystemFee(systemFeeForm);
+        if (response.success) {
+          showSuccess('Thành công', 'Tạo phí hệ thống thành công');
+          setShowSystemFeeDialog(false);
+          // Reload system fees
+          const reloadResponse = await SystemFeeService.getAllPaging({
+            page: systemFeePage,
+            pageSize: SYSTEM_FEE_ITEMS_PER_PAGE,
+          });
+          if (reloadResponse.success && reloadResponse.data) {
+            setSystemFees(reloadResponse.data.items || []);
+            setSystemFeeTotalPages(Math.ceil((reloadResponse.data.totalCount || 0) / SYSTEM_FEE_ITEMS_PER_PAGE));
+          }
+        } else {
+          showError('Lỗi', response.message || 'Không thể tạo phí hệ thống');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error saving system fee:', error);
+      showError('Lỗi', 'Không thể lưu phí hệ thống. Vui lòng thử lại.');
+    } finally {
+      setIsSavingSystemFee(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -129,91 +351,137 @@ export function ManageSystemWallet() {
         <p className="text-gray-600 mt-1">Theo dõi và quản lý ví của hệ thống EduMatch</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-lg bg-blue-50">
-                <Wallet className="h-6 w-6 text-blue-600" />
-              </div>
-              <TrendingUp className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Số dư ví hệ thống</p>
-              <p className="text-3xl font-semibold text-gray-900">{formatCurrency(currentBalance)}</p>
-              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                <ArrowUpRight className="h-3 w-3" />
-                +5.2% so với tháng trước
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Tabs */}
+      <Tabs defaultValue="wallet" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 bg-[#F2E5BF]">
+          <TabsTrigger value="wallet" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">
+            <Wallet className="h-4 w-4 mr-2" />
+            Ví hệ thống
+          </TabsTrigger>
+          <TabsTrigger value="system-fee" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">
+            <Settings className="h-4 w-4 mr-2" />
+            Phí hệ thống
+          </TabsTrigger>
+        </TabsList>
 
-        <Card className="bg-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-lg bg-green-50">
-                <TrendingUp className="h-6 w-6 text-green-600" />
-              </div>
-              <span className="text-sm text-gray-500">Tổng thu</span>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Tổng tiền vào ví</p>
-              <p className="text-3xl font-semibold text-green-600">{formatCurrency(totalCredit)}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {mockSystemWalletTransactions.filter(t => t.transactionType === 1).length} giao dịch
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Wallet Tab */}
+        <TabsContent value="wallet" className="space-y-6">
 
-        <Card className="bg-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-lg bg-red-50">
-                <TrendingDown className="h-6 w-6 text-red-600" />
-              </div>
-              <span className="text-sm text-gray-500">Tổng chi</span>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Tổng tiền ra ví</p>
-              <p className="text-3xl font-semibold text-red-600">{formatCurrency(totalDebit)}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {mockSystemWalletTransactions.filter(t => t.transactionType === 0).length} giao dịch
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 rounded-lg bg-blue-50">
+                    <Wallet className="h-6 w-6 text-blue-600" />
+                  </div>
+                  {isLoadingWallet ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                  ) : (
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Số dư ví hệ thống</p>
+                  {isLoadingWallet ? (
+                    <div className="h-9 bg-gray-200 animate-pulse rounded" />
+                  ) : (
+                    <>
+                      <p className="text-3xl font-semibold text-gray-900">{formatCurrency(currentBalance)}</p>
+                      {dashboard && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Tổng số dư người dùng: {formatCurrency(dashboard.totalUserAvailableBalance)}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Balance Chart */}
-      <Card className="bg-white">
-        <CardHeader>
-          <CardTitle>Biến động số dư theo tháng</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={monthlyBalanceData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`} />
-              <Tooltip
-                formatter={(value: number) => formatCurrency(value)}
-                labelFormatter={(label) => `Tháng: ${label}`}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="balance" 
-                stroke="#257180" 
-                strokeWidth={2}
-                dot={{ fill: '#257180', r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+            <Card className="bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 rounded-lg bg-green-50">
+                    <TrendingUp className="h-6 w-6 text-green-600" />
+                  </div>
+                  {isLoadingTransactions ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                  ) : (
+                    <span className="text-sm text-gray-500">Tổng thu</span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Tổng tiền vào ví</p>
+                  {isLoadingTransactions ? (
+                    <div className="h-9 bg-gray-200 animate-pulse rounded" />
+                  ) : (
+                    <>
+                      <p className="text-3xl font-semibold text-green-600">{formatCurrency(totalCredit)}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {transactions.filter(t => t.transactionType === WalletTransactionType.CREDIT).length} giao dịch
+                      </p>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 rounded-lg bg-red-50">
+                    <TrendingDown className="h-6 w-6 text-red-600" />
+                  </div>
+                  {isLoadingTransactions ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                  ) : (
+                    <span className="text-sm text-gray-500">Tổng chi</span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Tổng tiền ra ví</p>
+                  {isLoadingTransactions ? (
+                    <div className="h-9 bg-gray-200 animate-pulse rounded" />
+                  ) : (
+                    <>
+                      <p className="text-3xl font-semibold text-red-600">{formatCurrency(totalDebit)}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {transactions.filter(t => t.transactionType === WalletTransactionType.DEBIT).length} giao dịch
+                      </p>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Dashboard Info */}
+          {dashboard && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-white">
+                <CardHeader>
+                  <CardTitle className="text-lg">Thông tin ví hệ thống</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Số dư ví hệ thống:</span>
+                      <span className="font-semibold">{formatCurrency(dashboard.platformRevenueBalance)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Tổng số dư bị khóa (gia sư):</span>
+                      <span className="font-semibold">{formatCurrency(dashboard.totalTutorLockedBalance)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Tổng số dư khả dụng (người dùng):</span>
+                      <span className="font-semibold">{formatCurrency(dashboard.totalUserAvailableBalance)}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
       {/* Filters */}
       <Card className="bg-white">
@@ -291,7 +559,7 @@ export function ManageSystemWallet() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {transaction.transactionType === 1 ? (
+                          {transaction.transactionType === WalletTransactionType.CREDIT ? (
                             <ArrowUpRight className="h-4 w-4 text-green-600" />
                           ) : (
                             <ArrowDownRight className="h-4 w-4 text-red-600" />
@@ -302,7 +570,7 @@ export function ManageSystemWallet() {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {transaction.userName || transaction.tutorName || 'Hệ thống'}
+                        {transaction.booking?.learnerEmail || transaction.booking?.tutorEmail || 'Hệ thống'}
                       </TableCell>
                       <TableCell>
                         {transaction.referenceCode ? (
@@ -313,9 +581,9 @@ export function ManageSystemWallet() {
                       </TableCell>
                       <TableCell>
                         <span className={`font-semibold ${
-                          transaction.transactionType === 1 ? 'text-green-600' : 'text-red-600'
+                          transaction.transactionType === WalletTransactionType.CREDIT ? 'text-green-600' : 'text-red-600'
                         }`}>
-                          {transaction.transactionType === 1 ? '+' : '-'}
+                          {transaction.transactionType === WalletTransactionType.CREDIT ? '+' : '-'}
                           {formatCurrency(transaction.amount)}
                         </span>
                       </TableCell>
@@ -390,6 +658,250 @@ export function ManageSystemWallet() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        {/* System Fee Tab */}
+        <TabsContent value="system-fee" className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold text-gray-900">Quản lý Phí hệ thống</h2>
+              <p className="text-gray-600 mt-1">Cấu hình các loại phí hệ thống</p>
+            </div>
+            <Button onClick={handleCreateSystemFee} className="bg-[#257180] hover:bg-[#257180]/90 text-white">
+              <Plus className="h-4 w-4 mr-2" />
+              Thêm phí hệ thống
+            </Button>
+          </div>
+
+          {/* System Fees Table */}
+          <Card className="bg-white">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Danh sách phí hệ thống</CardTitle>
+                <Badge variant="outline">{systemFees.length} phí</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingSystemFees ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#257180]" />
+                  <span className="ml-2 text-gray-600">Đang tải danh sách phí hệ thống...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="w-[60px]">ID</TableHead>
+                          <TableHead>Tên phí</TableHead>
+                          <TableHead>Phần trăm (%)</TableHead>
+                          <TableHead>Số tiền cố định</TableHead>
+                          <TableHead>Hiệu lực từ</TableHead>
+                          <TableHead>Hiệu lực đến</TableHead>
+                          <TableHead>Trạng thái</TableHead>
+                          <TableHead className="text-right">Thao tác</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {systemFees.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                              Chưa có phí hệ thống nào
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          systemFees.map((fee) => (
+                            <TableRow key={fee.id} className="hover:bg-gray-50">
+                              <TableCell>
+                                <span className="font-mono text-sm text-gray-600">{fee.id}</span>
+                              </TableCell>
+                              <TableCell className="font-medium">{fee.name}</TableCell>
+                              <TableCell className="text-sm text-gray-600">
+                                {fee.percentage !== undefined && fee.percentage !== null ? `${fee.percentage}%` : '-'}
+                              </TableCell>
+                              <TableCell className="text-sm text-gray-600">
+                                {fee.fixedAmount !== undefined && fee.fixedAmount !== null ? formatCurrency(fee.fixedAmount) : '-'}
+                              </TableCell>
+                              <TableCell className="text-sm text-gray-600">
+                                {new Date(fee.effectiveFrom).toLocaleDateString('vi-VN')}
+                              </TableCell>
+                              <TableCell className="text-sm text-gray-600">
+                                {fee.effectiveTo ? new Date(fee.effectiveTo).toLocaleDateString('vi-VN') : '-'}
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={fee.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                                  {fee.isActive ? 'Hoạt động' : 'Không hoạt động'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditSystemFee(fee)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Pagination */}
+                  {systemFeeTotalPages > 1 && (
+                    <div className="mt-6">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              onClick={() => setSystemFeePage(prev => Math.max(1, prev - 1))}
+                              className={systemFeePage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                          
+                          {[...Array(Math.min(systemFeeTotalPages, 5))].map((_, idx) => {
+                            let pageNum;
+                            if (systemFeeTotalPages <= 5) {
+                              pageNum = idx + 1;
+                            } else if (systemFeePage <= 3) {
+                              pageNum = idx + 1;
+                            } else if (systemFeePage >= systemFeeTotalPages - 2) {
+                              pageNum = systemFeeTotalPages - 4 + idx;
+                            } else {
+                              pageNum = systemFeePage - 2 + idx;
+                            }
+                            
+                            return (
+                              <PaginationItem key={idx}>
+                                <PaginationLink
+                                  onClick={() => setSystemFeePage(pageNum)}
+                                  isActive={systemFeePage === pageNum}
+                                  className="cursor-pointer"
+                                >
+                                  {pageNum}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          })}
+                          
+                          <PaginationItem>
+                            <PaginationNext 
+                              onClick={() => setSystemFeePage(prev => Math.min(systemFeeTotalPages, prev + 1))}
+                              className={systemFeePage === systemFeeTotalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* System Fee Dialog */}
+      <Dialog open={showSystemFeeDialog} onOpenChange={setShowSystemFeeDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingSystemFee ? 'Chỉnh sửa Phí hệ thống' : 'Thêm Phí hệ thống'}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Tên phí hệ thống <span className="text-red-500">*</span>
+              </label>
+              <Input
+                value={systemFeeForm.name}
+                onChange={(e) => setSystemFeeForm({ ...systemFeeForm, name: e.target.value })}
+                placeholder="Nhập tên phí hệ thống"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Phần trăm (%)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={systemFeeForm.percentage || ''}
+                  onChange={(e) => setSystemFeeForm({ 
+                    ...systemFeeForm, 
+                    percentage: e.target.value ? parseFloat(e.target.value) : undefined,
+                    fixedAmount: e.target.value ? undefined : systemFeeForm.fixedAmount
+                  })}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Số tiền cố định (VND)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={systemFeeForm.fixedAmount || ''}
+                  onChange={(e) => setSystemFeeForm({ 
+                    ...systemFeeForm, 
+                    fixedAmount: e.target.value ? parseFloat(e.target.value) : undefined,
+                    percentage: e.target.value ? undefined : systemFeeForm.percentage
+                  })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={systemFeeForm.isActive ?? true}
+                onChange={(e) => setSystemFeeForm({ ...systemFeeForm, isActive: e.target.checked })}
+                className="w-4 h-4 text-[#257180] border-gray-300 rounded focus:ring-[#257180]"
+              />
+              <label htmlFor="isActive" className="text-sm text-gray-700">
+                Kích hoạt
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setShowSystemFeeDialog(false)}
+              disabled={isSavingSystemFee}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleSaveSystemFee}
+              disabled={isSavingSystemFee}
+              className="bg-[#257180] hover:bg-[#257180]/90 text-white"
+            >
+              {isSavingSystemFee ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Đang lưu...
+                </>
+              ) : (
+                'Lưu'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

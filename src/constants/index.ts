@@ -154,7 +154,7 @@ export const SUBJECT_LEVELS = {
 export const API_ENDPOINTS = {
   // ==================== AUTH ====================
   AUTH: {
-    LOGIN: '/api/user/login',
+    LOGIN: '/api/auth/login', // Use Next.js API route proxy
     REGISTER: '/api/user/register',
     LOGOUT: '/api/user/logout',
     REFRESH: '/api/auth/refresh-token', // Use Next.js API route proxy
@@ -168,6 +168,8 @@ export const API_ENDPOINTS = {
   USER_PROFILES: {
     GET_BY_EMAIL: '/api/userprofiles/:email',
     UPDATE: '/api/userprofiles/update-user-profile',
+    GET_PROVINCES: '/api/UserProfiles/provinves',
+    GET_SUB_DISTRICTS: '/api/UserProfiles/subDistricts/:provinceId',
   },
   
   // ==================== TUTORS ====================
@@ -211,6 +213,13 @@ export const API_ENDPOINTS = {
     ACTIVATE_USER: '/api/admin/users/:email/activate',
     UPDATE_USER_ROLE: '/api/admin/users/:email/:roleId',
     CREATE_ADMIN: '/api/admin/create-admin',
+  },
+  
+  // ==================== ADMIN WALLET ====================
+  ADMIN_WALLET: {
+    GET_SYSTEM_WALLET: '/api/admin/wallet/system',
+    GET_SYSTEM_TRANSACTIONS: '/api/admin/wallet/system-transactions',
+    GET_DASHBOARD: '/api/admin/wallet/dashboard',
   },
   
   // ==================== SUBJECTS ====================
@@ -342,6 +351,15 @@ export const API_ENDPOINTS = {
     UPDATE_STATUS: '/api/Booking/update-status/:id',
   },
   
+  // ==================== NOTIFICATIONS ====================
+  NOTIFICATIONS: {
+    LIST: '/api/Notification',
+    UNREAD_COUNT: '/api/Notification/unread-count',
+    MARK_AS_READ: '/api/Notification/:id/read',
+    MARK_ALL_AS_READ: '/api/Notification/read-all',
+    DELETE: '/api/Notification/:id',
+  },
+  
   // ==================== SCHEDULES ====================
   SCHEDULES: {
     GET_BY_ID: '/api/Schedule/get-by-id/:id',
@@ -374,6 +392,7 @@ export const API_ENDPOINTS = {
     // Deposits
     CREATE_DEPOSIT_VNPAY: '/api/Deposits/create-vnpay-request',
     CANCEL_DEPOSIT: '/api/Deposits/:id/cancel',
+    CLEANUP_EXPIRED_DEPOSITS: '/api/Deposits/admin/cleanup-expired',
     
     // Withdrawals
     CREATE_WITHDRAWAL: '/api/Withdrawals/create-request',
@@ -387,6 +406,14 @@ export const API_ENDPOINTS = {
     GET_BANK_ACCOUNTS: '/api/UserBankAccounts/my-accounts',
     CREATE_BANK_ACCOUNT: '/api/UserBankAccounts',
     DELETE_BANK_ACCOUNT: '/api/UserBankAccounts/:id',
+  },
+  
+  // ==================== SYSTEM FEES ====================
+  SYSTEM_FEES: {
+    GET_ALL_PAGING: '/api/SystemFee/get-all-paging',
+    GET_ALL_NO_PAGING: '/api/SystemFee/get-all-no-paging',
+    CREATE: '/api/SystemFee/create-systemfee',
+    UPDATE: '/api/SystemFee/update-systemfee',
   },
   
   // ==================== UPLOAD ====================

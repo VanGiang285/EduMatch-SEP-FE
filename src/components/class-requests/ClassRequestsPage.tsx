@@ -31,6 +31,7 @@ import {
   GraduationCap,
   Loader2,
   Send,
+  Star,
 } from 'lucide-react';
 import {
   mockSubjects,
@@ -42,9 +43,11 @@ import { Separator } from '../ui/layout/separator';
 import { FormatService } from '@/lib/format';
 import { CreateClassRequestDialog } from './CreateClassRequestDialog';
 import { ClassRequestService, ClassRequestItemDto, ClassRequestDetailDto } from '@/services/classRequestService';
-import { TutorApplicationService, TutorApplicationItemDto } from '@/services/tutorApplicationService';
+import { TutorApplicationService } from '@/services/tutorApplicationService';
+import { TutorApplicationItemDto, TutorProfileDto } from '@/types/backend';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { TeachingMode, ClassRequestStatus } from '@/types/enums';
+import { TutorService } from '@/services/tutorService';
 
 const DAY_OF_WEEK_MAP: Record<number, string> = DAY_OF_WEEK_OPTIONS.reduce(
   (acc, item) => {
@@ -88,11 +91,14 @@ export function ClassRequestsPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [loadingApplicants, setLoadingApplicants] = useState(false);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [tutorDetails, setTutorDetails] = useState<Record<number, TutorProfileDto>>({});
+  const [loadingTutorProfiles, setLoadingTutorProfiles] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [applyingRequestId, setApplyingRequestId] = useState<number | null>(null);
   const [applyMessage, setApplyMessage] = useState('');
   const [isApplying, setIsApplying] = useState(false);
+  const [appliedRequestIds, setAppliedRequestIds] = useState<Set<number>>(new Set());
   
   // Filters
   const [subjectFilter, setSubjectFilter] = useState<string>('all');
@@ -104,6 +110,9 @@ export function ClassRequestsPage() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6);
+
+  // Check if user is tutor
+  const isTutor = user?.role === USER_ROLES.TUTOR;
 
   // Load danh sách yêu cầu mở lớp (Public - không cần auth)
   useEffect(() => {
@@ -126,6 +135,24 @@ export function ClassRequestsPage() {
 
     loadClassRequests();
   }, []);
+
+  // Load danh sách các request mà tutor đã ứng tuyển
+  useEffect(() => {
+    if (user && isTutor) {
+      const loadAppliedRequests = async () => {
+        try {
+          const response = await TutorApplicationService.getTutorAppliedApplications();
+          if (response.success && response.data) {
+            const appliedIds = new Set(response.data.map(app => app.classRequestId));
+            setAppliedRequestIds(appliedIds);
+          }
+        } catch (err) {
+          // Silent fail
+        }
+      };
+      loadAppliedRequests();
+    }
+  }, [user, isTutor]);
 
   // Load chi tiết yêu cầu và danh sách gia sư ứng tuyển khi mở dialog
   useEffect(() => {
@@ -165,6 +192,51 @@ export function ClassRequestsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRequest, showDetailDialog]);
+
+  useEffect(() => {
+    if (!showDetailDialog || applicants.length === 0) return;
+    const missingIds = applicants
+      .map((applicant) => applicant.tutorId)
+      .filter((id) => !tutorDetails[id]);
+    if (missingIds.length === 0) return;
+    let isMounted = true;
+    setLoadingTutorProfiles(true);
+    const fetchDetails = async () => {
+      try {
+        const results = await Promise.all(
+          missingIds.map(async (id) => {
+            const response = await TutorService.getTutorById(id);
+            if (response.success && response.data) {
+              return { id, profile: response.data };
+            }
+            return null;
+          })
+        );
+        if (!isMounted) return;
+        setTutorDetails((prev) => {
+          const next = { ...prev };
+          results.forEach((item) => {
+            if (item) {
+              next[item.id] = item.profile;
+            }
+          });
+          return next;
+        });
+      } catch (error) {
+        if (isMounted) {
+          showError('Lỗi', 'Không thể tải thông tin gia sư');
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingTutorProfiles(false);
+        }
+      }
+    };
+    fetchDetails();
+    return () => {
+      isMounted = false;
+    };
+  }, [applicants, showDetailDialog, tutorDetails, showError]);
 
   // Filter và sort requests
   const filteredRequests = useMemo(() => {
@@ -317,11 +389,16 @@ export function ClassRequestsPage() {
         showSuccess('Thành công', 'Ứng tuyển thành công!');
         setShowApplyDialog(false);
         setApplyMessage('');
+        const appliedId = applyingRequestId;
         setApplyingRequestId(null);
         // Reload danh sách để cập nhật số lượng ứng viên
         const refreshResponse = await ClassRequestService.getOpenClassRequests();
         if (refreshResponse.success && refreshResponse.data) {
           setClassRequests(refreshResponse.data);
+        }
+        // Cập nhật appliedRequestIds
+        if (appliedId) {
+          setAppliedRequestIds(prev => new Set([...prev, appliedId]));
         }
       } else {
         throw new Error(response.message || 'Ứng tuyển thất bại');
@@ -376,9 +453,6 @@ export function ClassRequestsPage() {
     if (modeNum === TeachingMode.Hybrid) return 'Kết hợp';
     return 'Không xác định';
   };
-
-  // Check if user is tutor
-  const isTutor = user?.role === USER_ROLES.TUTOR;
 
   return (
     <div className="min-h-screen bg-gray-50 pt-16">
@@ -623,7 +697,7 @@ export function ClassRequestsPage() {
                               >
                                 Xem chi tiết
                               </Button>
-                              {(request.status === ClassRequestStatus.Open.toString() || request.status === '0') && user && isTutor && (
+                              {(request.status === ClassRequestStatus.Open.toString() || request.status === '0') && user && isTutor && !appliedRequestIds.has(request.id) && (
                                 <Button 
                                   onClick={() => handleApplyClick(request.id)}
                                   className="bg-[#FD8B51] hover:bg-[#CB6040] text-white flex-1 sm:flex-none"
@@ -710,7 +784,9 @@ export function ClassRequestsPage() {
         <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
           <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white">
             <DialogHeader>
-              <DialogTitle className="text-2xl sm:text-3xl font-bold text-gray-900">Chi tiết yêu cầu mở lớp</DialogTitle>
+              <DialogTitle className="text-2xl sm:text-3xl font-bold text-gray-900">
+                {selectedRequestDetail ? (selectedRequestDetail.title || `${selectedRequestDetail.subjectName || ''} ${selectedRequestDetail.level || ''}`.trim()) : 'Chi tiết yêu cầu mở lớp'}
+              </DialogTitle>
               <DialogDescription className="text-sm sm:text-base text-gray-600">
                 Thông tin chi tiết về yêu cầu và danh sách gia sư ứng tuyển
               </DialogDescription>
@@ -725,25 +801,6 @@ export function ClassRequestsPage() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
                 {/* Left Column: Request Details */}
                 <div className="space-y-6 lg:col-span-2">
-                  {/* Header */}
-                  <div className="flex flex-col sm:flex-row items-start gap-5 bg-gradient-to-r from-[#F2E5BF]/20 to-transparent p-6 rounded-lg">
-                    <div className="relative flex-shrink-0">
-                      <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-[#F2E5BF] border-4 border-white shadow-md">
-                        {selectedRequestDetail.learnerEmail && (
-                          <div className="w-full h-full rounded-lg flex items-center justify-center text-lg sm:text-xl font-bold text-[#257180] bg-[#F2E5BF]">
-                            {selectedRequestDetail.learnerEmail.slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                        {selectedRequestDetail.title || `${selectedRequestDetail.subjectName || ''} ${selectedRequestDetail.level || ''}`.trim()}
-                      </h3>
-                    </div>
-                  </div>
-
-                  <Separator className="my-2" />
 
                   {/* Quick Info */}
                   <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -761,6 +818,31 @@ export function ClassRequestsPage() {
                       </p>
                       <p className="font-medium text-gray-900 mt-1 break-words">{selectedRequestDetail.level || 'N/A'}</p>
                     </div>
+                    <div className="sm:col-span-2 min-w-0">
+                      <p className="text-sm text-gray-600 flex items-center gap-1">
+                        <BookOpen className="h-4 w-4 flex-shrink-0" />
+                        Mục tiêu học tập
+                      </p>
+                      <p className="font-medium text-gray-900 mt-1 break-words whitespace-pre-wrap">{selectedRequestDetail.learningGoal || 'Chưa có'}</p>
+                    </div>
+                    <div className="sm:col-span-2 min-w-0">
+                      <p className="text-sm text-gray-600 flex items-center gap-1">
+                        <GraduationCap className="h-4 w-4 flex-shrink-0" />
+                        Yêu cầu gia sư
+                      </p>
+                      <p className="font-medium text-gray-900 mt-1 break-words whitespace-pre-wrap">{selectedRequestDetail.tutorRequirement || 'Chưa có'}</p>
+                    </div>
+                    {selectedRequestDetail.expectedStartDate && (
+                      <div className="min-w-0">
+                        <p className="text-sm text-gray-600 flex items-center gap-1">
+                          <Clock className="h-4 w-4 flex-shrink-0" />
+                          Ngày bắt đầu dự kiến
+                        </p>
+                        <p className="font-medium text-gray-900 mt-1 break-words">
+                          {FormatService.formatDate(selectedRequestDetail.expectedStartDate)}
+                        </p>
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <p className="text-sm text-gray-600">Hình thức</p>
                       <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20 mt-1">
@@ -805,30 +887,6 @@ export function ClassRequestsPage() {
                     </div>
                   </div>
                 )}
-
-                  {/* Description */}
-                  {(selectedRequestDetail.learningGoal || selectedRequestDetail.tutorRequirement) && (
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      {selectedRequestDetail.learningGoal && (
-                        <div className="mb-4 min-w-0">
-                          <p className="text-sm text-gray-600 flex items-center gap-1 mb-1">
-                            <BookOpen className="h-4 w-4 flex-shrink-0" />
-                            Mục tiêu học tập
-                          </p>
-                          <p className="font-medium text-gray-900 mt-1 break-words whitespace-pre-wrap">{selectedRequestDetail.learningGoal}</p>
-                        </div>
-                      )}
-                      {selectedRequestDetail.tutorRequirement && (
-                        <div className="min-w-0">
-                          <p className="text-sm text-gray-600 flex items-center gap-1 mb-1">
-                            <GraduationCap className="h-4 w-4 flex-shrink-0" />
-                            Yêu cầu gia sư
-                          </p>
-                          <p className="font-medium text-gray-900 mt-1 break-words whitespace-pre-wrap">{selectedRequestDetail.tutorRequirement}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                   {/* Location */}
                   {((selectedRequestDetail.addressLine && selectedRequestDetail.addressLine !== 'string') || selectedRequestDetail.subDistrictName || selectedRequestDetail.provinceName) && (
@@ -888,12 +946,18 @@ export function ClassRequestsPage() {
                     </div>
                   ) : (
                     <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2">
-                      {applicants.map((applicant) => (
+                      {applicants.map((applicant) => {
+                        const tutorProfile = tutorDetails[applicant.tutorId];
+                        const educationLabel = tutorProfile && tutorProfile.tutorEducations && tutorProfile.tutorEducations.length > 0
+                          ? tutorProfile.tutorEducations[0].institution?.name || 'Chưa cập nhật'
+                          : 'Chưa cập nhật';
+                        const ratingValue = tutorProfile ? 5.0 : 5.0;
+                        return (
                         <Card key={applicant.applicationId} className="border border-gray-200 hover:border-[#FD8B51]/30 transition-all">
                           <CardContent className="p-4">
                             <div className="flex gap-3 mb-3">
                               <div className="relative flex-shrink-0">
-                                <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-[#F2E5BF] border-2 border-gray-200">
+                                <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-[#F2E5BF] border-2 border-gray-200">
                                   {applicant.avatarUrl ? (
                                     <img 
                                       src={applicant.avatarUrl} 
@@ -909,7 +973,7 @@ export function ClassRequestsPage() {
                                     />
                                   ) : null}
                                   <div 
-                                    className={`w-full h-full rounded-lg flex items-center justify-center text-sm font-bold text-[#257180] bg-[#F2E5BF] ${applicant.avatarUrl ? 'hidden' : 'flex'}`}
+                                    className={`w-full h-full rounded-lg flex items-center justify-center text-lg font-bold text-[#257180] bg-[#F2E5BF] ${applicant.avatarUrl ? 'hidden' : 'flex'}`}
                                     style={{ display: applicant.avatarUrl ? 'none' : 'flex' }}
                                   >
                                     {applicant.tutorName?.slice(0, 2).toUpperCase() || 'GS'}
@@ -918,7 +982,15 @@ export function ClassRequestsPage() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <h5 className="text-lg font-semibold mb-1 truncate">{applicant.tutorName}</h5>
-                                <p className="text-xs text-gray-500">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-xs text-gray-600">Đánh giá: {ratingValue.toFixed(1)}</span>
+                                </div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <GraduationCap className="w-4 h-4 text-gray-500" />
+                                  <span className="text-xs text-gray-600">Học vấn: {educationLabel}</span>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
                                   Ứng tuyển: {FormatService.formatDate(applicant.appliedAt)}
                                 </p>
                               </div>
@@ -941,7 +1013,7 @@ export function ClassRequestsPage() {
                             </div>
                           </CardContent>
                         </Card>
-                      ))}
+                      )})}
                     </div>
                   )}
                 </div>
@@ -976,7 +1048,7 @@ export function ClassRequestsPage() {
                 }
               }
               const isOpen = statusNum === ClassRequestStatus.Open;
-              if (isOpen && user && isTutor) {
+              if (isOpen && user && isTutor && !appliedRequestIds.has(selectedRequestDetail.id)) {
                 return (
                   <div className="mt-6 pt-6 border-t border-gray-200 flex justify-end">
                     <Button
