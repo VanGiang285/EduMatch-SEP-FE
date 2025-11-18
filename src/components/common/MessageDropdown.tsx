@@ -16,7 +16,7 @@ import { ChatRoomDto, ChatMessageDto } from '@/types/backend';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
 import { FormatService } from '@/lib/format';
-import { useChatContext } from '@/contexts/ChatContext';
+import { useChat } from '@/hooks/useChat';
 interface MessageDropdownProps {
   onMessageClick?: (roomId: number) => void;
   onViewAll?: () => void;
@@ -24,7 +24,7 @@ interface MessageDropdownProps {
 export function MessageDropdown({ onMessageClick, onViewAll }: MessageDropdownProps) {
   const { user } = useAuth();
   const { getUserProfile } = useUserProfiles();
-  const { openChatWithTutor } = useChatContext();
+  const { messages } = useChat();
   const router = useRouter();
   const [chatRooms, setChatRooms] = useState<ChatRoomDto[]>([]);
   const [userProfiles, setUserProfiles] = useState<Map<string, { avatarUrl?: string; userName?: string }>>(new Map());
@@ -115,8 +115,29 @@ export function MessageDropdown({ onMessageClick, onViewAll }: MessageDropdownPr
     };
     loadChatRooms();
   }, [currentUserEmail, getUserProfile]);
+  useEffect(() => {
+    if (messages.length === 0) {
+      return;
+    }
+    const messagesByRoom = new Map<number, ChatMessageDto>();
+    messages.forEach((msg) => {
+      if (msg.chatRoomId) {
+        const existing = messagesByRoom.get(msg.chatRoomId);
+        if (!existing || new Date(msg.sentAt) > new Date(existing.sentAt)) {
+          messagesByRoom.set(msg.chatRoomId, msg);
+        }
+      }
+    });
+    setLastMessages((prev) => {
+      const newMap = new Map(prev);
+      messagesByRoom.forEach((msg, roomId) => {
+        newMap.set(roomId, msg);
+      });
+      return newMap;
+    });
+  }, [messages]);
   const unreadCount = chatRooms.reduce((count, room) => {
-    const lastMessage = room.lastMessage;
+    const lastMessage = lastMessages.get(room.id) || room.lastMessage;
     if (lastMessage && !lastMessage.isRead && lastMessage.receiverEmail === currentUserEmail) {
       return count + 1;
     }
@@ -189,6 +210,14 @@ export function MessageDropdown({ onMessageClick, onViewAll }: MessageDropdownPr
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      setLastMessages((prev) => {
+                        const newMap = new Map(prev);
+                        const existing = newMap.get(room.id) || room.lastMessage;
+                        if (existing && existing.receiverEmail === currentUserEmail && !existing.isRead) {
+                          newMap.set(room.id, { ...existing, isRead: true });
+                        }
+                        return newMap;
+                      });
                       router.push(`/profile?tab=messages&roomId=${room.id}`);
                       setTimeout(() => {
                         onMessageClick?.(room.id);

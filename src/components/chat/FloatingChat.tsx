@@ -160,7 +160,7 @@ export function FloatingChat() {
     return () => {
       isMounted = false;
     };
-  }, [currentUserEmail, selectedRoom, selectedRoomId, setSelectedRoomId, getUserProfile]);
+  }, [currentUserEmail, selectedRoomId, setSelectedRoomId, getUserProfile]);
   useEffect(() => {
     if (messages.length > 0) {
       const messagesByRoom = new Map<number, ChatMessageDto>();
@@ -222,9 +222,23 @@ export function FloatingChat() {
             });
           }
           const room = chatRooms.find(r => r.id === selectedRoom);
-          if (room && room.tutor?.userEmail) {
+          if (room && currentUserEmail) {
             try {
-              await markMessagesAsRead(selectedRoom, room.tutor.userEmail);
+              await markMessagesAsRead(selectedRoom, currentUserEmail);
+              setMessages(prev => prev.map(msg => {
+                if (msg.chatRoomId === selectedRoom && msg.receiverEmail === currentUserEmail && !msg.isRead) {
+                  return { ...msg, isRead: true };
+                }
+                return msg;
+              }));
+              setLastMessages(prev => {
+                const newMap = new Map(prev);
+                const existing = newMap.get(selectedRoom);
+                if (existing && existing.receiverEmail === currentUserEmail && !existing.isRead) {
+                  newMap.set(selectedRoom, { ...existing, isRead: true });
+                }
+                return newMap;
+              });
             } catch (err) {
               console.error("Failed to mark messages as read:", err);
             }
