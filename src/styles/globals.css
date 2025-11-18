@@ -309,3 +309,334 @@ html {
     background: rgba(0, 0, 0, 0.3);
   }
 }
+
+@layer components {
+  .edu-ai-robot-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .edu-ai-robot-svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 8px 16px rgba(37, 113, 128, 0.2));
+  }
+
+  .edu-ai-robot-body {
+    animation: edu-ai-robot-float 3s ease-in-out infinite;
+    transform-origin: center;
+  }
+
+  .edu-ai-robot-head {
+    animation: edu-ai-robot-head-bob 2.5s ease-in-out infinite;
+    transform-origin: center bottom;
+  }
+
+  .edu-ai-robot-antenna {
+    animation: edu-ai-robot-antenna-pulse 1.5s ease-in-out infinite;
+  }
+
+  .edu-ai-robot-antenna-line {
+    animation: edu-ai-robot-antenna-pulse 1.5s ease-in-out infinite;
+  }
+
+  .edu-ai-robot-eye {
+    animation: edu-ai-robot-blink 3s ease-in-out infinite;
+    transform-origin: center;
+  }
+
+  .edu-ai-robot-eye-pupil {
+    animation: edu-ai-robot-eye-move 4s ease-in-out infinite;
+  }
+
+  .edu-ai-robot-mouth {
+    animation: edu-ai-robot-smile 2s ease-in-out infinite;
+    transform-origin: 100px 55px;
+  }
+
+  .edu-ai-robot-chest {
+    animation: edu-ai-robot-chest-glow 2s ease-in-out infinite;
+  }
+
+  .edu-ai-robot-chest-dot {
+    animation: edu-ai-robot-chest-pulse 1.5s ease-in-out infinite;
+  }
+
+  .edu-ai-robot-chest-dot:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .edu-ai-robot-chest-dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  .edu-ai-robot-arm-left {
+    animation: edu-ai-robot-arm-swing-left 3s ease-in-out infinite;
+    transform-origin: right center;
+  }
+
+  .edu-ai-robot-arm-right {
+    animation: edu-ai-robot-arm-swing-right 3s ease-in-out infinite;
+    transform-origin: left center;
+  }
+
+  .edu-ai-robot-hand {
+    animation: edu-ai-robot-hand-wave 2s ease-in-out infinite;
+  }
+
+  .edu-ai-robot-leg-left {
+    animation: edu-ai-robot-leg-bounce-left 2.5s ease-in-out infinite;
+    transform-origin: top center;
+  }
+
+  .edu-ai-robot-leg-right {
+    animation: edu-ai-robot-leg-bounce-right 2.5s ease-in-out infinite;
+    transform-origin: top center;
+  }
+
+  .edu-ai-robot-sparkle {
+    opacity: 0;
+  }
+
+  .edu-ai-robot-sparkle-1 {
+    animation: edu-ai-robot-sparkle-1 2s ease-in-out infinite;
+  }
+
+  .edu-ai-robot-sparkle-2 {
+    animation: edu-ai-robot-sparkle-2 2s ease-in-out infinite 0.5s;
+  }
+
+  .edu-ai-robot-sparkle-3 {
+    animation: edu-ai-robot-sparkle-3 2s ease-in-out infinite 1s;
+  }
+
+  .edu-ai-robot-sparkle-4 {
+    animation: edu-ai-robot-sparkle-4 2s ease-in-out infinite 1.5s;
+  }
+
+  .ai-status-dot {
+    width: 8px;
+    height: 8px;
+    background: #10B981;
+    border-radius: 50%;
+    display: inline-block;
+    animation: ai-status-pulse 2s ease-in-out infinite;
+  }
+
+  .ai-typing-dot {
+    width: 8px;
+    height: 8px;
+    background: #257180;
+    border-radius: 50%;
+    animation: ai-typing-bounce 1.4s ease-in-out infinite;
+  }
+
+  .ai-typing-dot-1 {
+    animation-delay: 0s;
+  }
+
+  .ai-typing-dot-2 {
+    animation-delay: 0.2s;
+  }
+
+  .ai-typing-dot-3 {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes edu-ai-robot-float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
+  @keyframes edu-ai-robot-head-bob {
+    0%, 100% {
+      transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-3px) rotate(1deg);
+    }
+  }
+
+  @keyframes edu-ai-robot-antenna-pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scale(1.1);
+    }
+  }
+
+  @keyframes edu-ai-robot-blink {
+    0%, 90%, 100% {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+    95% {
+      transform: scaleY(0.1);
+      opacity: 0.5;
+    }
+  }
+
+  @keyframes edu-ai-robot-eye-move {
+    0%, 100% {
+      transform: translate(0, 0);
+    }
+    25% {
+      transform: translate(2px, -1px);
+    }
+    50% {
+      transform: translate(-1px, 1px);
+    }
+    75% {
+      transform: translate(1px, 1px);
+    }
+  }
+
+  @keyframes edu-ai-robot-smile {
+    0%, 100% {
+      transform: scaleY(1);
+    }
+    50% {
+      transform: scaleY(1.2);
+    }
+  }
+
+  @keyframes edu-ai-robot-chest-glow {
+    0%, 100% {
+      opacity: 0.2;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+
+  @keyframes edu-ai-robot-chest-pulse {
+    0%, 100% {
+      opacity: 0.6;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+
+  @keyframes edu-ai-robot-arm-swing-left {
+    0%, 100% {
+      transform: rotate(0deg);
+    }
+    50% {
+      transform: rotate(-10deg);
+    }
+  }
+
+  @keyframes edu-ai-robot-arm-swing-right {
+    0%, 100% {
+      transform: rotate(0deg);
+    }
+    50% {
+      transform: rotate(10deg);
+    }
+  }
+
+  @keyframes edu-ai-robot-hand-wave {
+    0%, 100% {
+      transform: rotate(0deg);
+    }
+    50% {
+      transform: rotate(15deg);
+    }
+  }
+
+  @keyframes edu-ai-robot-leg-bounce-left {
+    0%, 100% {
+      transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-5px) rotate(2deg);
+    }
+  }
+
+  @keyframes edu-ai-robot-leg-bounce-right {
+    0%, 100% {
+      transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-5px) rotate(-2deg);
+    }
+  }
+
+  @keyframes edu-ai-robot-sparkle-1 {
+    0%, 100% {
+      opacity: 0;
+      transform: translate(0, 0) scale(0.5);
+    }
+    50% {
+      opacity: 1;
+      transform: translate(-10px, -10px) scale(1);
+    }
+  }
+
+  @keyframes edu-ai-robot-sparkle-2 {
+    0%, 100% {
+      opacity: 0;
+      transform: translate(0, 0) scale(0.5);
+    }
+    50% {
+      opacity: 1;
+      transform: translate(10px, -5px) scale(1);
+    }
+  }
+
+  @keyframes edu-ai-robot-sparkle-3 {
+    0%, 100% {
+      opacity: 0;
+      transform: translate(0, 0) scale(0.5);
+    }
+    50% {
+      opacity: 1;
+      transform: translate(-10px, 10px) scale(1);
+    }
+  }
+
+  @keyframes edu-ai-robot-sparkle-4 {
+    0%, 100% {
+      opacity: 0;
+      transform: translate(0, 0) scale(0.5);
+    }
+    50% {
+      opacity: 1;
+      transform: translate(10px, 10px) scale(1);
+    }
+  }
+
+  @keyframes ai-status-pulse {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    50% {
+      opacity: 0.8;
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+    }
+  }
+
+  @keyframes ai-typing-bounce {
+    0%, 80%, 100% {
+      transform: scale(0.8);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1.2);
+      opacity: 1;
+    }
+  }
+}

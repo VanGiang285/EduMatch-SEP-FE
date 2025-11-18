@@ -21,6 +21,7 @@ export function PageWrapper({ children, currentPage }: PageWrapperProps) {
         onNavigateToHome={() => router.push('/')}
         onNavigateToBecomeTutor={() => router.push('/become-tutor')}
         onNavigateToFindTutor={() => router.push('/find-tutor')}
+        onNavigateToAIChat={() => router.push('/ai-chat')}
         onNavigateToMessages={() => router.push('/profile?tab=messages')}
         onNavigateToNotifications={() => router.push('/profile?tab=notifications')}
         onNavigateToFavorites={() => router.push('/saved-tutors')}

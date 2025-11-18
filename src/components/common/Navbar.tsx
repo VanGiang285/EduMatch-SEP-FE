@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "../ui/basic/button";
-import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings, FileText, ChevronDown } from "lucide-react";
+import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings, FileText, ChevronDown, Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomToast } from "@/hooks/useCustomToast";
@@ -23,6 +23,7 @@ interface NavbarProps {
   onNavigateToHome: () => void;
   onNavigateToBecomeTutor?: () => void;
   onNavigateToFindTutor?: () => void;
+  onNavigateToAIChat?: () => void;
   onNavigateToMessages?: () => void;
   onNavigateToNotifications?: () => void;
   onNavigateToFavorites?: () => void;
@@ -31,7 +32,7 @@ interface NavbarProps {
   currentPage: string;
   walletBalance?: number;
 }
-export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, onNavigateToMessages, onNavigateToNotifications, onNavigateToFavorites, onNavigateToWallet, onNavigateToClassRequests, currentPage, walletBalance = 0 }: NavbarProps) {
+export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, onNavigateToAIChat, onNavigateToMessages, onNavigateToNotifications, onNavigateToFavorites, onNavigateToWallet, onNavigateToClassRequests, currentPage, walletBalance = 0 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
   const { showWarning } = useCustomToast();
@@ -96,6 +97,13 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
               >
                 <BookOpen className="w-4 h-4" />
                 Yêu cầu mở lớp
+              </button>
+              <button
+                onClick={onNavigateToAIChat}
+                className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
+              >
+                <Sparkles className="w-4 h-4" />
+                AI Chat
               </button>
               <button
                 onClick={handleBecomeTutorClick}
@@ -313,6 +321,16 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                 >
                   <BookOpen className="w-4 h-4" />
                   Yêu cầu mở lớp
+                </button>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onNavigateToAIChat?.();
+                  }}
+                  className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  AI Chat
                 </button>
                 <button
                   onClick={handleBecomeTutorClick}
