@@ -30,6 +30,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useSchedules } from '@/hooks/useSchedules';
 import { useLearnerBookings } from '@/hooks/useLearnerBookings';
+import { useBookings } from '@/hooks/useBookings';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
@@ -42,8 +43,9 @@ export function ClassesTab() {
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
   const [cancelDialogBookingId, setCancelDialogBookingId] = useState<number | null>(null);
-  const { tutorProfiles, loadTutorProfiles, getTutorProfile, loadTutorProfile } = useTutorProfiles();
-  const { schedules, loading: loadingSchedules, loadSchedules, clearSchedules } = useSchedules();
+  const { loadTutorProfiles, getTutorProfile, loadTutorProfile } = useTutorProfiles();
+  const { schedules, loading: loadingSchedules, loadSchedulesByBookingId, clearSchedules } = useSchedules();
+  const { getBooking, loadBookingDetails } = useBookings();
 
   // Load tất cả bookings một lần khi component mount hoặc user thay đổi
   useEffect(() => {
@@ -106,11 +108,24 @@ export function ClassesTab() {
       }
 
       // Load schedules
-      await loadSchedules(selectedBookingId);
+      await loadSchedulesByBookingId(selectedBookingId);
     } catch (error: any) {
       showError('Lỗi khi tải chi tiết lớp học', error.message);
     }
   };
+
+  // Load booking details khi schedules thay đổi
+  useEffect(() => {
+    if (schedules.length > 0) {
+      const bookingIdsToLoad = schedules
+        .filter((schedule) => schedule.bookingId && !schedule.booking)
+        .map((schedule) => schedule.bookingId!);
+
+      if (bookingIdsToLoad.length > 0) {
+        loadBookingDetails(bookingIdsToLoad);
+      }
+    }
+  }, [schedules, loadBookingDetails]);
 
   const handleViewDetail = (bookingId: number) => {
     setSelectedBookingId(bookingId);
@@ -344,18 +359,36 @@ export function ClassesTab() {
                 .map((schedule) => {
                   const availability = schedule.availability;
                   const slot = availability?.slot;
-                  const scheduleDate = availability?.startDate
-                    ? new Date(availability.startDate)
-                    : null;
+
+                  // Lấy booking từ schedule hoặc từ hook (nếu schedule chỉ có bookingId)
+                  const booking = getBooking(schedule.bookingId, schedule.booking);
+                  // Từ booking lấy tutorSubject (tutorSubjectId)
+                  const tutorSubject = booking?.tutorSubject;
+                  // Từ tutorSubject lấy subject (môn học) và level
+                  const subject = tutorSubject?.subject;
+                  const level = tutorSubject?.level;
+
+                  // Lấy startDate và endDate từ availability (đã là datetime đầy đủ như "2025-11-02T15:00:00")
+                  let scheduleDate: Date | null = null;
+                  if (availability?.startDate) {
+                    scheduleDate = new Date(availability.startDate);
+                    // Nếu có slot.startTime, override time từ slot
+                    if (slot?.startTime) {
+                      const [startHours, startMinutes] = slot.startTime.split(':').map(Number);
+                      scheduleDate.setHours(startHours, startMinutes, 0, 0);
+                    }
+                    // Nếu không có slot, scheduleDate đã có time từ availability.startDate
+                  }
 
                   const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
 
-                  // Tính endDate từ startDate + slot.endTime
+                  // Lấy endDate từ availability.endDate (đã là datetime đầy đủ)
                   let endDate: Date | null = null;
                   if (availability?.endDate) {
+                    // availability.endDate đã có datetime đầy đủ, lấy trực tiếp
                     endDate = new Date(availability.endDate);
-                  } else if (scheduleDate && slot) {
-                    // Lấy thời gian từ slot.endTime và cộng vào startDate
+                  } else if (scheduleDate && slot?.endTime) {
+                    // Nếu không có availability.endDate nhưng có slot, tính từ scheduleDate + slot.endTime
                     const [endHours, endMinutes] = slot.endTime.split(':').map(Number);
                     endDate = new Date(scheduleDate);
                     endDate.setHours(endHours, endMinutes, 0, 0);
@@ -384,6 +417,20 @@ export function ClassesTab() {
                           <div className="flex-1">
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1">
+                                {/* Subject và Level */}
+                                {(subject || level) && (
+                                  <div className="mb-3">
+                                    <h4 className="font-semibold text-lg text-gray-900">
+                                      {subject?.subjectName || 'Môn học'}
+                                      {level && (
+                                        <span className="ml-2 text-base font-normal text-gray-500">
+                                          - {level.name}
+                                        </span>
+                                      )}
+                                    </h4>
+                                  </div>
+                                )}
+
                                 <div className="flex items-center gap-2 mb-3 flex-wrap">
                                   <Badge className={getScheduleStatusColor(schedule.status)}>
                                     {EnumHelpers.getScheduleStatusLabel(schedule.status)}
@@ -425,19 +472,7 @@ export function ClassesTab() {
                                     </div>
                                   )}
 
-                                  {slot && (
-                                    <div className="flex items-center gap-3">
-                                      <div className="bg-white rounded-lg p-2 shadow-sm">
-                                        <Clock className="h-5 w-5 text-[#257180]" />
-                                      </div>
-                                      <div className="flex-1">
-                                        <div className="text-xs text-gray-500">Thời gian</div>
-                                        <div className="text-gray-900 font-medium">
-                                          {slot.startTime} - {slot.endTime}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
+
 
                                   {scheduleDate && endDate && (
                                     <div className="flex items-center gap-3">
@@ -447,7 +482,7 @@ export function ClassesTab() {
                                       <div className="flex-1">
                                         <div className="text-xs text-gray-500">Bắt đầu - Kết thúc</div>
                                         <div className="text-gray-900 font-medium">
-                                          {format(scheduleDate, "dd/MM/yyyy 'lúc' HH:mm", { locale: vi })} - {format(endDate, "HH:mm", { locale: vi })}
+                                          {format(scheduleDate, "HH:mm", { locale: vi })} - {format(endDate, "HH:mm", { locale: vi })}
                                         </div>
                                       </div>
                                     </div>

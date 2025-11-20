@@ -1,64 +1,42 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { UserProfileService } from '@/services';
-import { UserProfileDto } from '@/types/backend';
+import { UserProfileDto, UserDto } from '@/types/backend';
 
 /**
  * Custom hook để quản lý việc load và cache learner profiles
- * Tự động cache để tránh load lại các profile đã có
+ * Wrapper của useUserProfiles cho learner-specific use cases
  */
 export function useLearnerProfiles() {
   const [learnerProfiles, setLearnerProfiles] = useState<
-    Map<string, UserProfileDto>
+    Map<string, { profile: UserProfileDto; user: UserDto | null }>
   >(new Map());
   const [loading, setLoading] = useState(false);
 
   /**
-   * Load learner profiles từ danh sách emails
-   * Chỉ load những email chưa có trong cache
+   * Load learner profile từ email
    */
-  const loadLearnerProfiles = useCallback(
-    async (emails: string[]) => {
-      if (emails.length === 0) return;
-
-      const emailsToLoad = emails.filter(email => !learnerProfiles.has(email));
-      if (emailsToLoad.length === 0) {
-        return; // Đã có tất cả, không cần load
+  const loadLearnerProfile = useCallback(
+    async (email: string): Promise<void> => {
+      if (!email || learnerProfiles.has(email)) {
+        return;
       }
 
-      setLoading(true);
-
       try {
-        // Load tất cả learner profiles song song
-        const results = await Promise.all(
-          emailsToLoad.map(async email => {
-            try {
-              const response = await UserProfileService.getUserProfile(email);
-              if (response.success && response.data) {
-                return { email, profile: response.data };
-              }
-              return null;
-            } catch (error) {
-              console.error(
-                `Error loading learner profile for ${email}:`,
-                error
-              );
-              return null;
-            }
-          })
-        );
-
-        // Update state một lần sau khi load xong tất cả
-        setLearnerProfiles(current => {
-          const updated = new Map(current);
-          results.forEach(result => {
-            if (result) {
-              updated.set(result.email, result.profile);
-            }
+        setLoading(true);
+        const response = await UserProfileService.getUserProfile(email);
+        if (response.success && response.data) {
+          const profileData = response.data;
+          setLearnerProfiles(prev => {
+            const newMap = new Map(prev);
+            newMap.set(email, {
+              profile: profileData,
+              user: (profileData.userEmailNavigation as any) || null,
+            });
+            return newMap;
           });
-          return updated;
-        });
+        }
       } catch (error) {
-        console.error('Error loading learner profiles:', error);
+        console.error(`Failed to fetch learner profile for ${email}:`, error);
       } finally {
         setLoading(false);
       }
@@ -67,28 +45,39 @@ export function useLearnerProfiles() {
   );
 
   /**
-   * Lấy learner profile từ email
-   * Trả về undefined nếu chưa có trong cache
+   * Load nhiều learner profiles từ danh sách emails
+   */
+  const loadLearnerProfiles = useCallback(
+    async (emails: string[]): Promise<void> => {
+      if (emails.length === 0) return;
+
+      const emailsToLoad = emails.filter(email => !learnerProfiles.has(email));
+
+      if (emailsToLoad.length > 0) {
+        setLoading(true);
+        try {
+          await Promise.all(
+            emailsToLoad.map(email => loadLearnerProfile(email))
+          );
+        } finally {
+          setLoading(false);
+        }
+      }
+    },
+    [learnerProfiles, loadLearnerProfile]
+  );
+
+  /**
+   * Lấy learner profile từ cache
    */
   const getLearnerProfile = useCallback(
-    (email: string | undefined): UserProfileDto | undefined => {
+    (
+      email: string | undefined
+    ): { profile: UserProfileDto; user: UserDto | null } | undefined => {
       if (!email) return undefined;
       return learnerProfiles.get(email);
     },
     [learnerProfiles]
-  );
-
-  /**
-   * Load một learner profile đơn lẻ
-   */
-  const loadLearnerProfile = useCallback(
-    async (email: string) => {
-      if (!email) return;
-      if (learnerProfiles.has(email)) return; // Đã có, không cần load
-
-      await loadLearnerProfiles([email]);
-    },
-    [learnerProfiles, loadLearnerProfiles]
   );
 
   /**
@@ -101,9 +90,9 @@ export function useLearnerProfiles() {
   return {
     learnerProfiles,
     loading,
+    loadLearnerProfile,
     loadLearnerProfiles,
     getLearnerProfile,
-    loadLearnerProfile,
     clearCache,
   };
 }

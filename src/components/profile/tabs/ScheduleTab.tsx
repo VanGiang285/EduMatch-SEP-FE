@@ -10,6 +10,8 @@ import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { useLearnerSchedules } from '@/hooks/useLearnerSchedules';
+import { useBookings } from '@/hooks/useBookings';
+import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { ScheduleDto } from '@/types/backend';
@@ -18,6 +20,8 @@ export function ScheduleTab() {
   const { user } = useAuth();
   const { showError } = useCustomToast();
   const { schedules, loading, loadSchedules, clearSchedules } = useLearnerSchedules();
+  const { loadBookingDetails, getBooking } = useBookings();
+  const { getTutorProfile, loadTutorProfiles } = useTutorProfiles();
   const [filter, setFilter] = useState<'upcoming' | 'all'>('upcoming');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -45,6 +49,39 @@ export function ScheduleTab() {
       loadSchedules(user.email, params);
     }
   }, [user?.email, filter, loadSchedules, currentMonth]);
+
+  // Load booking details khi schedules thay đổi và booking chưa có
+  useEffect(() => {
+    if (schedules.length > 0) {
+      const bookingIdsToLoad = schedules
+        .filter((schedule) => schedule.bookingId && !schedule.booking)
+        .map((schedule) => schedule.bookingId!);
+
+      if (bookingIdsToLoad.length > 0) {
+        loadBookingDetails(bookingIdsToLoad);
+      }
+    }
+  }, [schedules, loadBookingDetails]);
+
+  // Load tutor profiles khi có bookings với tutorEmail
+  useEffect(() => {
+    if (schedules.length > 0) {
+      const tutorEmails: string[] = [];
+
+      schedules.forEach((schedule) => {
+        const booking = getBooking(schedule.bookingId, schedule.booking);
+        const tutorEmail = booking?.tutorSubject?.tutorEmail;
+
+        if (tutorEmail && !tutorEmails.includes(tutorEmail)) {
+          tutorEmails.push(tutorEmail);
+        }
+      });
+
+      if (tutorEmails.length > 0) {
+        loadTutorProfiles(tutorEmails);
+      }
+    }
+  }, [schedules, getBooking, loadTutorProfiles]);
 
   const getScheduleStatusColor = (status: ScheduleStatus | string) => {
     const parsedStatus = EnumHelpers.parseScheduleStatus(status);
@@ -250,10 +287,17 @@ export function ScheduleTab() {
                     const availability = schedule.availability;
                     const slot = availability?.slot;
                     const tutor = availability?.tutor;
-                    const booking = schedule.booking;
+
+                    // Lấy booking từ schedule hoặc từ hook (nếu schedule chỉ có bookingId)
+                    const booking = getBooking(schedule.bookingId, schedule.booking);
+                    // Từ booking lấy tutorSubject (tutorSubjectId)
                     const tutorSubject = booking?.tutorSubject;
+                    // Từ tutorSubject lấy subject (môn học) và level
                     const subject = tutorSubject?.subject;
                     const level = tutorSubject?.level;
+                    // Lấy tutorEmail và tutor profile
+                    const tutorEmail = tutorSubject?.tutorEmail;
+                    const tutorProfile = tutorEmail ? getTutorProfile(tutorEmail) : undefined;
                     const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
 
                     return (
@@ -286,11 +330,17 @@ export function ScheduleTab() {
                                 )}
                               </h5>
                               <p className="text-sm text-gray-600 mb-2">
-                                Gia sư: {tutor?.userEmail || tutor?.userName || 'Chưa có thông tin'}
+                                Gia sư: {tutorProfile?.userName || tutorEmail || 'Chưa có thông tin'}
                               </p>
+                              {tutorEmail && (
+                                <p className="text-xs text-gray-500 mb-2">
+                                  {tutorEmail}
+                                </p>
+                              )}
                               {slot && (
                                 <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
                                   <Clock className="h-4 w-4 text-[#257180]" />
+                                  <div className="text-xs text-gray-500">Bắt đầu - Kết thúc</div>
                                   <span>
                                     {slot.startTime} - {slot.endTime}
                                   </span>
@@ -312,12 +362,7 @@ export function ScheduleTab() {
                                   </a>
                                 </div>
                               )}
-                              {!isOnline && tutor?.addressLine && (
-                                <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
-                                  <MapPin className="h-4 w-4" />
-                                  <span className="break-words">{tutor.addressLine}</span>
-                                </div>
-                              )}
+
                             </div>
                           </div>
                         </CardContent>
@@ -428,10 +473,17 @@ export function ScheduleTab() {
                 const availability = schedule.availability;
                 const slot = availability?.slot;
                 const tutor = availability?.tutor;
-                const booking = schedule.booking;
+
+                // Lấy booking từ schedule hoặc từ hook (nếu schedule chỉ có bookingId)
+                const booking = getBooking(schedule.bookingId, schedule.booking);
+                // Từ booking lấy tutorSubject (tutorSubjectId)
                 const tutorSubject = booking?.tutorSubject;
+                // Từ tutorSubject lấy subject (môn học) và level
                 const subject = tutorSubject?.subject;
                 const level = tutorSubject?.level;
+                // Lấy tutorEmail và tutor profile
+                const tutorEmail = tutorSubject?.tutorEmail;
+                const tutorProfile = tutorEmail ? getTutorProfile(tutorEmail) : undefined;
 
                 const scheduleDate = availability?.startDate
                   ? new Date(availability.startDate)
@@ -508,8 +560,13 @@ export function ScheduleTab() {
                                   )}
                                 </h3>
                                 <p className="text-gray-600 text-sm mt-1">
-                                  Gia sư: {tutor?.userEmail || tutor?.userName || 'Chưa có thông tin'}
+                                  Gia sư: {tutorProfile?.userName || tutorEmail || 'Chưa có thông tin'}
                                 </p>
+                                {tutorEmail && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Email{tutorEmail}
+                                  </p>
+                                )}
                               </div>
 
                               <div className="space-y-3 bg-gray-50 rounded-lg p-4">
@@ -533,7 +590,7 @@ export function ScheduleTab() {
                                       <Clock className="h-5 w-5 text-[#257180]" />
                                     </div>
                                     <div className="flex-1">
-                                      <div className="text-xs text-gray-500">Thời gian</div>
+                                      <div className="text-xs text-gray-500">Bắt đầu - Kết thúc</div>
                                       <div className="text-gray-900 font-medium">
                                         {slot.startTime} - {slot.endTime}
                                       </div>
@@ -541,33 +598,7 @@ export function ScheduleTab() {
                                   </div>
                                 )}
 
-                                {scheduleDate && endDate && (
-                                  <div className="flex items-center gap-3">
-                                    <div className="bg-white rounded-lg p-2 shadow-sm">
-                                      <Clock className="h-5 w-5 text-[#257180]" />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="text-xs text-gray-500">Bắt đầu - Kết thúc</div>
-                                      <div className="text-gray-900 font-medium">
-                                        {format(scheduleDate, "dd/MM/yyyy 'lúc' HH:mm", { locale: vi })} - {format(endDate, "HH:mm", { locale: vi })}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
 
-                                {!isOnline && tutor?.addressLine && (
-                                  <div className="flex items-center gap-3">
-                                    <div className="bg-white rounded-lg p-2 shadow-sm">
-                                      <MapPin className="h-5 w-5 text-[#257180]" />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="text-xs text-gray-500">Địa điểm</div>
-                                      <div className="text-gray-900 font-medium line-clamp-1">
-                                        {tutor.province?.name}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
 
 
 

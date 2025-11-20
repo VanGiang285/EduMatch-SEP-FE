@@ -4,12 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/layout/card';
 import { Badge } from '@/components/ui/basic/badge';
 import { Button } from '@/components/ui/basic/button';
-import { Calendar, Clock, MapPin, Video, MessageCircle, Loader2, Filter } from 'lucide-react';
+import { Calendar, Clock, MapPin, Video, MessageCircle, Loader2, Filter, CheckCircle, XCircle, PlayCircle } from 'lucide-react';
 import { ScheduleService } from '@/services';
 import { ScheduleDto } from '@/types/backend';
 import { ScheduleStatus } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
+import { useBookings } from '@/hooks/useBookings';
+import { useLearnerProfiles } from '@/hooks/useLearnerProfiles';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useCustomToast } from '@/hooks/useCustomToast';
@@ -24,6 +26,8 @@ import {
 export function TutorScheduleTab() {
   const { user } = useAuth();
   const { showError } = useCustomToast();
+  const { getBooking, loadBookingDetails } = useBookings();
+  const { getLearnerProfile, loadLearnerProfiles } = useLearnerProfiles();
   const [schedules, setSchedules] = useState<ScheduleDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<ScheduleStatus | 'all'>('all');
@@ -34,6 +38,39 @@ export function TutorScheduleTab() {
       loadSchedules();
     }
   }, [user?.email, statusFilter, dateRange]);
+
+  // Load booking details khi schedules thay đổi
+  useEffect(() => {
+    if (schedules.length > 0) {
+      const bookingIdsToLoad = schedules
+        .filter((schedule) => schedule.bookingId && !schedule.booking)
+        .map((schedule) => schedule.bookingId!);
+
+      if (bookingIdsToLoad.length > 0) {
+        loadBookingDetails(bookingIdsToLoad);
+      }
+    }
+  }, [schedules, loadBookingDetails]);
+
+  // Load learner profiles khi có bookings với learnerEmail
+  useEffect(() => {
+    if (schedules.length > 0) {
+      const learnerEmails: string[] = [];
+
+      schedules.forEach((schedule) => {
+        const booking = getBooking(schedule.bookingId, schedule.booking);
+        const learnerEmail = booking?.learnerEmail;
+
+        if (learnerEmail && !learnerEmails.includes(learnerEmail)) {
+          learnerEmails.push(learnerEmail);
+        }
+      });
+
+      if (learnerEmails.length > 0) {
+        loadLearnerProfiles(learnerEmails);
+      }
+    }
+  }, [schedules, getBooking, loadLearnerProfiles]);
 
   const loadSchedules = async () => {
     if (!user?.email) return;
@@ -126,6 +163,39 @@ export function TutorScheduleTab() {
     }
   };
 
+  const getStatusIcon = (status: ScheduleStatus) => {
+    switch (status) {
+      case ScheduleStatus.Upcoming:
+        return <Calendar className="h-4 w-4" />;
+      case ScheduleStatus.InProgress:
+        return <PlayCircle className="h-4 w-4" />;
+      case ScheduleStatus.Completed:
+        return <CheckCircle className="h-4 w-4" />;
+      case ScheduleStatus.Cancelled:
+      case ScheduleStatus.Absent:
+        return <XCircle className="h-4 w-4" />;
+      default:
+        return null;
+    }
+  };
+
+  const getStatusColor = (status: ScheduleStatus) => {
+    switch (status) {
+      case ScheduleStatus.Upcoming:
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case ScheduleStatus.InProgress:
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case ScheduleStatus.Completed:
+        return 'bg-green-100 text-green-800 border-green-200';
+      case ScheduleStatus.Cancelled:
+        return 'bg-red-100 text-red-800 border-red-200';
+      case ScheduleStatus.Absent:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -185,15 +255,43 @@ export function TutorScheduleTab() {
           {schedules.map((schedule) => {
             const availability = schedule.availability;
             const slot = availability?.slot;
-            const booking = schedule.booking;
-            const learner = booking?.learner;
-            const tutorSubject = booking?.tutorSubject;
-            const subject = tutorSubject?.subject;
 
-            // Parse date from availability
-            const scheduleDate = availability?.startDate
-              ? new Date(availability.startDate)
-              : null;
+            // Lấy booking từ schedule hoặc từ hook (nếu schedule chỉ có bookingId)
+            const booking = getBooking(schedule.bookingId, schedule.booking);
+            const learnerEmail = booking?.learnerEmail;
+            // Lấy learner profile từ useLearnerProfiles
+            const learnerProfile = learnerEmail ? getLearnerProfile(learnerEmail) : undefined;
+            // Từ booking lấy tutorSubject (tutorSubjectId)
+            const tutorSubject = booking?.tutorSubject;
+            // Từ tutorSubject lấy subject (môn học) và level
+            const subject = tutorSubject?.subject;
+            const level = tutorSubject?.level;
+
+            // Lấy startDate và endDate từ availability (đã là datetime đầy đủ như "2025-11-02T15:00:00")
+            let scheduleDate: Date | null = null;
+            if (availability?.startDate) {
+              scheduleDate = new Date(availability.startDate);
+              // Nếu có slot.startTime, override time từ slot
+              if (slot?.startTime) {
+                const [startHours, startMinutes] = slot.startTime.split(':').map(Number);
+                scheduleDate.setHours(startHours, startMinutes, 0, 0);
+              }
+              // Nếu không có slot, scheduleDate đã có time từ availability.startDate
+            }
+
+            const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
+
+            // Lấy endDate từ availability.endDate (đã là datetime đầy đủ)
+            let endDate: Date | null = null;
+            if (availability?.endDate) {
+              // availability.endDate đã có datetime đầy đủ, lấy trực tiếp
+              endDate = new Date(availability.endDate);
+            } else if (scheduleDate && slot?.endTime) {
+              // Nếu không có availability.endDate nhưng có slot, tính từ scheduleDate + slot.endTime
+              const [endHours, endMinutes] = slot.endTime.split(':').map(Number);
+              endDate = new Date(scheduleDate);
+              endDate.setHours(endHours, endMinutes, 0, 0);
+            }
 
             return (
               <Card key={schedule.id} className="hover:shadow-md transition-shadow">
@@ -222,17 +320,19 @@ export function TutorScheduleTab() {
                         <div className="flex gap-3">
                           <div className="relative flex-shrink-0">
                             <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-[#F2E5BF]">
-                              {learner?.userProfile?.avatarUrl ? (
+                              {learnerProfile?.profile.avatarUrl ? (
                                 <img
-                                  src={learner.userProfile.avatarUrl}
-                                  alt={learner.userName || 'Học viên'}
+                                  src={learnerProfile.profile.avatarUrl}
+                                  alt={learnerProfile.user?.userName || 'Học viên'}
                                   className="w-full h-full object-cover rounded-lg"
                                 />
                               ) : (
                                 <div className="w-full h-full rounded-lg flex items-center justify-center text-lg font-bold text-[#257180] bg-[#F2E5BF]">
-                                  {learner?.userName
-                                    ? learner.userName.slice(0, 2).toUpperCase()
-                                    : 'HV'}
+                                  {learnerProfile?.user?.userName
+                                    ? learnerProfile.user.userName.slice(0, 2).toUpperCase()
+                                    : learnerEmail
+                                      ? learnerEmail.slice(0, 2).toUpperCase()
+                                      : 'HV'}
                                 </div>
                               )}
                             </div>
@@ -240,24 +340,35 @@ export function TutorScheduleTab() {
                           <div>
                             <h3 className="font-semibold text-lg">
                               {subject?.subjectName || 'Môn học'}
+                              {level && (
+                                <span className="ml-2 text-base font-normal text-gray-500">
+                                  - {level.name}
+                                </span>
+                              )}
                             </h3>
                             <p className="text-gray-600">
-                              Học viên: {learner?.userName || 'Chưa có thông tin'}
+                              Học viên: {learnerProfile?.user?.userName || 'Chưa có thông tin'}
                             </p>
-                            {learner?.email && (
-                              <p className="text-sm text-gray-500">{learner.email}</p>
+                            {learnerEmail && (
+                              <p className="text-sm text-gray-500">
+                                Email: {learnerEmail || 'Chưa có thông tin'}
+                              </p>
                             )}
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Badge variant={getStatusBadgeVariant(schedule.status)}>
-                            {EnumHelpers.getScheduleStatusLabel(schedule.status)}
+                        <div className="flex gap-2 flex-wrap">
+                          <Badge className={getStatusColor(EnumHelpers.parseScheduleStatus(schedule.status))}>
+                            <span className="flex items-center gap-1">
+                              {getStatusIcon(EnumHelpers.parseScheduleStatus(schedule.status))}
+                              {EnumHelpers.getScheduleStatusLabel(schedule.status)}
+                            </span>
                           </Badge>
-                          {schedule.meetingSession && (
+                          {isOnline && (
                             <Badge
                               variant="secondary"
                               className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20"
                             >
+                              <Video className="h-3 w-3 mr-1" />
                               Online
                             </Badge>
                           )}
@@ -265,24 +376,31 @@ export function TutorScheduleTab() {
                       </div>
 
                       <div className="mt-4 space-y-2">
-                        {slot && (
+                        {scheduleDate && endDate && (
                           <div className="flex items-center gap-2 text-gray-600">
                             <Clock className="h-4 w-4" />
                             <span>
-                              {slot.startTime} - {slot.endTime}
+                              {format(scheduleDate, "HH:mm", { locale: vi })} - {format(endDate, "HH:mm", { locale: vi })}
                             </span>
                           </div>
                         )}
-                        {schedule.meetingSession && (
+                        {isOnline && schedule.meetingSession?.meetLink && (
                           <div className="flex items-center gap-2 text-gray-600">
                             <Video className="h-4 w-4" />
-                            <span>Lớp học online</span>
+                            <a
+                              href={schedule.meetingSession.meetLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 font-medium hover:underline"
+                            >
+                              Link lớp học online
+                            </a>
                           </div>
                         )}
-                        {tutor?.addressLine && (
+                        {!isOnline && learnerProfile?.profile.addressLine && (
                           <div className="flex items-center gap-2 text-gray-600">
                             <MapPin className="h-4 w-4" />
-                            <span className="line-clamp-1">{tutor.addressLine}</span>
+                            <span className="line-clamp-1">{learnerProfile.profile.addressLine}</span>
                           </div>
                         )}
                         {schedule.attendanceNote && (

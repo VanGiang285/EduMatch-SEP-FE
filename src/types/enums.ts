@@ -103,6 +103,18 @@ export enum TutorApplicationStatus {
   Canceled = 1,
 }
 
+export enum TutorVerificationRequestStatus {
+  Pending = 0,
+  Approved = 1,
+  Rejected = 2,
+}
+
+export enum BookingRefundRequestStatus {
+  Pending = 0,
+  Approved = 1,
+  Rejected = 2,
+}
+
 /**
  * Helper functions để convert enum values
  */
