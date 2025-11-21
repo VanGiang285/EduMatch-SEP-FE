@@ -16,6 +16,10 @@ import { EnumHelpers, TeachingMode, TutorAvailabilityStatus } from '@/types/enum
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
+import { ROUTES, USER_ROLES } from '@/constants';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/form/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/feedback/dialog';
+import { BookingService, BookingWithSchedulesCreateRequest } from '@/services/bookingService';
 
 // Helper function để convert string enum từ API sang TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
@@ -47,11 +51,21 @@ interface TutorDetailProfilePageProps {
   tutorId: number;
 }
 
+type SelectedSlotDetail = {
+  slotKey: string;
+  availabilityId: number;
+  date: Date;
+  dateLabel: string;
+  timeRange: string;
+  isAvailable: boolean;
+};
+
 export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps) {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
-  const { showWarning } = useCustomToast();
+  const { isAuthenticated, user } = useAuth();
+  const { showWarning, showInfo, showSuccess, showError } = useCustomToast();
   const { tutor, isLoading, error, loadTutorDetail, clearError } = useTutorDetail();
+  const availabilitySectionRef = React.useRef<HTMLDivElement>(null);
 
   // Sử dụng hook useTutorAvailability - hook sẽ tự load từ API bằng tutorId
   const {
@@ -141,8 +155,13 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   }, [currentWeekStart, weekDays, bookedMap]);
 
   // const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [activeTab, setActiveTab] = useState('about');
   const [isFavorite, setIsFavorite] = useState(false);
   const [loadingFavorite, setLoadingFavorite] = useState(false);
+  const [selectedSubjectKey, setSelectedSubjectKey] = useState('');
+  const [selectedLevelKey, setSelectedLevelKey] = useState('');
+  const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
+  const [isCreatingBooking, setIsCreatingBooking] = useState(false);
   // const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
 
   // Hiển thị tất cả time slots từ hook (từ API) - chỉ hiển thị các slot mà gia sư đã đăng ký
@@ -161,6 +180,164 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       })
     );
   }, [timeSlotsFromHook, weekDays, isSlotAvailable, isSlotBooked]);
+
+  const subjectLevelOptions = React.useMemo(() => {
+    if (!tutor?.tutorSubjects || tutor.tutorSubjects.length === 0) {
+      return [];
+    }
+
+    const subjectMap = new Map<string, {
+      key: string;
+      subjectName: string;
+      levels: {
+        key: string;
+        levelName: string;
+        subjectId?: number;
+        levelId?: number;
+        tutorSubjectId?: number;
+        hourlyRate?: number;
+      }[];
+    }>();
+
+    tutor.tutorSubjects.forEach((tutorSubject, index) => {
+      const subjectKey = tutorSubject.subjectId ? String(tutorSubject.subjectId) : `subject-${index}`;
+      const levelKey = tutorSubject.levelId ? `${subjectKey}-${tutorSubject.levelId}` : `${subjectKey}-level-${index}`;
+      const subjectName = tutorSubject.subject?.subjectName || 'Môn học';
+      const levelName = tutorSubject.level?.name || 'Trình độ';
+
+      if (!subjectMap.has(subjectKey)) {
+        subjectMap.set(subjectKey, {
+          key: subjectKey,
+          subjectName,
+          levels: [],
+        });
+      }
+
+      subjectMap.get(subjectKey)?.levels.push({
+        key: levelKey,
+        levelName,
+        subjectId: tutorSubject.subjectId,
+        levelId: tutorSubject.levelId,
+        tutorSubjectId: tutorSubject.id,
+        hourlyRate: tutorSubject.hourlyRate || 0,
+      });
+    });
+
+    return Array.from(subjectMap.values());
+  }, [tutor?.tutorSubjects]);
+
+  React.useEffect(() => {
+    if (subjectLevelOptions.length === 0) {
+      setSelectedSubjectKey('');
+      return;
+    }
+
+    const currentSubjectExists = subjectLevelOptions.some(subject => subject.key === selectedSubjectKey);
+    if (!selectedSubjectKey || !currentSubjectExists) {
+      setSelectedSubjectKey(subjectLevelOptions[0].key);
+    }
+  }, [subjectLevelOptions, selectedSubjectKey]);
+
+  const selectedSubjectInfo = React.useMemo(() => {
+    if (!selectedSubjectKey) {
+      return null;
+    }
+    return subjectLevelOptions.find(option => option.key === selectedSubjectKey) || null;
+  }, [selectedSubjectKey, subjectLevelOptions]);
+
+  React.useEffect(() => {
+    if (!selectedSubjectInfo || selectedSubjectInfo.levels.length === 0) {
+      setSelectedLevelKey('');
+      return;
+    }
+
+    const currentLevelExists = selectedSubjectInfo.levels.some(level => level.key === selectedLevelKey);
+    if (!selectedLevelKey || !currentLevelExists) {
+      setSelectedLevelKey(selectedSubjectInfo.levels[0].key);
+    }
+  }, [selectedSubjectInfo, selectedLevelKey]);
+
+  const selectedLevelInfo = React.useMemo(() => {
+    if (!selectedSubjectInfo || !selectedLevelKey) {
+      return null;
+    }
+    return selectedSubjectInfo.levels.find(level => level.key === selectedLevelKey) || null;
+  }, [selectedSubjectInfo, selectedLevelKey]);
+
+  const getDateKeyFromAvailability = React.useCallback((startDate: string) => {
+    if (startDate.includes('T')) {
+      return startDate.split('T')[0];
+    }
+    const date = new Date(startDate);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const getHourKeyFromAvailability = React.useCallback((availability: { slot?: { startTime?: string }; startDate: string }) => {
+    if (availability.slot?.startTime) {
+      return availability.slot.startTime.split(':')[0].padStart(2, '0');
+    }
+    if (availability.startDate.includes('T')) {
+      const timePart = availability.startDate.split('T')[1];
+      if (timePart) {
+        return timePart.split(':')[0].padStart(2, '0');
+      }
+    }
+    return '00';
+  }, []);
+
+  const availabilityBySlotKey = React.useMemo(() => {
+    const map = new Map<string, typeof availabilities[number]>();
+    availabilities.forEach(availability => {
+      const dateKey = getDateKeyFromAvailability(availability.startDate);
+      const hourKey = getHourKeyFromAvailability(availability);
+      map.set(`${dateKey}-${hourKey}`, availability);
+    });
+    return map;
+  }, [availabilities, getDateKeyFromAvailability, getHourKeyFromAvailability]);
+
+  const selectedSlotDetails = React.useMemo<SelectedSlotDetail[]>(() => {
+    return Array.from(selectedSlots)
+      .map(slotKey => {
+        const availability = availabilityBySlotKey.get(slotKey);
+        if (!availability) {
+          return null;
+        }
+        const date = new Date(availability.startDate);
+        const dateLabel = date.toLocaleDateString('vi-VN', {
+          weekday: 'short',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        });
+        const startTimeLabel = availability.slot?.startTime
+          ? availability.slot.startTime.slice(0, 5)
+          : date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const endTimeLabel = availability.slot?.endTime
+          ? availability.slot.endTime.slice(0, 5)
+          : availability.endDate
+            ? new Date(availability.endDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+            : '';
+        const timeRange = endTimeLabel ? `${startTimeLabel} - ${endTimeLabel}` : startTimeLabel;
+        const status = EnumHelpers.parseTutorAvailabilityStatus(availability.status);
+        return {
+          slotKey,
+          availabilityId: availability.id,
+          date,
+          dateLabel,
+          timeRange,
+          isAvailable: status === TutorAvailabilityStatus.Available,
+        };
+      })
+      .filter((detail): detail is SelectedSlotDetail => detail !== null)
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [availabilityBySlotKey, selectedSlots]);
+
+  const canSelectSlots = !!selectedSubjectInfo && !!selectedLevelInfo;
+  const selectedLevelPrice = selectedLevelInfo?.hourlyRate ?? 0;
+  const estimatedTotal = selectedSlotDetails.length > 0 ? selectedLevelPrice * selectedSlotDetails.length : 0;
 
   useEffect(() => {
     if (tutorId) {
@@ -196,6 +373,118 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
 
     checkFavoriteStatus();
   }, [tutorId, isAuthenticated]);
+
+  const handleGoToAvailability = React.useCallback(() => {
+    setActiveTab('availability');
+    requestAnimationFrame(() => {
+      availabilitySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [availabilitySectionRef, setActiveTab]);
+
+  const handleBookingRequest = React.useCallback(() => {
+    if (!isAuthenticated) {
+      showWarning('Vui lòng đăng nhập', 'Bạn cần đăng nhập để đặt lịch học.');
+      if (typeof window !== 'undefined') {
+        const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        router.push(`${ROUTES.LOGIN}?redirect=${redirectUrl}`);
+      } else {
+        router.push(ROUTES.LOGIN);
+      }
+      return;
+    }
+
+    if (user?.role !== USER_ROLES.LEARNER) {
+      showWarning('Chưa hỗ trợ vai trò hiện tại', 'Tính năng đặt lịch chỉ áp dụng cho học viên.');
+      return;
+    }
+
+    if (subjectLevelOptions.length === 0) {
+      showWarning('Chưa có môn học', 'Gia sư chưa cập nhật môn học hoặc cấp độ để đặt lịch.');
+      return;
+    }
+    if (!selectedSubjectInfo) {
+      showWarning('Vui lòng chọn môn học', 'Hãy chọn môn học trước khi chọn khung giờ.');
+      return;
+    }
+    if (!selectedLevelInfo) {
+      showWarning('Vui lòng chọn cấp độ', 'Hãy chọn cấp độ của môn học trước khi chọn khung giờ.');
+      return;
+    }
+    if (selectedSlots.size === 0) {
+      showWarning('Chưa chọn khung giờ', 'Bạn cần chọn ít nhất một khung giờ học.');
+      return;
+    }
+    if (selectedSlotDetails.length !== selectedSlots.size) {
+      showWarning('Khung giờ không khả dụng', 'Một số khung giờ đã không còn trống. Vui lòng chọn lại.');
+      return;
+    }
+    if (selectedSlotDetails.some(detail => !detail.isAvailable)) {
+      showWarning('Khung giờ không còn trống', 'Vui lòng bỏ chọn các khung giờ đã được đặt.');
+      return;
+    }
+    setIsBookingDialogOpen(true);
+  }, [isAuthenticated, router, selectedLevelInfo, selectedSlotDetails, selectedSlots, selectedSubjectInfo, showWarning, subjectLevelOptions, user?.role]);
+
+  const handleConfirmBooking = React.useCallback(async () => {
+    if (!user?.email) {
+      showWarning('Thiếu thông tin học viên', 'Không tìm thấy email của bạn. Vui lòng đăng nhập lại.');
+      return;
+    }
+    if (!selectedSubjectInfo || !selectedLevelInfo || !selectedLevelInfo.tutorSubjectId) {
+      showWarning('Thông tin môn học không hợp lệ', 'Vui lòng chọn lại môn học và cấp độ.');
+      return;
+    }
+    if (selectedSlotDetails.length === 0) {
+      showWarning('Chưa chọn khung giờ', 'Bạn cần chọn ít nhất một khung giờ học.');
+      return;
+    }
+    if (selectedSlotDetails.some(detail => !detail.isAvailable)) {
+      showWarning('Khung giờ không còn trống', 'Vui lòng bỏ chọn các khung giờ đã được đặt.');
+      return;
+    }
+
+    const payload: BookingWithSchedulesCreateRequest = {
+      booking: {
+        learnerEmail: user.email,
+        tutorSubjectId: selectedLevelInfo.tutorSubjectId,
+        totalSessions: selectedSlotDetails.length,
+      },
+      schedules: selectedSlotDetails.map(detail => ({
+        availabilitiId: detail.availabilityId,
+      })),
+    };
+
+    try {
+      setIsCreatingBooking(true);
+      const response = await BookingService.createBooking(payload);
+      if (response.success) {
+        showSuccess('Đặt lịch thành công', 'Bạn có thể xem chi tiết trong tab Lớp học.');
+        setIsBookingDialogOpen(false);
+        clearSelectedSlots();
+        router.push('/profile?tab=classes');
+      } else {
+        const errorMessage =
+          typeof response.error === 'string'
+            ? response.error
+            : response.error?.message;
+        showError('Không thể đặt lịch', errorMessage || 'Vui lòng thử lại sau.');
+      }
+    } catch (error: any) {
+      showError('Không thể đặt lịch', error?.message || 'Đã xảy ra lỗi, vui lòng thử lại sau.');
+    } finally {
+      setIsCreatingBooking(false);
+    }
+  }, [
+    clearSelectedSlots,
+    router,
+    selectedLevelInfo,
+    selectedSlotDetails,
+    selectedSubjectInfo,
+    showError,
+    showSuccess,
+    showWarning,
+    user?.email,
+  ]);
 
   const reviews: Review[] = [];
   const formatDate = (date: Date) => {
@@ -431,7 +720,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                 </CardContent>
               </Card>
             )}
-            <Tabs defaultValue="about" className="space-y-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
               <TabsList className="grid w-full grid-cols-3 bg-[#F2E5BF]">
                 <TabsTrigger value="about" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">Giới thiệu</TabsTrigger>
                 <TabsTrigger value="reviews" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">Đánh giá ({reviews.length})</TabsTrigger>
@@ -647,187 +936,259 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                 </Card>
               </TabsContent>
               <TabsContent value="availability" className="space-y-6">
-                <Card className="border-[#FD8B51]">
-                  <CardHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <CardTitle className="font-bold">Lịch trống của gia sư</CardTitle>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {formatWeekDisplay()}
-                        </p>
-                      </div>
-
-                      {/* Navigation Controls */}
-                      <div className="flex items-center justify-between">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={goToPreviousWeek}
-                          className="flex items-center gap-2"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                          <span>Tuần trước</span>
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={goToCurrentWeek}
-                          className="bg-[#FD8B51] text-white hover:bg-[#CB6040] border-[#FD8B51]"
-                        >
-                          Về tuần hiện tại
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={goToNextWeek}
-                          className="flex items-center gap-2"
-                        >
-                          <span>Tuần sau</span>
-                          <ChevronRight className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingAvailability ? (
-                      <div className="text-center py-8">
-                        <Loader2 className="w-8 h-8 animate-spin text-[#FD8B51] mx-auto mb-4" />
-                        <p className="text-gray-600">Đang tải lịch trống của gia sư...</p>
-                      </div>
-                    ) : timeSlotsToShow.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <div className="min-w-[600px]">
-                          {/* Header with days */}
-                          <div className="grid grid-cols-8 gap-1 mb-2">
-                            <div className="p-2 text-sm font-medium text-gray-600">Giờ</div>
-                            {weekDays.map((day) => (
-                              <div key={day.key} className="p-2 text-center">
-                                <div className="text-sm font-medium text-gray-900">{day.label}</div>
-                                <div className="text-xs text-gray-500">{datesByDay[day.key]}</div>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Time slots grid */}
-                          <div className="space-y-1 max-h-[600px] overflow-y-auto">
-                            {timeSlotsToShow.map((timeSlot) => (
-                              <div key={timeSlot.id} className="grid grid-cols-8 gap-1">
-                                <div className="p-2 text-sm text-gray-600 bg-gray-50 rounded">
-                                  {timeSlot.startTime}
-                                </div>
-                                {weekDays.map((day) => {
-                                  const isAvailable = isSlotAvailable(day.key, timeSlot);
-                                  const isSelected = isSlotSelected(day.key, timeSlot);
-                                  const isBooked = isSlotBooked(day.key, timeSlot);
-
-                                  // Kiểm tra xem có availability nào cho slot này không (available hoặc booked)
-                                  const hasAvailability = isAvailable || isBooked;
-
-                                  // Xác định màu sắc và trạng thái
-                                  // - Màu cam: Đã chọn (selected) - chỉ khi available
-                                  // - Màu đỏ: Đã booked (không thể chọn)
-                                  // - Màu xanh: Available (có thể chọn)
-                                  // - Màu xám + X: Không có lịch đăng ký (không có availability)
-
-                                  let buttonClass = '';
-                                  let buttonContent = '';
-                                  let isDisabled = false;
-
-                                  if (isSelected && isAvailable) {
-                                    // Màu cam: Đã chọn (chỉ có thể chọn nếu available)
-                                    buttonClass = 'bg-[#FD8B51] text-white hover:bg-[#CB6040] cursor-pointer';
-                                    buttonContent = '✓';
-                                  } else if (isBooked) {
-                                    // Màu đỏ: Đã booked (không thể chọn)
-                                    buttonClass = 'bg-red-100 text-red-800 hover:bg-red-200 cursor-not-allowed';
-                                    buttonContent = '✗';
-                                    isDisabled = true;
-                                  } else if (isAvailable) {
-                                    // Màu xanh: Available (có thể chọn)
-                                    buttonClass = 'bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer';
-                                    buttonContent = '';
-                                  } else {
-                                    // Màu xám + X: Không có lịch đăng ký (không có availability)
-                                    buttonClass = 'bg-gray-100 text-gray-400 cursor-not-allowed';
-                                    buttonContent = '✗';
-                                    isDisabled = true;
-                                  }
-
-                                  return (
-                                    <button
-                                      key={`${day.key}-${timeSlot.id}`}
-                                      onClick={() => !isDisabled && isAvailable && handleSlotClick(day.key, timeSlot)}
-                                      disabled={isDisabled}
-                                      className={`p-2 text-xs rounded transition-all duration-200 ${buttonClass}`}
-                                    >
-                                      {buttonContent}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            ))}
-                          </div>
+                <div ref={availabilitySectionRef} className="space-y-6">
+                  <Card className="border-[#FD8B51]">
+                    <CardHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <CardTitle className="font-bold">Lịch trống của gia sư</CardTitle>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {formatWeekDisplay()}
+                          </p>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <CalendarIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600">Không có lịch trống trong tuần này</p>
-                        <p className="text-sm text-gray-500 mt-2">Gia sư chưa cập nhật lịch trống cho tuần này</p>
-                      </div>
-                    )}
 
-                    {/* Selected slots summary */}
-                    {selectedSlots.size > 0 && (
-                      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                        <p className="text-sm text-gray-700 mb-3">
-                          Bạn đã chọn <span className="font-medium">{selectedSlots.size}</span> khung giờ
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
-                            onClick={() => {
-                              // TODO: integrate booking action
-                            }}
-                          >
-                            <CalendarIcon className="w-4 h-4 mr-2" />
-                            Đặt lịch học
-                          </Button>
+                        {subjectLevelOptions.length > 0 ? (
+                          <div className="bg-[#FFF6EF] border border-[#FD8B51]/40 rounded-lg p-4 space-y-3">
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-gray-800">Chọn môn học</p>
+                              <Select value={selectedSubjectKey} onValueChange={setSelectedSubjectKey}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Chọn môn học" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {subjectLevelOptions.map(option => (
+                                    <SelectItem key={option.key} value={option.key}>
+                                      {option.subjectName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-gray-800">Chọn cấp độ</p>
+                              <Select
+                                value={selectedLevelKey}
+                                onValueChange={setSelectedLevelKey}
+                                disabled={!selectedSubjectInfo || selectedSubjectInfo.levels.length === 0}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Chọn cấp độ" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {selectedSubjectInfo?.levels.map(level => (
+                                    <SelectItem key={level.key} value={level.key}>
+                                      {level.levelName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            {selectedLevelInfo && (
+                              <div className="flex items-center justify-between rounded-md bg-white/80 border border-[#FD8B51]/30 px-3 py-2 text-sm text-gray-700">
+                                <span>Giá mỗi buổi</span>
+                                <span className="font-semibold text-[#FD8B51]">
+                                  {FormatService.formatVND(selectedLevelPrice)}
+                                </span>
+                              </div>
+                            )}
+                            <p className="text-xs text-gray-600">
+                              Vui lòng chọn môn học và cấp độ trước khi thao tác lịch.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                            Gia sư chưa cập nhật môn học/cấp độ để đặt lịch.
+                          </div>
+                        )}
+
+                        {/* Navigation Controls */}
+                        <div className="flex items-center justify-between">
                           <Button
                             variant="outline"
-                            onClick={clearSelectedSlots}
+                            size="sm"
+                            onClick={goToPreviousWeek}
+                            className="flex items-center gap-2"
                           >
-                            Xóa lựa chọn
+                            <ChevronLeft className="w-4 h-4" />
+                            <span>Tuần trước</span>
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={goToCurrentWeek}
+                            className="bg-[#FD8B51] text-white hover:bg-[#CB6040] border-[#FD8B51]"
+                          >
+                            Về tuần hiện tại
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={goToNextWeek}
+                            className="flex items-center gap-2"
+                          >
+                            <span>Tuần sau</span>
+                            <ChevronRight className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
-                    )}
+                    </CardHeader>
+                    <CardContent>
+                      {!canSelectSlots && subjectLevelOptions.length > 0 && (
+                        <div className="mb-4 p-4 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800">
+                          Vui lòng chọn môn học & cấp độ trước khi chọn khung giờ.
+                        </div>
+                      )}
+                      {isLoadingAvailability ? (
+                        <div className="text-center py-8">
+                          <Loader2 className="w-8 h-8 animate-spin text-[#FD8B51] mx-auto mb-4" />
+                          <p className="text-gray-600">Đang tải lịch trống của gia sư...</p>
+                        </div>
+                      ) : timeSlotsToShow.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <div className="min-w-[600px]">
+                            {/* Header with days */}
+                            <div className="grid grid-cols-8 gap-1 mb-2">
+                              <div className="p-2 text-sm font-medium text-gray-600">Giờ</div>
+                              {weekDays.map((day) => (
+                                <div key={day.key} className="p-2 text-center">
+                                  <div className="text-sm font-medium text-gray-900">{day.label}</div>
+                                  <div className="text-xs text-gray-500">{datesByDay[day.key]}</div>
+                                </div>
+                              ))}
+                            </div>
 
-                    {/* Legend - only show when there are slots to display */}
-                    {timeSlotsToShow.length > 0 && (
-                      <div className="mt-4 flex items-center gap-4 text-xs text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-green-100 rounded border border-green-300"></div>
-                          <span>Lịch rảnh (có thể đặt)</span>
+                            {/* Time slots grid */}
+                            <div className="space-y-1 max-h-[600px] overflow-y-auto">
+                              {timeSlotsToShow.map((timeSlot) => (
+                                <div key={timeSlot.id} className="grid grid-cols-8 gap-1">
+                                  <div className="p-2 text-sm text-gray-600 bg-gray-50 rounded">
+                                    {timeSlot.startTime}
+                                  </div>
+                                  {weekDays.map((day) => {
+                                    const isAvailable = isSlotAvailable(day.key, timeSlot);
+                                    const isSelected = isSlotSelected(day.key, timeSlot);
+                                    const isBooked = isSlotBooked(day.key, timeSlot);
+
+                                    // Xác định màu sắc và trạng thái
+                                    // - Màu cam: Đã chọn (selected) - chỉ khi available
+                                    // - Màu đỏ: Đã booked (không thể chọn)
+                                    // - Màu xanh: Available (có thể chọn)
+                                    // - Màu xám + X: Không có lịch đăng ký (không có availability)
+
+                                    let buttonClass = '';
+                                    let buttonContent = '';
+                                    let isDisabled = false;
+
+                                    if (isSelected && isAvailable) {
+                                      // Màu cam: Đã chọn (chỉ có thể chọn nếu available)
+                                      buttonClass = 'bg-[#FD8B51] text-white hover:bg-[#CB6040] cursor-pointer';
+                                      buttonContent = '✓';
+                                    } else if (isBooked) {
+                                      // Màu đỏ: Đã booked (không thể chọn)
+                                      buttonClass = 'bg-red-100 text-red-800 hover:bg-red-200 cursor-not-allowed';
+                                      buttonContent = '✗';
+                                      isDisabled = true;
+                                    } else if (isAvailable) {
+                                      // Màu xanh: Available (có thể chọn)
+                                      buttonClass = 'bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer';
+                                      buttonContent = '';
+                                    } else {
+                                      // Màu xám + X: Không có lịch đăng ký (không có availability)
+                                      buttonClass = 'bg-gray-100 text-gray-400 cursor-not-allowed';
+                                      buttonContent = '✗';
+                                      isDisabled = true;
+                                    }
+
+                                    return (
+                                      <button
+                                        key={`${day.key}-${timeSlot.id}`}
+                                        onClick={() => canSelectSlots && !isDisabled && isAvailable && handleSlotClick(day.key, timeSlot)}
+                                        disabled={isDisabled || !canSelectSlots}
+                                        className={`p-2 text-xs rounded transition-all duration-200 ${buttonClass} ${!canSelectSlots ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                      >
+                                        {buttonContent}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-[#FD8B51] rounded border border-[#CB6040]"></div>
-                          <span>Đã chọn</span>
+                      ) : (
+                        <div className="text-center py-8">
+                          <CalendarIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-600">Không có lịch trống trong tuần này</p>
+                          <p className="text-sm text-gray-500 mt-2">Gia sư chưa cập nhật lịch trống cho tuần này</p>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-red-100 rounded border border-red-300"></div>
-                          <span>Đã booked</span>
+                      )}
+
+                      {/* Selected slots summary */}
+                      {selectedSlots.size > 0 && (
+                        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <p className="text-sm text-gray-700 mb-3">
+                            Bạn đã chọn <span className="font-medium">{selectedSlotDetails.length}</span> khung giờ
+                          </p>
+                          {selectedLevelInfo && (
+                            <div className="mb-3 text-sm text-gray-700 space-y-1">
+                              <p>
+                                Giá mỗi buổi:{' '}
+                                <span className="font-semibold text-[#FD8B51]">
+                                  {FormatService.formatVND(selectedLevelPrice)}
+                                </span>
+                              </p>
+                              <p>
+                                Tạm tính:{' '}
+                                <span className="font-semibold text-[#257180]">
+                                  {FormatService.formatVND(estimatedTotal)}
+                                </span>
+                              </p>
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <Button
+                              className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
+                              onClick={handleBookingRequest}
+                            >
+                              <CalendarIcon className="w-4 h-4 mr-2" />
+                              Đặt lịch học
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={clearSelectedSlots}
+                            >
+                              Xóa lựa chọn
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-gray-100 rounded border border-gray-300"></div>
-                          <span>Không có lịch</span>
+                      )}
+
+                      {/* Legend - only show when there are slots to display */}
+                      {timeSlotsToShow.length > 0 && (
+                        <div className="mt-4 flex items-center gap-4 text-xs text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 bg-green-100 rounded border border-green-300"></div>
+                            <span>Lịch rảnh (có thể đặt)</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 bg-[#FD8B51] rounded border border-[#CB6040]"></div>
+                            <span>Đã chọn</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 bg-red-100 rounded border border-red-300"></div>
+                            <span>Đã booked</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 bg-gray-100 rounded border border-gray-300"></div>
+                            <span>Không có lịch</span>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
             </Tabs>
           </div>
@@ -869,11 +1230,12 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <Button className="w-full bg-[#257180] hover:bg-[#257180]/90 text-white" size="lg">
-                      <CalendarIcon className="w-4 h-4 mr-2" />
-                      Đặt buổi học thử
-                    </Button>
-                    <Button variant="outline" className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
+                    <Button
+                      variant="outline"
+                      className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                      size="lg"
+                      onClick={handleGoToAvailability}
+                    >
                       <Clock className="w-4 h-4 mr-2" />
                       Đặt lịch học
                     </Button>
@@ -918,6 +1280,89 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
           </div>
         </div>
       </div>
+      <Dialog
+        open={isBookingDialogOpen}
+        onOpenChange={(open) => {
+          if (!isCreatingBooking) {
+            setIsBookingDialogOpen(open);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Xác nhận đặt lịch học</DialogTitle>
+            <DialogDescription>
+              Kiểm tra lại thông tin trước khi gửi yêu cầu đặt lịch.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-[#FD8B51]/30 bg-[#FFF6EF] p-4 text-sm text-gray-700 space-y-1">
+              <p>
+                <span className="font-semibold text-gray-900">Môn học:</span>{' '}
+                {selectedSubjectInfo?.subjectName}
+              </p>
+              <p>
+                <span className="font-semibold text-gray-900">Cấp độ:</span>{' '}
+                {selectedLevelInfo?.levelName}
+              </p>
+              <p>
+                <span className="font-semibold text-gray-900">Giá mỗi buổi:</span>{' '}
+                <span className="text-[#FD8B51] font-semibold">
+                  {FormatService.formatVND(selectedLevelPrice)}
+                </span>
+              </p>
+              <p>
+                <span className="font-semibold text-gray-900">Số buổi:</span>{' '}
+                {selectedSlotDetails.length}
+              </p>
+              <p>
+                <span className="font-semibold text-gray-900">Tổng học phí dự kiến:</span>{' '}
+                <span className="text-[#257180] font-semibold">
+                  {FormatService.formatVND(estimatedTotal)}
+                </span>
+              </p>
+            </div>
+            <div className="max-h-64 overflow-y-auto rounded-lg border border-gray-200">
+              {selectedSlotDetails.length > 0 ? (
+                <ul className="divide-y divide-gray-100 text-sm">
+                  {selectedSlotDetails.map(detail => (
+                    <li key={detail.slotKey} className="flex items-center justify-between px-4 py-3">
+                      <div>
+                        <p className="font-medium text-gray-900">{detail.dateLabel}</p>
+                        <p className="text-gray-600">{detail.timeRange}</p>
+                      </div>
+                      {!detail.isAvailable && (
+                        <span className="text-xs font-medium text-red-600">Hết chỗ</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="px-4 py-6 text-center text-sm text-gray-600">
+                  Chưa có khung giờ nào được chọn.
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsBookingDialogOpen(false)}
+              disabled={isCreatingBooking}
+            >
+              Hủy
+            </Button>
+            <Button
+              className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
+              onClick={handleConfirmBooking}
+              disabled={isCreatingBooking || selectedSlotDetails.length === 0}
+            >
+              {isCreatingBooking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Xác nhận đặt lịch
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
