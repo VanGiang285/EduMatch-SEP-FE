@@ -172,4 +172,14 @@ export class BookingService {
     });
     return apiClient.put<BookingDto>(endpoint, status);
   }
+
+  /**
+   * Thanh toán Booking
+   */
+  static async payBooking(id: number): Promise<ApiResponse<BookingDto>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.PAY, {
+      id: id.toString(),
+    });
+    return apiClient.post<BookingDto>(endpoint);
+  }
 }

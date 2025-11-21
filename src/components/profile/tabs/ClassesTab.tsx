@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/layout/card';
 import { Badge } from '@/components/ui/basic/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
@@ -30,21 +30,30 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useSchedules } from '@/hooks/useSchedules';
 import { useBookings } from '@/hooks/useBookings';
+import { useWallet } from '@/hooks/useWallet';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
 export function ClassesTab() {
   const { user } = useAuth();
-  const { showError, showSuccess } = useCustomToast();
-  const { bookings, loading, loadLearnerBookings: loadBookings } = useBookings();
+  const { showError, showSuccess, showWarning } = useCustomToast();
+  const {
+    bookings,
+    loading,
+    loadLearnerBookings: loadBookings,
+    payBooking: payBookingApi,
+  } = useBookings();
   const [allBookings, setAllBookings] = useState<BookingDto[]>([]); // Lưu tất cả bookings để tính counts
   const [filter, setFilter] = useState<string>('all');
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
   const [cancelDialogBookingId, setCancelDialogBookingId] = useState<number | null>(null);
+  const [payingBookingId, setPayingBookingId] = useState<number | null>(null);
+  const [isPaying, setIsPaying] = useState<boolean>(false);
   const { loadTutorProfiles, getTutorProfile, loadTutorProfile } = useTutorProfiles();
   const { schedules, loading: loadingSchedules, loadSchedulesByBookingId, clearSchedules } = useSchedules();
   const { getBooking, loadBookingDetails } = useBookings();
+  const { balance, loading: walletLoading, refetch: refetchWallet } = useWallet();
 
   // Load tất cả bookings một lần khi component mount hoặc user thay đổi
   useEffect(() => {
@@ -55,16 +64,10 @@ export function ClassesTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email]);
 
-  // Cập nhật allBookings khi bookings thay đổi (chỉ khi load tất cả, không filter)
+  // Đồng bộ allBookings với dữ liệu bookings mới nhất
   useEffect(() => {
-    // Chỉ cập nhật khi allBookings đang rỗng hoặc khi có dữ liệu mới
-    if (allBookings.length === 0 && bookings.length > 0) {
-      setAllBookings(bookings);
-    } else if (bookings.length > allBookings.length) {
-      // Nếu bookings nhiều hơn allBookings, có thể là load tất cả
-      setAllBookings(bookings);
-    }
-  }, [bookings, allBookings.length]);
+    setAllBookings(bookings);
+  }, [bookings]);
 
   // Load tutor profiles khi có bookings
   useEffect(() => {
@@ -269,6 +272,64 @@ export function ClassesTab() {
   };
 
   // Tính toán counts cho từng trạng thái dựa trên tất cả bookings
+  const handlePayBooking = useCallback(
+    async (booking: BookingDto) => {
+      if (!booking || !booking.id) return;
+      if (!booking.totalAmount) {
+        showWarning('Không tìm thấy số tiền cần thanh toán. Vui lòng thử lại sau.');
+        return;
+      }
+      if (walletLoading) {
+        showWarning('Đang kiểm tra số dư ví, vui lòng đợi...');
+        return;
+      }
+      if (balance < booking.totalAmount) {
+        showWarning(
+          'Số dư không đủ',
+          `Số dư ví của bạn hiện là ${new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND',
+          }).format(balance)}, không đủ để thanh toán ${new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND',
+          }).format(booking.totalAmount)}. Vui lòng nạp thêm tiền.`
+        );
+        return;
+      }
+
+      setPayingBookingId(booking.id);
+      setIsPaying(true);
+
+      try {
+        const updatedBooking = await payBookingApi(booking.id);
+        if (updatedBooking) {
+          showSuccess('Thanh toán thành công', 'Số dư ví đã được trừ tương ứng.');
+          if (user?.email) {
+            await Promise.all([loadBookings(user.email), refetchWallet()]);
+          }
+        } else {
+          throw new Error('Thanh toán không thành công. Vui lòng thử lại.');
+        }
+      } catch (error: any) {
+        showError('Không thể thanh toán', error?.message || 'Vui lòng thử lại sau.');
+      } finally {
+        setIsPaying(false);
+        setPayingBookingId(null);
+      }
+    },
+    [balance, loadBookings, payBookingApi, refetchWallet, showError, showSuccess, showWarning, user?.email, walletLoading]
+  );
+
+  const handleRequestRefund = useCallback(
+    (booking: BookingDto) => {
+      showWarning(
+        'Yêu cầu hoàn tiền',
+        `Đơn #${booking.id} đang trong quá trình xử lý. Vui lòng liên hệ hỗ trợ để hoàn tất yêu cầu.`
+      );
+    },
+    [showWarning]
+  );
+
   const bookingCounts = useMemo(() => {
     return {
       all: allBookings.length,
@@ -698,8 +759,26 @@ export function ClassesTab() {
                             <span>Giá/buổi: {formatCurrency(booking.unitPrice)}</span>
                           </div>
 
-                          {EnumHelpers.parseBookingStatus(booking.status) === BookingStatus.Pending && (
-                            <div className="pt-2 border-t border-gray-200">
+                          <div className="pt-2 border-t border-gray-200 space-y-2">
+                            {EnumHelpers.parseBookingStatus(booking.status) !== BookingStatus.Cancelled &&
+                              EnumHelpers.parsePaymentStatus(booking.paymentStatus) === PaymentStatus.Pending && (
+                                <Button
+                                  size="sm"
+                                  className="w-full bg-[#FD8B51] hover:bg-[#CB6040] text-white"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePayBooking(booking);
+                                  }}
+                                  disabled={isPaying && payingBookingId === booking.id}
+                                >
+                                  {isPaying && payingBookingId === booking.id && (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  )}
+                                  Thanh toán
+                                </Button>
+                              )}
+
+                            {EnumHelpers.parseBookingStatus(booking.status) === BookingStatus.Pending && (
                               <Button
                                 size="sm"
                                 className="w-full bg-red-600 hover:bg-red-700 text-white"
@@ -711,8 +790,22 @@ export function ClassesTab() {
                                 <XCircle className="h-4 w-4 mr-2" />
                                 Hủy đơn
                               </Button>
-                            </div>
-                          )}
+                            )}
+
+                            {EnumHelpers.parseBookingStatus(booking.status) === BookingStatus.Confirmed && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full border-[#257180] text-[#257180] hover:bg-[#257180] hover:text-white"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRequestRefund(booking);
+                                }}
+                              >
+                                Yêu cầu hoàn tiền
+                              </Button>
+                            )}
+                          </div>
                         </div>
 
                         <div className="flex gap-2">

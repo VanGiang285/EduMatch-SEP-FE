@@ -349,6 +349,7 @@ export const API_ENDPOINTS = {
     UPDATE: '/api/Booking/update-booking',
     UPDATE_PAYMENT_STATUS: '/api/Booking/update-payment-status/:id',
     UPDATE_STATUS: '/api/Booking/update-status/:id',
+    PAY: '/api/Booking/:id/pay',
   },
   
   // ==================== NOTIFICATIONS ====================

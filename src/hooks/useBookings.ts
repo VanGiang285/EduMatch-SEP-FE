@@ -467,6 +467,41 @@ export function useBookings() {
   );
 
   /**
+   * Thanh toán Booking (tương ứng BookingService.payBooking)
+   */
+  const payBooking = useCallback(
+    async (id: number): Promise<BookingDto | null> => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await BookingService.payBooking(id);
+
+        if (response.success && response.data) {
+          setBookingsCache(prev => {
+            const newMap = new Map(prev);
+            newMap.set(id, response.data!);
+            return newMap;
+          });
+          setBookings(prev =>
+            prev.map(b => (b.id === id ? response.data! : b))
+          );
+          return response.data;
+        } else {
+          setError(response.error?.message || 'Không thể thanh toán booking');
+          return null;
+        }
+      } catch (err: any) {
+        setError(err.message || 'Lỗi khi thanh toán booking');
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  /**
    * Load nhiều booking details cùng lúc (helper method)
    */
   const loadBookingDetails = useCallback(
@@ -568,55 +603,55 @@ export function useBookings() {
    * Helper: Load tutor profile để lấy tutorId từ email
    * Tương tự useTutorBookings nhưng tích hợp vào useBookings
    */
-  const loadTutorProfile = useCallback(
-    async (userEmail: string) => {
-      if (!userEmail) {
-        setTutorId(null);
-        setLoadingTutorId(false);
-        lastLoadedEmailRef.current = null;
-        tutorIdRef.current = null;
-        return;
-      }
+  const loadTutorProfile = useCallback(async (userEmail: string) => {
+    if (!userEmail) {
+      setTutorId(null);
+      setLoadingTutorId(false);
+      lastLoadedEmailRef.current = null;
+      tutorIdRef.current = null;
+      return;
+    }
 
-      // Tránh load lại nếu đang loading cùng email
-      if (isLoadingTutorProfileRef.current && lastLoadedEmailRef.current === userEmail) {
-        return;
-      }
+    // Tránh load lại nếu đang loading cùng email
+    if (
+      isLoadingTutorProfileRef.current &&
+      lastLoadedEmailRef.current === userEmail
+    ) {
+      return;
+    }
 
-      // Nếu đã load cùng email và có tutorId, không load lại
-      if (lastLoadedEmailRef.current === userEmail && tutorIdRef.current) {
-        return;
-      }
+    // Nếu đã load cùng email và có tutorId, không load lại
+    if (lastLoadedEmailRef.current === userEmail && tutorIdRef.current) {
+      return;
+    }
 
-      try {
-        isLoadingTutorProfileRef.current = true;
-        setLoadingTutorId(true);
-        const response = await TutorService.getTutorByEmail(userEmail);
-        if (response.success && response.data && response.data.id) {
-          setTutorId(response.data.id);
-          tutorIdRef.current = response.data.id;
-          lastLoadedEmailRef.current = userEmail;
-        } else {
-          setTutorId(null);
-          tutorIdRef.current = null;
-          lastLoadedEmailRef.current = userEmail; // Vẫn set để tránh load lại
-          showErrorRef.current(
-            'Không thể tải thông tin gia sư',
-            response.error?.message
-          );
-        }
-      } catch (error: any) {
+    try {
+      isLoadingTutorProfileRef.current = true;
+      setLoadingTutorId(true);
+      const response = await TutorService.getTutorByEmail(userEmail);
+      if (response.success && response.data && response.data.id) {
+        setTutorId(response.data.id);
+        tutorIdRef.current = response.data.id;
+        lastLoadedEmailRef.current = userEmail;
+      } else {
         setTutorId(null);
         tutorIdRef.current = null;
         lastLoadedEmailRef.current = userEmail; // Vẫn set để tránh load lại
-        showErrorRef.current('Không thể tải thông tin gia sư', error.message);
-      } finally {
-        isLoadingTutorProfileRef.current = false;
-        setLoadingTutorId(false);
+        showErrorRef.current(
+          'Không thể tải thông tin gia sư',
+          response.error?.message
+        );
       }
-    },
-    []
-  );
+    } catch (error: any) {
+      setTutorId(null);
+      tutorIdRef.current = null;
+      lastLoadedEmailRef.current = userEmail; // Vẫn set để tránh load lại
+      showErrorRef.current('Không thể tải thông tin gia sư', error.message);
+    } finally {
+      isLoadingTutorProfileRef.current = false;
+      setLoadingTutorId(false);
+    }
+  }, []);
 
   /**
    * Helper: Load bookings của tutor (wrapper cho getAllByTutorIdNoPaging với state management)
@@ -683,6 +718,7 @@ export function useBookings() {
     updateBooking,
     updatePaymentStatus,
     updateStatus,
+    payBooking,
 
     // Helper methods
     loadBookingDetails,
