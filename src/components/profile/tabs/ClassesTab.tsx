@@ -29,7 +29,6 @@ import { useCustomToast } from '@/hooks/useCustomToast';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useSchedules } from '@/hooks/useSchedules';
-import { useLearnerBookings } from '@/hooks/useLearnerBookings';
 import { useBookings } from '@/hooks/useBookings';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -37,7 +36,7 @@ import { vi } from 'date-fns/locale';
 export function ClassesTab() {
   const { user } = useAuth();
   const { showError, showSuccess } = useCustomToast();
-  const { bookings, loading, loadBookings } = useLearnerBookings();
+  const { bookings, loading, loadLearnerBookings: loadBookings } = useBookings();
   const [allBookings, setAllBookings] = useState<BookingDto[]>([]); // Lưu tất cả bookings để tính counts
   const [filter, setFilter] = useState<string>('all');
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);

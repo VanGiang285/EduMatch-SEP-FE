@@ -257,20 +257,40 @@ export const EnumHelpers = {
   },
 
   /**
-   * Lấy label tiếng Việt cho TutorAvailabilityStatus
+   * Convert string/number sang enum cho TutorAvailabilityStatus
+   * Hỗ trợ:
+   *  - enum number: 0,1,2,3
+   *  - string enum: 'Available', 'Booked', 'InProgress', 'Cancelled' (không phân biệt hoa thường)
+   *  - string số: '0','1','2','3'
    */
-  getAvailabilityStatusLabel: (status: TutorAvailabilityStatus): string => {
-    switch (status) {
-      case TutorAvailabilityStatus.Available:
-        return 'Trống';
-      case TutorAvailabilityStatus.Booked:
-        return 'Đã đặt';
-      case TutorAvailabilityStatus.InProgress:
-        return 'Đang học';
-      case TutorAvailabilityStatus.Cancelled:
-        return 'Đã hủy';
+  parseTutorAvailabilityStatus: (
+    status: TutorAvailabilityStatus | string | number
+  ): TutorAvailabilityStatus => {
+    if (typeof status === 'number') return status;
+
+    const value = String(status).toLowerCase();
+
+    switch (value) {
+      case '0':
+      case 'available':
+        return TutorAvailabilityStatus.Available;
+
+      case '1':
+      case 'booked':
+        return TutorAvailabilityStatus.Booked;
+
+      case '2':
+      case 'inprogress':
+      case 'in_progress':
+        return TutorAvailabilityStatus.InProgress;
+
+      case '3':
+      case 'cancelled':
+      case 'canceled':
+        return TutorAvailabilityStatus.Cancelled;
+
       default:
-        return 'Không xác định';
+        return TutorAvailabilityStatus.Available;
     }
   },
 
@@ -400,7 +420,9 @@ export const EnumHelpers = {
     }
   },
 
-  parseTutorApplicationStatus: (status: TutorApplicationStatus | string | number): TutorApplicationStatus => {
+  parseTutorApplicationStatus: (
+    status: TutorApplicationStatus | string | number
+  ): TutorApplicationStatus => {
     if (typeof status === 'number') {
       return status as TutorApplicationStatus;
     }
@@ -415,7 +437,9 @@ export const EnumHelpers = {
     return TutorApplicationStatus.Applied;
   },
 
-  getTutorApplicationStatusLabel: (status: TutorApplicationStatus | string | number): string => {
+  getTutorApplicationStatusLabel: (
+    status: TutorApplicationStatus | string | number
+  ): string => {
     const parsedStatus = EnumHelpers.parseTutorApplicationStatus(status);
     if (parsedStatus === TutorApplicationStatus.Applied) {
       return 'Đang ứng tuyển';

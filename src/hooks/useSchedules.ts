@@ -303,6 +303,26 @@ export function useSchedules() {
     setError(null);
   }, []);
 
+  // ========== HELPER METHODS CHO LEARNER SCHEDULES ==========
+
+  /**
+   * Helper: Load schedules của learner (alias cho loadSchedulesByLearnerEmail)
+   * Tương tự useLearnerSchedules nhưng tích hợp vào useSchedules
+   */
+  const loadLearnerSchedules = useCallback(
+    async (
+      learnerEmail: string,
+      params?: {
+        startDate?: Date | string;
+        endDate?: Date | string;
+        status?: ScheduleStatus;
+      }
+    ) => {
+      await loadSchedulesByLearnerEmail(learnerEmail, params);
+    },
+    [loadSchedulesByLearnerEmail]
+  );
+
   return {
     schedules,
     loading,
@@ -316,5 +336,8 @@ export function useSchedules() {
     updateSchedule,
     cancelAllSchedulesByBooking,
     clearSchedules,
+
+    // Helper methods cho learner schedules
+    loadLearnerSchedules,
   };
 }

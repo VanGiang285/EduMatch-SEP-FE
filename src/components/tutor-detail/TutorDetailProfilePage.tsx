@@ -11,7 +11,8 @@ import { Separator } from '../ui/layout/separator';
 import { Star, Heart, MapPin, Clock, Calendar as CalendarIcon, MessageCircle, Video, Shield, Users, Globe, CheckCircle2, Play, ArrowLeft, Loader2, GraduationCap, Medal, ChevronLeft, ChevronRight } from 'lucide-react';
 import { FormatService } from '@/lib/format';
 import { useTutorDetail } from '@/hooks/useTutorDetail';
-import { EnumHelpers, TeachingMode } from '@/types/enums';
+import { useTutorAvailability } from '@/hooks/useTutorAvailability';
+import { EnumHelpers, TeachingMode, TutorAvailabilityStatus } from '@/types/enums';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
@@ -51,160 +52,128 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const { isAuthenticated } = useAuth();
   const { showWarning } = useCustomToast();
   const { tutor, isLoading, error, loadTutorDetail, clearError } = useTutorDetail();
-  
+
+  // Sử dụng hook useTutorAvailability - hook sẽ tự load từ API bằng tutorId
+  const {
+    availabilities,
+    availabilityMap,
+    selectedSlots,
+    currentWeekStart,
+    weekDays,
+    datesByDay,
+    formatWeekDisplay,
+    loadAvailabilities,
+    goToPreviousWeek,
+    goToNextWeek,
+    goToCurrentWeek,
+    handleSlotClick,
+    clearSelectedSlots,
+    isSlotAvailable,
+    isSlotSelected,
+    getAvailableTimeSlots,
+    timeSlots: timeSlotsFromHook,
+    isLoading: isLoadingAvailability,
+  } = useTutorAvailability();
+
+  // Tạo map cho booked slots (status = Booked) từ availabilities đã load từ API
+  const bookedMap = React.useMemo(() => {
+    const map: { [key: string]: boolean } = {};
+
+    availabilities
+      .filter(
+        av =>
+          EnumHelpers.parseTutorAvailabilityStatus(av.status) ===
+          TutorAvailabilityStatus.Booked
+      )
+      .forEach(availability => {
+        // Parse startDate - nếu không có timezone thì coi như local date
+        // Format: "2025-11-24T00:00:00" -> lấy phần date trực tiếp
+        let dateKey: string;
+        if (availability.startDate.includes('T')) {
+          // Lấy phần date trực tiếp từ string để tránh timezone issues
+          dateKey = availability.startDate.split('T')[0]; // "2025-11-24"
+        } else {
+          // Fallback: parse bằng Date
+          const startDate = new Date(availability.startDate);
+          const year = startDate.getFullYear();
+          const month = String(startDate.getMonth() + 1).padStart(2, '0');
+          const day = String(startDate.getDate()).padStart(2, '0');
+          dateKey = `${year}-${month}-${day}`;
+        }
+
+        // Dùng slot.startTime nếu có, nếu không thì lấy từ startDate
+        let timeKey = '00';
+        if (availability.slot?.startTime) {
+          // Lấy giờ từ slot.startTime (format: "HH:mm:ss" hoặc "HH:mm")
+          timeKey = availability.slot.startTime.split(':')[0].padStart(2, '0');
+        } else {
+          // Fallback: lấy từ startDate string
+          if (availability.startDate.includes('T')) {
+            const timePart = availability.startDate.split('T')[1];
+            if (timePart) {
+              timeKey = timePart.split(':')[0].padStart(2, '0');
+            }
+          }
+        }
+
+        const slotKey = `${dateKey}-${timeKey}`;
+        map[slotKey] = true;
+      });
+
+    return map;
+  }, [availabilities]);
+
+  // Helper function để kiểm tra slot có booked không
+  const isSlotBooked = React.useCallback((dayKey: string, timeSlot: { startTime: string; endTime: string; id: number }) => {
+    const date = new Date(currentWeekStart);
+    const dayIndex = weekDays.findIndex(day => day.key === dayKey);
+    date.setDate(currentWeekStart.getDate() + dayIndex);
+
+    // Dùng local date để tránh timezone issues (giống với bookedMap)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateKey = `${year}-${month}-${day}`; // YYYY-MM-DD (local)
+
+    const hour = timeSlot.startTime.split(':')[0].padStart(2, '0');
+    const slotKey = `${dateKey}-${hour}`;
+    return bookedMap[slotKey] || false;
+  }, [currentWeekStart, weekDays, bookedMap]);
+
   // const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isFavorite, setIsFavorite] = useState(false);
   const [loadingFavorite, setLoadingFavorite] = useState(false);
   // const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-  
-  // Availability calendar states
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
-    return startOfWeek;
-  });
-  const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
 
-  // Helper functions for availability calendar
-  const weekDays = [
-    { key: 'monday', label: 'Thứ 2' },
-    { key: 'tuesday', label: 'Thứ 3' },
-    { key: 'wednesday', label: 'Thứ 4' },
-    { key: 'thursday', label: 'Thứ 5' },
-    { key: 'friday', label: 'Thứ 6' },
-    { key: 'saturday', label: 'Thứ 7' },
-    { key: 'sunday', label: 'Chủ nhật' }
-  ];
-
-  const timeSlots = Array.from({ length: 24 }, (_, i) => ({
-    id: i + 1,
-    startTime: `${i.toString().padStart(2, '0')}:00`,
-    endTime: `${(i + 1).toString().padStart(2, '0')}:00`
-  }));
-
-  // Generate dates for current week
-  const generateCurrentWeekDates = () => {
-    const datesByDay: { [key: string]: string } = {};
-    weekDays.forEach((day, index) => {
-      const date = new Date(currentWeekStart);
-      date.setDate(currentWeekStart.getDate() + index);
-      datesByDay[day.key] = date.getDate().toString().padStart(2, '0') + '/' + 
-                           (date.getMonth() + 1).toString().padStart(2, '0');
-    });
-    return datesByDay;
-  };
-
-  // Create availability map from tutor data
-  const createAvailabilityMap = () => {
-    const availabilityMap: { [key: string]: boolean } = {};
-    
-    if (tutor?.tutorAvailabilities) {
-      tutor.tutorAvailabilities.forEach(availability => {
-        const startDate = new Date(availability.startDate);
-        const dateKey = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
-         const timeKey = availability.startDate.split('T')[1]?.split(':')[0] || '00'; // HH
-        const slotKey = `${dateKey}-${timeKey}`;
-        availabilityMap[slotKey] = true;
-      });
+  // Hiển thị tất cả time slots từ hook (từ API) - chỉ hiển thị các slot mà gia sư đã đăng ký
+  // Mỗi slot sẽ hiển thị màu sắc tương ứng: xanh (available), đỏ (booked), xám (không có lịch)
+  const timeSlotsToShow = React.useMemo(() => {
+    if (!timeSlotsFromHook || timeSlotsFromHook.length === 0) {
+      return [];
     }
-    
-    return availabilityMap;
-  };
 
-  const availabilityMap = createAvailabilityMap();
-  const datesByDay = generateCurrentWeekDates();
-
-  // Check if slot is available
-  const isSlotAvailable = (dayKey: string, timeSlot: any) => {
-    const date = new Date(currentWeekStart);
-    const dayIndex = weekDays.findIndex(day => day.key === dayKey);
-    date.setDate(currentWeekStart.getDate() + dayIndex);
-    const dateKey = date.toISOString().split('T')[0];
-    const slotKey = `${dateKey}-${timeSlot.startTime.split(':')[0]}`;
-    return availabilityMap[slotKey] || false;
-  };
-
-  // Check if slot is selected
-  const isSlotSelected = (dayKey: string, timeSlot: any) => {
-    const date = new Date(currentWeekStart);
-    const dayIndex = weekDays.findIndex(day => day.key === dayKey);
-    date.setDate(currentWeekStart.getDate() + dayIndex);
-    const dateKey = date.toISOString().split('T')[0];
-    const slotKey = `${dateKey}-${timeSlot.startTime.split(':')[0]}`;
-    return selectedSlots.has(slotKey);
-  };
-
-  // Filter to only show time slots that have at least one available slot in the current week
-  const availableTimeSlots = timeSlots.filter(timeSlot => {
-    return weekDays.some(day => isSlotAvailable(day.key, timeSlot));
-  });
-
-  // Navigation functions
-  const goToPreviousWeek = () => {
-    const newWeekStart = new Date(currentWeekStart);
-    newWeekStart.setDate(currentWeekStart.getDate() - 7);
-    setCurrentWeekStart(newWeekStart);
-  };
-
-  const goToNextWeek = () => {
-    const newWeekStart = new Date(currentWeekStart);
-    newWeekStart.setDate(currentWeekStart.getDate() + 7);
-    setCurrentWeekStart(newWeekStart);
-  };
-
-  const goToCurrentWeek = () => {
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay() + 1);
-    setCurrentWeekStart(startOfWeek);
-  };
-
-  // Format week display
-  const formatWeekDisplay = () => {
-    const endOfWeek = new Date(currentWeekStart);
-    endOfWeek.setDate(currentWeekStart.getDate() + 6);
-    
-    const startDay = currentWeekStart.getDate();
-    const startMonth = currentWeekStart.getMonth() + 1;
-    const endDay = endOfWeek.getDate();
-    const endMonth = endOfWeek.getMonth() + 1;
-    const year = currentWeekStart.getFullYear();
-    
-    if (startMonth === endMonth) {
-      return `Ngày ${startDay} - ${endDay}/${startMonth}/${year}`;
-    } else {
-      return `Ngày ${startDay}/${startMonth} - ${endDay}/${endMonth}/${year}`;
-    }
-  };
-
-  // Handle slot selection
-  const handleSlotClick = (dayKey: string, timeSlot: any) => {
-    const date = new Date(currentWeekStart);
-    const dayIndex = weekDays.findIndex(day => day.key === dayKey);
-    date.setDate(currentWeekStart.getDate() + dayIndex);
-    const dateKey = date.toISOString().split('T')[0];
-    const slotKey = `${dateKey}-${timeSlot.startTime.split(':')[0]}`;
-    
-    // Only allow selection of available slots
-    if (availabilityMap[slotKey]) {
-      setSelectedSlots(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(slotKey)) {
-          newSet.delete(slotKey);
-        } else {
-          newSet.add(slotKey);
-        }
-        return newSet;
-      });
-    }
-  };
+    // Chỉ hiển thị những slot có ít nhất một ngày trong tuần có availability (available hoặc booked)
+    return timeSlotsFromHook.filter(timeSlot =>
+      weekDays.some(day => {
+        const available = isSlotAvailable(day.key, timeSlot);
+        const booked = isSlotBooked(day.key, timeSlot);
+        return available || booked;
+      })
+    );
+  }, [timeSlotsFromHook, weekDays, isSlotAvailable, isSlotBooked]);
 
   useEffect(() => {
     if (tutorId) {
       loadTutorDetail(tutorId);
     }
   }, [tutorId, loadTutorDetail]);
+
+  // Load availabilities từ API khi tutorId thay đổi hoặc khi tutor được load
+  useEffect(() => {
+    if (tutorId) {
+      loadAvailabilities(tutorId);
+    }
+  }, [tutorId, loadAvailabilities]);
 
   // Check favorite status when tutor loads (only if authenticated)
   useEffect(() => {
@@ -214,24 +183,20 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
         setIsFavorite(false);
         return;
       }
-      
+
       try {
         const response = await FavoriteTutorService.isFavorite(tutorId);
         // Ensure response.data is a boolean - check for explicit true
         const isFavorite = response.data === true;
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`Tutor ${tutorId} favorite status:`, response.data, '→ isFavorite:', isFavorite);
-        }
         setIsFavorite(isFavorite);
       } catch (error) {
-        console.error('Error checking favorite status:', error);
         setIsFavorite(false);
       }
     };
 
     checkFavoriteStatus();
   }, [tutorId, isAuthenticated]);
-  
+
   const reviews: Review[] = [];
   const formatDate = (date: Date) => {
     const now = new Date();
@@ -287,9 +252,9 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-7xl mx-auto">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="mb-4 -ml-2 hover:bg-[#FD8B51] hover:text-white"
             onClick={() => router.back()}
           >
@@ -308,15 +273,14 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     <Avatar className="w-32 h-32">
                       <AvatarImage src={tutor.avatarUrl || undefined} className="object-cover" />
                       <AvatarFallback className="text-3xl bg-[#F2E5BF] text-[#257180]">
-                        {tutor.userName.split(' ').slice(-2).map(n => n[0]).join('')}
+                        {tutor.userName?.split(' ').slice(-2).map(n => n[0]).join('') || 'GS'}
                       </AvatarFallback>
                     </Avatar>
                     {(tutor.status === 1 || tutor.status === 3 || tutor.status === 4) && (
-                      <div className={`absolute -bottom-2 -right-2 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white ${
-                        tutor.status === 1 ? 'bg-blue-600' : 
-                        tutor.status === 3 ? 'bg-orange-600' : 
-                        'bg-red-600'
-                      }`}>
+                      <div className={`absolute -bottom-2 -right-2 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white ${tutor.status === 1 ? 'bg-blue-600' :
+                        tutor.status === 3 ? 'bg-orange-600' :
+                          'bg-red-600'
+                        }`}>
                         <Shield className="w-5 h-5 text-white" />
                       </div>
                     )}
@@ -393,7 +357,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                               await FavoriteTutorService.removeFromFavorite(tutorId);
                             }
                           } catch (error) {
-                            console.error('Error toggling favorite:', error);
                             // Revert optimistic update on error
                             setIsFavorite(!newFavoriteState);
                           } finally {
@@ -414,7 +377,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       <div className="flex items-center gap-2 text-gray-600">
                         <MapPin className="w-4 h-4" />
                         <span>
-                          {tutor.subDistrict?.name && tutor.province?.name 
+                          {tutor.subDistrict?.name && tutor.province?.name
                             ? `${tutor.subDistrict.name}, ${tutor.province.name}`
                             : tutor.province?.name || 'Việt Nam'
                           }
@@ -438,26 +401,26 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
               </CardContent>
             </Card>
             {tutor.videoIntroUrl && (
-                <Card className="border-[#FD8B51]">
+              <Card className="border-[#FD8B51]">
                 <CardContent className="p-6">
-                    <div className="relative bg-gradient-to-br from-[#257180] to-[#1e5a66] rounded-lg overflow-hidden aspect-video">
-                      <video 
-                        className="w-full h-full object-cover"
-                        controls
-                        poster={tutor.avatarUrl}
-                        preload="metadata"
-                      >
-                        <source src={tutor.videoIntroUrl} type="video/mp4" />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                          <div className="text-center text-white">
-                            <div className="w-20 h-20 rounded-full bg-[#FD8B51]/20 backdrop-blur-sm flex items-center justify-center mb-4 mx-auto">
-                        <Play className="w-8 h-8 text-white ml-1" />
-                            </div>
-                            <p className="font-bold">Video không hỗ trợ</p>
-                            <p className="text-sm mt-2">{tutor.userName}</p>
+                  <div className="relative bg-gradient-to-br from-[#257180] to-[#1e5a66] rounded-lg overflow-hidden aspect-video">
+                    <video
+                      className="w-full h-full object-cover"
+                      controls
+                      poster={tutor.avatarUrl}
+                      preload="metadata"
+                    >
+                      <source src={tutor.videoIntroUrl} type="video/mp4" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                        <div className="text-center text-white">
+                          <div className="w-20 h-20 rounded-full bg-[#FD8B51]/20 backdrop-blur-sm flex items-center justify-center mb-4 mx-auto">
+                            <Play className="w-8 h-8 text-white ml-1" />
+                          </div>
+                          <p className="font-bold">Video không hỗ trợ</p>
+                          <p className="text-sm mt-2">{tutor.userName}</p>
+                        </div>
                       </div>
-                    </div>
-                      </video>
+                    </video>
                     <div className="absolute bottom-4 left-4">
                       <Badge variant="default" className="bg-black bg-opacity-70 text-white">
                         <Video className="w-3 h-3 mr-1" />
@@ -502,7 +465,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                             {tutor.tutorSubjects.map((tutorSubject, idx) => (
                               <li key={idx} className="flex items-start gap-2">
                                 <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                                 <span>{tutorSubject.subject?.subjectName} - {tutorSubject.level?.name}</span>
+                                <span>{tutorSubject.subject?.subjectName} - {tutorSubject.level?.name}</span>
                               </li>
                             ))}
                           </ul>
@@ -559,9 +522,9 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                                   </p>
                                   {edu.verified === 1 && (
                                     <Badge variant="outline" className="text-xs mt-1">
-                                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                                    Đã xác thực
-                                  </Badge>
+                                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                                      Đã xác thực
+                                    </Badge>
                                   )}
                                 </div>
                               </div>
@@ -599,8 +562,8 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                               </div>
                               {cert.verified === 1 && (
                                 <Badge variant="outline" className="text-xs">
-                                Đã xác thực
-                              </Badge>
+                                  Đã xác thực
+                                </Badge>
                               )}
                             </div>
                           ))}
@@ -646,7 +609,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                           <div className="flex items-start gap-4">
                             <Avatar className="w-12 h-12">
                               <AvatarImage src={review.studentAvatar || undefined} />
-                              <AvatarFallback className="bg-[#F2E5BF] text-[#257180]">{review.studentName.split(' ').slice(0,2).map(n => n[0]).join('')}</AvatarFallback>
+                              <AvatarFallback className="bg-[#F2E5BF] text-[#257180]">{review.studentName.split(' ').slice(0, 2).map(n => n[0]).join('')}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
                               <div className="flex items-start justify-between mb-2">
@@ -655,9 +618,9 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                                   <div className="flex items-center gap-2 mt-1">
                                     <div className="flex">
                                       {[...Array(5)].map((_, i) => (
-                                        <Star 
-                                          key={i} 
-                                          className={`w-4 h-4 ${ i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300' }`} 
+                                        <Star
+                                          key={i}
+                                          className={`w-4 h-4 ${i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
                                         />
                                       ))}
                                     </div>
@@ -693,7 +656,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                           {formatWeekDisplay()}
                         </p>
                       </div>
-                      
+
                       {/* Navigation Controls */}
                       <div className="flex items-center justify-between">
                         <Button
@@ -705,7 +668,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                           <ChevronLeft className="w-4 h-4" />
                           <span>Tuần trước</span>
                         </Button>
-                        
+
                         <Button
                           variant="outline"
                           size="sm"
@@ -714,7 +677,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                         >
                           Về tuần hiện tại
                         </Button>
-                        
+
                         <Button
                           variant="outline"
                           size="sm"
@@ -728,7 +691,12 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {availableTimeSlots.length > 0 ? (
+                    {isLoadingAvailability ? (
+                      <div className="text-center py-8">
+                        <Loader2 className="w-8 h-8 animate-spin text-[#FD8B51] mx-auto mb-4" />
+                        <p className="text-gray-600">Đang tải lịch trống của gia sư...</p>
+                      </div>
+                    ) : timeSlotsToShow.length > 0 ? (
                       <div className="overflow-x-auto">
                         <div className="min-w-[600px]">
                           {/* Header with days */}
@@ -741,50 +709,76 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                               </div>
                             ))}
                           </div>
-                          
+
                           {/* Time slots grid */}
-                          <div className="space-y-1">
-                            {availableTimeSlots.map((timeSlot) => (
-                            <div key={timeSlot.id} className="grid grid-cols-8 gap-1">
-                              <div className="p-2 text-sm text-gray-600 bg-gray-50 rounded">
-                                {timeSlot.startTime}
+                          <div className="space-y-1 max-h-[600px] overflow-y-auto">
+                            {timeSlotsToShow.map((timeSlot) => (
+                              <div key={timeSlot.id} className="grid grid-cols-8 gap-1">
+                                <div className="p-2 text-sm text-gray-600 bg-gray-50 rounded">
+                                  {timeSlot.startTime}
+                                </div>
+                                {weekDays.map((day) => {
+                                  const isAvailable = isSlotAvailable(day.key, timeSlot);
+                                  const isSelected = isSlotSelected(day.key, timeSlot);
+                                  const isBooked = isSlotBooked(day.key, timeSlot);
+
+                                  // Kiểm tra xem có availability nào cho slot này không (available hoặc booked)
+                                  const hasAvailability = isAvailable || isBooked;
+
+                                  // Xác định màu sắc và trạng thái
+                                  // - Màu cam: Đã chọn (selected) - chỉ khi available
+                                  // - Màu đỏ: Đã booked (không thể chọn)
+                                  // - Màu xanh: Available (có thể chọn)
+                                  // - Màu xám + X: Không có lịch đăng ký (không có availability)
+
+                                  let buttonClass = '';
+                                  let buttonContent = '';
+                                  let isDisabled = false;
+
+                                  if (isSelected && isAvailable) {
+                                    // Màu cam: Đã chọn (chỉ có thể chọn nếu available)
+                                    buttonClass = 'bg-[#FD8B51] text-white hover:bg-[#CB6040] cursor-pointer';
+                                    buttonContent = '✓';
+                                  } else if (isBooked) {
+                                    // Màu đỏ: Đã booked (không thể chọn)
+                                    buttonClass = 'bg-red-100 text-red-800 hover:bg-red-200 cursor-not-allowed';
+                                    buttonContent = '✗';
+                                    isDisabled = true;
+                                  } else if (isAvailable) {
+                                    // Màu xanh: Available (có thể chọn)
+                                    buttonClass = 'bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer';
+                                    buttonContent = '';
+                                  } else {
+                                    // Màu xám + X: Không có lịch đăng ký (không có availability)
+                                    buttonClass = 'bg-gray-100 text-gray-400 cursor-not-allowed';
+                                    buttonContent = '✗';
+                                    isDisabled = true;
+                                  }
+
+                                  return (
+                                    <button
+                                      key={`${day.key}-${timeSlot.id}`}
+                                      onClick={() => !isDisabled && isAvailable && handleSlotClick(day.key, timeSlot)}
+                                      disabled={isDisabled}
+                                      className={`p-2 text-xs rounded transition-all duration-200 ${buttonClass}`}
+                                    >
+                                      {buttonContent}
+                                    </button>
+                                  );
+                                })}
                               </div>
-                              {weekDays.map((day) => {
-                                const isAvailable = isSlotAvailable(day.key, timeSlot);
-                                const isSelected = isSlotSelected(day.key, timeSlot);
-                                
-                                return (
-                                  <button
-                                    key={`${day.key}-${timeSlot.id}`}
-                                    onClick={() => handleSlotClick(day.key, timeSlot)}
-                                    disabled={!isAvailable}
-                                    className={`
-                                      p-2 text-xs rounded transition-all duration-200
-                                      ${isAvailable 
-                                        ? isSelected
-                                          ? 'bg-[#FD8B51] text-white hover:bg-[#CB6040]'
-                                          : 'bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer'
-                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                      }
-                                    `}
-                                  >
-                                    {isAvailable ? (isSelected ? '✓' : '') : '✗'}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ))}
-                        </div>
-                            </div>
+                            ))}
                           </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <CalendarIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <CalendarIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                         <p className="text-gray-600">Không có lịch trống trong tuần này</p>
                         <p className="text-sm text-gray-500 mt-2">Gia sư chưa cập nhật lịch trống cho tuần này</p>
-                        </div>
+                      </div>
                     )}
-                    
+
                     {/* Selected slots summary */}
                     {selectedSlots.size > 0 && (
                       <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -792,38 +786,42 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                           Bạn đã chọn <span className="font-medium">{selectedSlots.size}</span> khung giờ
                         </p>
                         <div className="flex gap-2">
-                          <Button 
+                          <Button
                             className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
                             onClick={() => {
-                              console.log('Book lesson with slots:', Array.from(selectedSlots));
+                              // TODO: integrate booking action
                             }}
                           >
                             <CalendarIcon className="w-4 h-4 mr-2" />
                             Đặt lịch học
                           </Button>
-                          <Button 
+                          <Button
                             variant="outline"
-                            onClick={() => setSelectedSlots(new Set())}
+                            onClick={clearSelectedSlots}
                           >
                             Xóa lựa chọn
                           </Button>
                         </div>
                       </div>
                     )}
-                    
-                    {/* Legend - only show when there are available slots */}
-                    {availableTimeSlots.length > 0 && (
+
+                    {/* Legend - only show when there are slots to display */}
+                    {timeSlotsToShow.length > 0 && (
                       <div className="mt-4 flex items-center gap-4 text-xs text-gray-600">
                         <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-green-100 rounded"></div>
-                          <span>Có thể đặt</span>
+                          <div className="w-3 h-3 bg-green-100 rounded border border-green-300"></div>
+                          <span>Lịch rảnh (có thể đặt)</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-[#FD8B51] rounded"></div>
+                          <div className="w-3 h-3 bg-[#FD8B51] rounded border border-[#CB6040]"></div>
                           <span>Đã chọn</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-gray-100 rounded"></div>
+                          <div className="w-3 h-3 bg-red-100 rounded border border-red-300"></div>
+                          <span>Đã booked</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-gray-100 rounded border border-gray-300"></div>
                           <span>Không có lịch</span>
                         </div>
                       </div>
@@ -846,11 +844,11 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                             const prices = tutor.tutorSubjects.map(ts => ts.hourlyRate || 0);
                             const minPrice = Math.min(...prices);
                             const maxPrice = Math.max(...prices);
-                            
+
                             return (
                               <div className="flex items-baseline justify-center gap-2">
                                 <span className="text-3xl">
-                                  {minPrice === maxPrice 
+                                  {minPrice === maxPrice
                                     ? FormatService.formatVND(minPrice)
                                     : `${FormatService.formatVND(minPrice)} - ${FormatService.formatVND(maxPrice)}`
                                   }

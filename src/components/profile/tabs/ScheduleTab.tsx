@@ -9,7 +9,7 @@ import { ScheduleStatus, TeachingMode } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomToast } from '@/hooks/useCustomToast';
-import { useLearnerSchedules } from '@/hooks/useLearnerSchedules';
+import { useSchedules } from '@/hooks/useSchedules';
 import { useBookings } from '@/hooks/useBookings';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from 'date-fns';
@@ -19,7 +19,7 @@ import { ScheduleDto } from '@/types/backend';
 export function ScheduleTab() {
   const { user } = useAuth();
   const { showError } = useCustomToast();
-  const { schedules, loading, loadSchedules, clearSchedules } = useLearnerSchedules();
+  const { schedules, loading, loadLearnerSchedules: loadSchedules, clearSchedules } = useSchedules();
   const { loadBookingDetails, getBooking } = useBookings();
   const { getTutorProfile, loadTutorProfiles } = useTutorProfiles();
   const [filter, setFilter] = useState<'upcoming' | 'all'>('upcoming');

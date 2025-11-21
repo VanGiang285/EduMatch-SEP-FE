@@ -27,7 +27,6 @@ import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { useSchedules } from '@/hooks/useSchedules';
-import { useTutorBookings } from '@/hooks/useTutorBookings';
 import { useLearnerProfiles } from '@/hooks/useLearnerProfiles';
 import { useBookings } from '@/hooks/useBookings';
 import { format } from 'date-fns';
@@ -37,7 +36,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 export function TutorBookingsTab() {
   const { user } = useAuth();
   const { showError, showSuccess } = useCustomToast();
-  const { bookings, loading, tutorId, loadingTutorId, loadTutorProfile, loadBookings } = useTutorBookings();
+  const { bookings, loading, tutorId, loadingTutorId, loadTutorProfile, loadTutorBookings: loadBookings } = useBookings();
   const [filter, setFilter] = useState<string>('all');
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
