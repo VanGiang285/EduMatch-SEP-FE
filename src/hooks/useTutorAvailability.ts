@@ -80,6 +80,56 @@ const WEEK_DAYS = [
   { key: 'sunday', label: 'Chủ nhật' },
 ];
 
+export const normalizeAvailabilityStatus = (
+  status: string | number | TutorAvailabilityStatus
+): TutorAvailabilityStatus => EnumHelpers.parseTutorAvailabilityStatus(status);
+
+const formatDateKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getDateKeyFromStartDate = (startDate: string): string => {
+  if (startDate.includes('T')) {
+    return startDate.split('T')[0];
+  }
+  return formatDateKey(new Date(startDate));
+};
+
+const getTimeKeyFromAvailability = (
+  availability: TutorAvailabilityDto
+): string => {
+  if (availability.slot?.startTime) {
+    return availability.slot.startTime.split(':')[0].padStart(2, '0');
+  }
+
+  if (availability.startDate.includes('T')) {
+    const timePart = availability.startDate.split('T')[1];
+    if (timePart) {
+      return timePart.split(':')[0].padStart(2, '0');
+    }
+  }
+
+  return '00';
+};
+
+const getHourFromTimeSlot = (timeSlot: { startTime: string }): string =>
+  timeSlot.startTime.split(':')[0].padStart(2, '0');
+
+const getWeekDateKey = (currentWeekStart: Date, dayKey: string): string => {
+  const date = new Date(currentWeekStart);
+  const dayIndex = WEEK_DAYS.findIndex(day => day.key === dayKey);
+  if (dayIndex >= 0) {
+    date.setDate(currentWeekStart.getDate() + dayIndex);
+  }
+  return formatDateKey(date);
+};
+
+const buildSlotKey = (dateKey: string, hour: string): string =>
+  `${dateKey}-${hour}`;
+
 /**
  * Hook quản lý lịch trống của gia sư
 
@@ -113,62 +163,18 @@ export function useTutorAvailability(): UseTutorAvailabilityReturn {
   const availabilityMap = useMemo(() => {
     const map: { [key: string]: boolean } = {};
 
-    availabilities
-      .filter(
-        av =>
-          EnumHelpers.parseTutorAvailabilityStatus(av.status) ===
-          EnumHelpers.parseTutorAvailabilityStatus(
-            TutorAvailabilityStatus.Available
-          )
-      )
-      .forEach(availability => {
-        // Parse startDate - nếu không có timezone thì coi như local date
-        // Format: "2025-11-24T00:00:00" -> lấy phần date trực tiếp
-        let dateKey: string;
-        if (availability.startDate.includes('T')) {
-          // Lấy phần date trực tiếp từ string để tránh timezone issues
-          dateKey = availability.startDate.split('T')[0]; // "2025-11-24"
-        } else {
-          // Fallback: parse bằng Date
-          const startDate = new Date(availability.startDate);
-          const year = startDate.getFullYear();
-          const month = String(startDate.getMonth() + 1).padStart(2, '0');
-          const day = String(startDate.getDate()).padStart(2, '0');
-          dateKey = `${year}-${month}-${day}`;
-        }
+    availabilities.forEach(availability => {
+      if (
+        normalizeAvailabilityStatus(availability.status) !==
+        TutorAvailabilityStatus.Available
+      ) {
+        return;
+      }
 
-        // Dùng slot.startTime nếu có, nếu không thì lấy từ startDate
-        let timeKey = '00';
-        if (availability.slot?.startTime) {
-          // Lấy giờ từ slot.startTime (format: "HH:mm:ss" hoặc "HH:mm")
-          timeKey = availability.slot.startTime.split(':')[0].padStart(2, '0');
-        } else {
-          // Fallback: lấy từ startDate string
-          if (availability.startDate.includes('T')) {
-            const timePart = availability.startDate.split('T')[1];
-            if (timePart) {
-              timeKey = timePart.split(':')[0].padStart(2, '0');
-            }
-          }
-        }
-
-        const slotKey = `${dateKey}-${timeKey}`; // Tạo key: "YYYY-MM-DD-HH"
-        map[slotKey] = true; // Đánh dấu slot này có sẵn
-
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Availability map entry:', {
-            startDate: availability.startDate,
-            slot: availability.slot,
-            dateKey,
-            timeKey,
-            slotKey,
-          });
-        }
-      });
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Availability Map keys:', Object.keys(map).slice(0, 20));
-    }
+      const dateKey = getDateKeyFromStartDate(availability.startDate);
+      const timeKey = getTimeKeyFromAvailability(availability);
+      map[buildSlotKey(dateKey, timeKey)] = true;
+    });
 
     return map;
   }, [availabilities]);
@@ -281,7 +287,9 @@ export function useTutorAvailability(): UseTutorAvailabilityReturn {
         setError('Không thể tải lịch trống của gia sư');
       }
     } catch (err) {
-      console.error('Error loading tutor availabilities:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error loading tutor availabilities:', err);
+      }
       setError('Lỗi khi tải lịch trống của gia sư');
       setAvailabilities([]);
     } finally {
@@ -324,32 +332,9 @@ export function useTutorAvailability(): UseTutorAvailabilityReturn {
       dayKey: string,
       timeSlot: { startTime: string; endTime: string; id: number }
     ) => {
-      // Tính ngày cụ thể từ dayKey và currentWeekStart
-      const date = new Date(currentWeekStart);
-      const dayIndex = WEEK_DAYS.findIndex(day => day.key === dayKey);
-      date.setDate(currentWeekStart.getDate() + dayIndex);
-
-      // Dùng local date để tránh timezone issues (giống với availabilityMap)
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const dateKey = `${year}-${month}-${day}`; // YYYY-MM-DD (local)
-
-      // Tạo key để tra cứu trong availabilityMap: "YYYY-MM-DD-HH"
-      const hour = timeSlot.startTime.split(':')[0].padStart(2, '0');
-      const slotKey = `${dateKey}-${hour}`;
-
-      const isAvailable = availabilityMap[slotKey] || false;
-
-      if (process.env.NODE_ENV === 'development' && isAvailable) {
-        console.log('Slot available found:', {
-          dayKey,
-          timeSlot: timeSlot.startTime,
-          slotKey,
-        });
-      }
-
-      return isAvailable;
+      const dateKey = getWeekDateKey(currentWeekStart, dayKey);
+      const hour = getHourFromTimeSlot(timeSlot);
+      return Boolean(availabilityMap[buildSlotKey(dateKey, hour)]);
     },
     [currentWeekStart, availabilityMap]
   );
@@ -362,12 +347,8 @@ export function useTutorAvailability(): UseTutorAvailabilityReturn {
       dayKey: string,
       timeSlot: { startTime: string; endTime: string; id: number }
     ) => {
-      // Tính ngày cụ thể và tạo key giống như isSlotAvailable
-      const date = new Date(currentWeekStart);
-      const dayIndex = WEEK_DAYS.findIndex(day => day.key === dayKey);
-      date.setDate(currentWeekStart.getDate() + dayIndex);
-      const dateKey = date.toISOString().split('T')[0];
-      const slotKey = `${dateKey}-${timeSlot.startTime.split(':')[0]}`;
+      const dateKey = getWeekDateKey(currentWeekStart, dayKey);
+      const slotKey = buildSlotKey(dateKey, getHourFromTimeSlot(timeSlot));
 
       // Kiểm tra trong selectedSlots Set
       return selectedSlots.has(slotKey);
@@ -388,29 +369,24 @@ export function useTutorAvailability(): UseTutorAvailabilityReturn {
       dayKey: string,
       timeSlot: { startTime: string; endTime: string; id: number }
     ) => {
-      // Tính ngày cụ thể và tạo key
-      const date = new Date(currentWeekStart);
-      const dayIndex = WEEK_DAYS.findIndex(day => day.key === dayKey);
-      date.setDate(currentWeekStart.getDate() + dayIndex);
-      const dateKey = date.toISOString().split('T')[0];
-      const slotKey = `${dateKey}-${timeSlot.startTime.split(':')[0]}`;
-
-      // Chỉ cho phép chọn các slot có sẵn
-      if (availabilityMap[slotKey]) {
-        setSelectedSlots(prev => {
-          const newSet = new Set(prev);
-          if (newSet.has(slotKey)) {
-            // Nếu đã chọn thì bỏ chọn
-            newSet.delete(slotKey);
-          } else {
-            // Nếu chưa chọn thì thêm vào
-            newSet.add(slotKey);
-          }
-          return newSet;
-        });
+      if (!isSlotAvailable(dayKey, timeSlot)) {
+        return;
       }
+
+      const dateKey = getWeekDateKey(currentWeekStart, dayKey);
+      const slotKey = buildSlotKey(dateKey, getHourFromTimeSlot(timeSlot));
+
+      setSelectedSlots(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(slotKey)) {
+          newSet.delete(slotKey);
+        } else {
+          newSet.add(slotKey);
+        }
+        return newSet;
+      });
     },
-    [currentWeekStart, availabilityMap]
+    [currentWeekStart, isSlotAvailable]
   );
 
   /** Xóa tất cả các slot đã chọn */
