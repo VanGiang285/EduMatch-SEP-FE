@@ -254,11 +254,23 @@ export function ClassesTab() {
     try {
       const response = await BookingService.updateStatus(bookingId, BookingStatus.Cancelled);
       if (response.success) {
-        showSuccess && showSuccess('Đã hủy booking thành công');
+        showSuccess('Đã hủy booking thành công');
+
         // Reload bookings của learner
         if (user?.email) {
           await loadBookings(user.email);
         }
+
+        // Reload wallet để cập nhật số dư nếu có refund
+        try {
+          if (refetchWallet) {
+            await refetchWallet();
+          }
+        } catch (walletError) {
+          // Ignore wallet reload error, không ảnh hưởng đến việc hủy booking
+          console.error('Error reloading wallet:', walletError);
+        }
+
         // Nếu đang ở detail của booking vừa hủy thì quay về list
         if (selectedBookingId === bookingId) {
           handleBackToList();
