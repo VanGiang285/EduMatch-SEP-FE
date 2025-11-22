@@ -674,7 +674,7 @@ export function TutorBookingsTab() {
                               <div className="flex justify-between text-sm font-semibold text-green-600 pt-1 border-t border-gray-300">
                                 <span>Số tiền nhận được:</span>
                                 <span>
-                                  {formatCurrency(booking.totalAmount - booking.systemFeeAmount)}
+                                  {formatCurrency(booking.tutorReceiveAmount)}
                                 </span>
                               </div>
                             </>

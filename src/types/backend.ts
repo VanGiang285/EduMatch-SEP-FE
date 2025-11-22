@@ -262,6 +262,7 @@ export interface BookingDto {
   updatedAt?: string;
   systemFee?: SystemFeeDto;
   systemFeeAmount: number;
+  tutorReceiveAmount: number;
   learner?: UserDto;
   tutorSubject?: TutorSubjectDto;
   schedules?: ScheduleDto[];
