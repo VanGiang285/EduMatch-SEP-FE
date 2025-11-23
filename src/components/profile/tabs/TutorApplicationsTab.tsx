@@ -433,10 +433,10 @@ export function TutorApplicationsTab() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50 border-b border-gray-200">
-                  <TableHead className="w-[50px] text-center px-2">ID</TableHead>
-                  <TableHead className="min-w-[180px] max-w-[250px] px-3">Yêu cầu</TableHead>
-                  <TableHead className="w-[90px] px-2">Hình thức</TableHead>
-                  <TableHead className="w-[120px] px-2">
+                  <TableHead className="w-[50px] text-left px-2">ID</TableHead>
+                  <TableHead className="min-w-[180px] max-w-[250px] px-3 text-left">Yêu cầu</TableHead>
+                  <TableHead className="w-[90px] px-2 text-left">Hình thức</TableHead>
+                  <TableHead className="w-[120px] px-2 text-left">
                     <button
                       type="button"
                       onClick={() => {
@@ -454,8 +454,8 @@ export function TutorApplicationsTab() {
                       />
                     </button>
                   </TableHead>
-                  <TableHead className="w-[100px] px-2">Trạng thái</TableHead>
-                  <TableHead className="w-[110px] px-2">
+                  <TableHead className="w-[100px] px-2 text-left">Trạng thái</TableHead>
+                  <TableHead className="w-[110px] px-2 text-left">
                     <button
                       type="button"
                       onClick={() => {
@@ -470,7 +470,7 @@ export function TutorApplicationsTab() {
                       />
                     </button>
                   </TableHead>
-                  <TableHead className="w-[90px] text-right px-2">Thao tác</TableHead>
+                  <TableHead className="w-[90px] text-left px-2">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -492,10 +492,10 @@ export function TutorApplicationsTab() {
                     const applicationStatus = parseApplicationStatus(application.tutorApplicationStatus);
                     return (
                       <TableRow key={application.id} className="hover:bg-gray-50 border-b border-gray-200">
-                        <TableCell className="text-center font-mono text-xs text-gray-600 px-2">
+                        <TableCell className="text-left font-mono text-xs text-gray-600 px-2">
                           {startIndex + index + 1}
                         </TableCell>
-                        <TableCell className="px-3">
+                        <TableCell className="px-3 text-left">
                           <div className="space-y-0.5 min-w-0">
                             <p className="font-semibold text-sm text-gray-900 line-clamp-1 truncate">{application.title}</p>
                             <p className="text-xs text-gray-600 line-clamp-1 truncate">
@@ -507,54 +507,54 @@ export function TutorApplicationsTab() {
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell className="px-2">
+                        <TableCell className="px-2 text-left">
                           <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20 text-xs whitespace-nowrap">
                             {getModeLabel(application.mode)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="px-2">
+                        <TableCell className="px-2 text-left">
                           <div className="text-xs text-gray-900">
                             <span className="line-clamp-2">{formatPrice(application.targetUnitPriceMin, application.targetUnitPriceMax)}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="px-2">
+                        <TableCell className="px-2 text-left">
                           <Badge className={`${getApplicationStatusBadge(applicationStatus)} text-xs`}>
                             {getApplicationStatusText(applicationStatus)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-gray-600 whitespace-nowrap px-2">
+                        <TableCell className="text-xs text-gray-600 whitespace-nowrap px-2 text-left">
                           {FormatService.formatDate(application.appliedAt)}
                         </TableCell>
-                        <TableCell className="text-right px-2">
-                          <div className="flex justify-end gap-1">
+                        <TableCell className="text-left px-2">
+                          <div className="flex gap-1">
                             <Button
                               variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 rounded-full border border-gray-200 text-gray-500 hover:bg-[#FD8B51] hover:text-white flex-shrink-0"
+                              size="sm"
+                              className="p-2 hover:bg-[#FD8B51] hover:text-white"
                               onClick={() => handleViewDetail(application)}
                             >
-                              <Eye className="h-3.5 w-3.5" />
+                              <Eye className="h-5 w-5" />
                             </Button>
                             {applicationStatus === TutorApplicationStatus.Applied && (
                               <>
                                 <Button
                                   variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 rounded-full border border-gray-200 text-gray-500 hover:bg-[#257180] hover:text-white flex-shrink-0"
+                                  size="sm"
+                                  className="p-2 hover:bg-[#FD8B51] hover:text-white"
                                   onClick={() => handleOpenEdit(application)}
                                 >
-                                  <Edit className="h-3.5 w-3.5" />
+                                  <Edit className="h-5 w-5" />
                                 </Button>
                                 <Button
                                   variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 rounded-full border border-gray-200 text-gray-500 hover:bg-red-500 hover:text-white flex-shrink-0"
+                                  size="sm"
+                                  className="p-2 hover:bg-[#FD8B51] hover:text-white"
                                   onClick={() => {
                                     setSelectedApplication(application);
                                     setCancelDialogOpen(true);
                                   }}
                                 >
-                                  <XCircle className="h-3.5 w-3.5" />
+                                  <XCircle className="h-5 w-5" />
                                 </Button>
                               </>
                             )}

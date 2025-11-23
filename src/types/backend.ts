@@ -14,6 +14,9 @@ import {
   ScheduleStatus,
   TutorAvailabilityStatus,
   DayOfWeekEnum,
+  BookingRefundRequestStatus,
+  TutorVerificationRequestStatus,
+  ReportStatus,
 } from './enums';
 
 // ==================== COMMON ====================
@@ -306,6 +309,135 @@ export interface MeetingSessionDto {
   meetingType: number; // MeetingType enum
   createdAt: string;
   updatedAt?: string;
+}
+
+// ==================== REFUNDS & DISPUTES ====================
+
+export interface RefundPolicyDto {
+  id: number;
+  name: string;
+  description?: string;
+  refundPercentage: number;
+  isActive: boolean;
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface RefundRequestEvidenceDto {
+  id: number;
+  bookingRefundRequestId: number;
+  fileUrl: string;
+  createdAt: string;
+  bookingRefundRequest?: BookingRefundRequestDto;
+}
+
+export interface BookingRefundRequestDto {
+  id: number;
+  bookingId: number;
+  learnerEmail: string;
+  refundPolicyId: number;
+  reason?: string;
+  status: BookingRefundRequestStatus;
+  approvedAmount?: number;
+  adminNote?: string;
+  createdAt: string;
+  processedAt?: string;
+  processedBy?: string;
+  booking?: BookingDto;
+  refundPolicy?: RefundPolicyDto;
+  learner?: UserDto;
+  refundRequestEvidences?: RefundRequestEvidenceDto[];
+}
+
+export interface TutorVerificationRequestDto {
+  id: number;
+  userEmail: string;
+  tutorId?: number;
+  status: TutorVerificationRequestStatus;
+  description?: string;
+  adminNote?: string;
+  processedAt?: string;
+  processedBy?: string;
+  createdAt: string;
+  tutor?: TutorProfileDto;
+  user?: UserDto;
+}
+
+// ==================== AI CHATBOT ====================
+
+export interface ChatRequestDto {
+  sessionId?: number;
+  message: string;
+}
+
+export interface ChatResponseDto {
+  sessionId: number;
+  reply: string;
+}
+
+export interface ChatSessionDto {
+  id: number;
+  createdAt: string;
+  lastMessage?: string;
+}
+
+export interface ChatMessageDto {
+  sessionId: number;
+  role: string;
+  message: string;
+  createdAt: string;
+}
+
+// ==================== REPORTS ====================
+
+export interface ReportListItemDto {
+  id: number;
+  reporterEmail: string;
+  reporterName?: string;
+  reporterAvatarUrl?: string;
+  reportedUserEmail: string;
+  reportedUserName?: string;
+  reportedAvatarUrl?: string;
+  reason: string;
+  status: ReportStatus;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ReportDetailDto extends ReportListItemDto {
+  tutorDefenseNote?: string;
+  adminNotes?: string;
+  handledByAdminEmail?: string;
+}
+
+export interface ReportEvidenceDto {
+  id: number;
+  reportId: number;
+  submittedByEmail?: string;
+  mediaType: number;
+  evidenceType: number;
+  fileUrl: string;
+  filePublicId?: string;
+  caption?: string;
+  createdAt: string;
+}
+
+export interface ReportDefenseDto {
+  id: number;
+  reportId: number;
+  tutorEmail: string;
+  note: string;
+  createdAt: string;
+  evidences?: ReportEvidenceDto[];
+}
+
+export interface ReportFullDetailDto extends ReportDetailDto {
+  defenses?: ReportDefenseDto[];
+  reporterEvidences?: ReportEvidenceDto[];
+  tutorEvidences?: ReportEvidenceDto[];
+  adminEvidences?: ReportEvidenceDto[];
 }
 
 // ==================== WALLET & PAYMENT ====================

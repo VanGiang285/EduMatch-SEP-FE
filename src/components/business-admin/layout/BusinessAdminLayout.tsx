@@ -21,6 +21,8 @@ export function BusinessAdminLayout({ children }: BusinessAdminLayoutProps) {
     if (pathname?.includes('/applications')) return 'tutor-applications';
     if (pathname?.includes('/class-requests')) return 'class-requests';
     if (pathname?.includes('/reports')) return 'reports';
+    if (pathname?.includes('/refund-requests')) return 'refund-requests';
+    if (pathname?.includes('/refund-policies')) return 'refund-policies';
     if (pathname?.includes('/wallet')) return 'wallet';
     return 'dashboard';
   };

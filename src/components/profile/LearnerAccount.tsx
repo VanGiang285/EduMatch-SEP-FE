@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/basic/button';
-import { User, Calendar, BookOpen, Wallet, MessageCircle, Settings, GraduationCap, FileText, Bell, ClipboardList } from 'lucide-react';
+import { User, Calendar, BookOpen, Wallet, MessageCircle, Settings, GraduationCap, FileText, Bell, ClipboardList, Receipt } from 'lucide-react';
 import { ProfileTab } from './tabs/ProfileTab';
 import { ScheduleTab } from './tabs/ScheduleTab';
 import { TutorScheduleTab } from './tabs/TutorScheduleTab';
@@ -15,6 +15,7 @@ import { TutorProfileTab } from './tabs/TutorProfileTab';
 import { ClassRequestsTab } from './tabs/ClassRequestsTab';
 import { NotificationsTab } from './tabs/NotificationsTab';
 import { TutorApplicationsTab } from './tabs/TutorApplicationsTab';
+import { RefundRequestsTab } from './tabs/RefundRequestsTab';
 import { Badge } from '@/components/ui/basic/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -68,6 +69,7 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
     ...(!isTutor ? [{ id: 'classRequests', label: 'Yêu cầu mở lớp', icon: FileText }] : []),
     ...(isTutor ? [{ id: 'tutorApplications', label: 'Ứng tuyển lớp dạy', icon: ClipboardList }] : []),
     { id: 'wallet', label: 'Ví', icon: Wallet },
+    ...(!isTutor ? [{ id: 'refundRequests', label: 'Yêu cầu hoàn tiền', icon: Receipt }] : []),
     { id: 'notifications', label: 'Thông báo', icon: Bell, badge: unreadNotifications },
     { id: 'messages', label: 'Tin nhắn', icon: MessageCircle },
     { id: 'settings', label: 'Cài đặt', icon: Settings }
@@ -90,6 +92,8 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
         return isTutor ? <TutorApplicationsTab /> : <ClassRequestsTab />;
       case 'wallet':
         return <WalletTab />;
+      case 'refundRequests':
+        return <RefundRequestsTab />;
       case 'notifications':
         return <NotificationsTab />;
       case 'messages':

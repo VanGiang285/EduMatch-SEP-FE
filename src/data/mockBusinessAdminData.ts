@@ -1,7 +1,10 @@
 // Mock data for Business Admin features
 
 // Helper functions
-export const formatCurrency = (amount: number): string => {
+export const formatCurrency = (amount: number | undefined | null): string => {
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    return '0₫';
+  }
   return `${amount.toLocaleString('vi-VN')}₫`;
 };
 

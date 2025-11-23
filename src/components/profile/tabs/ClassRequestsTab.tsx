@@ -517,11 +517,11 @@ export function ClassRequestsTab() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50 border-b border-gray-200">
-                  <TableHead className="w-[70px] text-center">ID</TableHead>
-                  <TableHead>Môn học</TableHead>
-                  <TableHead>Hình thức</TableHead>
-                  <TableHead>Mức giá</TableHead>
-                  <TableHead>
+                  <TableHead className="w-[70px] text-left">ID</TableHead>
+                  <TableHead className="text-left">Môn học</TableHead>
+                  <TableHead className="text-left">Hình thức</TableHead>
+                  <TableHead className="text-left">Mức giá</TableHead>
+                  <TableHead className="text-left">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -532,8 +532,8 @@ export function ClassRequestsTab() {
                       <ArrowUpDown className="ml-1 h-3 w-3" />
                     </Button>
                   </TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead className="text-right">Thao tác</TableHead>
+                  <TableHead className="text-left">Trạng thái</TableHead>
+                  <TableHead className="text-left">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -555,20 +555,20 @@ export function ClassRequestsTab() {
                     const statusNum = getStatusNumber(request.status);
                     return (
                     <TableRow key={request.id} className="hover:bg-gray-50 border-b border-gray-200">
-                      <TableCell className="text-center font-mono text-sm text-gray-600">
+                      <TableCell className="text-left font-mono text-sm text-gray-600">
                         {startIndex + index + 1}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-left">
                         <div>
                             <p className="font-medium text-gray-900">{request.subjectName || 'N/A'} - {request.level || 'N/A'}</p>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-left">
                         <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20">
                             {getModeText(request.mode)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm text-left">
                         <div>
                             {request.targetUnitPriceMin && request.targetUnitPriceMax ? (
                               <>
@@ -584,23 +584,22 @@ export function ClassRequestsTab() {
                             )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-left">
                         {FormatService.formatDate(request.createdAt)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-left">
                           <Badge className={getClassRequestStatusColor(statusNum)}>
                             {getClassRequestStatusText(statusNum)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-left">
                         <Button
-                          variant="outline"
-                          size="lg"
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleViewDetail(request)}
-                          className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                          className="p-2 hover:bg-[#FD8B51] hover:text-white"
                         >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Xem
+                          <Eye className="h-5 w-5" />
                         </Button>
                       </TableCell>
                     </TableRow>
