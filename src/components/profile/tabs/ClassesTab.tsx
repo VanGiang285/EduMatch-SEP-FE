@@ -254,9 +254,18 @@ export function ClassesTab() {
     try {
       const response = await BookingService.updateStatus(bookingId, BookingStatus.Cancelled);
       if (response.success) {
+        // Cập nhật trực tiếp state allBookings ngay lập tức để UI cập nhật ngay
+        setAllBookings((prevBookings) =>
+          prevBookings.map((booking) =>
+            booking.id === bookingId
+              ? { ...booking, status: BookingStatus.Cancelled }
+              : booking
+          )
+        );
+
         showSuccess('Đã hủy booking thành công');
 
-        // Reload bookings của learner
+        // Reload bookings của learner để đồng bộ dữ liệu
         if (user?.email) {
           await loadBookings(user.email);
         }
