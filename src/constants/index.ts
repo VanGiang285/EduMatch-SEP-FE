@@ -415,6 +415,59 @@ export const API_ENDPOINTS = {
     CREATE: '/api/SystemFee/create-systemfee',
     UPDATE: '/api/SystemFee/update-systemfee',
   },
+
+  // ==================== BOOKING REFUND REQUESTS ====================
+  BOOKING_REFUND_REQUEST: {
+    GET_ALL: '/api/BookingRefundRequest/get-all',
+    GET_BY_EMAIL: '/api/BookingRefundRequest/get-all-by-email',
+    GET_BY_ID: '/api/BookingRefundRequest/get-by-id/:id',
+    CREATE: '/api/BookingRefundRequest/create',
+    UPDATE_STATUS: '/api/BookingRefundRequest/update-status/:id',
+  },
+
+  // ==================== REFUND POLICY ====================
+  REFUND_POLICY: {
+    GET_ALL: '/api/RefundPolicy/get-all',
+    GET_BY_ID: '/api/RefundPolicy/get-by-id/:id',
+    CREATE: '/api/RefundPolicy/create',
+    UPDATE: '/api/RefundPolicy/update',
+    UPDATE_IS_ACTIVE: '/api/RefundPolicy/update-is-active/:id',
+  },
+
+  // ==================== TUTOR VERIFICATION REQUEST ====================
+  TUTOR_VERIFICATION_REQUEST: {
+    GET_ALL: '/api/TutorVerificationRequest/get-all',
+    GET_BY_EMAIL_OR_TUTOR_ID: '/api/TutorVerificationRequest/get-by-email-or-tutor-id',
+    GET_BY_ID: '/api/TutorVerificationRequest/get-by-id/:id',
+  },
+
+  // ==================== AI CHATBOT ====================
+  AI_CHATBOT: {
+    CREATE_SESSION: '/api/AIChatbot/session',
+    LIST_SESSIONS: '/api/AIChatbot/listSessionByUserEmail',
+    DELETE_SESSION: '/api/AIChatbot/session/:sessionId',
+    CHAT: '/api/AIChatbot/chat',
+    CHAT_HISTORY: '/api/AIChatbot/chatHistory',
+    SYNC_TUTORS: '/api/AIChatbot/sync-tutors',
+  },
+
+  // ==================== REPORTS ====================
+  REPORTS: {
+    CREATE: '/api/Reports',
+    GET_LEARNER_REPORTS: '/api/Reports/learner',
+    UPDATE_LEARNER_REPORT: '/api/Reports/:id/learner',
+    CANCEL_LEARNER_REPORT: '/api/Reports/:id/learner',
+    GET_TUTOR_REPORTS: '/api/Reports/tutor',
+    GET_DETAIL: '/api/Reports/:id',
+    GET_FULL_DETAIL: '/api/Reports/:id/full',
+    UPDATE_BY_ADMIN: '/api/Reports/:id',
+    ADD_EVIDENCE: '/api/Reports/:id/evidence',
+    GET_EVIDENCE: '/api/Reports/:id/evidence',
+    UPDATE_EVIDENCE: '/api/Reports/:id/evidence/:evidenceId',
+    DELETE_EVIDENCE: '/api/Reports/:id/evidence/:evidenceId',
+    ADD_DEFENSE: '/api/Reports/:id/defenses',
+    GET_DEFENSES: '/api/Reports/:id/defenses',
+  },
   
   // ==================== UPLOAD ====================
   UPLOAD: {

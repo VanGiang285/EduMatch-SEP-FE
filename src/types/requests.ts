@@ -9,7 +9,8 @@ import {
   TutorStatus,
   VerifyStatus,
   InstitutionType,
-  TutorAvailabilityStatus
+  TutorAvailabilityStatus,
+  TutorVerificationRequestStatus
 } from './enums';
 
 // ==================== AUTH REQUESTS ====================
@@ -372,5 +373,98 @@ export interface CreateMeetingRequest {
   endTime: string;
   attendeeEmails?: string[];
   timeZone?: string;
+}
+
+// ==================== BOOKING REFUND REQUESTS ====================
+
+export interface BookingRefundRequestCreateRequest {
+  bookingId: number;
+  learnerEmail: string;
+  refundPolicyId: number;
+  reason?: string;
+  fileUrls?: string[];
+}
+
+// ==================== REFUND POLICY REQUESTS ====================
+
+export interface RefundPolicyCreateRequest {
+  name: string;
+  description?: string;
+  refundPercentage: number;
+}
+
+export interface RefundPolicyUpdateRequest {
+  id: number;
+  name?: string;
+  description?: string;
+  refundPercentage?: number;
+}
+
+// ==================== TUTOR VERIFICATION REQUESTS ====================
+
+export interface TutorVerificationRequestFilter {
+  email?: string;
+  tutorId?: number;
+  status?: TutorVerificationRequestStatus;
+}
+
+// ==================== AI CHATBOT REQUESTS ====================
+
+export interface ChatRequest {
+  sessionId?: number;
+  message: string;
+}
+
+// ==================== REPORT EVIDENCE REQUESTS ====================
+
+export interface ReportEvidenceCreateRequest {
+  mediaType: number;
+  evidenceType?: number;
+  defenseId?: number;
+  fileUrl: string;
+  filePublicId?: string;
+  caption?: string;
+}
+
+export interface ReportEvidenceUpdateRequest {
+  mediaType?: number;
+  evidenceType?: number;
+  fileUrl?: string;
+  filePublicId?: string;
+  caption?: string;
+}
+
+export interface BasicEvidenceRequest {
+  mediaType: number;
+  fileUrl: string;
+  filePublicId?: string;
+  caption?: string;
+}
+
+// ==================== REPORT DEFENSE REQUESTS ====================
+
+export interface ReportDefenseCreateRequest {
+  note: string;
+  evidences?: BasicEvidenceRequest[];
+}
+
+// ==================== REPORT REQUESTS ====================
+
+export interface ReportCreateRequest {
+  reportedUserEmail: string;
+  reason: string;
+}
+
+export interface ReportUpdateByLearnerRequest {
+  reason: string;
+}
+
+export interface ReportUpdateRequest {
+  status: number;
+  adminNotes?: string;
+}
+
+export interface TutorComplaintRequest {
+  defenseNote: string;
 }
 

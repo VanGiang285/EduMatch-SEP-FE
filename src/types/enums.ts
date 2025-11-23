@@ -103,6 +103,36 @@ export enum TutorApplicationStatus {
   Canceled = 1,
 }
 
+export enum BookingRefundRequestStatus {
+  Pending = 0,
+  Approved = 1,
+  Rejected = 2,
+}
+
+export enum TutorVerificationRequestStatus {
+  Pending = 0,
+  Approved = 1,
+  Rejected = 2,
+}
+
+export enum MediaType {
+  Image = 0,
+  Video = 1,
+}
+
+export enum ReportEvidenceType {
+  ReporterEvidence = 0,
+  TutorDefense = 1,
+  AdminAttachment = 2,
+}
+
+export enum ReportStatus {
+  Pending = 0,
+  UnderReview = 1,
+  Resolved = 2,
+  Dismissed = 3,
+}
+
 /**
  * Helper functions để convert enum values
  */
