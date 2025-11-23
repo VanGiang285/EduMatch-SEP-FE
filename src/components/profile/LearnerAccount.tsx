@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/basic/button';
-import { User, Calendar, BookOpen, Wallet, MessageCircle, Settings, GraduationCap, FileText, Bell, ClipboardList, Receipt } from 'lucide-react';
+import { User, Calendar, BookOpen, Wallet, MessageCircle, Settings, GraduationCap, FileText, Bell, ClipboardList, Receipt, AlertTriangle } from 'lucide-react';
 import { ProfileTab } from './tabs/ProfileTab';
 import { ScheduleTab } from './tabs/ScheduleTab';
 import { TutorScheduleTab } from './tabs/TutorScheduleTab';
@@ -16,6 +16,7 @@ import { ClassRequestsTab } from './tabs/ClassRequestsTab';
 import { NotificationsTab } from './tabs/NotificationsTab';
 import { TutorApplicationsTab } from './tabs/TutorApplicationsTab';
 import { RefundRequestsTab } from './tabs/RefundRequestsTab';
+import { ReportsTab } from './tabs/ReportsTab';
 import { Badge } from '@/components/ui/basic/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -70,6 +71,7 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
     ...(isTutor ? [{ id: 'tutorApplications', label: 'Ứng tuyển lớp dạy', icon: ClipboardList }] : []),
     { id: 'wallet', label: 'Ví', icon: Wallet },
     ...(!isTutor ? [{ id: 'refundRequests', label: 'Yêu cầu hoàn tiền', icon: Receipt }] : []),
+    { id: 'reports', label: 'Báo cáo', icon: AlertTriangle },
     { id: 'notifications', label: 'Thông báo', icon: Bell, badge: unreadNotifications },
     { id: 'messages', label: 'Tin nhắn', icon: MessageCircle },
     { id: 'settings', label: 'Cài đặt', icon: Settings }
@@ -94,6 +96,8 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
         return <WalletTab />;
       case 'refundRequests':
         return <RefundRequestsTab />;
+      case 'reports':
+        return <ReportsTab />;
       case 'notifications':
         return <NotificationsTab />;
       case 'messages':

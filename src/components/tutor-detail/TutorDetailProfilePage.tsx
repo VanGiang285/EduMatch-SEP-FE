@@ -6,17 +6,21 @@ import { Button } from '../ui/basic/button';
 import { Badge } from '../ui/basic/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/basic/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/navigation/tabs';
-// import { Calendar } from '../ui/form/calendar';
 import { Separator } from '../ui/layout/separator';
-import { Star, Heart, MapPin, Clock, Calendar as CalendarIcon, MessageCircle, Video, Shield, Users, Globe, CheckCircle2, Play, ArrowLeft, Loader2, GraduationCap, Medal, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, Heart, MapPin, Clock, Calendar as CalendarIcon, MessageCircle, Video, Shield, Users, Globe, CheckCircle2, Play, ArrowLeft, Loader2, GraduationCap, Medal, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { FormatService } from '@/lib/format';
 import { useTutorDetail } from '@/hooks/useTutorDetail';
-import { EnumHelpers, TeachingMode } from '@/types/enums';
+import { EnumHelpers, TeachingMode, MediaType, ReportEvidenceType } from '@/types/enums';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
+import { ReportService, MediaService } from '@/services';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/feedback/dialog';
+import { Label } from '../ui/form/label';
+import { Textarea } from '../ui/form/textarea';
+import { Input } from '../ui/form/input';
+import { ReportCreateRequest, BasicEvidenceRequest } from '@/types/requests';
 
-// Helper function để convert string enum từ API sang TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
   if (typeof mode === 'number') {
     return mode as TeachingMode;
@@ -48,16 +52,20 @@ interface TutorDetailProfilePageProps {
 
 export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps) {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
-  const { showWarning } = useCustomToast();
+  const { isAuthenticated, user } = useAuth();
+  const { showWarning, showSuccess, showError } = useCustomToast();
   const { tutor, isLoading, error, loadTutorDetail, clearError } = useTutorDetail();
   
-  // const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isFavorite, setIsFavorite] = useState(false);
   const [loadingFavorite, setLoadingFavorite] = useState(false);
-  // const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportEvidences, setReportEvidences] = useState<BasicEvidenceRequest[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
+  const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   
-  // Availability calendar states
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     const today = new Date();
     const startOfWeek = new Date(today);
@@ -66,7 +74,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   });
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
 
-  // Helper functions for availability calendar
   const weekDays = [
     { key: 'monday', label: 'Thứ 2' },
     { key: 'tuesday', label: 'Thứ 3' },
@@ -83,7 +90,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     endTime: `${(i + 1).toString().padStart(2, '0')}:00`
   }));
 
-  // Generate dates for current week
   const generateCurrentWeekDates = () => {
     const datesByDay: { [key: string]: string } = {};
     weekDays.forEach((day, index) => {
@@ -95,7 +101,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     return datesByDay;
   };
 
-  // Create availability map from tutor data
   const createAvailabilityMap = () => {
     const availabilityMap: { [key: string]: boolean } = {};
     
@@ -115,7 +120,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const availabilityMap = createAvailabilityMap();
   const datesByDay = generateCurrentWeekDates();
 
-  // Check if slot is available
   const isSlotAvailable = (dayKey: string, timeSlot: any) => {
     const date = new Date(currentWeekStart);
     const dayIndex = weekDays.findIndex(day => day.key === dayKey);
@@ -125,7 +129,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     return availabilityMap[slotKey] || false;
   };
 
-  // Check if slot is selected
   const isSlotSelected = (dayKey: string, timeSlot: any) => {
     const date = new Date(currentWeekStart);
     const dayIndex = weekDays.findIndex(day => day.key === dayKey);
@@ -135,12 +138,10 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     return selectedSlots.has(slotKey);
   };
 
-  // Filter to only show time slots that have at least one available slot in the current week
   const availableTimeSlots = timeSlots.filter(timeSlot => {
     return weekDays.some(day => isSlotAvailable(day.key, timeSlot));
   });
 
-  // Navigation functions
   const goToPreviousWeek = () => {
     const newWeekStart = new Date(currentWeekStart);
     newWeekStart.setDate(currentWeekStart.getDate() - 7);
@@ -160,7 +161,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     setCurrentWeekStart(startOfWeek);
   };
 
-  // Format week display
   const formatWeekDisplay = () => {
     const endOfWeek = new Date(currentWeekStart);
     endOfWeek.setDate(currentWeekStart.getDate() + 6);
@@ -178,7 +178,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     }
   };
 
-  // Handle slot selection
   const handleSlotClick = (dayKey: string, timeSlot: any) => {
     const date = new Date(currentWeekStart);
     const dayIndex = weekDays.findIndex(day => day.key === dayKey);
@@ -186,7 +185,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     const dateKey = date.toISOString().split('T')[0];
     const slotKey = `${dateKey}-${timeSlot.startTime.split(':')[0]}`;
     
-    // Only allow selection of available slots
     if (availabilityMap[slotKey]) {
       setSelectedSlots(prev => {
         const newSet = new Set(prev);
@@ -206,10 +204,8 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     }
   }, [tutorId, loadTutorDetail]);
 
-  // Check favorite status when tutor loads (only if authenticated)
   useEffect(() => {
     const checkFavoriteStatus = async () => {
-      // Reset favorite when not authenticated or no tutorId
       if (!tutorId || !isAuthenticated) {
         setIsFavorite(false);
         return;
@@ -217,7 +213,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       
       try {
         const response = await FavoriteTutorService.isFavorite(tutorId);
-        // Ensure response.data is a boolean - check for explicit true
         const isFavorite = response.data === true;
         if (process.env.NODE_ENV === 'development') {
           console.log(`Tutor ${tutorId} favorite status:`, response.data, '→ isFavorite:', isFavorite);
@@ -232,6 +227,115 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     checkFavoriteStatus();
   }, [tutorId, isAuthenticated]);
   
+  const handleReportFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user?.email) return;
+    
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const validFiles = files.filter(file => {
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      if (!isImage && !isVideo) {
+        showError('Lỗi', 'Chỉ chấp nhận file ảnh hoặc video');
+        return false;
+      }
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        showError('Lỗi', `File ${file.name} vượt quá 10MB`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    setUploading(true);
+    try {
+      const uploadPromises = validFiles.map(async (file) => {
+        const mediaType = file.type.startsWith('image/') ? 'Image' : 'Video';
+        const response = await MediaService.uploadFile({
+          file,
+          ownerEmail: user.email!,
+          mediaType: mediaType as 'Image' | 'Video',
+        });
+        
+        if (response.success && response.data?.secureUrl) {
+          return {
+            url: response.data.secureUrl,
+            publicId: response.data.publicId,
+            mediaType: file.type.startsWith('image/') ? MediaType.Image : MediaType.Video,
+            file,
+          };
+        } else {
+          throw new Error(`Không thể upload file ${file.name}`);
+        }
+      });
+
+      const results = await Promise.all(uploadPromises);
+      setUploadedUrls(prev => [...prev, ...results.map(r => r.url)]);
+      setUploadingFiles(prev => [...prev, ...results.map(r => r.file)]);
+      setReportEvidences(prev => [
+        ...prev,
+        ...results.map(r => ({
+          mediaType: r.mediaType,
+          fileUrl: r.url,
+          filePublicId: r.publicId,
+          caption: '',
+        })),
+      ]);
+      showSuccess('Thành công', `Đã upload ${results.length} file thành công`);
+    } catch (error: any) {
+      console.error('Error uploading files:', error);
+      showError('Lỗi', error.message || 'Không thể upload file');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveReportFile = (index: number) => {
+    setUploadedUrls(prev => prev.filter((_, i) => i !== index));
+    setUploadingFiles(prev => prev.filter((_, i) => i !== index));
+    setReportEvidences(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmitReport = async () => {
+    if (!user?.email || !tutor?.userEmail) {
+      showError('Lỗi', 'Vui lòng đăng nhập');
+      return;
+    }
+    if (!reportReason.trim()) {
+      showError('Lỗi', 'Vui lòng điền lý do báo cáo');
+      return;
+    }
+
+    try {
+      setIsSubmittingReport(true);
+      const request: ReportCreateRequest = {
+        reportedUserEmail: tutor.userEmail,
+        reason: reportReason.trim(),
+        evidences: reportEvidences.length > 0 ? reportEvidences : undefined,
+      };
+      const response = await ReportService.createReport(request);
+      if (response.success) {
+        showSuccess('Thành công', 'Đã tạo báo cáo');
+        setShowReportDialog(false);
+        setReportReason('');
+        setReportEvidences([]);
+        setUploadingFiles([]);
+        setUploadedUrls([]);
+      } else {
+        showError('Lỗi', response.message || 'Không thể tạo báo cáo');
+      }
+    } catch (error) {
+      console.error('Error creating report:', error);
+      showError('Lỗi', 'Không thể tạo báo cáo');
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   const reviews: Review[] = [];
   const formatDate = (date: Date) => {
     const now = new Date();
@@ -284,7 +388,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
 
   return (
     <div className="min-h-screen bg-gray-50 pt-16">
-      {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-7xl mx-auto">
           <Button 
@@ -371,7 +474,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                         variant="ghost"
                         size="sm"
                         onClick={async () => {
-                          // Check if user is authenticated
                           if (!isAuthenticated) {
                             showWarning(
                               'Vui lòng đăng nhập',
@@ -382,7 +484,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                           }
 
                           const newFavoriteState = !isFavorite;
-                          // Optimistic update
                           setIsFavorite(newFavoriteState);
                           setLoadingFavorite(true);
 
@@ -394,7 +495,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                             }
                           } catch (error) {
                             console.error('Error toggling favorite:', error);
-                            // Revert optimistic update on error
                             setIsFavorite(!newFavoriteState);
                           } finally {
                             setLoadingFavorite(false);
@@ -610,7 +710,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                   </CardContent>
                 </Card>
 
-                {/* Subjects */}
                 <Card className="border-[#FD8B51]">
                   <CardHeader>
                     <CardTitle className="font-bold">Môn học giảng dạy</CardTitle>
@@ -694,7 +793,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                         </p>
                       </div>
                       
-                      {/* Navigation Controls */}
                       <div className="flex items-center justify-between">
                         <Button
                           variant="outline"
@@ -731,7 +829,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     {availableTimeSlots.length > 0 ? (
                       <div className="overflow-x-auto">
                         <div className="min-w-[600px]">
-                          {/* Header with days */}
                           <div className="grid grid-cols-8 gap-1 mb-2">
                             <div className="p-2 text-sm font-medium text-gray-600">Giờ</div>
                             {weekDays.map((day) => (
@@ -742,7 +839,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                             ))}
                           </div>
                           
-                          {/* Time slots grid */}
                           <div className="space-y-1">
                             {availableTimeSlots.map((timeSlot) => (
                             <div key={timeSlot.id} className="grid grid-cols-8 gap-1">
@@ -785,7 +881,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                         </div>
                     )}
                     
-                    {/* Selected slots summary */}
                     {selectedSlots.size > 0 && (
                       <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                         <p className="text-sm text-gray-700 mb-3">
@@ -811,7 +906,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       </div>
                     )}
                     
-                    {/* Legend - only show when there are available slots */}
                     {availableTimeSlots.length > 0 && (
                       <div className="mt-4 flex items-center gap-4 text-xs text-gray-600">
                         <div className="flex items-center gap-1">
@@ -886,7 +980,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                   </div>
                 </CardContent>
               </Card>
-              {/* Quick Stats */}
               <Card className="border-[#FD8B51]">
                 <CardHeader>
                   <CardTitle className="text-base font-bold">Thông tin nhanh</CardTitle>
@@ -912,14 +1005,125 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                   </div>
                 </CardContent>
               </Card>
-              {/* Report */}
-              <Button variant="ghost" className="w-full hover:bg-[#FD8B51] hover:text-white">
+              <Button 
+                variant="ghost" 
+                className="w-full hover:bg-[#FD8B51] hover:text-white"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    showWarning('Cần đăng nhập', 'Bạn cần đăng nhập để báo cáo gia sư');
+                    return;
+                  }
+                  setShowReportDialog(true);
+                }}
+              >
                 Báo cáo gia sư này
               </Button>
             </div>
           </div>
         </div>
       </div>
+
+      {showReportDialog && (
+        <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Báo cáo gia sư</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Gia sư báo cáo</Label>
+                <div className="mt-2 p-3 bg-gray-50 rounded border">
+                  <p className="font-medium text-sm">{tutor?.userName || tutor?.userEmail || 'N/A'}</p>
+                  <p className="text-xs text-gray-500">{tutor?.userEmail}</p>
+                </div>
+              </div>
+              <div>
+                <Label>Lý do báo cáo *</Label>
+                <Textarea
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  placeholder="Nhập lý do báo cáo..."
+                  className="mt-2"
+                  rows={4}
+                />
+              </div>
+              <div>
+                <Label>Bằng chứng (tùy chọn)</Label>
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept="image/*,video/*"
+                      multiple
+                      onChange={handleReportFileSelect}
+                      disabled={uploading}
+                      className="flex-1"
+                    />
+                    {uploading && <Loader2 className="h-4 w-4 animate-spin text-[#257180]" />}
+                  </div>
+                  {reportEvidences.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {reportEvidences.map((evidence, index) => (
+                        <div key={index} className="relative group">
+                          {evidence.mediaType === MediaType.Image ? (
+                            <img
+                              src={evidence.fileUrl}
+                              alt="Evidence"
+                              className="w-full h-24 object-cover rounded border"
+                            />
+                          ) : (
+                            <video
+                              src={evidence.fileUrl}
+                              controls
+                              className="w-full h-24 object-cover rounded border"
+                            />
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveReportFile(index)}
+                            className="absolute top-1 right-1 h-6 w-6 p-0 bg-red-500 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowReportDialog(false);
+                  setReportReason('');
+                  setReportEvidences([]);
+                  setUploadingFiles([]);
+                  setUploadedUrls([]);
+                }}
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={handleSubmitReport}
+                disabled={isSubmittingReport || !reportReason.trim()}
+                className="bg-[#257180] hover:bg-[#257180]/90 text-white"
+              >
+                {isSubmittingReport ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Đang xử lý...
+                  </>
+                ) : (
+                  'Gửi báo cáo'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

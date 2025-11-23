@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "../ui/basic/button";
-import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings, FileText, ChevronDown, Sparkles, Receipt } from "lucide-react";
+import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings, FileText, ChevronDown, Sparkles, Receipt, AlertTriangle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomToast } from "@/hooks/useCustomToast";
@@ -242,6 +242,13 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                             Yêu cầu hoàn tiền
                           </DropdownMenuItem>
                         )}
+                        <DropdownMenuItem
+                          onClick={() => router.push('/profile?tab=reports')}
+                          className="cursor-pointer"
+                        >
+                          <AlertTriangle className="h-4 w-4 mr-2" />
+                          Báo cáo
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=notifications')}
                           className="cursor-pointer"
@@ -486,6 +493,16 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                         <span className="text-sm">Yêu cầu hoàn tiền</span>
                       </button>
                     )}
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push('/profile?tab=reports');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-sm">Báo cáo</span>
+                    </button>
                     <button
                       onClick={() => {
                         setMobileMenuOpen(false);

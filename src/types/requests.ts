@@ -457,6 +457,7 @@ export interface ReportDefenseCreateRequest {
 export interface ReportCreateRequest {
   reportedUserEmail: string;
   reason: string;
+  evidences?: BasicEvidenceRequest[];
 }
 
 export interface ReportUpdateByLearnerRequest {
