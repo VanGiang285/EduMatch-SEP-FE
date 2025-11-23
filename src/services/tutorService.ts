@@ -2,7 +2,7 @@ import { apiClient, replaceUrlParams } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
 import { ApiResponse } from '@/types/api';
 import { TutorProfileDto, TutorCertificateDto, TutorEducationDto } from '@/types/backend';
-import { TutorProfileUpdateRequest, UpdateTutorStatusRequest, VerifyUpdateRequest } from '@/types/requests';
+import { TutorProfileUpdateRequest, UpdateTutorStatusRequest, VerifyUpdateRequest, RejectTutorRequest } from '@/types/requests';
 import { TutorStatus } from '@/types/enums';
 
 export class TutorService {
@@ -46,6 +46,12 @@ export class TutorService {
   static async approveAndVerifyAll(tutorId: number): Promise<ApiResponse<TutorProfileDto>> {
     const url = replaceUrlParams(API_ENDPOINTS.TUTORS.APPROVE_AND_VERIFY_ALL, { tutorId: tutorId.toString() });
     return apiClient.put<TutorProfileDto>(url);
+  }
+
+  // Từ chối gia sư và reject tất cả chứng chỉ, bằng cấp
+  static async rejectAll(tutorId: number, request: RejectTutorRequest): Promise<ApiResponse<TutorProfileDto>> {
+    const url = replaceUrlParams(API_ENDPOINTS.TUTORS.REJECT_ALL, { tutorId: tutorId.toString() });
+    return apiClient.put<TutorProfileDto>(url, request);
   }
 
   // Xác thực nhiều chứng chỉ cùng lúc

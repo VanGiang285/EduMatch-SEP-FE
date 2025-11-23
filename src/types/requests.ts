@@ -408,6 +408,10 @@ export interface TutorVerificationRequestFilter {
   status?: TutorVerificationRequestStatus;
 }
 
+export interface RejectTutorRequest {
+  reason: string;
+}
+
 // ==================== AI CHATBOT REQUESTS ====================
 
 export interface ChatRequest {

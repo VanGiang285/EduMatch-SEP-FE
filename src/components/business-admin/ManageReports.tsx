@@ -44,7 +44,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
 import { Separator } from '@/components/ui/layout/separator';
 import { Label } from '@/components/ui/form/label';
 import { Search, Eye, CheckCircle, XCircle, AlertTriangle, FileText, ExternalLink, ArrowUpDown } from 'lucide-react';
@@ -228,29 +227,29 @@ export function ManageReports() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50">
-                  <TableHead className="w-[80px]">
+                  <TableHead className="w-[80px] text-left">
                     <Button variant="ghost" size="sm" onClick={() => handleSort('id')} className="h-8 px-2">
                       ID <ArrowUpDown className="ml-1 h-3 w-3" />
                     </Button>
                   </TableHead>
-                  <TableHead>
+                  <TableHead className="text-left">
                     <Button variant="ghost" size="sm" onClick={() => handleSort('reporterName')} className="h-8 px-2">
                       Người báo cáo <ArrowUpDown className="ml-1 h-3 w-3" />
                     </Button>
                   </TableHead>
-                  <TableHead>
+                  <TableHead className="text-left">
                     <Button variant="ghost" size="sm" onClick={() => handleSort('reportedTutorName')} className="h-8 px-2">
                       Gia sư bị báo cáo <ArrowUpDown className="ml-1 h-3 w-3" />
                     </Button>
                   </TableHead>
-                  <TableHead>Lý do</TableHead>
-                  <TableHead>
+                  <TableHead className="text-left">Lý do</TableHead>
+                  <TableHead className="text-left">
                     <Button variant="ghost" size="sm" onClick={() => handleSort('createdAt')} className="h-8 px-2">
                       Ngày báo cáo <ArrowUpDown className="ml-1 h-3 w-3" />
                     </Button>
                   </TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead className="text-right">Thao tác</TableHead>
+                  <TableHead className="text-left">Trạng thái</TableHead>
+                  <TableHead className="text-left">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -261,54 +260,91 @@ export function ManageReports() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedReports.map((report) => (
+                  paginatedReports.map((report, index) => (
                     <TableRow key={report.id} className="hover:bg-gray-50">
-                      <TableCell>
-                        <span className="font-mono text-sm text-gray-600">{report.id}</span>
+                      <TableCell className="text-left">
+                        <span className="font-mono text-sm text-gray-600">{startIndex + index + 1}</span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-left">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={report.reporterAvatar} alt={report.reporterName} />
-                            <AvatarFallback className="bg-[#257180] text-white">
-                              {report.reporterName.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <div className="relative flex-shrink-0">
+                            <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#F2E5BF]">
+                              {report.reporterAvatar ? (
+                                <img 
+                                  src={report.reporterAvatar} 
+                                  alt={report.reporterName}
+                                  className="w-full h-full object-cover rounded-lg"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                    if (fallback) {
+                                      fallback.style.display = 'flex';
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <div 
+                                className={`w-full h-full rounded-lg flex items-center justify-center text-sm font-bold text-[#257180] bg-[#F2E5BF] ${report.reporterAvatar ? 'hidden' : 'flex'}`}
+                                style={{ display: report.reporterAvatar ? 'none' : 'flex' }}
+                              >
+                                {report.reporterName.substring(0, 2).toUpperCase()}
+                              </div>
+                            </div>
+                          </div>
                           <div>
                             <p className="text-sm font-medium text-gray-900">{report.reporterName}</p>
                             <p className="text-xs text-gray-500">{report.reporterEmail}</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-left">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={report.reportedTutorAvatar} alt={report.reportedTutorName} />
-                            <AvatarFallback className="bg-red-100 text-red-800">
-                              {report.reportedTutorName.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <div className="relative flex-shrink-0">
+                            <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#F2E5BF]">
+                              {report.reportedTutorAvatar ? (
+                                <img 
+                                  src={report.reportedTutorAvatar} 
+                                  alt={report.reportedTutorName}
+                                  className="w-full h-full object-cover rounded-lg"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                    if (fallback) {
+                                      fallback.style.display = 'flex';
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <div 
+                                className={`w-full h-full rounded-lg flex items-center justify-center text-sm font-bold text-[#257180] bg-[#F2E5BF] ${report.reportedTutorAvatar ? 'hidden' : 'flex'}`}
+                                style={{ display: report.reportedTutorAvatar ? 'none' : 'flex' }}
+                              >
+                                {report.reportedTutorName.substring(0, 2).toUpperCase()}
+                              </div>
+                            </div>
+                          </div>
                           <p className="text-sm font-medium text-gray-900">{report.reportedTutorName}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-xs">
+                      <TableCell className="max-w-xs text-left">
                         <p className="text-sm text-gray-900 truncate">{report.reason}</p>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600">
+                      <TableCell className="text-sm text-gray-600 text-left">
                         {new Date(report.createdAt).toLocaleDateString('vi-VN')}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-left">
                         <Badge className={getReportStatusColor(report.status)}>
                           {getReportStatusText(report.status)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-left">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleViewDetail(report)}
+                          className="p-2 hover:bg-[#FD8B51] hover:text-white"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-5 w-5" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -378,12 +414,30 @@ export function ManageReports() {
               <div>
                 <p className="text-sm text-gray-600 mb-2">Người báo cáo</p>
                 <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={selectedReport.reporterAvatar} alt={selectedReport.reporterName} />
-                    <AvatarFallback className="bg-[#257180] text-white">
-                      {selectedReport.reporterName.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative flex-shrink-0">
+                    <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-[#F2E5BF]">
+                      {selectedReport.reporterAvatar ? (
+                        <img 
+                          src={selectedReport.reporterAvatar} 
+                          alt={selectedReport.reporterName}
+                          className="w-full h-full object-cover rounded-lg"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) {
+                              fallback.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <div 
+                        className={`w-full h-full rounded-lg flex items-center justify-center text-base font-bold text-[#257180] bg-[#F2E5BF] ${selectedReport.reporterAvatar ? 'hidden' : 'flex'}`}
+                        style={{ display: selectedReport.reporterAvatar ? 'none' : 'flex' }}
+                      >
+                        {selectedReport.reporterName.substring(0, 2).toUpperCase()}
+                      </div>
+                    </div>
+                  </div>
                   <div>
                     <p className="font-medium text-gray-900">{selectedReport.reporterName}</p>
                     <p className="text-sm text-gray-600">{selectedReport.reporterEmail}</p>
@@ -395,12 +449,30 @@ export function ManageReports() {
               <div>
                 <p className="text-sm text-gray-600 mb-2">Gia sư bị báo cáo</p>
                 <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={selectedReport.reportedTutorAvatar} alt={selectedReport.reportedTutorName} />
-                    <AvatarFallback className="bg-red-100 text-red-800">
-                      {selectedReport.reportedTutorName.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative flex-shrink-0">
+                    <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-[#F2E5BF]">
+                      {selectedReport.reportedTutorAvatar ? (
+                        <img 
+                          src={selectedReport.reportedTutorAvatar} 
+                          alt={selectedReport.reportedTutorName}
+                          className="w-full h-full object-cover rounded-lg"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) {
+                              fallback.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <div 
+                        className={`w-full h-full rounded-lg flex items-center justify-center text-base font-bold text-[#257180] bg-[#F2E5BF] ${selectedReport.reportedTutorAvatar ? 'hidden' : 'flex'}`}
+                        style={{ display: selectedReport.reportedTutorAvatar ? 'none' : 'flex' }}
+                      >
+                        {selectedReport.reportedTutorName.substring(0, 2).toUpperCase()}
+                      </div>
+                    </div>
+                  </div>
                   <div>
                     <p className="font-medium text-gray-900">{selectedReport.reportedTutorName}</p>
                     <p className="text-sm text-gray-600">ID Gia sư: {selectedReport.reportedTutorId}</p>
@@ -473,7 +545,7 @@ export function ManageReports() {
 
               {/* Actions */}
               <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
+                <Button variant="outline" onClick={() => setShowDetailDialog(false)} className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
                   Đóng
                 </Button>
                 {selectedReport.status === 0 && (
@@ -490,7 +562,7 @@ export function ManageReports() {
                       Từ chối báo cáo
                     </Button>
                     <Button
-                      className="bg-[#257180] hover:bg-[#1f5a66]"
+                      className="bg-[#257180] hover:bg-[#257180]/90 text-white"
                       onClick={() => {
                         setShowDetailDialog(false);
                         setShowResolveDialog(true);

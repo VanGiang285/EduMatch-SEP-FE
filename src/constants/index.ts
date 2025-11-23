@@ -187,6 +187,7 @@ export const API_ENDPOINTS = {
     UPDATE_PROFILE: '/api/Tutors/update-tutor-profile',
     UPDATE_STATUS: '/api/Tutors/update-tutor-status/:tutorId',
     APPROVE_AND_VERIFY_ALL: '/api/Tutors/approve-and-verify-all/:tutorId',
+    REJECT_ALL: '/api/Tutors/reject-all/:tutorId',
     
     // Verify batch
     VERIFY_EDUCATION_BATCH: '/api/Tutors/verify-list-education/:tutorId',
