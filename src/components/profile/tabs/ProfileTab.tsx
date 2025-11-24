@@ -68,7 +68,7 @@ export function ProfileTab() {
         setSubDistricts([]);
         return;
       }
-      
+
       const provinceId = parseInt(formData.cityId);
       if (isNaN(provinceId) || provinceId <= 0) {
         setSubDistricts([]);
@@ -107,9 +107,9 @@ export function ProfileTab() {
         if (response.success && response.data) {
           const profile = response.data;
           setOriginalData(profile);
-          
+
           // Format date for input (YYYY-MM-DD)
-          const dobFormatted = profile.dob 
+          const dobFormatted = profile.dob
             ? new Date(profile.dob).toISOString().split('T')[0]
             : '';
 
@@ -144,10 +144,10 @@ export function ProfileTab() {
 
   const handleCancel = () => {
     if (originalData && user) {
-      const dobFormatted = originalData.dob 
+      const dobFormatted = originalData.dob
         ? new Date(originalData.dob).toISOString().split('T')[0]
         : '';
-      
+
       setFormData({
         userName: user.name || user.email || '',
         email: user.email,
@@ -253,7 +253,7 @@ export function ProfileTab() {
       };
 
       const response = await UserProfileService.updateUserProfile(updateRequest);
-      
+
       if (response.success && response.data) {
         setOriginalData(response.data);
         showSuccess('Thành công', 'Cập nhật thông tin thành công.');
@@ -294,9 +294,9 @@ export function ProfileTab() {
             <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
               Hủy
             </Button>
-            <Button 
-              onClick={handleSave} 
-              size="lg" 
+            <Button
+              onClick={handleSave}
+              size="lg"
               className="bg-[#257180] hover:bg-[#257180]/90 text-white"
               disabled={isSaving}
             >
@@ -325,8 +325,8 @@ export function ProfileTab() {
             <div className="relative flex-shrink-0">
               <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-[#F2E5BF] border-2 border-gray-200">
                 {avatarPreview || formData.avatarUrl || user?.avatar ? (
-                  <img 
-                    src={avatarPreview || formData.avatarUrl || user?.avatar || ''} 
+                  <img
+                    src={avatarPreview || formData.avatarUrl || user?.avatar || ''}
                     alt={formData.userName}
                     className="w-full h-full object-cover rounded-lg"
                     onError={(e) => {
@@ -338,7 +338,7 @@ export function ProfileTab() {
                     }}
                   />
                 ) : null}
-                <div 
+                <div
                   className={`w-full h-full rounded-lg flex items-center justify-center text-2xl font-bold text-[#257180] bg-[#F2E5BF] ${avatarPreview || formData.avatarUrl || user?.avatar ? 'hidden' : 'flex'}`}
                   style={{ display: avatarPreview || formData.avatarUrl || user?.avatar ? 'none' : 'flex' }}
                 >
@@ -357,8 +357,8 @@ export function ProfileTab() {
                     id="avatar-upload"
                     disabled={isUploadingAvatar}
                   />
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => document.getElementById('avatar-upload')?.click()}
                     disabled={isUploadingAvatar}
                     className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
@@ -377,8 +377,8 @@ export function ProfileTab() {
                   </Button>
                 </div>
                 {(avatarPreview || formData.avatarUrl) && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={handleRemoveAvatar}
                     disabled={isUploadingAvatar}
@@ -516,7 +516,7 @@ export function ProfileTab() {
                 <SelectTrigger id="district" className={!isEditing ? "bg-gray-50" : ""}>
                   <SelectValue placeholder={
                     isLoadingLocations ? "Đang tải..." :
-                    formData.cityId ? "Chọn quận/huyện" : "Chọn tỉnh trước"
+                      formData.cityId ? "Chọn quận/huyện" : "Chọn tỉnh trước"
                   } />
                 </SelectTrigger>
                 <SelectContent>
