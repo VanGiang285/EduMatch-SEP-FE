@@ -371,9 +371,29 @@ export interface ChatRequestDto {
   message: string;
 }
 
+export interface ChatSuggestionTutorDto {
+  rank?: number;
+  tutorId?: number;
+  name: string;
+  subjects?: string[];
+  levels?: string[];
+  teachingExp?: string;
+  province?: string;
+  subDistrict?: string;
+  hourlyRates?: string[];
+  matchScore?: number;
+  profileUrl?: string;
+}
+
+export interface ChatSuggestionsDto {
+  message?: string;
+  tutors?: ChatSuggestionTutorDto[];
+}
+
 export interface ChatResponseDto {
   sessionId: number;
   reply: string;
+  suggestions?: ChatSuggestionsDto;
 }
 
 export interface ChatSessionDto {
