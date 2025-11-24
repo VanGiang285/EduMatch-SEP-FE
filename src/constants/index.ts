@@ -483,6 +483,7 @@ export const API_ENDPOINTS = {
     GET_ALL_CRITERIA: '/api/Feedback/Get-All-Criteria',
     GET_ALL: '/api/Feedback/Get-All-Feedbacks',
     UPDATE: '/api/Feedback/Update-Feedback',
+    GET_RATING_SUMMARY: '/api/Feedback/summary/:tutorId',
   },
   
   // ==================== UPLOAD ====================

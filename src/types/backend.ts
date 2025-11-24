@@ -702,6 +702,14 @@ export interface FeedbackCriterion {
   isActive?: boolean;
 }
 
+export interface TutorRatingSummary {
+  id: number;
+  tutorId: number;
+  averageRating: number;
+  totalFeedbackCount: number;
+  updatedAt: string;
+}
+
 // ==================== SEARCH & FILTER ====================
 
 export interface TutorFilterDto {

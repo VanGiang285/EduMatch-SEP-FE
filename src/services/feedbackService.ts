@@ -4,6 +4,7 @@ import { ApiResponse } from '@/types/api';
 import {
   TutorFeedbackDto,
   FeedbackCriterion,
+  TutorRatingSummary,
 } from '@/types/backend';
 import {
   CreateTutorFeedbackRequest,
@@ -88,6 +89,18 @@ export class FeedbackService {
       API_ENDPOINTS.FEEDBACK.UPDATE,
       request
     );
+  }
+
+  /**
+   * Gets tutor rating summary by tutor ID
+   */
+  static async getTutorRatingSummary(
+    tutorId: number
+  ): Promise<ApiResponse<TutorRatingSummary>> {
+    const url = replaceUrlParams(API_ENDPOINTS.FEEDBACK.GET_RATING_SUMMARY, {
+      tutorId: tutorId.toString(),
+    });
+    return apiClient.get<TutorRatingSummary>(url);
   }
 }
 

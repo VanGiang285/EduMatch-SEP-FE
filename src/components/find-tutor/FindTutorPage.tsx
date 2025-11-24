@@ -39,6 +39,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { useChatContext } from '@/contexts/ChatContext';
 import { LocationService, ProvinceDto } from '@/services/locationService';
+import { FeedbackService } from '@/services/feedbackService';
+import { TutorRatingSummary } from '@/types/backend';
 
 // Helper function để convert string enum từ API sang TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
@@ -88,6 +90,7 @@ export function FindTutorPage() {
   const { openChatWithTutor } = useChatContext();
   const [provinces, setProvinces] = useState<ProvinceDto[]>([]);
   const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
+  const [tutorRatings, setTutorRatings] = useState<Map<number, TutorRatingSummary>>(new Map());
   const tutorsPerPage = 6;
   const sortedProvinces = useMemo(
     () => [...provinces].sort((a, b) => a.name.localeCompare(b.name, 'vi')),
@@ -298,6 +301,40 @@ export function FindTutorPage() {
 
     checkFavoriteStatuses();
   }, [tutors, isAuthenticated]);
+
+  // Load rating summaries for all tutors
+  useEffect(() => {
+    const loadRatings = async () => {
+      if (tutors.length === 0) {
+        setTutorRatings(new Map());
+        return;
+      }
+
+      const ratingPromises = tutors.map(async (tutor) => {
+        try {
+          const response = await FeedbackService.getTutorRatingSummary(tutor.id);
+          if (response.success && response.data) {
+            return { tutorId: tutor.id, rating: response.data };
+          }
+          return null;
+        } catch (error) {
+          console.error(`Error loading rating for tutor ${tutor.id}:`, error);
+          return null;
+        }
+      });
+
+      const results = await Promise.all(ratingPromises);
+      const ratingMap = new Map<number, TutorRatingSummary>();
+      results.forEach((result) => {
+        if (result) {
+          ratingMap.set(result.tutorId, result.rating);
+        }
+      });
+      setTutorRatings(ratingMap);
+    };
+
+    loadRatings();
+  }, [tutors]);
 
   // Reset video when currentTutor changes
   useEffect(() => {
@@ -612,8 +649,12 @@ export function FindTutorPage() {
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                             <div className="flex items-center gap-1.5">
                               <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
-                              <span className="text-sm text-black font-medium">5.0</span>
-                              <span className="text-sm text-gray-600">(0 đánh giá)</span>
+                              <span className="text-sm text-black font-medium">
+                                {tutorRatings.get(tutor.id)?.averageRating.toFixed(1) || '0.0'}
+                              </span>
+                              <span className="text-sm text-gray-600">
+                                ({tutorRatings.get(tutor.id)?.totalFeedbackCount || 0} đánh giá)
+                              </span>
                             </div>
                             <Separator orientation="vertical" className="h-4" />
                             <span className="text-sm text-gray-600">0 buổi học</span>

@@ -36,11 +36,12 @@ import {
 import { useFindTutor } from '@/hooks/useFindTutor';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { TutorService } from '@/services/tutorService';
-import { TutorProfileDto } from '@/types/backend';
+import { TutorProfileDto, TutorRatingSummary } from '@/types/backend';
 import { EnumHelpers, TeachingMode } from '@/types/enums';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { useChatContext } from '@/contexts/ChatContext';
+import { FeedbackService } from '@/services/feedbackService';
 
 // Helper function to convert string enum from API to TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
@@ -84,6 +85,7 @@ export function SavedTutorsPage() {
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set());
   const [loadingFavorite, setLoadingFavorite] = useState<Set<number>>(new Set());
   const { openChatWithTutor } = useChatContext();
+  const [tutorRatings, setTutorRatings] = useState<Map<number, TutorRatingSummary>>(new Map());
   const tutorsPerPage = 6;
 
   const buildDetailedTutorList = useCallback(async (baseTutors: TutorProfileDto[]): Promise<TutorProfileDto[]> => {
@@ -153,6 +155,40 @@ export function SavedTutorsPage() {
     loadFavoriteTutors();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
+
+  // Load rating summaries for saved tutors
+  useEffect(() => {
+    const loadRatings = async () => {
+      if (savedTutors.length === 0) {
+        setTutorRatings(new Map());
+        return;
+      }
+
+      const ratingPromises = savedTutors.map(async (tutor) => {
+        try {
+          const response = await FeedbackService.getTutorRatingSummary(tutor.id);
+          if (response.success && response.data) {
+            return { tutorId: tutor.id, rating: response.data };
+          }
+          return null;
+        } catch (error) {
+          console.error(`Error loading rating for tutor ${tutor.id}:`, error);
+          return null;
+        }
+      });
+
+      const results = await Promise.all(ratingPromises);
+      const ratingMap = new Map<number, TutorRatingSummary>();
+      results.forEach((result) => {
+        if (result) {
+          ratingMap.set(result.tutorId, result.rating);
+        }
+      });
+      setTutorRatings(ratingMap);
+    };
+
+    loadRatings();
+  }, [savedTutors]);
 
   // Client-side filtering and sorting
   const filteredAndSortedTutors = React.useMemo(() => {
@@ -653,8 +689,12 @@ export function SavedTutorsPage() {
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                                   <div className="flex items-center gap-1.5">
                                     <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
-                                    <span className="text-sm text-black font-medium">5.0</span>
-                                    <span className="text-sm text-gray-600">(0 đánh giá)</span>
+                                    <span className="text-sm text-black font-medium">
+                                      {tutorRatings.get(tutor.id)?.averageRating.toFixed(1) || '0.0'}
+                                    </span>
+                                    <span className="text-sm text-gray-600">
+                                      ({tutorRatings.get(tutor.id)?.totalFeedbackCount || 0} đánh giá)
+                                    </span>
                                   </div>
                                   <Separator orientation="vertical" className="h-4" />
                                   <span className="text-sm text-gray-600">0 buổi học</span>
