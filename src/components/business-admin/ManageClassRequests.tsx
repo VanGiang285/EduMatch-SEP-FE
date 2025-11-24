@@ -62,6 +62,15 @@ import { ClassRequestStatus, TeachingMode } from '@/types/enums';
 
 const ITEMS_PER_PAGE = 10;
 
+const getInitials = (value?: string) => {
+  if (!value) return 'NA';
+  const trimmed = value.trim();
+  if (!trimmed) return 'NA';
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+};
+
 type SortField = 'id' | 'learnerName' | 'subjectName' | 'createdAt';
 type SortOrder = 'asc' | 'desc';
 
@@ -576,10 +585,10 @@ export function ManageClassRequests() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10">
-                                  <AvatarImage src={request.avatarUrl} alt={request.learnerName} />
-                                  <AvatarFallback className="bg-[#257180] text-white">
-                                    {request.learnerName?.substring(0, 2).toUpperCase() || 'U'}
+                                <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] font-semibold">
+                                  <AvatarImage src={request.avatarUrl} alt={request.learnerName} className="object-cover" />
+                                  <AvatarFallback>
+                                    {getInitials(request.learnerName || request.learnerEmail)}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
@@ -706,9 +715,14 @@ export function ManageClassRequests() {
             <div className="space-y-6">
               {/* Learner Info */}
               <div className="flex items-start gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarFallback className="bg-[#257180] text-white text-2xl">
-                    {selectedRequest.learnerEmail?.substring(0, 2).toUpperCase() || 'U'}
+                <Avatar className="h-20 w-20 rounded-2xl border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] text-3xl font-semibold">
+                  <AvatarImage
+                    src={selectedRequest.avatarUrl}
+                    alt={selectedRequest.learnerEmail}
+                    className="object-cover"
+                  />
+                  <AvatarFallback>
+                    {getInitials(selectedRequest.learnerName || selectedRequest.learnerEmail)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
@@ -857,10 +871,10 @@ export function ManageClassRequests() {
                           {applicants.map((applicant) => (
                             <div key={applicant.applicationId} className="p-3 bg-gray-50 rounded-lg">
                               <div className="flex items-center gap-3 mb-2">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage src={applicant.avatarUrl} />
-                                  <AvatarFallback className="bg-[#257180] text-white text-xs">
-                                    {applicant.tutorName?.substring(0, 2).toUpperCase() || 'GS'}
+                                <Avatar className="h-8 w-8 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] font-semibold">
+                                  <AvatarImage src={applicant.avatarUrl} className="object-cover" />
+                                  <AvatarFallback>
+                                    {getInitials(applicant.tutorName || applicant.tutorEmail)}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1">

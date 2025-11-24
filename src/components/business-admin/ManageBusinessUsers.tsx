@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
 import { Badge } from '@/components/ui/basic/badge';
@@ -43,11 +43,16 @@ import {
   CheckCircle,
   Loader2,
   ArrowUpDown,
-  MapPin,
   Calendar,
   Phone,
   Mail,
+  Star,
   Shield,
+  MapPin,
+  Globe,
+  Maximize2,
+  FileText,
+  ExternalLink,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
 import { AdminService } from '@/services/adminService';
@@ -56,9 +61,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { UserProfileService } from '@/services/userProfileService';
 import { LocationService, ProvinceDto } from '@/services/locationService';
-import { EnumHelpers, Gender } from '@/types/enums';
+import { EnumHelpers, Gender, VerifyStatus, TeachingMode } from '@/types/enums';
 import { TutorService } from '@/services/tutorService';
 import { DetailTutorProfile, mapTutorProfileToDetail } from './ManageTutorApplications';
+import { Separator } from '@/components/ui/layout/separator';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/navigation/tabs';
+import { formatCurrency } from '@/data/mockBusinessAdminData';
 
 type SortField = 'id' | 'name' | 'email' | 'createdAt';
 
@@ -67,6 +80,116 @@ const ROLE = {
   TUTOR: 2,
   BUSINESS_ADMIN: 3,
   SYSTEM_ADMIN: 4,
+};
+
+const getInitials = (value?: string) => {
+  if (!value) return 'NA';
+  const trimmed = value.trim();
+  if (!trimmed) return 'NA';
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+};
+
+const ROLE_BADGES: Record<number, { label: string; className: string }> = {
+  [ROLE.LEARNER]: {
+    label: 'Học viên',
+    className: 'bg-[#257180] text-white border border-[#257180] font-semibold px-3 py-1',
+  },
+  [ROLE.TUTOR]: {
+    label: 'Gia sư',
+    className: 'bg-[#FD8B51] text-white border border-[#FD8B51] font-semibold px-3 py-1',
+  },
+  [ROLE.BUSINESS_ADMIN]: {
+    label: 'Business Admin',
+    className: 'bg-amber-100 text-amber-800 border-2 border-amber-400 font-semibold px-3 py-1',
+  },
+};
+
+const getTeachingModeText = (modes: TeachingMode | string | number): string => {
+  const parsedModes = EnumHelpers.parseTeachingMode(modes);
+  const modeLabels: string[] = [];
+  if (parsedModes & TeachingMode.Offline) modeLabels.push('Dạy trực tiếp');
+  if (parsedModes & TeachingMode.Online) modeLabels.push('Dạy online');
+  if (parsedModes & TeachingMode.Hybrid) modeLabels.push('Kết hợp');
+  return modeLabels.length > 0 ? modeLabels.join(', ') : 'Chưa cập nhật';
+};
+
+const getVerifyStatusText = (status: VerifyStatus | number): string => {
+  const parsedStatus = EnumHelpers.parseVerifyStatus(status);
+  switch (parsedStatus) {
+    case VerifyStatus.Pending:
+      return 'Chờ duyệt';
+    case VerifyStatus.Verified:
+      return 'Đã xác minh';
+    case VerifyStatus.Rejected:
+      return 'Bị từ chối';
+    case VerifyStatus.Expired:
+      return 'Hết hạn';
+    case VerifyStatus.Removed:
+      return 'Đã xóa';
+    default:
+      return 'Không xác định';
+  }
+};
+
+const getVerifyStatusColor = (status: VerifyStatus | number): string => {
+  const parsedStatus = EnumHelpers.parseVerifyStatus(status);
+  switch (parsedStatus) {
+    case VerifyStatus.Pending:
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case VerifyStatus.Verified:
+      return 'bg-green-100 text-green-800 border-green-200';
+    case VerifyStatus.Rejected:
+      return 'bg-red-100 text-red-800 border-red-200';
+    case VerifyStatus.Expired:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+    case VerifyStatus.Removed:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+const resolveRoleId = (input: ManageUserDto | number | string | undefined | null): number | null => {
+  if (typeof input === 'object' && input !== null) {
+    const record = input as ManageUserDto;
+    const roleFromId = resolveRoleId(record.roleId as number | undefined);
+    if (roleFromId !== null) {
+      return roleFromId;
+    }
+    if (record.roleName) {
+      return resolveRoleId(record.roleName);
+    }
+    return null;
+  }
+
+  if (typeof input === 'number' && !Number.isNaN(input)) {
+    return input;
+  }
+
+  if (typeof input === 'string') {
+    const numeric = Number(input);
+    if (!Number.isNaN(numeric)) {
+      return numeric;
+    }
+
+    const normalized = input.trim().toLowerCase();
+    if (normalized.includes('học') || normalized.includes('learner')) {
+      return ROLE.LEARNER;
+    }
+    if (normalized.includes('gia sư') || normalized.includes('tutor')) {
+      return ROLE.TUTOR;
+    }
+    if (normalized.includes('business')) {
+      return ROLE.BUSINESS_ADMIN;
+    }
+    if (normalized.includes('system')) {
+      return ROLE.SYSTEM_ADMIN;
+    }
+  }
+
+  return null;
 };
 
 export function ManageBusinessUsers() {
@@ -95,7 +218,40 @@ export function ManageBusinessUsers() {
   const [detailUser, setDetailUser] = useState<ManageUserDto | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [detailLoadingEmail, setDetailLoadingEmail] = useState<string | null>(null);
+  const [avatarCache, setAvatarCache] = useState<Record<string, string>>({});
+  const avatarCacheRef = useRef<Record<string, string>>({});
+
+  useEffect(() => {
+    avatarCacheRef.current = avatarCache;
+  }, [avatarCache]);
   const [provinces, setProvinces] = useState<ProvinceDto[]>([]);
+
+  const preloadAvatars = useCallback(async (list: ManageUserDto[]) => {
+    const targets = list.filter((u) => u.email && !avatarCacheRef.current[u.email]);
+    if (!targets.length) return;
+
+    await Promise.all(
+      targets.map(async (account) => {
+        if (!account.email) return;
+        try {
+          const response = await UserProfileService.getUserProfile(account.email);
+          if (response.success && response.data?.avatarUrl) {
+            setAvatarCache((prev) => {
+              if (prev[account.email!]) {
+                return prev;
+              }
+              const next = { ...prev, [account.email!]: response.data?.avatarUrl || '' };
+              avatarCacheRef.current = next;
+              return next;
+            });
+          }
+        } catch {
+          // ignore avatar errors
+        }
+      })
+    );
+  }, []);
 
   useEffect(() => {
     if (!user?.email) {
@@ -108,9 +264,13 @@ export function ManageBusinessUsers() {
         const response = await AdminService.getAllUsers();
         if (response.success && response.data) {
           const filtered = response.data
-            .filter((u) => u.roleId !== ROLE.SYSTEM_ADMIN)
+            .filter((u) => {
+              const roleId = resolveRoleId(u);
+              return roleId !== ROLE.SYSTEM_ADMIN && roleId !== ROLE.BUSINESS_ADMIN;
+            })
             .filter((u) => u.email !== user?.email);
           setUsers(filtered);
+          preloadAvatars(filtered);
         } else {
           showErrorRef.current?.('Lỗi', response.message || 'Không thể tải danh sách người dùng');
         }
@@ -135,7 +295,7 @@ export function ManageBusinessUsers() {
 
     loadUsers();
     loadProvinces();
-  }, [user?.email]);
+  }, [user?.email, preloadAvatars]);
 
   useEffect(() => {
     let filtered = [...users];
@@ -151,8 +311,8 @@ export function ManageBusinessUsers() {
     }
 
     if (filterRole !== 'all') {
-      const roleId = parseInt(filterRole);
-      filtered = filtered.filter((u) => u.roleId === roleId);
+      const selectedRoleId = Number(filterRole);
+      filtered = filtered.filter((u) => resolveRoleId(u) === selectedRoleId);
     }
 
     if (filterStatus !== 'all') {
@@ -190,7 +350,8 @@ export function ManageBusinessUsers() {
 
     setFilteredUsers(filtered);
     setCurrentPage(1);
-  }, [users, searchTerm, filterRole, filterStatus, sortField, sortDirection]);
+    preloadAvatars(filtered);
+  }, [users, searchTerm, filterRole, filterStatus, sortField, sortDirection, preloadAvatars]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -212,7 +373,7 @@ export function ManageBusinessUsers() {
     return <Badge className="bg-gray-100 text-gray-700 border-gray-200">Chưa kích hoạt</Badge>;
   };
 
-  const getRoleName = (roleId: number) => {
+  const getRoleName = (roleId: number | null | undefined) => {
     switch (roleId) {
       case ROLE.LEARNER:
         return 'Học viên';
@@ -262,14 +423,16 @@ export function ManageBusinessUsers() {
   };
 
   const handleViewDetail = async (userData: ManageUserDto) => {
-    if (userData.roleId !== ROLE.LEARNER && userData.roleId !== ROLE.TUTOR) {
+    const roleId = resolveRoleId(userData);
+    if (roleId !== ROLE.LEARNER && roleId !== ROLE.TUTOR) {
       return;
     }
     setDetailUser(userData);
+    setDetailLoadingEmail(userData.email);
     setIsDetailLoading(true);
 
     try {
-      if (userData.roleId === ROLE.LEARNER) {
+      if (roleId === ROLE.LEARNER) {
         const response = await UserProfileService.getUserProfile(userData.email);
         if (response.success && response.data) {
           const profile = response.data;
@@ -287,16 +450,36 @@ export function ManageBusinessUsers() {
             }
           }
 
+          const resolvedProvince = provinceName
+            ? profile.province
+              ? { ...profile.province, name: provinceName }
+              : profile.cityId
+                ? { id: profile.cityId, name: provinceName }
+                : profile.province
+            : profile.province;
+
+          const resolvedSubDistrict = subDistrictName
+            ? profile.subDistrict
+              ? { ...profile.subDistrict, name: subDistrictName }
+              : profile.subDistrictId
+                ? {
+                    id: profile.subDistrictId,
+                    provinceId: profile.cityId ?? 0,
+                    name: subDistrictName,
+                  }
+                : profile.subDistrict
+            : profile.subDistrict;
+
           setDetailLearner({
             ...profile,
-            province: provinceName ? { ...(profile.province || {}), name: provinceName } : profile.province,
-            subDistrict: subDistrictName ? { ...(profile.subDistrict || {}), name: subDistrictName } : profile.subDistrict,
+            province: resolvedProvince,
+            subDistrict: resolvedSubDistrict,
           });
           setDetailType('learner');
         } else {
           showError('Lỗi', response.message || 'Không thể tải thông tin học viên');
         }
-      } else if (userData.roleId === ROLE.TUTOR) {
+      } else if (roleId === ROLE.TUTOR) {
         const response = await TutorService.getTutorByEmail(userData.email);
         if (response.success && response.data) {
           const detail = mapTutorProfileToDetail(response.data);
@@ -311,6 +494,7 @@ export function ManageBusinessUsers() {
       showError('Lỗi', 'Không thể tải chi tiết người dùng.');
     } finally {
       setIsDetailLoading(false);
+      setDetailLoadingEmail(null);
     }
   };
 
@@ -376,7 +560,7 @@ export function ManageBusinessUsers() {
             </Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-[#257180]" />
@@ -429,11 +613,13 @@ export function ManageBusinessUsers() {
                           </TableCell>
                           <TableCell className="text-left">
                             <div className="flex items-center gap-3 min-w-0 max-w-[220px]">
-                              <Avatar className="h-10 w-10 rounded-lg">
-                                <AvatarImage src={record.avatarUrl} />
-                                <AvatarFallback className="bg-[#F2E5BF] text-[#257180]">
-                                  {(record.userName || record.email || 'U').slice(0, 2).toUpperCase()}
-                                </AvatarFallback>
+                              <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] font-semibold">
+                                <AvatarImage
+                                  src={avatarCache[record.email] || record.avatarUrl}
+                                  alt={record.userName || record.email}
+                                  className="object-cover"
+                                />
+                                <AvatarFallback>{getInitials(record.userName || record.email)}</AvatarFallback>
                               </Avatar>
                               <p className="font-medium text-gray-900 truncate" title={record.userName || record.email}>
                                 {record.userName || record.email}
@@ -447,9 +633,17 @@ export function ManageBusinessUsers() {
                           </TableCell>
                           <TableCell className="text-left text-sm text-gray-700">{record.phone || '-'}</TableCell>
                           <TableCell className="text-left">
-                            <Badge className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20 text-xs">
-                              {record.roleName || getRoleName(record.roleId)}
-                            </Badge>
+                            {(() => {
+                              const roleId = resolveRoleId(record);
+                              const badgeClass =
+                                (roleId && ROLE_BADGES[roleId]?.className) ||
+                                'bg-gray-100 text-gray-700 border-2 border-gray-300 font-semibold px-3 py-1';
+                              return (
+                                <Badge className={badgeClass}>
+                                  {roleId ? ROLE_BADGES[roleId]?.label || getRoleName(roleId) : record.roleName || 'Không xác định'}
+                                </Badge>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="text-left">{getStatusBadge(record.isActive)}</TableCell>
                           <TableCell className="text-left text-sm text-gray-700">
@@ -465,41 +659,40 @@ export function ManageBusinessUsers() {
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-2">
-                              {record.roleId === ROLE.LEARNER || record.roleId === ROLE.TUTOR ? (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-9 w-9 border border-gray-200 text-[#257180] hover:bg-[#257180]/10"
-                                  onClick={() => handleViewDetail(record)}
-                                  title="Xem chi tiết"
-                                >
-                                  {isDetailLoading && detailUser?.email === record.email ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Eye className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              ) : null}
+                              {(() => {
+                                const roleId = resolveRoleId(record);
+                                return roleId === ROLE.LEARNER || roleId === ROLE.TUTOR ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="p-2 hover:bg-[#FD8B51] hover:text-white"
+                                    onClick={() => handleViewDetail(record)}
+                                    title="Xem chi tiết"
+                                  >
+                                    {detailLoadingEmail === record.email && isDetailLoading ? (
+                                      <Loader2 className="h-5 w-5 animate-spin" />
+                                    ) : (
+                                      <Eye className="h-5 w-5" />
+                                    )}
+                                  </Button>
+                                ) : null;
+                              })()}
                               <Button
                                 variant="ghost"
-                                size="icon"
+                                size="sm"
                                 onClick={() =>
                                   record.isActive ? handleDeactivateUser(record.email) : handleActivateUser(record.email)
                                 }
                                 disabled={isActivating === record.email || isDeactivating === record.email}
-                                className={`h-9 w-9 border ${
-                                  record.isActive
-                                    ? 'border-orange-200 text-orange-600 hover:bg-orange-50'
-                                    : 'border-green-200 text-green-600 hover:bg-green-50'
-                                }`}
+                                className="p-2 hover:bg-[#FD8B51] hover:text-white"
                                 title={record.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
                               >
                                 {isActivating === record.email || isDeactivating === record.email ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <Loader2 className="h-5 w-5 animate-spin" />
                                 ) : record.isActive ? (
-                                  <XCircle className="h-4 w-4" />
+                                  <XCircle className="h-5 w-5" />
                                 ) : (
-                                  <CheckCircle className="h-4 w-4" />
+                                  <CheckCircle className="h-5 w-5" />
                                 )}
                               </Button>
                             </div>
@@ -573,20 +766,18 @@ export function ManageBusinessUsers() {
           ) : detailLearner && detailUser ? (
             <div className="space-y-6">
               <Card className="border border-gray-200">
-                <CardContent className="p-6 flex items-center gap-6">
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage src={detailLearner.avatarUrl} />
-                    <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-2xl">
-                      {(detailUser.userName || detailUser.email || 'U').slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
+                <CardContent className="p-6 flex flex-col sm:flex-row gap-6">
+                  <Avatar className="h-24 w-24 rounded-xl border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] text-2xl font-semibold">
+                    <AvatarImage src={detailLearner.avatarUrl} alt={detailUser.userName || detailUser.email} className="object-cover" />
+                    <AvatarFallback>{getInitials(detailUser.userName || detailUser.email)}</AvatarFallback>
                   </Avatar>
-                  <div>
+                  <div className="flex-1 space-y-2">
                     <h3 className="text-2xl font-semibold text-gray-900">{detailUser.userName || detailUser.email}</h3>
-                    <p className="text-gray-600 flex items-center gap-2 mt-1">
+                    <p className="text-gray-600 flex items-center gap-2">
                       <Mail className="h-4 w-4" />
                       {detailUser.email}
                     </p>
-                    <p className="text-gray-600 flex items-center gap-2 mt-1">
+                    <p className="text-gray-600 flex items-center gap-2">
                       <Phone className="h-4 w-4" />
                       {detailUser.phone || 'Chưa cập nhật'}
                     </p>
@@ -594,63 +785,57 @@ export function ManageBusinessUsers() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-gray-200">
-                <CardHeader>
-                  <CardTitle>Thông tin cơ bản</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500">Họ và tên</p>
-                    <p className="font-medium text-gray-900">{detailUser.userName || detailUser.email}</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500">Ngày sinh</p>
-                    <p className="font-medium text-gray-900">
-                      {detailLearner.dob ? new Date(detailLearner.dob).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500">Giới tính</p>
-                    <p className="font-medium text-gray-900">
-                      {EnumHelpers.getGenderLabel((detailLearner.gender as Gender) ?? Gender.Unknown)}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500">Tài khoản</p>
-                    <p className="font-medium text-gray-900">
-                      {detailLearner.userEmailNavigation?.isActive ? 'Đang hoạt động' : 'Chưa kích hoạt'}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border border-gray-200">
+                  <CardHeader>
+                    <CardTitle>Thông tin cá nhân</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-sm text-gray-500">Họ và tên</p>
+                      <p className="font-medium text-gray-900">{detailUser.userName || 'Chưa cập nhật'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Ngày sinh</p>
+                      <p className="font-medium text-gray-900">
+                        {detailLearner.dob ? new Date(detailLearner.dob).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Giới tính</p>
+                      <p className="font-medium text-gray-900">
+                        {EnumHelpers.getGenderLabel((detailLearner.gender as Gender) ?? Gender.Unknown)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Tình trạng tài khoản</p>
+                      <p className="font-medium text-gray-900">
+                        {detailLearner.userEmailNavigation?.isActive ? 'Đang hoạt động' : 'Chưa kích hoạt'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <Card className="border border-gray-200">
-                <CardHeader>
-                  <CardTitle>Địa chỉ</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-3 bg-gray-50 rounded-lg">
+                <Card className="border border-gray-200">
+                  <CardHeader>
+                    <CardTitle>Địa chỉ</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
                       <p className="text-sm text-gray-500">Tỉnh/Thành phố</p>
-                      <p className="font-medium text-gray-900">
-                        {detailLearner.province?.name || 'Chưa cập nhật'}
-                      </p>
+                      <p className="font-medium text-gray-900">{detailLearner.province?.name || 'Chưa cập nhật'}</p>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
+                    <div>
                       <p className="text-sm text-gray-500">Quận/Huyện</p>
-                      <p className="font-medium text-gray-900">
-                        {detailLearner.subDistrict?.name || 'Chưa cập nhật'}
-                      </p>
+                      <p className="font-medium text-gray-900">{detailLearner.subDistrict?.name || 'Chưa cập nhật'}</p>
                     </div>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500">Địa chỉ chi tiết</p>
-                    <p className="font-medium text-gray-900">
-                      {detailLearner.addressLine || 'Chưa cập nhật'}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                    <div>
+                      <p className="text-sm text-gray-500">Địa chỉ chi tiết</p>
+                      <p className="font-medium text-gray-900">{detailLearner.addressLine || 'Chưa cập nhật'}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           ) : (
             <div className="text-gray-500 text-center py-6">Không có dữ liệu</div>
@@ -659,9 +844,9 @@ export function ManageBusinessUsers() {
       </Dialog>
 
       <Dialog open={detailType === 'tutor'} onOpenChange={(open) => !open && setDetailType(null)}>
-        <DialogContent className="!max-w-7xl max-h-[95vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="!max-w-7xl sm:!max-w-7xl max-h-[95vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader className="border-b pb-4">
-            <DialogTitle>Hồ sơ gia sư</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-gray-900">Hồ sơ gia sư</DialogTitle>
           </DialogHeader>
           {isDetailLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -672,122 +857,180 @@ export function ManageBusinessUsers() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
                   <Card className="border border-gray-200">
-                    <CardContent className="p-6 flex flex-col sm:flex-row gap-6">
-                      <div className="relative flex-shrink-0">
-                        <Avatar className="w-28 h-28 sm:w-32 sm:h-32">
-                          <AvatarImage src={detailTutor.avatarUrl} />
-                          <AvatarFallback className="text-3xl bg-[#F2E5BF] text-[#257180]">
-                            {detailTutor.userName.split(' ').slice(-2).map((n) => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white bg-blue-600">
-                          <Shield className="w-5 h-5 text-white" />
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-3">
-                        <div>
-                          <h1 className="text-2xl font-semibold text-gray-900 truncate">{detailTutor.userName}</h1>
-                          <p className="text-gray-600 flex items-center gap-2 mt-1">
-                            <Mail className="h-4 w-4" />
-                            {detailTutor.email}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge className="bg-green-100 text-green-800 border-green-200">
-                            {EnumHelpers.getTeachingModeLabel(detailTutor.teachingModes)}
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <MapPin className="h-4 w-4" />
-                            <span>
-                              {detailTutor.subDistrictName || 'Chưa cập nhật'}
-                              {detailTutor.provinceName ? `, ${detailTutor.provinceName}` : ''}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Calendar className="h-4 w-4" />
-                            <span>Tham gia {new Date(detailTutor.createdAt).toLocaleDateString('vi-VN')}</span>
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-6 flex-col sm:flex-row">
+                        <div className="relative flex-shrink-0">
+                          <Avatar className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] text-3xl font-semibold">
+                            <AvatarImage src={detailTutor.avatarUrl} alt={detailTutor.userName} className="object-cover" />
+                            <AvatarFallback>
+                              {detailTutor.userName
+                                .split(' ')
+                                .slice(-2)
+                                .map((n) => n[0])
+                                .join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white bg-blue-600">
+                            <Shield className="w-5 h-5 text-white" />
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border border-gray-200">
-                    <CardHeader>
-                      <CardTitle>Giới thiệu</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <p className="text-gray-700 whitespace-pre-line">
-                        {detailTutor.bio || 'Chưa có thông tin giới thiệu.'}
-                      </p>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 mb-3">Môn học đăng ký</h3>
-                        {detailTutor.subjects.length > 0 ? (
-                          <div className="space-y-2">
-                            {detailTutor.subjects.map((subject) => (
-                              <div
-                                key={subject.id}
-                                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                              >
-                                <div>
-                                  <p className="font-medium text-gray-900">{subject.subject?.subjectName || 'Chưa có tên'}</p>
-                                  {subject.level && (
-                                    <p className="text-sm text-gray-600">{subject.level.name}</p>
-                                  )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col gap-3">
+                            <div className="min-w-0">
+                              <h1 className="text-gray-900 text-2xl font-semibold mb-2 truncate" title={detailTutor.userName}>
+                                {detailTutor.userName}
+                              </h1>
+                              <div className="flex items-center gap-3 flex-wrap text-sm text-gray-600">
+                                <div className="flex items-center gap-1.5">
+                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-gray-900">{detailTutor.rating.toFixed(1)}</span>
+                                  <span className="text-gray-500">({detailTutor.totalReviews} đánh giá)</span>
                                 </div>
-                                <p className="font-semibold text-[#257180]">
-                                  {subject.hourlyRate ? subject.hourlyRate.toLocaleString('vi-VN') : 'Chưa cập nhật'}/giờ
-                                </p>
+                                <span className="text-gray-400">•</span>
+                                <span>{detailTutor.totalStudents} học viên</span>
                               </div>
-                            ))}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                                {getTeachingModeText(detailTutor.teachingModes)}
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                              <div className="flex items-center gap-2 text-gray-600 min-w-0">
+                                <MapPin className="w-4 h-4 flex-shrink-0" />
+                                <span className="truncate">
+                                  {detailTutor.subDistrictName || 'Chưa cập nhật'}
+                                  {detailTutor.provinceName ? `, ${detailTutor.provinceName}` : ''}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-gray-600 min-w-0">
+                                <Globe className="w-4 h-4 flex-shrink-0" />
+                                <span className="truncate">{getTeachingModeText(detailTutor.teachingModes)}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-gray-600 min-w-0">
+                                <Users className="w-4 h-4 flex-shrink-0" />
+                                <span className="truncate">{detailTutor.email}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-gray-600 min-w-0">
+                                <Calendar className="w-4 h-4 flex-shrink-0" />
+                                <span className="truncate">
+                                  Tham gia {new Date(detailTutor.createdAt).toLocaleDateString('vi-VN')}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        ) : (
-                          <p className="text-gray-500">Chưa có môn học nào.</p>
-                        )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card className="border border-gray-200">
-                    <CardHeader>
-                      <CardTitle>Lịch khả dụng</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {detailTutor.availabilities.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {detailTutor.availabilities.map((avail) => (
-                            <div key={avail.id} className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-                              <span>
-                                {avail.slot?.dayOfWeek !== undefined &&
-                                  ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][avail.slot.dayOfWeek]}
-                              </span>
-                              {avail.slot?.startTime && avail.slot?.endTime && (
-                                <span className="text-gray-600">
-                                  {avail.slot.startTime} - {avail.slot.endTime}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-gray-500">Chưa cập nhật lịch.</p>
-                      )}
-                    </CardContent>
-                  </Card>
+                  <Tabs defaultValue="about" className="space-y-6">
+                    <TabsList className="grid w-full grid-cols-2 bg-[#F2E5BF]">
+                      <TabsTrigger value="about" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">
+                        Giới thiệu
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="education"
+                        className="data-[state=active]:bg-white data-[state=active]:text-[#257180]"
+                      >
+                        Học vấn & Chứng chỉ
+                      </TabsTrigger>
+                    </TabsList>
 
-                  <Card className="border border-gray-200">
-                    <CardHeader>
-                      <CardTitle>Học vấn & Chứng chỉ</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div>
-                        <h4 className="font-semibold mb-3">Bằng cấp</h4>
-                        {detailTutor.educations.length > 0 ? (
-                          <div className="space-y-3">
-                            {detailTutor.educations.map((edu) => (
-                              <div key={edu.id} className="p-4 border rounded-lg space-y-3">
+                    <TabsContent value="about" className="space-y-6">
+                      <Card className="border border-gray-200">
+                        <CardHeader>
+                          <CardTitle className="font-bold">Về tôi</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          <div>
+                            <p className="text-gray-700 leading-relaxed whitespace-pre-line break-words">
+                              {detailTutor.bio || 'Chưa có thông tin giới thiệu.'}
+                            </p>
+                          </div>
+                          <Separator className="bg-gray-200" />
+                          <div>
+                            <h3 className="text-gray-900 mb-3 font-bold">Môn học đăng ký</h3>
+                            {detailTutor.subjects.length > 0 ? (
+                              <div className="space-y-3">
+                                {detailTutor.subjects.map((subject) => (
+                                  <div key={subject.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div>
+                              <p className="font-medium text-gray-900">{subject.subject?.subjectName || 'Chưa có tên'}</p>
+                                      {subject.level && <p className="text-sm text-gray-600">{subject.level.name}</p>}
+                                    </div>
+                                    <p className="font-semibold text-[#257180]">
+                                      {subject.hourlyRate ? formatCurrency(subject.hourlyRate) : 'Chưa cập nhật'}/giờ
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-gray-500">Chưa có môn học nào.</p>
+                            )}
+                          </div>
+                          <Separator className="bg-gray-200" />
+                          {detailTutor.availabilities.length > 0 ? (
+                            <div>
+                              <h3 className="text-gray-900 mb-3 font-bold">Lịch khả dụng</h3>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {detailTutor.availabilities.map((avail) => {
+                                  const startDate = avail.startDate ? new Date(avail.startDate) : null;
+                                  const dayOfWeek = avail.slot?.dayOfWeek !== undefined
+                                    ? avail.slot.dayOfWeek
+                                    : startDate
+                                    ? startDate.getDay()
+                                    : null;
+                                  const dayOfWeekText = dayOfWeek !== null
+                                    ? ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][dayOfWeek]
+                                    : '';
+                                  const formatTime = (timeStr?: string) => {
+                                    if (!timeStr) return '';
+                                    const parts = timeStr.split(':');
+                                    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
+                                  };
+                                  const dateText = startDate
+                                    ? startDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                    : '';
+                                  return (
+                                    <div key={avail.id} className="p-3 bg-gray-50 rounded-lg space-y-1">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-gray-900">
+                                          {dayOfWeekText}
+                                        </span>
+                                        {avail.slot?.startTime && avail.slot?.endTime && (
+                                          <span className="text-sm text-gray-600">
+                                            {formatTime(avail.slot.startTime)} - {formatTime(avail.slot.endTime)}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {dateText && (
+                                        <p className="text-xs text-gray-500">{dateText}</p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <h3 className="text-gray-900 mb-3 font-bold">Lịch khả dụng</h3>
+                              <p className="text-gray-500">Chưa cập nhật lịch khả dụng.</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="education" className="space-y-6">
+                      <Card className="border border-gray-200">
+                        <CardHeader>
+                          <CardTitle className="font-bold">Học vấn</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {detailTutor.educations.length > 0 ? (
+                            detailTutor.educations.map((edu) => (
+                              <div key={edu.id} className="p-4 border border-gray-200 rounded-lg space-y-3">
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                                   <div>
                                     <p className="font-medium text-gray-900">{edu.institution?.name || 'Chưa có tên'}</p>
@@ -797,33 +1040,59 @@ export function ManageBusinessUsers() {
                                       </p>
                                     )}
                                   </div>
-                                  <Badge className="bg-gray-100 text-gray-800 border-gray-200">
-                                    {EnumHelpers.getVerifyStatusLabel(edu.verified)}
+                                  <Badge className={getVerifyStatusColor(edu.verified)}>
+                                    {getVerifyStatusText(edu.verified)}
                                   </Badge>
                                 </div>
                                 {edu.certificateUrl && (
-                                  <div className="relative group cursor-zoom-in" onClick={() => setPreviewImage(edu.certificateUrl)}>
+                                  <div className="relative group cursor-zoom-in" onClick={() => setPreviewImage(edu.certificateUrl ?? null)}>
                                     <img
                                       src={edu.certificateUrl}
                                       alt="Bằng cấp"
                                       className="w-full max-h-64 object-cover rounded-lg border"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                      }}
                                     />
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors rounded-lg" />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors rounded-lg flex items-center justify-center">
+                                      <Maximize2 className="h-6 w-6 text-white opacity-0 group-hover:opacity-100" />
+                                    </div>
+                                  </div>
+                                )}
+                                {edu.certificateUrl && (
+                                  <a
+                                    href={edu.certificateUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-[#257180] hover:underline flex items-center gap-1"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                    Xem bằng cấp
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                )}
+                                {edu.verified === VerifyStatus.Rejected && edu.rejectReason && (
+                                  <div className="p-2 bg-red-50 rounded text-sm text-red-800">
+                                    <p className="font-medium">Lý do từ chối:</p>
+                                    <p>{edu.rejectReason}</p>
                                   </div>
                                 )}
                               </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-gray-500">Chưa có thông tin bằng cấp.</p>
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold mb-3">Chứng chỉ</h4>
-                        {detailTutor.certificates.length > 0 ? (
-                          <div className="space-y-3">
-                            {detailTutor.certificates.map((cert) => (
-                              <div key={cert.id} className="p-4 border rounded-lg space-y-3">
+                            ))
+                          ) : (
+                            <p className="text-gray-500">Chưa có thông tin học vấn.</p>
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border border-gray-200">
+                        <CardHeader>
+                          <CardTitle className="font-bold">Chứng chỉ</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {detailTutor.certificates.length > 0 ? (
+                            detailTutor.certificates.map((cert) => (
+                              <div key={cert.id} className="p-4 border border-gray-200 rounded-lg space-y-3">
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                                   <div>
                                     <p className="font-medium text-gray-900">
@@ -835,29 +1104,52 @@ export function ManageBusinessUsers() {
                                       </p>
                                     )}
                                   </div>
-                                  <Badge className="bg-gray-100 text-gray-800 border-gray-200">
-                                    {EnumHelpers.getVerifyStatusLabel(cert.verified)}
+                                  <Badge className={getVerifyStatusColor(cert.verified)}>
+                                    {getVerifyStatusText(cert.verified)}
                                   </Badge>
                                 </div>
                                 {cert.certificateUrl && (
-                                  <div className="relative group cursor-zoom-in" onClick={() => setPreviewImage(cert.certificateUrl)}>
+                                  <div className="relative group cursor-zoom-in" onClick={() => setPreviewImage(cert.certificateUrl ?? null)}>
                                     <img
                                       src={cert.certificateUrl}
                                       alt="Chứng chỉ"
                                       className="w-full max-h-64 object-cover rounded-lg border"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                      }}
                                     />
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors rounded-lg" />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors rounded-lg flex items-center justify-center">
+                                      <Maximize2 className="h-6 w-6 text-white opacity-0 group-hover:opacity-100" />
+                                    </div>
+                                  </div>
+                                )}
+                                {cert.certificateUrl && (
+                                  <a
+                                    href={cert.certificateUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-[#257180] hover:underline flex items-center gap-1"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                    Xem chứng chỉ
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                )}
+                                {cert.verified === VerifyStatus.Rejected && cert.rejectReason && (
+                                  <div className="p-2 bg-red-50 rounded text-sm text-red-800">
+                                    <p className="font-medium">Lý do từ chối:</p>
+                                    <p>{cert.rejectReason}</p>
                                   </div>
                                 )}
                               </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-gray-500">Chưa có thông tin chứng chỉ.</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                            ))
+                          ) : (
+                            <p className="text-gray-500">Chưa có thông tin chứng chỉ.</p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
                 </div>
 
                 <div className="lg:col-span-1 space-y-6">
@@ -885,7 +1177,7 @@ export function ManageBusinessUsers() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Hình thức:</span>
-                          <span className="font-medium">{EnumHelpers.getTeachingModeLabel(detailTutor.teachingModes)}</span>
+                          <span className="font-medium truncate">{getTeachingModeText(detailTutor.teachingModes)}</span>
                         </div>
                       </div>
                     </CardContent>
@@ -894,7 +1186,7 @@ export function ManageBusinessUsers() {
               </div>
             </div>
           ) : (
-            <div className="text-gray-500 text-center py-6">Không có dữ liệu</div>
+            <div className="text-center py-8 text-gray-500">Không tìm thấy thông tin gia sư</div>
           )}
         </DialogContent>
       </Dialog>

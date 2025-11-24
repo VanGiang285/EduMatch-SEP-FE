@@ -76,11 +76,21 @@ import { TutorVerificationRequestStatus, TeachingMode, VerifyStatus, EnumHelpers
 import { RejectTutorRequest } from '@/types/requests';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { formatCurrency } from '@/data/mockBusinessAdminData';
+import { UserProfileService } from '@/services/userProfileService';
 
 const ITEMS_PER_PAGE = 10;
 
 type SortField = 'id' | 'userName' | 'email' | 'createdAt';
 type SortOrder = 'asc' | 'desc';
+
+const getInitials = (value?: string) => {
+  if (!value) return 'NA';
+  const trimmed = value.trim();
+  if (!trimmed) return 'NA';
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+};
 
 export interface DetailTutorProfile {
   id: number;
@@ -254,11 +264,43 @@ export function ManageTutorApplications() {
   const [rejectReason, setRejectReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [avatarCache, setAvatarCache] = useState<Record<string, string>>({});
+  const avatarCacheRef = useRef<Record<string, string>>({});
 
   const detailTutor = useMemo(() => {
     if (!selectedRequest || !selectedTutor) return null;
     return mapTutorProfileToDetail(selectedTutor, selectedRequest);
   }, [selectedRequest, selectedTutor]);
+
+  const preloadAvatars = useCallback(async (list: TutorVerificationRequestDto[]) => {
+    const targets = list.filter((r) => {
+      const email = r.userEmail || r.tutor?.userEmail || r.user?.email;
+      return email && !avatarCacheRef.current[email];
+    });
+    if (!targets.length) return;
+
+    await Promise.all(
+      targets.map(async (req) => {
+        const email = req.userEmail || req.tutor?.userEmail || req.user?.email;
+        if (!email) return;
+        try {
+          const response = await UserProfileService.getUserProfile(email);
+          if (response.success && response.data?.avatarUrl) {
+            setAvatarCache((prev) => {
+              if (prev[email]) {
+                return prev;
+              }
+              const next = { ...prev, [email]: response.data?.avatarUrl || '' };
+              avatarCacheRef.current = next;
+              return next;
+            });
+          }
+        } catch {
+          // ignore avatar errors
+        }
+      })
+    );
+  }, []);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -278,10 +320,12 @@ export function ManageTutorApplications() {
         if (rejectedRes.success && rejectedRes.data) allRequests.push(...rejectedRes.data);
         
         setRequests(allRequests);
+        preloadAvatars(allRequests);
       } else {
         response = await TutorVerificationRequestService.getAll(statusFilter);
         if (response.success && response.data) {
           setRequests(response.data);
+          preloadAvatars(response.data);
         } else {
           setRequests([]);
         }
@@ -293,7 +337,7 @@ export function ManageTutorApplications() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, preloadAvatars]);
 
   useEffect(() => {
     fetchRequests();
@@ -537,7 +581,9 @@ export function ManageTutorApplications() {
                     ) : (
                       paginatedRequests.map((req, index) => {
                         const userName = getApplicantName(req) || 'Chưa có tên';
-                        const avatarUrl = getApplicantAvatar(req);
+                        const email = req.userEmail || req.tutor?.userEmail || req.user?.email;
+                        const cachedAvatar = email ? avatarCache[email] : undefined;
+                        const avatarUrl = cachedAvatar || getApplicantAvatar(req);
                         return (
                           <TableRow key={req.id} className="hover:bg-gray-50">
                             <TableCell className="text-left">
@@ -545,30 +591,10 @@ export function ManageTutorApplications() {
                             </TableCell>
                             <TableCell className="text-left">
                               <div className="flex items-center gap-3">
-                                <div className="relative flex-shrink-0">
-                                  <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#F2E5BF]">
-                                    {avatarUrl ? (
-                                      <img 
-                                        src={avatarUrl} 
-                                        alt={userName}
-                                        className="w-full h-full object-cover rounded-lg"
-                                        onError={(e) => {
-                                          e.currentTarget.style.display = 'none';
-                                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                                          if (fallback) {
-                                            fallback.style.display = 'flex';
-                                          }
-                                        }}
-                                      />
-                                    ) : null}
-                                    <div 
-                                      className={`w-full h-full rounded-lg flex items-center justify-center text-sm font-bold text-[#257180] bg-[#F2E5BF] ${avatarUrl ? 'hidden' : 'flex'}`}
-                                      style={{ display: avatarUrl ? 'none' : 'flex' }}
-                                    >
-                                      {userName.substring(0, 2).toUpperCase()}
-                                    </div>
-                                  </div>
-                                </div>
+                                <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] font-semibold">
+                                  <AvatarImage src={avatarUrl} alt={userName} className="object-cover" />
+                                  <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+                                </Avatar>
                                 <div>
                                   <p className="text-sm font-medium text-gray-900">{userName}</p>
                                   {req.tutor?.phone && (
@@ -660,9 +686,9 @@ export function ManageTutorApplications() {
                     <CardContent className="p-6">
                       <div className="flex items-start gap-6 flex-col sm:flex-row">
                         <div className="relative flex-shrink-0">
-                          <Avatar className="w-28 h-28 sm:w-32 sm:h-32">
+                          <Avatar className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] text-3xl font-semibold">
                             <AvatarImage src={detailTutor.avatarUrl} alt={detailTutor.userName} className="object-cover" />
-                            <AvatarFallback className="text-2xl bg-[#F2E5BF] text-[#257180]">
+                            <AvatarFallback>
                               {detailTutor.userName
                                 .split(' ')
                                 .slice(-2)
@@ -777,19 +803,42 @@ export function ManageTutorApplications() {
                             <div>
                               <h3 className="text-gray-900 mb-3 font-bold">Lịch khả dụng</h3>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {detailTutor.availabilities.map((avail) => (
-                                  <div key={avail.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span className="text-sm">
-                                      {avail.slot?.dayOfWeek !== undefined &&
-                                        ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][avail.slot.dayOfWeek]}
-                                    </span>
-                                    {avail.slot?.startTime && avail.slot?.endTime && (
-                                      <span className="text-sm text-gray-600">
-                                        {avail.slot.startTime} - {avail.slot.endTime}
-                                      </span>
-                                    )}
-                                  </div>
-                                ))}
+                                {detailTutor.availabilities.map((avail) => {
+                                  const startDate = avail.startDate ? new Date(avail.startDate) : null;
+                                  const dayOfWeek = avail.slot?.dayOfWeek !== undefined
+                                    ? avail.slot.dayOfWeek
+                                    : startDate
+                                    ? startDate.getDay()
+                                    : null;
+                                  const dayOfWeekText = dayOfWeek !== null
+                                    ? ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][dayOfWeek]
+                                    : '';
+                                  const formatTime = (timeStr?: string) => {
+                                    if (!timeStr) return '';
+                                    const parts = timeStr.split(':');
+                                    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
+                                  };
+                                  const dateText = startDate
+                                    ? startDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                    : '';
+                                  return (
+                                    <div key={avail.id} className="p-3 bg-gray-50 rounded-lg space-y-1">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-gray-900">
+                                          {dayOfWeekText}
+                                        </span>
+                                        {avail.slot?.startTime && avail.slot?.endTime && (
+                                          <span className="text-sm text-gray-600">
+                                            {formatTime(avail.slot.startTime)} - {formatTime(avail.slot.endTime)}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {dateText && (
+                                        <p className="text-xs text-gray-500">{dateText}</p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           ) : (
@@ -810,7 +859,7 @@ export function ManageTutorApplications() {
                         <CardContent className="space-y-4">
                           {detailTutor.educations.length > 0 ? (
                             detailTutor.educations.map((edu) => (
-                              <div key={edu.id} className="p-4 border rounded-lg space-y-3">
+                              <div key={edu.id} className="p-4 border border-gray-200 rounded-lg space-y-3">
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                                   <div>
                                     <p className="font-medium text-gray-900">{edu.institution?.name || 'Chưa có tên'}</p>
@@ -872,7 +921,7 @@ export function ManageTutorApplications() {
                         <CardContent className="space-y-4">
                           {detailTutor.certificates.length > 0 ? (
                             detailTutor.certificates.map((cert) => (
-                              <div key={cert.id} className="p-4 border rounded-lg space-y-3">
+                              <div key={cert.id} className="p-4 border border-gray-200 rounded-lg space-y-3">
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                                   <div>
                                     <p className="font-medium text-gray-900">

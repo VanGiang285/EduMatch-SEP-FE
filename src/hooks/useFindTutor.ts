@@ -11,6 +11,7 @@ import {
   EducationInstitutionDto,
   CertificateTypeDto,
 } from '@/types/backend';
+import { TutorStatus } from '@/types/enums';
 
 export interface UseFindTutorReturn {
   tutors: TutorProfileDto[];
@@ -47,15 +48,6 @@ export function useFindTutor(): UseFindTutorReturn {
     page: 1,
     pageSize: 10,
   });
-
-  useEffect(() => {
-    loadMasterData();
-  }, []);
-
-  useEffect(() => {
-    // Only load data once on mount, filtering will be done client-side
-    loadAllTutors();
-  }, []);
 
   const loadMasterData = useCallback(async () => {
     setIsLoadingMasterData(true);
@@ -98,7 +90,7 @@ export function useFindTutor(): UseFindTutorReturn {
     setError(null);
 
     try {
-      const response = await TutorService.getAllTutors();
+      const response = await TutorService.getTutorsByStatus(TutorStatus.Approved);
 
       if (response.success && response.data) {
         setTutors(response.data);
@@ -114,6 +106,11 @@ export function useFindTutor(): UseFindTutorReturn {
       setIsLoadingTutors(false);
     }
   }, []);
+
+  useEffect(() => {
+    loadMasterData();
+    loadAllTutors();
+  }, [loadMasterData, loadAllTutors]);
 
   const searchTutors = useCallback(async () => {
     setIsLoadingTutors(true);

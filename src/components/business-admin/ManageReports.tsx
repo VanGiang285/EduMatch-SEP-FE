@@ -664,11 +664,9 @@ export function ManageReports() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
+                          <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] font-semibold">
                             <AvatarImage src={report.reporterAvatarUrl} alt={report.reporterName} />
-                            <AvatarFallback className="bg-[#F2E5BF] text-sm font-semibold text-[#257180]">
-                              {getInitials(report.reporterName || report.reporterEmail)}
-                            </AvatarFallback>
+                            <AvatarFallback>{getInitials(report.reporterName || report.reporterEmail)}</AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="text-sm font-medium text-gray-900">
@@ -680,11 +678,9 @@ export function ManageReports() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
+                          <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] font-semibold">
                             <AvatarImage src={report.reportedAvatarUrl} alt={report.reportedUserName} />
-                            <AvatarFallback className="bg-[#F2E5BF] text-sm font-semibold text-[#257180]">
-                              {getInitials(report.reportedUserName || report.reportedUserEmail)}
-                            </AvatarFallback>
+                            <AvatarFallback>{getInitials(report.reportedUserName || report.reportedUserEmail)}</AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="text-sm font-medium text-gray-900">
