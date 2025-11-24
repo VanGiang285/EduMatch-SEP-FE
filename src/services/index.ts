@@ -27,3 +27,4 @@ export * from './refundPolicyService';
 export * from './tutorVerificationRequestService';
 export * from './aiChatbotService';
 export * from './reportService';
+export * from './feedbackService';

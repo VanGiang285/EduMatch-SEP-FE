@@ -651,6 +651,35 @@ export interface ClassApplicationDto {
   classRequest?: ClassRequestDto;
 }
 
+// ==================== FEEDBACK (Tutor Feedback) ====================
+
+export interface TutorFeedbackDto {
+  id: number;
+  tutorId: number;
+  bookingId: number;
+  learnerEmail: string;
+  overallRating: number; // Average of all criteria ratings
+  comment?: string;
+  createdAt: string;
+  updateAt?: string;
+  feedbackDetails: TutorFeedbackDetailDto[];
+}
+
+export interface TutorFeedbackDetailDto {
+  criterionId: number;
+  criteriaName?: string;
+  rating: number; // 1-5
+}
+
+export interface FeedbackCriterion {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  createdAt?: string;
+  isActive?: boolean;
+}
+
 // ==================== SEARCH & FILTER ====================
 
 export interface TutorFilterDto {

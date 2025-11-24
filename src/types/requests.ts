@@ -452,6 +452,10 @@ export interface ReportDefenseCreateRequest {
   evidences?: BasicEvidenceRequest[];
 }
 
+export interface ReportDefenseUpdateRequest {
+  note: string; // Required, 3-2000 characters
+}
+
 // ==================== REPORT REQUESTS ====================
 
 export interface ReportCreateRequest {
@@ -471,5 +475,26 @@ export interface ReportUpdateRequest {
 
 export interface TutorComplaintRequest {
   defenseNote: string;
+}
+
+// ==================== FEEDBACK REQUESTS ====================
+
+export interface CreateTutorFeedbackRequest {
+  bookingId: number;
+  tutorId: number;
+  comment?: string;
+  feedbackDetails: CreateTutorFeedbackDetailRequest[];
+}
+
+export interface CreateTutorFeedbackDetailRequest {
+  criterionId: number;
+  rating: number; // 1-5
+}
+
+export interface UpdateTutorFeedbackRequest {
+  bookingId: number;
+  tutorId: number;
+  comment?: string;
+  feedbackDetails: import('./backend').TutorFeedbackDetailDto[]; // Use existing detail DTO from backend.ts
 }
 
