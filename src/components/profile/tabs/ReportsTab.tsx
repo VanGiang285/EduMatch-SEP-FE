@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
@@ -40,11 +40,11 @@ import {
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
 import { Label } from '@/components/ui/form/label';
-import { Search, Plus, Eye, Loader2, ArrowUpDown, Upload, X, Image as ImageIcon, Video, Edit, Trash2, Shield } from 'lucide-react';
+import { Search, Plus, Eye, Loader2, ArrowUpDown, X, Edit, Shield } from 'lucide-react';
 import { ReportService, TutorService, MediaService } from '@/services';
-import { ReportListItemDto, ReportFullDetailDto, ReportEvidenceDto, ReportDefenseDto, TutorProfileDto } from '@/types/backend';
+import { ReportListItemDto, ReportFullDetailDto, TutorProfileDto } from '@/types/backend';
 import { ReportStatus, MediaType, ReportEvidenceType, TutorStatus } from '@/types/enums';
-import { ReportCreateRequest, ReportUpdateByLearnerRequest, ReportDefenseCreateRequest, ReportEvidenceCreateRequest, BasicEvidenceRequest } from '@/types/requests';
+import { ReportCreateRequest, ReportUpdateByLearnerRequest, ReportDefenseCreateRequest, BasicEvidenceRequest } from '@/types/requests';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -56,7 +56,6 @@ import {
 } from '@/components/ui/form/select';
 import { SelectWithSearch, SelectWithSearchItem } from '@/components/ui/form/select-with-search';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
-import { Separator } from '@/components/ui/layout/separator';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -64,12 +63,13 @@ type SortField = 'id' | 'createdAt' | 'status';
 type SortOrder = 'asc' | 'desc';
 
 const normalizeMediaType = (mediaType: number | string | undefined): number => {
-  if (mediaType === undefined || mediaType === null) return 1;
+  if (mediaType === undefined || mediaType === null) return MediaType.Video;
   if (typeof mediaType === 'string') {
-    if (mediaType === 'Image' || mediaType === '0') return 0;
-    if (mediaType === 'Video' || mediaType === '1') return 1;
     const parsed = parseInt(mediaType, 10);
-    return isNaN(parsed) ? 1 : parsed;
+    if (!isNaN(parsed)) return parsed;
+    if (mediaType.toLowerCase() === 'image') return MediaType.Image;
+    if (mediaType.toLowerCase() === 'video') return MediaType.Video;
+    return MediaType.Video;
   }
   return Number(mediaType);
 };
@@ -174,6 +174,11 @@ const getStatusColor = (status: ReportStatus | number | string): string => {
 export function ReportsTab() {
   const { user } = useAuth();
   const { showSuccess, showError } = useCustomToast();
+  const showErrorRef = React.useRef(showError);
+
+  React.useEffect(() => {
+    showErrorRef.current = showError;
+  }, [showError]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReportStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -204,30 +209,29 @@ export function ReportsTab() {
     evidences: [] as BasicEvidenceRequest[],
   });
 
-  const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
-  const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadingDefenseFiles, setUploadingDefenseFiles] = useState<File[]>([]);
-  const [uploadedDefenseUrls, setUploadedDefenseUrls] = useState<string[]>([]);
+  const [, setUploadingFiles] = useState<File[]>([]);
+  const [, setUploadedUrls] = useState<string[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [tutorNames, setTutorNames] = useState<Record<string, string>>({});
   const [tutorAvatars, setTutorAvatars] = useState<Record<string, string>>({});
   const [uploadingDefense, setUploadingDefense] = useState(false);
+  const [, setUploadingDefenseFiles] = useState<File[]>([]);
+  const [, setUploadedDefenseUrls] = useState<string[]>([]);
   const [showConfirmDefense, setShowConfirmDefense] = useState(false);
   const [showConfirmUpdate, setShowConfirmUpdate] = useState(false);
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
+  const [canSubmitDefense, setCanSubmitDefense] = useState(false);
 
-  useEffect(() => {
-    fetchReports();
-  }, []);
-
-  const fetchReports = async () => {
-    if (!user) return;
+  const fetchReports = useCallback(async () => {
+    if (!user) {
+      setReports([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const response = isLearner
-        ? await ReportService.getLearnerReports()
-        : await ReportService.getTutorReports();
+      const response = isLearner ? await ReportService.getLearnerReports() : await ReportService.getTutorReports();
       if (response.success && response.data) {
         setReports(response.data);
       } else {
@@ -235,12 +239,16 @@ export function ReportsTab() {
       }
     } catch (error) {
       console.error('Error fetching reports:', error);
-      showError('Lỗi', 'Không thể tải danh sách báo cáo');
+      showErrorRef.current('Lỗi', 'Không thể tải danh sách báo cáo');
       setReports([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [isLearner, user]);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
 
   const fetchTutors = async () => {
     setLoadingTutors(true);
@@ -265,32 +273,35 @@ export function ReportsTab() {
       const response = await ReportService.getFullReportDetail(report.id);
       if (response.success && response.data) {
         const reportData = response.data;
+        const tutorEvidences = reportData.tutorEvidences ?? [];
         if (reportData.reporterEvidences) {
-          reportData.reporterEvidences = reportData.reporterEvidences.map(ev => ({
+          reportData.reporterEvidences = reportData.reporterEvidences.map((ev) => ({
             ...ev,
             mediaType: normalizeMediaType(ev.mediaType),
           }));
         }
-        if (reportData.defenses && reportData.defenses.length > 0) {
+        let defenses = reportData.defenses || [];
+        if (defenses.length > 0) {
           const defensesResponse = await ReportService.getDefenses(reportData.id);
           if (defensesResponse.success && defensesResponse.data) {
-            for (const defenseFromApi of defensesResponse.data) {
-              const existingDefense = reportData.defenses.find(d => d.id === defenseFromApi.id);
-              if (existingDefense && defenseFromApi.evidences && defenseFromApi.evidences.length > 0) {
-                existingDefense.evidences = defenseFromApi.evidences.map(ev => ({
-                  ...ev,
-                  mediaType: normalizeMediaType(ev.mediaType),
-                }));
-              }
-            }
+            defenses = defensesResponse.data;
           }
-          if (reportData.tutorEvidences && reportData.tutorEvidences.length > 0) {
+
+          defenses = defenses.map((defense) => ({
+            ...defense,
+            evidences: (defense.evidences || []).map((ev) => ({
+              ...ev,
+              mediaType: normalizeMediaType(ev.mediaType),
+            })),
+          }));
+
+          if (tutorEvidences.length > 0) {
             const usedEvidenceIds = new Set<number>();
-            for (const defense of reportData.defenses) {
+            defenses = defenses.map((defense) => {
               if (!defense.evidences || defense.evidences.length === 0) {
                 const defenseDate = new Date(defense.createdAt).getTime();
-                const relatedEvidences = reportData.tutorEvidences
-                  .filter(ev => {
+                const relatedEvidences = tutorEvidences
+                  .filter((ev) => {
                     if (usedEvidenceIds.has(ev.id)) return false;
                     if (ev.submittedByEmail && defense.tutorEmail && ev.submittedByEmail !== defense.tutorEmail) return false;
                     const evDate = new Date(ev.createdAt).getTime();
@@ -305,29 +316,38 @@ export function ReportsTab() {
                 
                 if (relatedEvidences.length > 0) {
                   const closestEvidences = relatedEvidences.slice(0, 10);
-                  defense.evidences = closestEvidences.map(ev => {
+                  const evidenceList = closestEvidences.map((ev) => {
                     usedEvidenceIds.add(ev.id);
                     return {
                       ...ev,
                       mediaType: normalizeMediaType(ev.mediaType),
                     };
                   });
+                  return { ...defense, evidences: evidenceList };
                 }
               }
-            }
+              return {
+                ...defense,
+                evidences: (defense.evidences || []).map((ev) => ({
+                  ...ev,
+                  mediaType: normalizeMediaType(ev.mediaType),
+                })),
+              };
+            });
           }
-          reportData.defenses = reportData.defenses.map(defense => ({
-            ...defense,
-            evidences: defense.evidences?.map(ev => ({
-              ...ev,
-              mediaType: normalizeMediaType(ev.mediaType),
-            })),
-          }));
+          reportData.defenses = defenses;
           
-          const uniqueTutorEmails = [...new Set(reportData.defenses.map(d => d.tutorEmail))];
+          const uniqueTutorEmails = Array.from(
+            new Set(
+              defenses
+                .map((d) => d.tutorEmail)
+                .filter((email): email is string => Boolean(email))
+            )
+          );
           const tutorNameMap: Record<string, string> = {};
           const tutorAvatarMap: Record<string, string> = {};
-          for (const email of uniqueTutorEmails) {
+          await Promise.all(
+            uniqueTutorEmails.map(async (email) => {
             try {
               const tutorResponse = await TutorService.getTutorByEmail(email);
               if (tutorResponse.success && tutorResponse.data) {
@@ -341,11 +361,14 @@ export function ReportsTab() {
               tutorNameMap[email] = email;
               tutorAvatarMap[email] = '';
             }
-          }
+            })
+          );
           setTutorNames(tutorNameMap);
           setTutorAvatars(tutorAvatarMap);
         }
         setSelectedReport(reportData);
+        const canDefenseResponse = await ReportService.canSubmitDefense(report.id);
+        setCanSubmitDefense(!!canDefenseResponse.data && canDefenseResponse.success);
         setShowDetailDialog(true);
       } else {
         showError('Lỗi', 'Không thể tải chi tiết báo cáo');
@@ -409,10 +432,11 @@ export function ReportsTab() {
           mediaType: mediaType as 'Image' | 'Video',
         });
         
-        if (response.success && response.data?.secureUrl) {
+        const uploadResult = response.data?.data;
+        if (response.success && uploadResult?.secureUrl) {
           return {
-            url: response.data.secureUrl,
-            publicId: response.data.publicId,
+            url: uploadResult.secureUrl,
+            publicId: uploadResult.publicId,
             mediaType: file.type.startsWith('image/') ? MediaType.Image : MediaType.Video,
             file,
           };
@@ -479,10 +503,11 @@ export function ReportsTab() {
           mediaType: mediaType as 'Image' | 'Video',
         });
         
-        if (response.success && response.data?.secureUrl) {
+        const uploadResult = response.data?.data;
+        if (response.success && uploadResult?.secureUrl) {
           return {
-            url: response.data.secureUrl,
-            publicId: response.data.publicId,
+            url: uploadResult.secureUrl,
+            publicId: uploadResult.publicId,
             mediaType: file.type.startsWith('image/') ? MediaType.Image : MediaType.Video,
             file,
           };
@@ -699,6 +724,7 @@ export function ReportsTab() {
               mediaType: normalizeMediaType(ev.mediaType),
             }));
           }
+          const tutorEvidences = reportData.tutorEvidences ?? [];
           if (reportData.defenses && reportData.defenses.length > 0) {
             const defensesResponse = await ReportService.getDefenses(reportData.id);
             if (defensesResponse.success && defensesResponse.data) {
@@ -712,12 +738,12 @@ export function ReportsTab() {
                 }
               }
             }
-            if (reportData.tutorEvidences && reportData.tutorEvidences.length > 0) {
+            if (tutorEvidences.length > 0) {
               const usedEvidenceIds = new Set<number>();
-              for (const defense of reportData.defenses) {
+            for (const defense of reportData.defenses) {
                 if (!defense.evidences || defense.evidences.length === 0) {
                   const defenseDate = new Date(defense.createdAt).getTime();
-                  const relatedEvidences = reportData.tutorEvidences
+                  const relatedEvidences = tutorEvidences
                     .filter(ev => {
                       if (usedEvidenceIds.has(ev.id)) return false;
                       if (ev.submittedByEmail && defense.tutorEmail && ev.submittedByEmail !== defense.tutorEmail) return false;
@@ -732,8 +758,8 @@ export function ReportsTab() {
                     });
                   
                   if (relatedEvidences.length > 0) {
-                    const closestEvidences = relatedEvidences.slice(0, 10);
-                    defense.evidences = closestEvidences.map(ev => {
+                  const closestEvidences = relatedEvidences.slice(0, 10);
+                  defense.evidences = closestEvidences.map(ev => {
                       usedEvidenceIds.add(ev.id);
                       return {
                         ...ev,
@@ -752,7 +778,13 @@ export function ReportsTab() {
               })),
             }));
             
-            const uniqueTutorEmails = [...new Set(reportData.defenses.map(d => d.tutorEmail))];
+            const uniqueTutorEmails = Array.from(
+              new Set(
+                reportData.defenses
+                  .map((d) => d.tutorEmail)
+                  .filter((email): email is string => Boolean(email))
+              )
+            );
             const tutorNameMap: Record<string, string> = {};
             const tutorAvatarMap: Record<string, string> = {};
             for (const email of uniqueTutorEmails) {
@@ -816,7 +848,7 @@ export function ReportsTab() {
   };
 
   const filteredReports = useMemo(() => {
-    let filtered = reports.filter(report => {
+    const filtered = reports.filter(report => {
       const matchesSearch = searchTerm === '' || 
         report.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (isLearner 
@@ -853,7 +885,7 @@ export function ReportsTab() {
     });
 
     return filtered;
-  }, [reports, searchTerm, statusFilter, sortField, sortOrder]);
+  }, [reports, searchTerm, statusFilter, sortField, sortOrder, isLearner]);
 
   const totalPages = Math.ceil(filteredReports.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -1130,8 +1162,15 @@ export function ReportsTab() {
       {showDetailDialog && selectedReport && (
         <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
           <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col" aria-describedby={undefined}>
-            <DialogHeader className="flex-shrink-0">
-              <DialogTitle className="text-xl font-semibold text-gray-900">Chi tiết báo cáo</DialogTitle>
+            <DialogHeader className="flex-shrink-0 pb-2">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <DialogTitle className="text-xl font-semibold text-gray-900">Chi tiết báo cáo</DialogTitle>
+                {isPendingOrUnderReviewStatus(selectedReport.status) && !canSubmitDefense && (
+                  <span className="text-base font-bold text-gray-700">
+                    Đã quá thời gian kháng cáo
+                  </span>
+                )}
+              </div>
             </DialogHeader>
             {selectedReport && (
               <div className="flex-1 overflow-y-auto">
@@ -1203,14 +1242,18 @@ export function ReportsTab() {
                   </CardContent>
                 </Card>
 
-                {selectedReport.adminNotes && (
-                  <Card className="bg-white border border-blue-200">
-                    <CardHeader className="pb-3 bg-blue-50">
-                      <CardTitle className="text-base font-semibold text-gray-900">Ghi chú của admin</CardTitle>
+                {selectedReport.handledByAdminEmail && (
+                  <Card className="border border-red-300 bg-red-50">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-semibold text-red-900">
+                        Xử lý bởi {selectedReport.handledByAdminEmail}
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-gray-900 mt-2 p-3 bg-gray-50 rounded-lg whitespace-pre-wrap">
-                        {selectedReport.adminNotes}
+                      <p className="text-sm text-red-900 mt-2 p-3 bg-white/70 rounded-lg border border-red-200 whitespace-pre-wrap">
+                        {selectedReport.adminNotes && selectedReport.adminNotes.trim().length > 0
+                          ? selectedReport.adminNotes
+                          : 'Chưa có ghi chú xử lý'}
                       </p>
                     </CardContent>
                   </Card>
@@ -1369,18 +1412,24 @@ export function ReportsTab() {
                 </>
               )}
               {isTutor && isPendingOrUnderReviewStatus(selectedReport.status) && (
-                <Button
-                  onClick={() => {
-                    setDefenseFormData({ note: '', evidences: [] });
-                    setUploadingDefenseFiles([]);
-                    setUploadedDefenseUrls([]);
-                    setShowDefenseDialog(true);
-                  }}
-                  className="bg-[#257180] hover:bg-[#257180]/90 text-white"
-                >
-                  <Shield className="h-4 w-4 mr-2" />
-                  Kháng cáo
-                </Button>
+                canSubmitDefense ? (
+                  <Button
+                    onClick={() => {
+                      setDefenseFormData({ note: '', evidences: [] });
+                      setUploadingDefenseFiles([]);
+                      setUploadedDefenseUrls([]);
+                      setShowDefenseDialog(true);
+                    }}
+                    className="bg-[#257180] hover:bg-[#257180]/90 text-white"
+                  >
+                    <Shield className="h-4 w-4 mr-2" />
+                    Kháng cáo
+                  </Button>
+                ) : (
+                  <span className="text-base font-semibold text-gray-600">
+                    Đã quá thời gian kháng cáo
+                  </span>
+                )
               )}
               <Button
                 variant="outline"
@@ -1733,7 +1782,7 @@ export function ReportsTab() {
                 Hủy
               </Button>
               <Button
-                onClick={handleSubmitDefense}
+                onClick={handleConfirmDefense}
                 disabled={isProcessing || !defenseFormData.note.trim()}
                 className="bg-[#257180] hover:bg-[#257180]/90 text-white"
               >
