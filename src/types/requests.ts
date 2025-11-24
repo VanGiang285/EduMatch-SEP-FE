@@ -10,7 +10,7 @@ import {
   VerifyStatus,
   InstitutionType,
   TutorAvailabilityStatus,
-  TutorVerificationRequestStatus
+  TutorVerificationRequestStatus,
 } from './enums';
 
 // ==================== AUTH REQUESTS ====================
@@ -18,6 +18,7 @@ import {
 export interface LoginRequest {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface RegisterRequest {
@@ -471,4 +472,3 @@ export interface ReportUpdateRequest {
 export interface TutorComplaintRequest {
   defenseNote: string;
 }
-
