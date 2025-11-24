@@ -7,13 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout
 import { Button } from '@/components/ui/basic/button';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { WalletService } from '@/services/walletService';
-import { useWallet } from '@/hooks/useWallet';
+import { useWalletContext } from '@/contexts/WalletContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
 
 function DepositSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refetch } = useWallet();
+  const { refetch } = useWalletContext();
   const { showSuccess, showError } = useCustomToast();
 
   useEffect(() => {
@@ -36,10 +36,10 @@ function DepositSuccessContent() {
           'Thanh toán thành công',
           `Bạn đã nạp ${WalletService.formatCurrency(amount)} vào ví thành công.`
         );
-        
+
         // Refresh wallet balance
         await refetch();
-        
+
         // Redirect to wallet tab after 2 seconds
         setTimeout(() => {
           router.push('/profile?tab=wallet');
@@ -50,7 +50,7 @@ function DepositSuccessContent() {
           'Giao dịch đã bị hủy',
           'Bạn đã hủy giao dịch nạp tiền. Vui lòng thử lại nếu muốn tiếp tục.'
         );
-        
+
         // Redirect to wallet tab after 2 seconds
         setTimeout(() => {
           router.push('/profile?tab=wallet');
@@ -61,7 +61,7 @@ function DepositSuccessContent() {
           'Thanh toán thất bại',
           'Giao dịch không thành công. Vui lòng thử lại hoặc liên hệ hỗ trợ nếu vấn đề vẫn tiếp tục.'
         );
-        
+
         // Redirect to wallet tab after 2 seconds
         setTimeout(() => {
           router.push('/profile?tab=wallet');
@@ -100,8 +100,8 @@ function DepositSuccessContent() {
                 {isSuccess
                   ? 'Nạp tiền thành công'
                   : isCancelled
-                  ? 'Giao dịch đã bị hủy'
-                  : 'Thanh toán thất bại'}
+                    ? 'Giao dịch đã bị hủy'
+                    : 'Thanh toán thất bại'}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

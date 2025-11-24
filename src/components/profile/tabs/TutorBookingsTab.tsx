@@ -361,16 +361,16 @@ export function TutorBookingsTab() {
 
                   const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
 
-                  // Lấy endDate từ availability.endDate (đã là datetime đầy đủ)
+                  // Lấy endDate: ưu tiên lấy từ slot.endTime, nếu không có mới dùng availability.endDate
                   let endDate: Date | null = null;
-                  if (availability?.endDate) {
-                    // availability.endDate đã có datetime đầy đủ, lấy trực tiếp
-                    endDate = new Date(availability.endDate);
-                  } else if (scheduleDate && slot?.endTime) {
-                    // Nếu không có availability.endDate nhưng có slot, tính từ scheduleDate + slot.endTime
+                  if (scheduleDate && slot?.endTime) {
+                    // Ưu tiên: tính từ scheduleDate + slot.endTime
                     const [endHours, endMinutes] = slot.endTime.split(':').map(Number);
                     endDate = new Date(scheduleDate);
                     endDate.setHours(endHours, endMinutes, 0, 0);
+                  } else if (availability?.endDate) {
+                    // Fallback: dùng availability.endDate nếu không có slot.endTime
+                    endDate = new Date(availability.endDate);
                   }
 
                   return (

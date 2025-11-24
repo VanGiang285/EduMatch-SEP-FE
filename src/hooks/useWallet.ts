@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { WalletService } from '@/services/walletService';
@@ -11,6 +11,7 @@ export interface UseWalletReturn {
   loading: boolean;
   error: any | null;
   refetch: () => Promise<void>;
+  reset: () => void;
 }
 
 export function useWallet(): UseWalletReturn {
@@ -23,11 +24,13 @@ export function useWallet(): UseWalletReturn {
       setLoading(true);
       setError(null);
       const response = await WalletService.getWalletBalance();
-      
+
       if (response.success && response.data) {
         setWallet(response.data);
       } else {
-        throw new Error(response.error?.message || 'Failed to fetch wallet balance');
+        throw new Error(
+          response.error?.message || 'Failed to fetch wallet balance'
+        );
       }
     } catch (err) {
       const appError = ErrorHandler.handleApiError(err);
@@ -47,12 +50,18 @@ export function useWallet(): UseWalletReturn {
     await fetchWallet();
   }, [fetchWallet]);
 
+  const reset = useCallback(() => {
+    setWallet(null);
+    setError(null);
+    setLoading(false);
+  }, []);
+
   return {
     balance: wallet?.balance ?? 0,
     wallet,
     loading,
     error,
     refetch,
+    reset,
   };
 }
-

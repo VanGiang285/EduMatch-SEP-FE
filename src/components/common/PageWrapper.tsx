@@ -2,7 +2,7 @@
 import { ReactNode } from "react";
 import { Navbar } from "./Navbar";
 import { useRouter } from "next/navigation";
-import { useWallet } from "@/hooks/useWallet";
+import { useWalletContext } from "@/contexts/WalletContext";
 
 interface PageWrapperProps {
   children: ReactNode;
@@ -11,7 +11,7 @@ interface PageWrapperProps {
 
 export function PageWrapper({ children, currentPage }: PageWrapperProps) {
   const router = useRouter();
-  const { balance } = useWallet();
+  const { balance } = useWalletContext();
 
   return (
     <>
