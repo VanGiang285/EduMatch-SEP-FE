@@ -213,10 +213,42 @@ export const EnumHelpers = {
   },
 
   /**
+   * Convert string/number sang VerifyStatus enum
+   */
+  parseVerifyStatus: (status: VerifyStatus | string | number | undefined | null): VerifyStatus => {
+    if (typeof status === 'number') {
+      return status as VerifyStatus;
+    }
+    if (typeof status === 'string') {
+      const trimmed = status.trim();
+      const numeric = Number(trimmed);
+      if (!Number.isNaN(numeric)) {
+        return numeric as VerifyStatus;
+      }
+      switch (trimmed.toLowerCase()) {
+        case 'pending':
+          return VerifyStatus.Pending;
+        case 'verified':
+          return VerifyStatus.Verified;
+        case 'rejected':
+          return VerifyStatus.Rejected;
+        case 'expired':
+          return VerifyStatus.Expired;
+        case 'removed':
+          return VerifyStatus.Removed;
+        default:
+          return VerifyStatus.Pending;
+      }
+    }
+    return VerifyStatus.Pending;
+  },
+
+  /**
    * Lấy label tiếng Việt cho VerifyStatus
    */
-  getVerifyStatusLabel: (status: VerifyStatus): string => {
-    switch (status) {
+  getVerifyStatusLabel: (status: VerifyStatus | string | number | undefined | null): string => {
+    const parsedStatus = EnumHelpers.parseVerifyStatus(status);
+    switch (parsedStatus) {
       case VerifyStatus.Pending:
         return 'Chờ duyệt';
       case VerifyStatus.Verified:
@@ -439,6 +471,64 @@ export const EnumHelpers = {
       return 'Đang ứng tuyển';
     }
     return 'Đã hủy';
+  },
+
+  /**
+   * Convert string/number sang TutorVerificationRequestStatus
+   */
+  parseTutorVerificationRequestStatus: (
+    status: TutorVerificationRequestStatus | string | number | undefined | null,
+  ): TutorVerificationRequestStatus => {
+    if (typeof status === 'number') {
+      return status as TutorVerificationRequestStatus;
+    }
+    if (typeof status === 'string') {
+      const trimmed = status.trim();
+      const numeric = Number(trimmed);
+      if (!Number.isNaN(numeric)) {
+        return numeric as TutorVerificationRequestStatus;
+      }
+      switch (trimmed.toLowerCase()) {
+        case 'pending':
+          return TutorVerificationRequestStatus.Pending;
+        case 'approved':
+          return TutorVerificationRequestStatus.Approved;
+        case 'rejected':
+          return TutorVerificationRequestStatus.Rejected;
+        default:
+          return TutorVerificationRequestStatus.Pending;
+      }
+    }
+    return TutorVerificationRequestStatus.Pending;
+  },
+
+  /**
+   * Convert string/number sang BookingRefundRequestStatus
+   */
+  parseBookingRefundRequestStatus: (
+    status: BookingRefundRequestStatus | string | number | undefined | null,
+  ): BookingRefundRequestStatus => {
+    if (typeof status === 'number') {
+      return status as BookingRefundRequestStatus;
+    }
+    if (typeof status === 'string') {
+      const trimmed = status.trim();
+      const numeric = Number(trimmed);
+      if (!Number.isNaN(numeric)) {
+        return numeric as BookingRefundRequestStatus;
+      }
+      switch (trimmed.toLowerCase()) {
+        case 'pending':
+          return BookingRefundRequestStatus.Pending;
+        case 'approved':
+          return BookingRefundRequestStatus.Approved;
+        case 'rejected':
+          return BookingRefundRequestStatus.Rejected;
+        default:
+          return BookingRefundRequestStatus.Pending;
+      }
+    }
+    return BookingRefundRequestStatus.Pending;
   },
 };
 

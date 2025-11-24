@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
 import { Label } from '@/components/ui/form/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
+import { SelectWithSearch, SelectWithSearchItem } from '@/components/ui/form/select-with-search';
 import { Camera, Save, Loader2, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserProfileService } from '@/services/userProfileService';
@@ -14,19 +15,25 @@ import { useCustomToast } from '@/hooks/useCustomToast';
 import { Gender } from '@/types/enums';
 import { UserProfileDto } from '@/types/backend';
 import { UserProfileUpdateRequest } from '@/types/requests';
+import { MediaService } from '@/services/mediaService';
 
 export function ProfileTab() {
   const { user } = useAuth();
   const { showSuccess, showError } = useCustomToast();
+  const showErrorRef = useRef(showError);
+  useEffect(() => {
+    showErrorRef.current = showError;
+  }, [showError]);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [originalData, setOriginalData] = useState<UserProfileDto | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
   const [provinces, setProvinces] = useState<ProvinceDto[]>([]);
+  const [provincesLoaded, setProvincesLoaded] = useState(false);
   const [subDistricts, setSubDistricts] = useState<SubDistrictDto[]>([]);
+  const [subDistrictProvinceId, setSubDistrictProvinceId] = useState('');
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [formData, setFormData] = useState({
     userName: '',
@@ -41,6 +48,8 @@ export function ProfileTab() {
     addressLine: '',
     avatarUrl: '',
     avatarUrlPublicId: '',
+    latitude: '',
+    longitude: '',
   });
 
   // Load provinces on mount
@@ -56,6 +65,7 @@ export function ProfileTab() {
         console.error('Error loading provinces:', error);
       } finally {
         setIsLoadingLocations(false);
+        setProvincesLoaded(true);
       }
     };
     loadProvinces();
@@ -66,12 +76,18 @@ export function ProfileTab() {
     const loadSubDistricts = async () => {
       if (!formData.cityId) {
         setSubDistricts([]);
+        setSubDistrictProvinceId('');
         return;
       }
-      
-      const provinceId = parseInt(formData.cityId);
-      if (isNaN(provinceId) || provinceId <= 0) {
+
+      if (subDistrictProvinceId === formData.cityId) {
+        return;
+      }
+
+      const provinceId = parseInt(formData.cityId, 10);
+      if (Number.isNaN(provinceId) || provinceId <= 0) {
         setSubDistricts([]);
+        setSubDistrictProvinceId('');
         return;
       }
 
@@ -79,19 +95,35 @@ export function ProfileTab() {
       try {
         const response = await LocationService.getSubDistrictsByProvinceId(provinceId);
         if (response.success && response.data) {
-          setSubDistricts(response.data);
+          const districts = response.data;
+          setSubDistricts(districts);
+          setSubDistrictProvinceId(formData.cityId);
+          setFormData((prev) => {
+            if (!prev.subDistrictId) {
+              return prev;
+            }
+            const matched = districts.find(
+              (district) => district.id.toString() === prev.subDistrictId
+            );
+            if (matched && matched.name !== prev.subDistrictName) {
+              return { ...prev, subDistrictName: matched.name };
+            }
+            return prev;
+          });
         } else {
           setSubDistricts([]);
+          setSubDistrictProvinceId('');
         }
       } catch (error) {
         console.error('Error loading sub-districts:', error);
         setSubDistricts([]);
+        setSubDistrictProvinceId('');
       } finally {
         setIsLoadingLocations(false);
       }
     };
     loadSubDistricts();
-  }, [formData.cityId]);
+  }, [formData.cityId, subDistrictProvinceId]);
 
   // Load user profile data
   useEffect(() => {
@@ -101,46 +133,78 @@ export function ProfileTab() {
         return;
       }
 
+      if (!provincesLoaded) {
+        return;
+      }
+
       setIsLoading(true);
       try {
         const response = await UserProfileService.getUserProfile(user.email);
         if (response.success && response.data) {
           const profile = response.data;
           setOriginalData(profile);
-          
-          // Format date for input (YYYY-MM-DD)
-          const dobFormatted = profile.dob 
+
+          const dobFormatted = profile.dob
             ? new Date(profile.dob).toISOString().split('T')[0]
             : '';
 
+          const cityIdStr = profile.cityId?.toString() || '';
+          const districtIdStr = profile.subDistrictId?.toString() || '';
+          const provinceMatch = provinces.find((province) => province.id === profile.cityId);
+          const resolvedProvinceName = profile.province?.name || provinceMatch?.name || '';
+          let resolvedSubDistrictName = profile.subDistrict?.name || '';
+
+          if (!resolvedSubDistrictName && profile.cityId && profile.subDistrictId) {
+            try {
+              const subDistrictRes = await LocationService.getSubDistrictsByProvinceId(profile.cityId);
+              if (subDistrictRes.success && subDistrictRes.data) {
+                setSubDistricts(subDistrictRes.data);
+                setSubDistrictProvinceId(profile.cityId.toString());
+                const matchedDistrict = subDistrictRes.data.find(
+                  (district) => district.id === profile.subDistrictId
+                );
+                resolvedSubDistrictName = matchedDistrict?.name || '';
+              } else {
+                setSubDistricts([]);
+                setSubDistrictProvinceId('');
+              }
+            } catch (error) {
+              console.error('Error resolving sub-district names:', error);
+              setSubDistricts([]);
+              setSubDistrictProvinceId('');
+            }
+          }
+
           setFormData({
-            userName: user.name || user.email || '',
+            userName: profile.userEmailNavigation?.userName || user.name || user.email || '',
             email: user.email,
-            phone: user.phone || '',
+            phone: profile.userEmailNavigation?.phone || '',
             dob: dobFormatted,
             gender: profile.gender?.toString() || Gender.Unknown.toString(),
-            cityId: profile.cityId?.toString() || '',
-            subDistrictId: profile.subDistrictId?.toString() || '',
-            cityName: profile.province?.name || '',
-            subDistrictName: profile.subDistrict?.name || '',
+            cityId: cityIdStr,
+            subDistrictId: districtIdStr,
+            cityName: resolvedProvinceName,
+            subDistrictName: resolvedSubDistrictName,
             addressLine: profile.addressLine || '',
             avatarUrl: profile.avatarUrl || '',
             avatarUrlPublicId: profile.avatarUrlPublicId || '',
+            latitude: profile.latitude?.toString() || '',
+            longitude: profile.longitude?.toString() || '',
           });
-          // Set avatar preview
+
           if (profile.avatarUrl) {
             setAvatarPreview(profile.avatarUrl);
           }
         }
       } catch (error) {
-        showError('Lỗi', 'Không thể tải thông tin người dùng. Vui lòng thử lại.');
+        showErrorRef.current?.('Lỗi', 'Không thể tải thông tin người dùng. Vui lòng thử lại.');
       } finally {
         setIsLoading(false);
       }
     };
 
     loadUserProfile();
-  }, [user?.email]);
+  }, [user?.email, user?.name, provincesLoaded, provinces]);
 
   const handleCancel = () => {
     if (originalData && user) {
@@ -149,9 +213,9 @@ export function ProfileTab() {
         : '';
       
       setFormData({
-        userName: user.name || user.email || '',
+        userName: originalData.userEmailNavigation?.userName || user.name || user.email || '',
         email: user.email,
-        phone: user.phone || '',
+        phone: originalData.userEmailNavigation?.phone || '',
         dob: dobFormatted,
         gender: originalData.gender?.toString() || Gender.Unknown.toString(),
         cityId: originalData.cityId?.toString() || '',
@@ -161,10 +225,10 @@ export function ProfileTab() {
         addressLine: originalData.addressLine || '',
         avatarUrl: originalData.avatarUrl || '',
         avatarUrlPublicId: originalData.avatarUrlPublicId || '',
+        latitude: originalData.latitude?.toString() || '',
+        longitude: originalData.longitude?.toString() || '',
       });
-      // Reset avatar preview
       setAvatarPreview(originalData.avatarUrl || null);
-      setSelectedAvatarFile(null);
     }
     setIsEditing(false);
   };
@@ -192,7 +256,6 @@ export function ProfileTab() {
       setAvatarPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
-    setSelectedAvatarFile(file);
 
     // Upload avatar immediately
     if (!user?.email) {
@@ -202,21 +265,34 @@ export function ProfileTab() {
 
     setIsUploadingAvatar(true);
     try {
-      const uploadResponse = await UserProfileService.uploadAvatar(file, user.email);
-      if (uploadResponse.success && uploadResponse.data) {
-        setFormData({
-          ...formData,
-          avatarUrl: uploadResponse.data.avatarUrl,
-          avatarUrlPublicId: uploadResponse.data.avatarUrlPublicId || '',
-        });
+      const uploadResponse = await MediaService.uploadFile({
+        file,
+        ownerEmail: user.email,
+        mediaType: 'Image',
+      });
+      const uploadPayload = uploadResponse.data as any;
+      const secureUrl = uploadPayload?.secureUrl ?? uploadPayload?.data?.secureUrl;
+      const publicId = uploadPayload?.publicId ?? uploadPayload?.data?.publicId;
+      if (uploadResponse.success && secureUrl) {
+        setFormData((prev) => ({
+          ...prev,
+          avatarUrl: secureUrl,
+          avatarUrlPublicId: publicId || '',
+        }));
+        setAvatarPreview(secureUrl);
         showSuccess('Thành công', 'Tải ảnh đại diện thành công.');
       } else {
-        throw new Error(uploadResponse.message || uploadResponse.error || 'Upload thất bại');
+        const uploadErrorMessage =
+          typeof uploadResponse.message === 'string' && uploadResponse.message
+            ? uploadResponse.message
+            : typeof uploadResponse.error === 'string' && uploadResponse.error
+              ? uploadResponse.error
+              : 'Upload thất bại';
+        throw new Error(uploadErrorMessage);
       }
     } catch (error: any) {
-      showError('Lỗi', error.message || 'Không thể tải ảnh lên. Vui lòng thử lại.');
+      showErrorRef.current?.('Lỗi', error.message || 'Không thể tải ảnh lên. Vui lòng thử lại.');
       setAvatarPreview(formData.avatarUrl || null);
-      setSelectedAvatarFile(null);
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -230,7 +306,6 @@ export function ProfileTab() {
       avatarUrlPublicId: '',
     });
     setAvatarPreview(null);
-    setSelectedAvatarFile(null);
   };
 
   const handleSave = async () => {
@@ -243,6 +318,8 @@ export function ProfileTab() {
     try {
       const updateRequest: UserProfileUpdateRequest = {
         userEmail: user.email,
+        userName: formData.userName || undefined,
+        phone: formData.phone || undefined,
         dob: formData.dob || undefined,
         gender: parseInt(formData.gender) as Gender,
         addressLine: formData.addressLine || undefined,
@@ -250,17 +327,22 @@ export function ProfileTab() {
         subDistrictId: formData.subDistrictId ? parseInt(formData.subDistrictId) : undefined,
         avatarUrl: formData.avatarUrl || undefined,
         avatarUrlPublicId: formData.avatarUrlPublicId || undefined,
+        latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
       };
 
       const response = await UserProfileService.updateUserProfile(updateRequest);
-      
+
       if (response.success && response.data) {
         setOriginalData(response.data);
         showSuccess('Thành công', 'Cập nhật thông tin thành công.');
         setIsEditing(false);
-        setSelectedAvatarFile(null);
       } else {
-        throw new Error(response.message || 'Cập nhật thất bại');
+        const message =
+          typeof response.message === 'string' && response.message
+            ? response.message
+            : 'Cập nhật thất bại';
+        throw new Error(message);
       }
     } catch (error: any) {
       showError('Lỗi', error.message || 'Không thể cập nhật thông tin. Vui lòng thử lại.');
@@ -427,9 +509,8 @@ export function ProfileTab() {
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                disabled={true}
-                className="bg-gray-50"
-                placeholder="Số điện thoại (tính năng cập nhật đang phát triển)"
+                disabled={!isEditing}
+                placeholder="Nhập số điện thoại"
               />
             </div>
 
@@ -474,59 +555,54 @@ export function ProfileTab() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="city">Tỉnh/Thành phố</Label>
-              <Select
+              <SelectWithSearch
                 value={formData.cityId}
                 onValueChange={(value) => {
-                  setFormData({
-                    ...formData,
+                  setFormData((prev) => ({
+                    ...prev,
                     cityId: value,
-                    subDistrictId: '', // Reset district when province changes
-                    cityName: provinces.find(p => p.id.toString() === value)?.name || '',
+                    subDistrictId: '',
+                    cityName: provinces.find((province) => province.id.toString() === value)?.name || '',
                     subDistrictName: '',
-                  });
+                  }));
                 }}
-                disabled={!isEditing}
+                placeholder={isLoadingLocations ? 'Đang tải...' : 'Chọn tỉnh/thành phố'}
+                disabled={!isEditing || isLoadingLocations}
               >
-                <SelectTrigger id="city" className={!isEditing ? "bg-gray-50" : ""}>
-                  <SelectValue placeholder={isLoadingLocations ? "Đang tải..." : "Chọn tỉnh/thành phố"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {provinces.map((province) => (
-                    <SelectItem key={province.id} value={province.id.toString()}>
-                      {province.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {provinces.map((province) => (
+                  <SelectWithSearchItem key={province.id} value={province.id.toString()}>
+                    {province.name}
+                  </SelectWithSearchItem>
+                ))}
+              </SelectWithSearch>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="district">Quận/Huyện</Label>
-              <Select
+              <SelectWithSearch
                 value={formData.subDistrictId}
                 onValueChange={(value) => {
-                  setFormData({
-                    ...formData,
+                  setFormData((prev) => ({
+                    ...prev,
                     subDistrictId: value,
-                    subDistrictName: subDistricts.find(d => d.id.toString() === value)?.name || '',
-                  });
+                    subDistrictName: subDistricts.find((district) => district.id.toString() === value)?.name || '',
+                  }));
                 }}
+                placeholder={
+                  isLoadingLocations
+                    ? 'Đang tải...'
+                    : formData.cityId
+                      ? 'Chọn quận/huyện'
+                      : 'Chọn tỉnh trước'
+                }
                 disabled={!isEditing || !formData.cityId || isLoadingLocations}
               >
-                <SelectTrigger id="district" className={!isEditing ? "bg-gray-50" : ""}>
-                  <SelectValue placeholder={
-                    isLoadingLocations ? "Đang tải..." :
-                    formData.cityId ? "Chọn quận/huyện" : "Chọn tỉnh trước"
-                  } />
-                </SelectTrigger>
-                <SelectContent>
-                  {subDistricts.map((district) => (
-                    <SelectItem key={district.id} value={district.id.toString()}>
-                      {district.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {subDistricts.map((district) => (
+                  <SelectWithSearchItem key={district.id} value={district.id.toString()}>
+                    {district.name}
+                  </SelectWithSearchItem>
+                ))}
+              </SelectWithSearch>
             </div>
 
             <div className="space-y-2 md:col-span-2">

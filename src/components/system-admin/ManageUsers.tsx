@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
 import { Input } from '@/components/ui/form/input';
 import { Badge } from '@/components/ui/basic/badge';
 import {
@@ -23,21 +24,20 @@ import {
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { 
-  Users, 
-  Search, 
+  Users,
+  Search,
   UserPlus,
   CheckCircle,
   XCircle,
   Filter,
-  Loader2
+  Loader2,
+  ArrowUpDown,
 } from 'lucide-react';
 import { CreateBusinessAdminDialog } from './CreateBusinessAdminDialog';
 import { AdminService } from '@/services/adminService';
@@ -53,14 +53,14 @@ export function ManageUsers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
   const [isActivating, setIsActivating] = useState<string | null>(null);
   const [isDeactivating, setIsDeactivating] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState('');
+  const [sortField, setSortField] = useState<'id' | 'name' | 'email' | 'createdAt'>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Load users from API
   useEffect(() => {
@@ -140,24 +140,47 @@ export function ManageUsers() {
       }
     }
 
-    // Sort by create date (newest first by default)
     filtered.sort((a, b) => {
-      const dateA = a.createAt || a.createdAt || '';
-      const dateB = b.createAt || b.createdAt || '';
-      
-      if (!dateA && !dateB) return 0;
-      if (!dateA) return 1;
-      if (!dateB) return -1;
-      
-      const timeA = new Date(dateA).getTime();
-      const timeB = new Date(dateB).getTime();
-      
-      return sortOrder === 'newest' ? timeB - timeA : timeA - timeB;
+      let valueA: string | number = '';
+      let valueB: string | number = '';
+
+      switch (sortField) {
+        case 'id':
+          valueA = a.id || 0;
+          valueB = b.id || 0;
+          break;
+        case 'name':
+          valueA = (a.userName || '').toLowerCase();
+          valueB = (b.userName || '').toLowerCase();
+          break;
+        case 'email':
+          valueA = (a.email || '').toLowerCase();
+          valueB = (b.email || '').toLowerCase();
+          break;
+        case 'createdAt':
+        default:
+          valueA = new Date(a.createAt || a.createdAt || '').getTime();
+          valueB = new Date(b.createAt || b.createdAt || '').getTime();
+          break;
+      }
+
+      if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
+      if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
     });
 
     setFilteredUsers(filtered);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [users, searchTerm, filterRole, filterStatus, sortOrder]);
+  }, [users, searchTerm, filterRole, filterStatus, sortField, sortDirection]);
+
+  const handleSort = (field: 'id' | 'name' | 'email' | 'createdAt') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection(field === 'createdAt' ? 'desc' : 'asc');
+    }
+  };
 
   // Pagination
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
@@ -211,8 +234,6 @@ export function ManageUsers() {
           u.email === email ? { ...u, isActive: true } : u
         ));
         showSuccess('Thành công', 'Đã kích hoạt tài khoản thành công');
-        setSuccessMessage('Đã kích hoạt tài khoản thành công');
-        setTimeout(() => setSuccessMessage(''), 3000);
       } else {
         showError('Lỗi', response.message || 'Không thể kích hoạt tài khoản');
       }
@@ -234,8 +255,6 @@ export function ManageUsers() {
           u.email === email ? { ...u, isActive: false } : u
         ));
         showSuccess('Thành công', 'Đã vô hiệu hóa tài khoản thành công');
-        setSuccessMessage('Đã vô hiệu hóa tài khoản thành công');
-        setTimeout(() => setSuccessMessage(''), 3000);
       } else {
         showError('Lỗi', response.message || 'Không thể vô hiệu hóa tài khoản');
       }
@@ -259,8 +278,6 @@ export function ManageUsers() {
           );
           setUsers(filtered);
           showSuccess('Thành công', 'Đã tạo tài khoản Business Admin thành công');
-          setSuccessMessage('Đã tạo tài khoản Business Admin thành công');
-          setTimeout(() => setSuccessMessage(''), 3000);
         }
       } catch (error) {
         console.error('Error reloading users:', error);
@@ -288,16 +305,6 @@ export function ManageUsers() {
           Tạo Business Admin
         </Button>
       </div>
-
-      {/* Success Message */}
-      {successMessage && (
-        <Alert className="bg-green-50 border-green-200">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800 text-sm">
-            {successMessage}
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Filters */}
       <Card className="hover:shadow-md transition-shadow bg-white">
@@ -344,17 +351,6 @@ export function ManageUsers() {
               </SelectContent>
             </Select>
 
-            {/* Sort by Date */}
-            <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'newest' | 'oldest')}>
-              <SelectTrigger className="w-full md:w-[200px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Sắp xếp" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Mới nhất trước</SelectItem>
-                <SelectItem value="oldest">Cũ nhất trước</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>
@@ -365,9 +361,6 @@ export function ManageUsers() {
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-[#257180]" />
             Danh sách người dùng
-            <Badge variant="secondary" className="ml-2 bg-[#257180] text-white">
-              {filteredUsers.length} người dùng
-            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -382,14 +375,30 @@ export function ManageUsers() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50 border-b border-gray-200">
-                      <TableHead className="w-[60px] text-left font-semibold text-gray-900">STT</TableHead>
-                      <TableHead className="w-[180px] text-left font-semibold text-gray-900">Tên người dùng</TableHead>
-                      <TableHead className="w-[220px] text-left font-semibold text-gray-900">Email</TableHead>
-                      <TableHead className="w-[130px] text-left font-semibold text-gray-900">Số điện thoại</TableHead>
-                      <TableHead className="w-[140px] text-left font-semibold text-gray-900">Vai trò</TableHead>
-                      <TableHead className="w-[120px] text-left font-semibold text-gray-900">Trạng thái</TableHead>
-                      <TableHead className="w-[120px] text-left font-semibold text-gray-900">Ngày tạo</TableHead>
-                      <TableHead className="text-center font-semibold text-gray-900 w-[180px]">Hành động</TableHead>
+                  <TableHead className="w-[80px] text-left">
+                    <Button variant="ghost" size="sm" onClick={() => handleSort('id')} className="h-8 px-2">
+                      ID <ArrowUpDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="text-left">
+                    <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-8 px-2">
+                      Tên người dùng <ArrowUpDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="text-left">
+                    <Button variant="ghost" size="sm" onClick={() => handleSort('email')} className="h-8 px-2">
+                      Email <ArrowUpDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="text-left font-semibold text-gray-900">Số điện thoại</TableHead>
+                  <TableHead className="text-left font-semibold text-gray-900">Vai trò</TableHead>
+                  <TableHead className="text-left font-semibold text-gray-900">Trạng thái</TableHead>
+                  <TableHead className="text-left">
+                    <Button variant="ghost" size="sm" onClick={() => handleSort('createdAt')} className="h-8 px-2">
+                      Ngày tạo <ArrowUpDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="text-center font-semibold text-gray-900 w-[140px]">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -409,23 +418,21 @@ export function ManageUsers() {
                         <span className="font-mono text-sm text-gray-600">{startIndex + index + 1}</span>
                       </TableCell>
                       <TableCell className="text-left">
-                            <div className="flex items-center gap-3 min-w-0 max-w-[180px]">
-                              {user.avatarUrl ? (
-                                <img 
-                                  src={user.avatarUrl} 
-                                  alt={user.userName || user.email}
-                                  className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="w-8 h-8 rounded-full bg-[#F2E5BF] flex items-center justify-center text-sm font-semibold text-[#257180] flex-shrink-0">
-                                  {(user.userName || user.email || 'U').charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                              <p className="font-medium text-gray-900 truncate min-w-0" title={user.userName || user.email}>
-                                {user.userName || user.email}
-                              </p>
-                            </div>
-                          </TableCell>
+                        <div className="flex items-center gap-3 min-w-0 max-w-[220px]">
+                          <Avatar className="h-10 w-10 rounded-lg">
+                            <AvatarImage src={user.avatarUrl} />
+                            <AvatarFallback className="bg-[#F2E5BF] text-[#257180]">
+                              {(user.userName || user.email || 'U').slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <p
+                            className="font-medium text-gray-900 truncate min-w-0"
+                            title={user.userName || user.email}
+                          >
+                            {user.userName || user.email}
+                          </p>
+                        </div>
+                      </TableCell>
                           <TableCell className="text-left text-sm text-gray-700 max-w-[220px]">
                             <span className="truncate block min-w-0" title={user.email}>
                               {user.email}
@@ -461,49 +468,30 @@ export function ManageUsers() {
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-2">
-                              {user.isActive ? (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDeactivateUser(user.email)}
-                                  disabled={isDeactivating === user.email || isActivating === user.email}
-                                  className="text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700"
-                                >
-                                  {isDeactivating === user.email ? (
-                                    <>
-                                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                      Đang xử lý...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <XCircle className="w-3 h-3 mr-1" />
-                                  Vô hiệu hóa
-                              </>
-                            )}
-                                </Button>
-                              ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleActivateUser(user.email)}
-                                  disabled={isActivating === user.email || isDeactivating === user.email}
-                                  className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-                                >
-                                  {isActivating === user.email ? (
-                                    <>
-                                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                      Đang xử lý...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle className="w-3 h-3 mr-1" />
-                                      Kích hoạt
-                              </>
-                            )}
-                                </Button>
-                              )}
-                        </div>
-                      </TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  user.isActive ? handleDeactivateUser(user.email) : handleActivateUser(user.email)
+                                }
+                                disabled={isActivating === user.email || isDeactivating === user.email}
+                                className={`p-2 rounded-lg ${
+                                  user.isActive
+                                    ? 'text-red-600 hover:bg-red-50'
+                                    : 'text-green-600 hover:bg-green-50'
+                                }`}
+                                title={user.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                              >
+                                {isActivating === user.email || isDeactivating === user.email ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : user.isActive ? (
+                                  <XCircle className="h-5 w-5" />
+                                ) : (
+                                  <CheckCircle className="h-5 w-5" />
+                                )}
+                              </Button>
+                            </div>
+                          </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -520,12 +508,13 @@ export function ManageUsers() {
                     <PaginationPrevious 
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                    />
+                    >
+                      Trước
+                    </PaginationPrevious>
                   </PaginationItem>
                   
                   {[...Array(totalPages)].map((_, idx) => {
                     const pageNum = idx + 1;
-                    // Show first page, last page, current page, and pages around current
                     if (
                       pageNum === 1 ||
                       pageNum === totalPages ||
@@ -542,12 +531,6 @@ export function ManageUsers() {
                           </PaginationLink>
                         </PaginationItem>
                       );
-                    } else if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
-                      return (
-                        <PaginationItem key={pageNum}>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      );
                     }
                     return null;
                   })}
@@ -556,7 +539,9 @@ export function ManageUsers() {
                     <PaginationNext 
                       onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                       className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                    />
+                    >
+                      Sau
+                    </PaginationNext>
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>

@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
@@ -38,6 +38,7 @@ import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { useChatContext } from '@/contexts/ChatContext';
+import { LocationService, ProvinceDto } from '@/services/locationService';
 
 // Helper function để convert string enum từ API sang TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
@@ -85,7 +86,13 @@ export function FindTutorPage() {
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set());
   const [loadingFavorite, setLoadingFavorite] = useState<Set<number>>(new Set());
   const { openChatWithTutor } = useChatContext();
+  const [provinces, setProvinces] = useState<ProvinceDto[]>([]);
+  const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
   const tutorsPerPage = 6;
+  const sortedProvinces = useMemo(
+    () => [...provinces].sort((a, b) => a.name.localeCompare(b.name, 'vi')),
+    [provinces]
+  );
   
   // Note: Using client-side filtering instead of API filtering
   // because backend API doesn't support filter parameters yet
@@ -133,17 +140,7 @@ export function FindTutorPage() {
 
     // Filter by city (using province)
     if (selectedCity !== 'all') {
-      filtered = filtered.filter(tutor => {
-        const cityMap: { [key: string]: number } = {
-          'hanoi': 1,
-          'hcm': 2,
-          'danang': 3,
-          'haiphong': 4,
-          'cantho': 5
-        };
-        const cityId = cityMap[selectedCity];
-        return tutor.province?.id === cityId;
-      });
+      filtered = filtered.filter(tutor => tutor.province?.id?.toString() === selectedCity);
     }
 
     // Filter by teaching mode
@@ -240,6 +237,23 @@ export function FindTutorPage() {
 
     return () => clearTimeout(timeoutId);
   }, [searchQuery, selectedCity, selectedTeachingMode, setFilters]);
+
+  useEffect(() => {
+    const loadProvinces = async () => {
+      setIsLoadingProvinces(true);
+      try {
+        const response = await LocationService.getAllProvinces();
+        if (response.success && response.data) {
+          setProvinces(response.data);
+        }
+      } catch (error) {
+        console.error('Error loading provinces:', error);
+      } finally {
+        setIsLoadingProvinces(false);
+      }
+    };
+    loadProvinces();
+  }, []);
 
   const totalPages = Math.ceil(filteredAndSortedTutors.length / tutorsPerPage);
   const indexOfLastTutor = currentPage * tutorsPerPage;
@@ -442,15 +456,15 @@ export function FindTutorPage() {
             <SelectWithSearch 
               value={selectedCity} 
               onValueChange={setSelectedCity}
-              placeholder="Thành phố"
-              disabled={isLoadingMasterData}
+              placeholder={isLoadingProvinces ? 'Đang tải...' : 'Thành phố'}
+              disabled={isLoadingMasterData || isLoadingProvinces}
             >
               <SelectWithSearchItem value="all">Tất cả thành phố</SelectWithSearchItem>
-              <SelectWithSearchItem value="hanoi">Hà Nội</SelectWithSearchItem>
-              <SelectWithSearchItem value="hcm">TP. Hồ Chí Minh</SelectWithSearchItem>
-              <SelectWithSearchItem value="danang">Đà Nẵng</SelectWithSearchItem>
-              <SelectWithSearchItem value="haiphong">Hải Phòng</SelectWithSearchItem>
-              <SelectWithSearchItem value="cantho">Cần Thơ</SelectWithSearchItem>
+              {sortedProvinces.map((province) => (
+                <SelectWithSearchItem key={province.id} value={province.id.toString()}>
+                  {province.name}
+                </SelectWithSearchItem>
+              ))}
             </SelectWithSearch>
             </div>
 

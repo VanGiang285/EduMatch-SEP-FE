@@ -129,11 +129,11 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
           <div className="relative z-10 p-12 pb-16">
             <h2 className="text-4xl font-bold text-white mb-6 leading-tight">
-              BƯỚC ĐẦU TIÊN<br />
-              HƯỚNG TỚI THÀNH CÔNG
+              CÙNG EDUMATCH<br />
+              KIẾN TẠO TƯƠNG LAI
             </h2>
             <p className="text-lg text-white/90 leading-relaxed">
-              Tạo tài khoản và bắt đầu hành trình học tập cùng các gia sư hàng đầu. Tri thức là chìa khóa mở ra tương lai.
+              EDUMATCH kết nối bạn với đội ngũ gia sư tận tâm để mỗi giờ học đều là một bước tiến dài hơn trên con đường tri thức.
             </p>
           </div>
         </div>
@@ -143,11 +143,11 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
             {/* Header */}
             <div className="mb-6 sm:mb-8">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-3 sm:mb-4 leading-tight tracking-tight">
-                TẠO TÀI KHOẢN<br />
-                HỌC TẬP NGAY HÔM NAY
+                EDUMATCH ĐỒNG HÀNH<br />
+                CÙNG HÀNH TRÌNH CỦA BẠN
               </h1>
               <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
-                Gia nhập cộng đồng học viên và trải nghiệm phương pháp học tập hiệu quả.
+                Gia nhập cộng đồng EDUMATCH để kết nối với gia sư phù hợp và trải nghiệm phương pháp học cá nhân hóa hiệu quả.
               </p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6" noValidate>

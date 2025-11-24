@@ -98,40 +98,18 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
         router.push('/');
       }
     } catch (error: any) {
-      let errorMessage = "Đăng nhập thất bại";
-      
-      // Xử lý error message từ nhiều nguồn khác nhau
       const message = error?.message || error?.error || '';
-      
-      if (message) {
-        // Check các trường hợp lỗi cụ thể
-        if (message.includes("Invalid email") || 
-            message.includes("Invalid credentials") || 
-            message.includes("invalid") ||
-            message.includes("wrong password") ||
-            message.toLowerCase().includes("incorrect")) {
-          errorMessage = "Email hoặc mật khẩu không chính xác";
-        } else if (message.includes("Email not verified") || message.includes("not verified")) {
-          try {
-            await AuthService.resendVerification(trimmedEmail);
-            errorMessage = "Vui lòng xác thực email trước khi đăng nhập. Email xác thực đã được gửi lại";
-            showInfo("Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư của bạn");
-          } catch (resendError) {
-            errorMessage = "Vui lòng xác thực email trước khi đăng nhập";
-          }
-        } else if (message.includes("Account is deactivated") || message.includes("deactivated")) {
-          errorMessage = "Tài khoản đã bị vô hiệu hóa";
-        } else if (message.includes("Email is logged in with google") || message.includes("google")) {
-          errorMessage = "Email này đã được đăng ký bằng Google. Vui lòng đăng nhập bằng Google";
-        } else if (message === "An error occurred") {
-          // Nếu là generic error, cho thông báo mặc định
-          errorMessage = "Email hoặc mật khẩu không chính xác";
-        } else {
-          errorMessage = message;
+
+      if (message && (message.includes('Email not verified') || message.includes('not verified'))) {
+        try {
+          await AuthService.resendVerification(trimmedEmail);
+          showInfo('Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư của bạn');
+        } catch (resendError) {
+          console.warn('Failed to resend verification email:', resendError);
         }
       }
-      
-      setError(errorMessage);
+
+      setError('Tài khoản hoặc mật khẩu sai');
     } finally {
       setIsLoading(false);
     }
@@ -163,7 +141,7 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
             {/* Header */}
             <div className="mb-6 sm:mb-8">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-3 sm:mb-4 leading-tight tracking-tight">
-                CÙNG GIA SƯ MỞ RA<br />
+                CÙNG EDUMATCH MỞ RA<br />
                 CƠ HỘI HỌC TẬP MỚI
               </h1>
               <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
