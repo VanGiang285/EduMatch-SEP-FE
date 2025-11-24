@@ -372,9 +372,29 @@ export interface ChatRequestDto {
   message: string;
 }
 
+export interface ChatSuggestionTutorDto {
+  rank?: number;
+  tutorId?: number;
+  name: string;
+  subjects?: string[];
+  levels?: string[];
+  teachingExp?: string;
+  province?: string;
+  subDistrict?: string;
+  hourlyRates?: string[];
+  matchScore?: number;
+  profileUrl?: string;
+}
+
+export interface ChatSuggestionsDto {
+  message?: string;
+  tutors?: ChatSuggestionTutorDto[];
+}
+
 export interface ChatResponseDto {
   sessionId: number;
   reply: string;
+  suggestions?: ChatSuggestionsDto;
 }
 
 export interface ChatSessionDto {
@@ -650,6 +670,35 @@ export interface ClassApplicationDto {
   updatedAt?: string;
   tutor?: TutorProfileDto;
   classRequest?: ClassRequestDto;
+}
+
+// ==================== FEEDBACK (Tutor Feedback) ====================
+
+export interface TutorFeedbackDto {
+  id: number;
+  tutorId: number;
+  bookingId: number;
+  learnerEmail: string;
+  overallRating: number; // Average of all criteria ratings
+  comment?: string;
+  createdAt: string;
+  updateAt?: string;
+  feedbackDetails: TutorFeedbackDetailDto[];
+}
+
+export interface TutorFeedbackDetailDto {
+  criterionId: number;
+  criteriaName?: string;
+  rating: number; // 1-5
+}
+
+export interface FeedbackCriterion {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  createdAt?: string;
+  isActive?: boolean;
 }
 
 // ==================== SEARCH & FILTER ====================

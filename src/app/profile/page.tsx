@@ -22,6 +22,8 @@ function ProfileContent() {
         'classRequests': 'classRequests',
         'tutorApplications': 'tutorApplications',
         'wallet': 'wallet',
+        'refundRequests': 'refundRequests',
+        'reports': 'reports',
         'notifications': 'notifications',
         'messages': 'messages',
         'settings': 'settings',

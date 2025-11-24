@@ -456,12 +456,14 @@ export const API_ENDPOINTS = {
   // ==================== REPORTS ====================
   REPORTS: {
     CREATE: '/api/Reports',
+    GET_ALL: '/api/Reports', // Admin only - get all reports
     GET_LEARNER_REPORTS: '/api/Reports/learner',
     UPDATE_LEARNER_REPORT: '/api/Reports/:id/learner',
     CANCEL_LEARNER_REPORT: '/api/Reports/:id/learner',
     GET_TUTOR_REPORTS: '/api/Reports/tutor',
     GET_DETAIL: '/api/Reports/:id',
     GET_FULL_DETAIL: '/api/Reports/:id/full',
+    CAN_DEFENSE: '/api/Reports/:id/can-defense',
     UPDATE_BY_ADMIN: '/api/Reports/:id',
     ADD_EVIDENCE: '/api/Reports/:id/evidence',
     GET_EVIDENCE: '/api/Reports/:id/evidence',
@@ -469,6 +471,19 @@ export const API_ENDPOINTS = {
     DELETE_EVIDENCE: '/api/Reports/:id/evidence/:evidenceId',
     ADD_DEFENSE: '/api/Reports/:id/defenses',
     GET_DEFENSES: '/api/Reports/:id/defenses',
+    UPDATE_DEFENSE: '/api/Reports/:id/defenses/:defenseId',
+    DELETE_DEFENSE: '/api/Reports/:id/defenses/:defenseId',
+  },
+
+  // ==================== FEEDBACK (Tutor Feedback) ====================
+  FEEDBACK: {
+    CREATE: '/api/Feedback/Create-Feedback',
+    GET_BY_ID: '/api/Feedback/Get-Feedback-By-Id/:feedbackId',
+    GET_BY_LEARNER: '/api/Feedback/Get-Feedback-By-Learner',
+    GET_BY_TUTOR: '/api/Feedback/Get-Feedback-By-Tutor',
+    GET_ALL_CRITERIA: '/api/Feedback/Get-All-Criteria',
+    GET_ALL: '/api/Feedback/Get-All-Feedbacks',
+    UPDATE: '/api/Feedback/Update-Feedback',
   },
   
   // ==================== UPLOAD ====================

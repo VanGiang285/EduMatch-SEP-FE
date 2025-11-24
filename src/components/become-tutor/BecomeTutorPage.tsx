@@ -678,7 +678,6 @@ export function BecomeTutorPage() {
     return result;
   };
 
-  // Helper function để build request theo đúng structure backend
   const buildBecomeTutorRequest = (
     uploadedFiles: {
       avatarUrl?: string;
@@ -687,18 +686,16 @@ export function BecomeTutorPage() {
       educationUrls: string[];
     }
   ): BecomeTutorRequest => {
-    // Build availabilities từ schedule
     const availabilities = Object.entries(formData.availability.schedule).flatMap(([date, daySchedule]) =>
       Object.values(daySchedule).flatMap(slotIds =>
         slotIds.map(slotId => ({
-          tutorId: 0, // Backend sẽ set
+          tutorId: 1,
           slotId: slotId,
           startDate: date + 'T00:00:00'
         }))
       )
     );
 
-    // Build subjects từ formData
     const subjects = formData.introduction.subjects.flatMap(subject =>
       subject.levels.map(levelId => {
         const pricing = formData.pricing.subjectPricing.find(p => p.subjectId === subject.subjectId);
@@ -710,7 +707,7 @@ export function BecomeTutorPage() {
         }
 
         return {
-          tutorId: 0, // Backend sẽ set
+          tutorId: 1,
           subjectId: subject.subjectId,
           hourlyRate: hourlyRate,
           levelId: levelId
@@ -718,10 +715,9 @@ export function BecomeTutorPage() {
       })
     );
 
-    // Build certificates
     const certificates = formData.certifications.items.length > 0
       ? formData.certifications.items.map((cert, idx) => ({
-          tutorId: 0, // Backend sẽ set
+          tutorId: 1,
           certificateTypeId: cert.certificateTypeId,
           issueDate: cert.issueDate,
           expiryDate: cert.expiryDate,
@@ -729,22 +725,19 @@ export function BecomeTutorPage() {
         }))
       : [];
 
-    // Build educations (Required by backend)
     const educations = formData.education.items.length > 0
       ? formData.education.items.map((edu, idx) => ({
-          tutorId: 0, // Backend sẽ set
+          tutorId: 1,
           institutionId: edu.institutionId,
           issueDate: edu.issueDate,
           certificateEducationUrl: uploadedFiles.educationUrls[idx] || undefined
         }))
       : [];
     
-    // Backend requires at least one education
     if (educations.length === 0) {
       throw new Error('Vui lòng thêm ít nhất một bằng cấp học vấn');
     }
 
-    // Validate provinceId và subDistrictId
     const provinceId = parseInt(formData.introduction.province);
     const subDistrictId = parseInt(formData.introduction.district);
     
@@ -755,7 +748,6 @@ export function BecomeTutorPage() {
       throw new Error('Vui lòng chọn quận/huyện');
     }
 
-    // Build request
     const request: BecomeTutorRequest = {
       tutorProfile: {
         userEmail: formData.introduction.email || user?.email || '',
@@ -799,12 +791,7 @@ export function BecomeTutorPage() {
       const uploadedFiles = await uploadFiles();
       console.log('✅ Upload files thành công:', uploadedFiles);
 
-      // Step 2: Build request đúng structure
-      console.log('🔨 Building request...');
       const request = buildBecomeTutorRequest(uploadedFiles);
-      console.log('📋 Request data:', request);
-
-      // Step 3: Submit request
       await submitApplication(request);
     } catch (err: any) {
       console.error('❌ Error in handleSubmit:', err);
@@ -1625,7 +1612,7 @@ export function BecomeTutorPage() {
                           <div className="space-y-2">
                             <Label htmlFor="cert-subject" className="text-black text-sm sm:text-base">Môn học <span className="text-red-500">*</span></Label>
                             <SelectWithSearch
-                                value={currentCertification.subjectId.toString()}
+                                value={currentCertification.subjectId > 0 ? currentCertification.subjectId.toString() : ""}
                                 onValueChange={(value) => setCurrentCertification(prev => ({ ...prev, subjectId: parseInt(value), certificateTypeId: 0 }))}
                               placeholder="Chọn môn học"
                               className="border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
@@ -1646,49 +1633,45 @@ export function BecomeTutorPage() {
                           </div>
                           <div className="space-y-2">
                               <Label htmlFor="cert-type" className="text-black text-sm sm:text-base">Chứng chỉ <span className="text-red-500">*</span></Label>
-                            {!showNewCertificateInput ? (
-                              <SelectWithSearch
-                                value={currentCertification.certificateTypeId.toString()}
-                                onValueChange={(value) => {
-                                  if (value === "NEW_CERTIFICATE") {
-                                    setShowNewCertificateInput(true);
-                                  } else {
-                                    setCurrentCertification(prev => ({ ...prev, certificateTypeId: parseInt(value) }));
-                                  }
-                                }}
-                                placeholder={currentCertification.subjectId ? "Chọn chứng chỉ" : "Chọn môn học trước"}
-                                disabled={!currentCertification.subjectId}
-                                className="border-gray-300 focus:border-[#257180] focus:ring-[#257180] disabled:opacity-50"
-                              >
-                                {currentCertification.subjectId ? (() => {
-                                  const selectedSubject = subjects.find(subject => subject.id === currentCertification.subjectId);
-                                  const availableCertificateTypes = selectedSubject?.certificateTypes || [];
-                                  
-                                  return (
-                                    <>
-                                      <SelectWithSearchItem 
-                                        value="NEW_CERTIFICATE"
-                                        onClick={() => setShowNewCertificateInput(true)}
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <Plus className="w-4 h-4 text-black" />
-                                          <span>Không có trong hệ thống</span>
-                                        </div>
-                                      </SelectWithSearchItem>
-                                      {availableCertificateTypes.map((certType) => (
-                                        <SelectWithSearchItem 
-                                          key={certType.id} 
-                                          value={certType.id.toString()}
-                                          onClick={() => setCurrentCertification(prev => ({ ...prev, certificateTypeId: certType.id }))}
-                                        >
-                                          {certType.code} - {certType.name}
-                                        </SelectWithSearchItem>
-                                      ))}
-                                    </>
-                                  );
-                                })() : null}
-                              </SelectWithSearch>
-                            ) : (
+                            {!showNewCertificateInput ? (() => {
+                              const selectedSubject = subjects.find(subject => subject.id === currentCertification.subjectId);
+                              const availableCertificateTypes = selectedSubject?.certificateTypes || [];
+                              
+                              return (
+                                <SelectWithSearch
+                                  value={currentCertification.certificateTypeId > 0 ? currentCertification.certificateTypeId.toString() : ""}
+                                  onValueChange={(value) => {
+                                    if (value === "NEW_CERTIFICATE") {
+                                      setShowNewCertificateInput(true);
+                                    } else {
+                                      setCurrentCertification(prev => ({ ...prev, certificateTypeId: parseInt(value) }));
+                                    }
+                                  }}
+                                  placeholder={currentCertification.subjectId ? "Chọn chứng chỉ" : "Chọn môn học trước"}
+                                  disabled={!currentCertification.subjectId}
+                                  className="border-gray-300 focus:border-[#257180] focus:ring-[#257180] disabled:opacity-50"
+                                >
+                                  {currentCertification.subjectId > 0 && (
+                                    <SelectWithSearchItem 
+                                      value="NEW_CERTIFICATE"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <Plus className="w-4 h-4 text-black" />
+                                        <span>Không có trong hệ thống</span>
+                                      </div>
+                                    </SelectWithSearchItem>
+                                  )}
+                                  {currentCertification.subjectId > 0 && availableCertificateTypes.map((certType) => (
+                                    <SelectWithSearchItem 
+                                      key={certType.id} 
+                                      value={certType.id.toString()}
+                                    >
+                                      {certType.code} - {certType.name}
+                                    </SelectWithSearchItem>
+                                  ))}
+                                </SelectWithSearch>
+                              );
+                            })() : (
                               <div className="space-y-3 p-4 border border-[#257180] rounded-lg bg-gray-50">
                                 <div className="space-y-2">
                                   <Label className="text-black text-sm sm:text-base">Tên chứng chỉ <span className="text-red-500">*</span></Label>

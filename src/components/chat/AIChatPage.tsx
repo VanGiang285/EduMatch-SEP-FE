@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/basic/button";
 import { Input } from "@/components/ui/form/input";
 import { ScrollArea } from "@/components/ui/layout/scroll-area";
@@ -9,18 +9,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCustomToast } from "@/hooks/useCustomToast";
 import { EduAIRobot } from "./EduAIRobot";
 import { AIChatbotService } from "@/services/aiChatbotService";
-import { ChatSessionDto, ChatMessageDto } from "@/types/backend";
+import { ChatSessionDto, ChatMessageDto, ChatSuggestionsDto } from "@/types/backend";
+import { useRouter } from "next/navigation";
 
 interface Message {
   id: string;
-  text: string;
+  text?: string;
+  reply?: string;
   sender: "user" | "ai";
   timestamp: Date;
+  suggestions?: ChatSuggestionsDto;
 }
 
 export function AIChatPage() {
   const { user, isAuthenticated } = useAuth();
   const { showError, showSuccess } = useCustomToast();
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -206,6 +210,8 @@ export function AIChatPage() {
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
           text: response.data.reply,
+          reply: response.data.reply,
+          suggestions: response.data.suggestions,
           sender: "ai",
           timestamp: new Date(),
         };
@@ -232,6 +238,32 @@ export function AIChatPage() {
       showSuccess("Thành công", "Đã tạo cuộc trò chuyện mới");
     }
   };
+
+  const handleTutorClick = useCallback(
+    (profileUrl?: string) => {
+      if (!profileUrl) return;
+      if (profileUrl.startsWith("http")) {
+        try {
+          if (typeof window !== "undefined") {
+            const currentOrigin = window.location.origin;
+            if (profileUrl.startsWith(currentOrigin)) {
+              const relative = profileUrl.replace(currentOrigin, "") || "/";
+              router.push(relative);
+            } else {
+              window.open(profileUrl, "_blank", "noopener,noreferrer");
+            }
+          } else {
+            router.push(profileUrl);
+          }
+        } catch {
+          router.push(profileUrl);
+        }
+      } else {
+        router.push(profileUrl);
+      }
+    },
+    [router]
+  );
 
   const formatTime = (date: Date) => {
     return new Intl.DateTimeFormat("vi-VN", {
@@ -493,6 +525,7 @@ export function AIChatPage() {
                 <div className="space-y-6">
                   {messages.map((msg) => {
                     const isUser = msg.sender === "user";
+                    const displayText = msg.reply ?? msg.text ?? "";
                     return (
                       <div
                         key={msg.id}
@@ -514,9 +547,74 @@ export function AIChatPage() {
                             }`}
                           >
                             <p className="text-sm break-words whitespace-pre-line leading-relaxed">
-                              {msg.text}
+                              {displayText}
                             </p>
                           </div>
+                          {!isUser && msg.suggestions && (
+                            <div className="w-full mt-3 space-y-3">
+                              {msg.suggestions.message && (
+                                <div className="rounded-lg border border-[#F2E5BF] bg-[#FFF8EC] px-4 py-3 text-sm text-gray-800 whitespace-pre-line leading-relaxed">
+                                  {msg.suggestions.message}
+                                </div>
+                              )}
+                              {msg.suggestions.tutors && msg.suggestions.tutors.length > 0 && (
+                                <div className="space-y-3 w-full">
+                                  {msg.suggestions.tutors.map((tutor, index) => (
+                                    <div
+                                      key={`${tutor.tutorId ?? tutor.rank ?? index}`}
+                                      className="border border-[#E5E7EB] rounded-lg bg-white p-4 shadow-sm space-y-2"
+                                    >
+                                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleTutorClick(tutor.profileUrl)}
+                                          className="text-[#257180] font-semibold hover:underline"
+                                        >
+                                          {tutor.name}
+                                        </button>
+                                        {typeof tutor.matchScore === "number" && (
+                                          <span className="text-xs text-gray-500 font-medium">
+                                            Điểm phù hợp {(tutor.matchScore * 100).toFixed(0)}%
+                                          </span>
+                                        )}
+                                      </div>
+                                      {tutor.subjects && tutor.subjects.length > 0 && (
+                                        <p className="text-xs text-gray-600">
+                                          Môn: <span className="font-medium">{tutor.subjects.join(", ")}</span>
+                                        </p>
+                                      )}
+                                      {tutor.levels && tutor.levels.length > 0 && (
+                                        <p className="text-xs text-gray-600">
+                                          Cấp độ: <span className="font-medium">{tutor.levels.join(", ")}</span>
+                                        </p>
+                                      )}
+                                      {(tutor.province || tutor.subDistrict) && (
+                                        <p className="text-xs text-gray-600">
+                                          Khu vực:{" "}
+                                          <span className="font-medium">
+                                            {[tutor.subDistrict, tutor.province].filter(Boolean).join(", ") || "Không rõ"}
+                                          </span>
+                                        </p>
+                                      )}
+                                      {tutor.hourlyRates && tutor.hourlyRates.length > 0 && (
+                                        <p className="text-xs text-gray-600">
+                                          Học phí:{" "}
+                                          <span className="font-medium">
+                                            {tutor.hourlyRates.map((rate) => `${Number(rate).toLocaleString("vi-VN")}đ/h`).join(" · ")}
+                                          </span>
+                                        </p>
+                                      )}
+                                      {tutor.teachingExp && (
+                                        <p className="text-xs text-gray-600 whitespace-pre-line">
+                                          Kinh nghiệm: <span className="font-medium">{tutor.teachingExp}</span>
+                                        </p>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
                           <p className="text-xs text-gray-500 mt-1.5">
                             {formatTime(msg.timestamp)}
                           </p>

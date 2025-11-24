@@ -88,7 +88,7 @@ export interface UpdateTutorStatusRequest {
 // ==================== TUTOR SUBJECT REQUESTS ====================
 
 export interface TutorSubjectCreateRequest {
-  tutorId: number; // Backend sẽ set, truyền 0
+  tutorId?: number; // Optional - Backend sẽ set khi tạo mới
   subjectId: number;
   hourlyRate: number; // Required
   levelId: number; // Required
@@ -105,7 +105,7 @@ export interface TutorSubjectUpdateRequest {
 // ==================== TUTOR EDUCATION REQUESTS ====================
 
 export interface TutorEducationCreateRequest {
-  tutorId: number; // Backend sẽ set, truyền 0
+  tutorId?: number; // Optional - Backend sẽ set khi tạo mới
   institutionId: number;
   issueDate?: string;
   certificateEducationUrl?: string; // Backend dùng tên này
@@ -141,7 +141,7 @@ export interface EducationInstitutionUpdateRequest {
 // ==================== TUTOR CERTIFICATE REQUESTS ====================
 
 export interface TutorCertificateCreateRequest {
-  tutorId: number; // Backend sẽ set, truyền 0
+  tutorId?: number; // Optional - Backend sẽ set khi tạo mới
   certificateTypeId: number;
   issueDate?: string;
   expiryDate?: string;
@@ -177,7 +177,7 @@ export interface CertificateTypeUpdateRequest {
 // ==================== TUTOR AVAILABILITY REQUESTS ====================
 
 export interface TutorAvailabilityCreateRequest {
-  tutorId: number; // Backend sẽ set, truyền 0
+  tutorId?: number; // Optional - Backend sẽ set khi tạo mới
   slotId: number; // Required
   startDate: string; // Required, ISO 8601 date-time
 }
@@ -453,11 +453,16 @@ export interface ReportDefenseCreateRequest {
   evidences?: BasicEvidenceRequest[];
 }
 
+export interface ReportDefenseUpdateRequest {
+  note: string; // Required, 3-2000 characters
+}
+
 // ==================== REPORT REQUESTS ====================
 
 export interface ReportCreateRequest {
   reportedUserEmail: string;
   reason: string;
+  evidences?: BasicEvidenceRequest[];
 }
 
 export interface ReportUpdateByLearnerRequest {
@@ -471,4 +476,25 @@ export interface ReportUpdateRequest {
 
 export interface TutorComplaintRequest {
   defenseNote: string;
+}
+
+// ==================== FEEDBACK REQUESTS ====================
+
+export interface CreateTutorFeedbackRequest {
+  bookingId: number;
+  tutorId: number;
+  comment?: string;
+  feedbackDetails: CreateTutorFeedbackDetailRequest[];
+}
+
+export interface CreateTutorFeedbackDetailRequest {
+  criterionId: number;
+  rating: number; // 1-5
+}
+
+export interface UpdateTutorFeedbackRequest {
+  bookingId: number;
+  tutorId: number;
+  comment?: string;
+  feedbackDetails: import('./backend').TutorFeedbackDetailDto[]; // Use existing detail DTO from backend.ts
 }

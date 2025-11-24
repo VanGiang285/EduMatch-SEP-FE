@@ -16,6 +16,7 @@ import {
   ReportEvidenceCreateRequest,
   ReportEvidenceUpdateRequest,
   ReportDefenseCreateRequest,
+  ReportDefenseUpdateRequest,
 } from '@/types/requests';
 
 export class ReportService {
@@ -143,6 +144,46 @@ export class ReportService {
       id: reportId.toString(),
     });
     return apiClient.get<ReportDefenseDto[]>(url);
+  }
+
+  // Admin gets all reports
+  static async getAllReports(): Promise<ApiResponse<ReportListItemDto[]>> {
+    return apiClient.get<ReportListItemDto[]>(API_ENDPOINTS.REPORTS.GET_ALL);
+  }
+
+  // Check if tutor/admin can submit defense for this report
+  static async canSubmitDefense(
+    reportId: number
+  ): Promise<ApiResponse<boolean>> {
+    const url = replaceUrlParams(API_ENDPOINTS.REPORTS.CAN_DEFENSE, {
+      id: reportId.toString(),
+    });
+    return apiClient.get<boolean>(url);
+  }
+
+  // Update defense (owner tutor or admin)
+  static async updateDefense(
+    reportId: number,
+    defenseId: number,
+    request: ReportDefenseUpdateRequest
+  ): Promise<ApiResponse<ReportDefenseDto>> {
+    const url = replaceUrlParams(API_ENDPOINTS.REPORTS.UPDATE_DEFENSE, {
+      id: reportId.toString(),
+      defenseId: defenseId.toString(),
+    });
+    return apiClient.put<ReportDefenseDto>(url, request);
+  }
+
+  // Delete defense (owner tutor or admin)
+  static async deleteDefense(
+    reportId: number,
+    defenseId: number
+  ): Promise<ApiResponse<string>> {
+    const url = replaceUrlParams(API_ENDPOINTS.REPORTS.DELETE_DEFENSE, {
+      id: reportId.toString(),
+      defenseId: defenseId.toString(),
+    });
+    return apiClient.delete<string>(url);
   }
 
   // Tutor submits defense/complaint for a report (legacy method, use addDefense instead)

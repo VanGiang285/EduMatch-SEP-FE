@@ -1,10 +1,11 @@
 ﻿'use client';
-import React, { useState, useMemo } from 'react';
+/* eslint-disable @next/next/no-img-element */
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
 import { Badge } from '@/components/ui/basic/badge';
-import { Textarea } from '@/components/ui/form/textarea';
 import {
   Table,
   TableBody,
@@ -18,6 +19,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/feedback/dialog';
 import {
   AlertDialog,
@@ -30,13 +32,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/feedback/alert-dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/form/select';
-import {
   Pagination,
   PaginationContent,
   PaginationItem,
@@ -44,58 +39,382 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
-import { Separator } from '@/components/ui/layout/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/form/select';
 import { Label } from '@/components/ui/form/label';
-import { Search, Eye, CheckCircle, XCircle, AlertTriangle, FileText, ExternalLink, ArrowUpDown } from 'lucide-react';
+import { Textarea } from '@/components/ui/form/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
+import { useCustomToast } from '@/hooks/useCustomToast';
+import { ReportService, TutorService } from '@/services';
+import { ReportFullDetailDto, ReportListItemDto, ReportDefenseDto, ReportEvidenceDto } from '@/types/backend';
+import { MediaType, ReportStatus } from '@/types/enums';
 import { 
-  mockReports,
-  getReportStatusText,
-  getReportStatusColor,
-} from '@/data/mockBusinessAdminData';
-// Toast: import { toast } from 'sonner';
+  Search,
+  Eye,
+  ArrowUpDown,
+  Loader2,
+  XCircle,
+  Shield,
+} from 'lucide-react';
 
-const ITEMS_PER_PAGE = 10;
+const PAGE_SIZE = 10;
 
-type SortField = 'id' | 'reporterName' | 'reportedTutorName' | 'createdAt';
+type SortField = 'id' | 'reporterName' | 'reportedUserName' | 'createdAt';
 type SortOrder = 'asc' | 'desc';
+type ActionType = 'resolve' | 'dismiss';
+
+const getStatusLabel = (status: ReportStatus | number | string): string => {
+  let statusNum: number;
+  if (typeof status === 'string') {
+    statusNum = parseInt(status, 10);
+    if (isNaN(statusNum)) {
+      if (status === 'Pending') return 'Chờ xử lý';
+      if (status === 'UnderReview') return 'Đang xem xét';
+      if (status === 'Resolved') return 'Đã giải quyết';
+      if (status === 'Dismissed') return 'Đã bác bỏ';
+      return 'Không xác định';
+    }
+  } else if (typeof status === 'number') {
+    statusNum = status;
+  } else {
+    statusNum = status as number;
+  }
+
+  switch (statusNum) {
+    case ReportStatus.Pending:
+    case 0:
+      return 'Chờ xử lý';
+    case ReportStatus.UnderReview:
+    case 1:
+      return 'Đang xem xét';
+    case ReportStatus.Resolved:
+    case 2:
+      return 'Đã giải quyết';
+    case ReportStatus.Dismissed:
+    case 3:
+      return 'Đã bác bỏ';
+    default:
+      return 'Không xác định';
+  }
+};
+
+const getStatusColor = (status: ReportStatus | number | string): string => {
+  let statusNum: number;
+  if (typeof status === 'string') {
+    statusNum = parseInt(status, 10);
+    if (isNaN(statusNum)) {
+      if (status === 'Pending') return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+      if (status === 'UnderReview') return 'bg-blue-100 text-blue-800 border border-blue-200';
+      if (status === 'Resolved') return 'bg-green-100 text-green-800 border border-green-200';
+      if (status === 'Dismissed') return 'bg-red-100 text-red-800 border border-red-200';
+      return 'bg-gray-100 text-gray-800 border border-gray-200';
+    }
+  } else if (typeof status === 'number') {
+    statusNum = status;
+  } else {
+    statusNum = status as number;
+  }
+
+  switch (statusNum) {
+    case ReportStatus.Pending:
+    case 0:
+      return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+    case ReportStatus.UnderReview:
+    case 1:
+      return 'bg-blue-100 text-blue-800 border border-blue-200';
+    case ReportStatus.Resolved:
+    case 2:
+      return 'bg-green-100 text-green-800 border border-green-200';
+    case ReportStatus.Dismissed:
+    case 3:
+      return 'bg-red-100 text-red-800 border border-red-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border border-gray-200';
+  }
+};
+
+const isPendingOrUnderReviewStatus = (
+  status: ReportStatus | number | string | undefined
+): boolean => {
+  if (status === undefined || status === null) return false;
+  if (typeof status === 'string') {
+    if (status === 'Pending' || status === '0') return true;
+    if (status === 'UnderReview' || status === '1') return true;
+    const parsed = parseInt(status, 10);
+    return !isNaN(parsed) && (parsed === ReportStatus.Pending || parsed === ReportStatus.UnderReview);
+  }
+  const numeric = Number(status);
+  return numeric === ReportStatus.Pending || numeric === ReportStatus.UnderReview;
+};
+
+const formatDate = (value?: string, withTime = false): string => {
+  if (!value) return '---';
+  const date = new Date(value);
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}),
+  }).format(date);
+};
+
+const getInitials = (text?: string) => {
+  if (!text) return 'NA';
+  return text
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+};
+
+const normalizeMediaTypeValue = (
+  mediaType: number | string | undefined
+): number => {
+  if (mediaType === undefined || mediaType === null) {
+    return MediaType.Image;
+  }
+  if (typeof mediaType === 'string') {
+    const parsed = parseInt(mediaType, 10);
+    if (!isNaN(parsed)) {
+      return parsed;
+    }
+    if (mediaType.toLowerCase().includes('image')) return MediaType.Image;
+    if (mediaType.toLowerCase().includes('video')) return MediaType.Video;
+  }
+  return Number(mediaType);
+};
+
+const normalizeEvidenceList = (
+  evidences?: ReportEvidenceDto[]
+): ReportEvidenceDto[] | undefined =>
+  evidences?.map((item) => ({
+    ...item,
+    mediaType: normalizeMediaTypeValue(item.mediaType),
+  }));
 
 export function ManageReports() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('pending');
+  const { showSuccess, showError } = useCustomToast();
+  const showErrorRef = useRef(showError);
+
+  useEffect(() => {
+    showErrorRef.current = showError;
+  }, [showError]);
+
+  const [reports, setReports] = useState<ReportListItemDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedReport, setSelectedReport] = useState<any>(null);
-  const [showDetailDialog, setShowDetailDialog] = useState(false);
-  const [showResolveDialog, setShowResolveDialog] = useState(false);
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [adminNote, setAdminNote] = useState('');
-  const [reports, setReports] = useState(mockReports);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<ReportFullDetailDto | null>(null);
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  const [actionType, setActionType] = useState<ActionType | null>(null);
+  const [actionNote, setActionNote] = useState('');
+  const [actionSubmitting, setActionSubmitting] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [tutorNames, setTutorNames] = useState<Record<string, string>>({});
+  const [tutorAvatars, setTutorAvatars] = useState<Record<string, string>>({});
+  const [isDefenseWindowOpen, setIsDefenseWindowOpen] = useState(false);
+
+  const fetchReports = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await ReportService.getAllReports();
+      if (response.success && response.data) {
+        setReports(response.data);
+      } else {
+        setReports([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch reports', error);
+      showErrorRef.current('Lỗi', 'Không thể tải danh sách báo cáo');
+      setReports([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
+
+  const loadReportDetail = useCallback(
+    async (reportId: number) => {
+      const response = await ReportService.getFullReportDetail(reportId);
+      if (!response.success || !response.data) {
+        throw new Error('Không thể tải chi tiết báo cáo');
+      }
+
+      const baseDetail = response.data;
+      const enriched: ReportFullDetailDto = {
+        ...baseDetail,
+        reporterEvidences: normalizeEvidenceList(baseDetail.reporterEvidences),
+        tutorEvidences: normalizeEvidenceList(baseDetail.tutorEvidences),
+        adminEvidences: normalizeEvidenceList(baseDetail.adminEvidences),
+      };
+
+      let defenses: ReportDefenseDto[] = [];
+      if (baseDetail.defenses && baseDetail.defenses.length > 0) {
+        const defensesResponse = await ReportService.getDefenses(baseDetail.id);
+        if (defensesResponse.success && defensesResponse.data) {
+          defenses = defensesResponse.data.map((defense) => ({
+            ...defense,
+            evidences: normalizeEvidenceList(defense.evidences) ?? [],
+          }));
+        } else {
+          defenses = baseDetail.defenses.map((defense) => ({
+            ...defense,
+            evidences: normalizeEvidenceList(defense.evidences) ?? [],
+          }));
+        }
+      }
+
+      const tutorEvidences = enriched.tutorEvidences ?? [];
+      if (defenses.length > 0 && tutorEvidences.length > 0) {
+        const usedEvidenceIds = new Set<number>();
+        defenses = defenses.map((defense) => {
+          let defenseEvidences = defense.evidences ?? [];
+
+          if (defenseEvidences.length === 0) {
+            const defenseTime = new Date(defense.createdAt).getTime();
+            const relatedEvidences = tutorEvidences
+              .filter((evidence) => {
+                if (usedEvidenceIds.has(evidence.id)) return false;
+                if (
+                  evidence.submittedByEmail &&
+                  defense.tutorEmail &&
+                  evidence.submittedByEmail !== defense.tutorEmail
+                ) {
+                  return false;
+                }
+                const evidenceTime = new Date(evidence.createdAt).getTime();
+                return Math.abs(evidenceTime - defenseTime) < 60000;
+              })
+              .sort((a, b) => {
+                const aDiff = Math.abs(new Date(a.createdAt).getTime() - defenseTime);
+                const bDiff = Math.abs(new Date(b.createdAt).getTime() - defenseTime);
+                return aDiff - bDiff;
+              })
+              .slice(0, 10)
+              .map((evidence) => {
+                usedEvidenceIds.add(evidence.id);
+                return {
+                  ...evidence,
+                  mediaType: normalizeMediaTypeValue(evidence.mediaType),
+                };
+              });
+
+            defenseEvidences = relatedEvidences;
+          }
+
+          return {
+            ...defense,
+            evidences: defenseEvidences,
+          };
+        });
+      }
+
+      enriched.defenses = defenses;
+      try {
+        const canDefenseResponse = await ReportService.canSubmitDefense(reportId);
+        setIsDefenseWindowOpen(!!canDefenseResponse.data && canDefenseResponse.success);
+      } catch {
+        setIsDefenseWindowOpen(false);
+      }
+
+      if (enriched.defenses && enriched.defenses.length > 0) {
+        const uniqueTutorEmails = Array.from(
+          new Set(enriched.defenses.map((defense) => defense.tutorEmail))
+        ).filter(Boolean) as string[];
+
+        if (uniqueTutorEmails.length > 0) {
+          const nameMap: Record<string, string> = {};
+          const avatarMap: Record<string, string> = {};
+
+          await Promise.all(
+            uniqueTutorEmails.map(async (email) => {
+              try {
+                const tutorResponse = await TutorService.getTutorByEmail(email);
+                if (tutorResponse.success && tutorResponse.data) {
+                  nameMap[email] = tutorResponse.data.userName || email;
+                  avatarMap[email] = tutorResponse.data.avatarUrl || '';
+                } else {
+                  nameMap[email] = email;
+                  avatarMap[email] = '';
+                }
+              } catch {
+                nameMap[email] = email;
+                avatarMap[email] = '';
+              }
+            })
+          );
+
+          setTutorNames(nameMap);
+          setTutorAvatars(avatarMap);
+        } else {
+          setTutorNames({});
+          setTutorAvatars({});
+        }
+      } else {
+        setTutorNames({});
+        setTutorAvatars({});
+        enriched.defenses = [];
+      }
+
+      setSelectedReport(enriched);
+    },
+    []
+  );
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortField(field);
       setSortOrder('asc');
     }
   };
 
-  // Filter and sort reports
   const filteredReports = useMemo(() => {
-    let filtered = reports.filter((report) => {
-      const matchesSearch = report.reporterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           report.reportedTutorName.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || 
-                           (statusFilter === 'pending' && report.status === 0) ||
-                           (statusFilter === 'resolved' && report.status === 1);
-      
-      return matchesSearch && matchesStatus;
-    });
+    return reports
+      .filter((report) => {
+        const keyword = searchTerm.trim().toLowerCase();
+        const matchesSearch =
+          !keyword ||
+          report.reporterName?.toLowerCase().includes(keyword) ||
+          report.reportedUserName?.toLowerCase().includes(keyword) ||
+          report.reporterEmail.toLowerCase().includes(keyword) ||
+          report.reportedUserEmail.toLowerCase().includes(keyword) ||
+          report.reason.toLowerCase().includes(keyword);
 
-    // Sort
-    filtered.sort((a, b) => {
-      let aValue: any, bValue: any;
+        const matchesStatus =
+          statusFilter === 'all' ||
+          report.status === Number(statusFilter);
+
+        const createdAt = new Date(report.createdAt).getTime();
+        const fromTime = dateFrom ? new Date(dateFrom).getTime() : null;
+        const toTime = dateTo ? new Date(dateTo).getTime() + 86399000 : null;
+
+        const matchesDate =
+          (!fromTime || createdAt >= fromTime) &&
+          (!toTime || createdAt <= toTime);
+
+        return matchesSearch && matchesStatus && matchesDate;
+      })
+      .sort((a, b) => {
+        let aValue: number | string = '';
+        let bValue: number | string = '';
       
       switch (sortField) {
         case 'id':
@@ -103,149 +422,227 @@ export function ManageReports() {
           bValue = b.id;
           break;
         case 'reporterName':
-          aValue = a.reporterName.toLowerCase();
-          bValue = b.reporterName.toLowerCase();
+            aValue = (a.reporterName || a.reporterEmail).toLowerCase();
+            bValue = (b.reporterName || b.reporterEmail).toLowerCase();
           break;
-        case 'reportedTutorName':
-          aValue = a.reportedTutorName.toLowerCase();
-          bValue = b.reportedTutorName.toLowerCase();
+          case 'reportedUserName':
+            aValue = (a.reportedUserName || a.reportedUserEmail).toLowerCase();
+            bValue = (b.reportedUserName || b.reportedUserEmail).toLowerCase();
           break;
         case 'createdAt':
+          default:
           aValue = new Date(a.createdAt).getTime();
           bValue = new Date(b.createdAt).getTime();
           break;
-        default:
-          return 0;
       }
 
       if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
+  }, [reports, searchTerm, statusFilter, dateFrom, dateTo, sortField, sortOrder]);
 
-    return filtered;
-  }, [reports, searchTerm, statusFilter, sortField, sortOrder]);
+  const totalPages = Math.ceil(filteredReports.length / PAGE_SIZE) || 1;
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const paginatedReports = filteredReports.slice(startIndex, startIndex + PAGE_SIZE);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredReports.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedReports = filteredReports.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-  const handleViewDetail = (report: any) => {
-    setSelectedReport(report);
-    setShowDetailDialog(true);
+  const handleOpenDetail = async (reportId: number) => {
+    setDetailDialogOpen(true);
+    setSelectedReport(null);
+    setDetailLoading(true);
+    setIsDefenseWindowOpen(false);
+    try {
+      await loadReportDetail(reportId);
+    } catch (error) {
+      console.error('Failed to fetch report detail', error);
+      showErrorRef.current('Lỗi', 'Không thể tải chi tiết báo cáo');
+      setDetailDialogOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
-  const handleResolve = () => {
-    if (!adminNote.trim()) {
-      console.log('Error: Vui lòng nhập ghi chú xử lý');
-      return;
-    }
-    setReports(prev => prev.map(rep => 
-      rep.id === selectedReport.id 
-        ? { ...rep, status: 1, adminNote, resolvedAt: new Date().toISOString() } 
-        : rep
-    ));
-    console.log('Success: Đã xử lý báo cáo');
-    setShowResolveDialog(false);
-    setShowDetailDialog(false);
-    setAdminNote('');
+  const handleOpenActionDialog = (type: ActionType) => {
+    setActionType(type);
+    setActionNote('');
+    setActionDialogOpen(true);
   };
 
-  const handleReject = () => {
-    if (!adminNote.trim()) {
-      console.log('Error: Vui lòng nhập lý do từ chối');
+  const handleConfirmAction = async () => {
+    if (!selectedReport || !actionType) return;
+    if (!actionNote.trim()) {
+      showError('Thiếu thông tin', 'Vui lòng nhập ghi chú xử lý');
       return;
     }
-    setReports(prev => prev.map(rep => 
-      rep.id === selectedReport.id 
-        ? { ...rep, status: 2, adminNote } 
-        : rep
-    ));
-    console.log('Success: Đã từ chối báo cáo');
-    setShowRejectDialog(false);
-    setShowDetailDialog(false);
-    setAdminNote('');
+
+    setActionSubmitting(true);
+    try {
+      const status =
+        actionType === 'resolve' ? ReportStatus.Resolved : ReportStatus.Dismissed;
+      const response = await ReportService.updateReportByAdmin(selectedReport.id, {
+        status,
+        adminNotes: actionNote.trim(),
+      });
+
+      const updatedReport = response.success ? response.data : undefined;
+      if (updatedReport) {
+        showSuccess(
+          'Thành công',
+          actionType === 'resolve'
+            ? 'Đã đánh dấu báo cáo là ĐÃ GIẢI QUYẾT'
+            : 'Đã bác bỏ báo cáo'
+        );
+
+        setReports((prev) =>
+          prev.map((report) =>
+            report.id === selectedReport.id
+              ? { ...report, status }
+              : report
+          )
+        );
+
+        if (selectedReport) {
+          setDetailLoading(true);
+          try {
+            await loadReportDetail(selectedReport.id);
+          } catch (error) {
+            console.error('Failed to refresh report detail', error);
+            showErrorRef.current('Lỗi', 'Không thể làm mới chi tiết báo cáo');
+            setDetailDialogOpen(false);
+          } finally {
+            setDetailLoading(false);
+          }
+        }
+      } else {
+        showError('Lỗi', 'Không thể cập nhật trạng thái báo cáo');
+      }
+    } catch (error) {
+      console.error('Failed to update report', error);
+      showError('Lỗi', 'Không thể cập nhật trạng thái báo cáo');
+    } finally {
+      setActionSubmitting(false);
+      setActionDialogOpen(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Quản lý Báo cáo</h1>
-        <p className="text-gray-600 mt-1">Xử lý báo cáo từ người dùng về gia sư</p>
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-semibold text-gray-900">Quản lý báo cáo</h1>
+        <p className="text-gray-600">
+          Theo dõi, tìm kiếm và xử lý toàn bộ báo cáo từ người dùng.
+        </p>
       </div>
 
-      {/* Filters */}
       <Card className="bg-white">
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="md:col-span-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
-                  placeholder="Tìm kiếm theo người báo cáo hoặc gia sư..."
                   value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
                     setCurrentPage(1);
                   }}
                   className="pl-10"
+                placeholder="Tìm theo tên/email người báo cáo, gia sư hoặc lý do..."
                 />
               </div>
-            </div>
-
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={(value) => {
+            <div className="flex flex-1 flex-wrap items-center gap-3">
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(event) => {
+                  setDateFrom(event.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full sm:w-auto flex-1 min-w-[160px]"
+                aria-label="Lọc từ ngày"
+              />
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(event) => {
+                  setDateTo(event.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full sm:w-auto flex-1 min-w-[160px]"
+                aria-label="Lọc đến ngày"
+              />
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
               setStatusFilter(value);
               setCurrentPage(1);
-            }}>
-              <SelectTrigger>
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Trạng thái" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                <SelectItem value="pending">Chờ xử lý</SelectItem>
-                <SelectItem value="resolved">Đã xử lý</SelectItem>
+                  <SelectItem value={ReportStatus.Pending.toString()}>Chờ xử lý</SelectItem>
+                  <SelectItem value={ReportStatus.UnderReview.toString()}>Đang xem xét</SelectItem>
+                  <SelectItem value={ReportStatus.Resolved.toString()}>Đã giải quyết</SelectItem>
+                  <SelectItem value={ReportStatus.Dismissed.toString()}>Đã bác bỏ</SelectItem>
               </SelectContent>
             </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Reports Table */}
       <Card className="bg-white">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Danh sách báo cáo</CardTitle>
-            <Badge variant="outline">{filteredReports.length} báo cáo</Badge>
-          </div>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Danh sách báo cáo</CardTitle>
+          <Badge variant="outline" className="text-sm">
+            Tổng: {reports.length}
+          </Badge>
         </CardHeader>
         <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-16 text-gray-500">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Đang tải dữ liệu báo cáo...
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50">
-                  <TableHead className="w-[80px] text-left">
-                    <Button variant="ghost" size="sm" onClick={() => handleSort('id')} className="h-8 px-2">
-                      ID <ArrowUpDown className="ml-1 h-3 w-3" />
-                    </Button>
-                  </TableHead>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="w-16 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      ID
+                    </TableHead>
                   <TableHead className="text-left">
-                    <Button variant="ghost" size="sm" onClick={() => handleSort('reporterName')} className="h-8 px-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSort('reporterName')}
+                        className="h-8 px-2 text-sm font-medium text-gray-600"
+                      >
                       Người báo cáo <ArrowUpDown className="ml-1 h-3 w-3" />
                     </Button>
                   </TableHead>
                   <TableHead className="text-left">
-                    <Button variant="ghost" size="sm" onClick={() => handleSort('reportedTutorName')} className="h-8 px-2">
-                      Gia sư bị báo cáo <ArrowUpDown className="ml-1 h-3 w-3" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSort('reportedUserName')}
+                        className="h-8 px-2 text-sm font-medium text-gray-600"
+                      >
+                        Bị báo cáo <ArrowUpDown className="ml-1 h-3 w-3" />
                     </Button>
                   </TableHead>
-                  <TableHead className="text-left">Lý do</TableHead>
+                    <TableHead className="text-left w-64">Lý do</TableHead>
                   <TableHead className="text-left">
-                    <Button variant="ghost" size="sm" onClick={() => handleSort('createdAt')} className="h-8 px-2">
-                      Ngày báo cáo <ArrowUpDown className="ml-1 h-3 w-3" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSort('createdAt')}
+                        className="h-8 px-2 text-sm font-medium text-gray-600"
+                      >
+                        Ngày tạo <ArrowUpDown className="ml-1 h-3 w-3" />
                     </Button>
                   </TableHead>
                   <TableHead className="text-left">Trạng thái</TableHead>
@@ -255,96 +652,68 @@ export function ManageReports() {
               <TableBody>
                 {paginatedReports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                      Không tìm thấy báo cáo nào
+                      <TableCell colSpan={7} className="py-12 text-center text-gray-500">
+                        Không có báo cáo nào phù hợp với bộ lọc hiện tại
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginatedReports.map((report, index) => (
                     <TableRow key={report.id} className="hover:bg-gray-50">
-                      <TableCell className="text-left">
-                        <span className="font-mono text-sm text-gray-600">{startIndex + index + 1}</span>
+                      <TableCell className="text-sm font-mono text-gray-600">
+                        {startIndex + index + 1}
                       </TableCell>
-                      <TableCell className="text-left">
+                      <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="relative flex-shrink-0">
-                            <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#F2E5BF]">
-                              {report.reporterAvatar ? (
-                                <img 
-                                  src={report.reporterAvatar} 
-                                  alt={report.reporterName}
-                                  className="w-full h-full object-cover rounded-lg"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                                    if (fallback) {
-                                      fallback.style.display = 'flex';
-                                    }
-                                  }}
-                                />
-                              ) : null}
-                              <div 
-                                className={`w-full h-full rounded-lg flex items-center justify-center text-sm font-bold text-[#257180] bg-[#F2E5BF] ${report.reporterAvatar ? 'hidden' : 'flex'}`}
-                                style={{ display: report.reporterAvatar ? 'none' : 'flex' }}
-                              >
-                                {report.reporterName.substring(0, 2).toUpperCase()}
-                              </div>
-                            </div>
-                          </div>
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={report.reporterAvatarUrl} alt={report.reporterName} />
+                            <AvatarFallback className="bg-[#F2E5BF] text-sm font-semibold text-[#257180]">
+                              {getInitials(report.reporterName || report.reporterEmail)}
+                            </AvatarFallback>
+                          </Avatar>
                           <div>
-                            <p className="text-sm font-medium text-gray-900">{report.reporterName}</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {report.reporterName || 'Ẩn danh'}
+                            </p>
                             <p className="text-xs text-gray-500">{report.reporterEmail}</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-left">
+                      <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="relative flex-shrink-0">
-                            <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#F2E5BF]">
-                              {report.reportedTutorAvatar ? (
-                                <img 
-                                  src={report.reportedTutorAvatar} 
-                                  alt={report.reportedTutorName}
-                                  className="w-full h-full object-cover rounded-lg"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                                    if (fallback) {
-                                      fallback.style.display = 'flex';
-                                    }
-                                  }}
-                                />
-                              ) : null}
-                              <div 
-                                className={`w-full h-full rounded-lg flex items-center justify-center text-sm font-bold text-[#257180] bg-[#F2E5BF] ${report.reportedTutorAvatar ? 'hidden' : 'flex'}`}
-                                style={{ display: report.reportedTutorAvatar ? 'none' : 'flex' }}
-                              >
-                                {report.reportedTutorName.substring(0, 2).toUpperCase()}
-                              </div>
-                            </div>
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={report.reportedAvatarUrl} alt={report.reportedUserName} />
+                            <AvatarFallback className="bg-[#F2E5BF] text-sm font-semibold text-[#257180]">
+                              {getInitials(report.reportedUserName || report.reportedUserEmail)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {report.reportedUserName || report.reportedUserEmail}
+                            </p>
+                            <p className="text-xs text-gray-500">{report.reportedUserEmail}</p>
                           </div>
-                          <p className="text-sm font-medium text-gray-900">{report.reportedTutorName}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-xs text-left">
-                        <p className="text-sm text-gray-900 truncate">{report.reason}</p>
+                      <TableCell>
+                        <p className="line-clamp-2 text-sm text-gray-800">{report.reason}</p>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600 text-left">
-                        {new Date(report.createdAt).toLocaleDateString('vi-VN')}
+                      <TableCell className="text-sm text-gray-600">
+                        {formatDate(report.createdAt, true)}
                       </TableCell>
-                      <TableCell className="text-left">
-                        <Badge className={getReportStatusColor(report.status)}>
-                          {getReportStatusText(report.status)}
+                      <TableCell>
+                        <Badge className={getStatusColor(report.status)}>
+                          {getStatusLabel(report.status)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-left">
+                      <TableCell className="text-right">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleViewDetail(report)}
-                          className="p-2 hover:bg-[#FD8B51] hover:text-white"
+                          className="text-[#257180] hover:bg-[#257180]/10"
+                          onClick={() => handleOpenDetail(report.id)}
                         >
-                          <Eye className="h-5 w-5" />
+                          <Eye className="mr-2 h-4 w-4" />
+                          Xem chi tiết
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -353,20 +722,22 @@ export function ManageReports() {
               </TableBody>
             </Table>
           </div>
+          )}
 
-          {/* Pagination */}
           {totalPages > 1 && (
-            <div className="mt-6">
+            <div className="mt-6 flex items-center justify-between">
+              <p className="text-sm text-gray-500">
+                Hiển thị {paginatedReports.length} / {filteredReports.length} báo cáo
+              </p>
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious 
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                       className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
                   </PaginationItem>
-                  
-                  {[...Array(totalPages)].map((_, idx) => (
+                  {Array.from({ length: totalPages }).map((_, idx) => (
                     <PaginationItem key={idx}>
                       <PaginationLink
                         onClick={() => setCurrentPage(idx + 1)}
@@ -377,10 +748,9 @@ export function ManageReports() {
                       </PaginationLink>
                     </PaginationItem>
                   ))}
-                  
                   <PaginationItem>
                     <PaginationNext 
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                       className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
                   </PaginationItem>
@@ -391,247 +761,387 @@ export function ManageReports() {
         </CardContent>
       </Card>
 
-      {/* Detail Dialog */}
-      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
-          <DialogHeader>
-            <DialogTitle>Chi tiết báo cáo</DialogTitle>
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent
+          className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col"
+          aria-describedby={undefined}
+        >
+          <DialogHeader className="flex-shrink-0 pb-2">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-xl font-semibold text-gray-900">Chi tiết báo cáo</DialogTitle>
+              {selectedReport && isPendingOrUnderReviewStatus(selectedReport.status) && (
+                <span
+                  className={`text-base font-bold ${
+                    isDefenseWindowOpen ? 'text-amber-700' : 'text-gray-600'
+                  }`}
+                >
+                  {isDefenseWindowOpen ? 'Còn thời gian kháng cáo' : 'Đã quá thời gian kháng cáo'}
+                </span>
+              )}
+            </div>
           </DialogHeader>
           
-          {selectedReport && (
-            <div className="space-y-6">
-              {/* Status Badge */}
-              <div className="flex items-center justify-between">
-                <Badge className={getReportStatusColor(selectedReport.status)}>
-                  {getReportStatusText(selectedReport.status)}
-                </Badge>
-                <span className="text-sm text-gray-500">
-                  Báo cáo ngày {new Date(selectedReport.createdAt).toLocaleDateString('vi-VN')}
-                </span>
+          {detailLoading ? (
+            <div className="flex flex-1 items-center justify-center py-16 text-gray-500">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Đang tải chi tiết báo cáo...
               </div>
-
-              {/* Reporter Info */}
+          ) : selectedReport ? (
+            <div className="flex-1 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <div className="space-y-4 lg:col-span-2">
+                  {selectedReport.handledByAdminEmail && (
+                    <Card className="border border-red-300 bg-red-50 shadow-sm">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base font-semibold text-red-900">
+                          Xử lý bởi {selectedReport.handledByAdminEmail}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="rounded-lg border border-red-200 bg-white p-4 text-sm text-red-900 whitespace-pre-wrap leading-relaxed">
+                          {selectedReport.adminNotes && selectedReport.adminNotes.trim().length > 0
+                            ? selectedReport.adminNotes
+                            : 'Chưa có ghi chú xử lý'}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  <Card className="bg-white border border-gray-200">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base font-semibold text-gray-900">Thông tin cơ bản</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-600 mb-2">Người báo cáo</p>
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                  <div className="relative flex-shrink-0">
-                    <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-[#F2E5BF]">
-                      {selectedReport.reporterAvatar ? (
-                        <img 
-                          src={selectedReport.reporterAvatar} 
-                          alt={selectedReport.reporterName}
-                          className="w-full h-full object-cover rounded-lg"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (fallback) {
-                              fallback.style.display = 'flex';
-                            }
-                          }}
-                        />
-                      ) : null}
-                      <div 
-                        className={`w-full h-full rounded-lg flex items-center justify-center text-base font-bold text-[#257180] bg-[#F2E5BF] ${selectedReport.reporterAvatar ? 'hidden' : 'flex'}`}
-                        style={{ display: selectedReport.reporterAvatar ? 'none' : 'flex' }}
-                      >
-                        {selectedReport.reporterName.substring(0, 2).toUpperCase()}
+                          <Label className="text-sm text-gray-600">Người báo cáo</Label>
+                          <div className="mt-2 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={selectedReport.reporterAvatarUrl} alt={selectedReport.reporterName} />
+                              <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
+                                {selectedReport.reporterName?.[0]?.toUpperCase() || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-gray-900">
+                                {selectedReport.reporterName || 'Không xác định'}
+                              </p>
+                              <p className="truncate text-xs text-gray-500">{selectedReport.reporterEmail}</p>
                       </div>
                     </div>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{selectedReport.reporterName}</p>
-                    <p className="text-sm text-gray-600">{selectedReport.reporterEmail}</p>
+                          <Label className="text-sm text-gray-600">Người bị báo cáo</Label>
+                          <div className="mt-2 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={selectedReport.reportedAvatarUrl} alt={selectedReport.reportedUserName} />
+                              <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
+                                {selectedReport.reportedUserName?.[0]?.toUpperCase() || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-gray-900">
+                                {selectedReport.reportedUserName || 'Không xác định'}
+                              </p>
+                              <p className="truncate text-xs text-gray-500">{selectedReport.reportedUserEmail}</p>
+                            </div>
                   </div>
                 </div>
               </div>
 
-              {/* Reported Tutor Info */}
+                      <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-600 mb-2">Gia sư bị báo cáo</p>
-                <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="relative flex-shrink-0">
-                    <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-[#F2E5BF]">
-                      {selectedReport.reportedTutorAvatar ? (
-                        <img 
-                          src={selectedReport.reportedTutorAvatar} 
-                          alt={selectedReport.reportedTutorName}
-                          className="w-full h-full object-cover rounded-lg"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (fallback) {
-                              fallback.style.display = 'flex';
-                            }
-                          }}
-                        />
-                      ) : null}
-                      <div 
-                        className={`w-full h-full rounded-lg flex items-center justify-center text-base font-bold text-[#257180] bg-[#F2E5BF] ${selectedReport.reportedTutorAvatar ? 'hidden' : 'flex'}`}
-                        style={{ display: selectedReport.reportedTutorAvatar ? 'none' : 'flex' }}
-                      >
-                        {selectedReport.reportedTutorName.substring(0, 2).toUpperCase()}
-                      </div>
+                          <Label className="text-sm text-gray-600">Trạng thái</Label>
+                          <div className="mt-2">
+                            <Badge className={getStatusColor(selectedReport.status)}>
+                              {getStatusLabel(selectedReport.status)}
+                            </Badge>
                     </div>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{selectedReport.reportedTutorName}</p>
-                    <p className="text-sm text-gray-600">ID Gia sư: {selectedReport.reportedTutorId}</p>
-                  </div>
+                          <Label className="text-sm text-gray-600">Ngày tạo</Label>
+                          <p className="mt-2 font-medium text-gray-900">
+                            {formatDate(selectedReport.createdAt, true)}
+                          </p>
                 </div>
               </div>
 
-              <Separator />
+                    </CardContent>
+                  </Card>
 
-              {/* Report Details */}
-              <div>
-                <div className="flex items-start gap-3 mb-3">
-                  <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-600 mb-1">Lý do báo cáo</p>
-                    <p className="font-medium text-gray-900">{selectedReport.reason}</p>
-                  </div>
+                  <Card className="bg-white border border-gray-200">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base font-semibold text-gray-900">Lý do báo cáo</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="rounded-lg bg-gray-50 p-4 text-gray-900 whitespace-pre-wrap leading-relaxed">
+                        {selectedReport.reason}
                 </div>
+                    </CardContent>
+                  </Card>
+
+                  {selectedReport.reporterEvidences && selectedReport.reporterEvidences.length > 0 && (
+                    <Card className="bg-white border border-gray-200">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base font-semibold text-gray-900">
+                          Bằng chứng từ người báo cáo ({selectedReport.reporterEvidences.length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                          {selectedReport.reporterEvidences.map((evidence) => {
+                            const typeValue = normalizeMediaTypeValue(evidence.mediaType);
+                            const isImage = typeValue === MediaType.Image || typeValue === 0;
+                            return (
+                              <div key={evidence.id} className="relative">
+                                <div
+                                  className={`aspect-square rounded-lg border-2 border-gray-200 bg-gray-100 overflow-hidden ${
+                                    isImage ? 'cursor-pointer' : ''
+                                  }`}
+                                  onClick={() => isImage && setPreviewImage(evidence.fileUrl)}
+                                >
+                                  {isImage ? (
+                                    <img
+                                      src={evidence.fileUrl}
+                                      alt={evidence.caption || 'Evidence'}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <video src={evidence.fileUrl} controls className="h-full w-full object-cover" />
+                                  )}
               </div>
+                                {evidence.caption && (
+                                  <p className="mt-2 text-xs text-gray-600 line-clamp-2">{evidence.caption}</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
-              {/* Description */}
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-2">Mô tả chi tiết</p>
-                <p className="text-gray-900 whitespace-pre-wrap">{selectedReport.description}</p>
-              </div>
-
-              {/* Evidence */}
-              {selectedReport.evidenceUrls && selectedReport.evidenceUrls.length > 0 && (
-                <div>
-                  <p className="text-sm text-gray-600 mb-3">Bằng chứng ({selectedReport.evidenceUrls.length})</p>
-                  <div className="space-y-2">
-                    {selectedReport.evidenceUrls.map((url: string, index: number) => (
-                      <a
-                        key={index}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <FileText className="h-5 w-5 text-[#257180]" />
-                        <span className="text-sm text-gray-900">Bằng chứng {index + 1}</span>
-                        <ExternalLink className="h-4 w-4 text-gray-400 ml-auto" />
-                      </a>
-                    ))}
-                  </div>
+                  {selectedReport.adminEvidences && selectedReport.adminEvidences.length > 0 && (
+                    <Card className="bg-white border border-gray-200">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base font-semibold text-gray-900">
+                          Bằng chứng từ admin ({selectedReport.adminEvidences.length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                          {selectedReport.adminEvidences.map((evidence) => {
+                            const typeValue = normalizeMediaTypeValue(evidence.mediaType);
+                            const isImage = typeValue === MediaType.Image || typeValue === 0;
+                            return (
+                              <div key={evidence.id}>
+                                <div
+                                  className={`aspect-square rounded-lg border-2 border-gray-200 bg-gray-100 overflow-hidden ${
+                                    isImage ? 'cursor-pointer' : ''
+                                  }`}
+                                  onClick={() => isImage && setPreviewImage(evidence.fileUrl)}
+                                >
+                                  {isImage ? (
+                                    <img
+                                      src={evidence.fileUrl}
+                                      alt={evidence.caption || 'Evidence'}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <video src={evidence.fileUrl} controls className="h-full w-full object-cover" />
+                                  )}
                 </div>
-              )}
-
-              {/* Related Booking */}
-              {selectedReport.relatedBookingId && (
-                <div className="p-4 border border-blue-200 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    Liên quan đến Booking <span className="font-mono font-semibold">{selectedReport.relatedBookingId}</span>
-                  </p>
-                </div>
-              )}
-
-              {/* Admin Note */}
-              {selectedReport.adminNote && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm text-green-800 font-medium mb-1">Ghi chú xử lý</p>
-                  <p className="text-sm text-gray-900">{selectedReport.adminNote}</p>
-                  {selectedReport.resolvedAt && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      Xử lý ngày {new Date(selectedReport.resolvedAt).toLocaleDateString('vi-VN')}
-                    </p>
+                                {evidence.caption && (
+                                  <p className="mt-2 text-xs text-gray-600 line-clamp-2">{evidence.caption}</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
                   )}
                 </div>
-              )}
 
-              {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button variant="outline" onClick={() => setShowDetailDialog(false)} className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
-                  Đóng
-                </Button>
-                {selectedReport.status === 0 && (
+                <div className="lg:col-span-1">
+                  {selectedReport.defenses && selectedReport.defenses.length > 0 ? (
+                    <Card className="sticky top-0 bg-white border border-gray-200">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base font-semibold text-gray-900">
+                          Kháng cáo ({selectedReport.defenses.length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {selectedReport.defenses.map((defense) => (
+                          <div key={defense.id} className="rounded-lg border border-gray-200 p-4">
+                            <div className="mb-3 flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage
+                                  src={tutorAvatars[defense.tutorEmail]}
+                                  alt={tutorNames[defense.tutorEmail] || defense.tutorEmail}
+                                />
+                                <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
+                                  {(tutorNames[defense.tutorEmail] || defense.tutorEmail)[0]?.toUpperCase() || 'T'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium text-gray-900">
+                                  {tutorNames[defense.tutorEmail] || defense.tutorEmail}
+                                </p>
+                                <p className="text-xs text-gray-500">{formatDate(defense.createdAt, true)}</p>
+                              </div>
+                            </div>
+                            <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">
+                              {defense.note}
+                            </p>
+                            {defense.evidences && defense.evidences.length > 0 && (
+                              <div className="mt-3 border-t border-gray-200 pt-3">
+                                <Label className="text-sm text-gray-600">
+                                  Bằng chứng kháng cáo ({defense.evidences.length})
+                                </Label>
+                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                  {defense.evidences.map((evidence) => {
+                                    const typeValue = normalizeMediaTypeValue(evidence.mediaType);
+                                    const isImage = typeValue === MediaType.Image || typeValue === 0;
+                                    return (
+                                      <div key={evidence.id}>
+                                        <div
+                                          className={`aspect-square rounded-lg border border-gray-200 bg-gray-100 overflow-hidden ${
+                                            isImage ? 'cursor-pointer' : ''
+                                          }`}
+                                          onClick={() => isImage && setPreviewImage(evidence.fileUrl)}
+                                        >
+                                          {isImage ? (
+                                            <img
+                                              src={evidence.fileUrl}
+                                              alt={evidence.caption || 'Evidence'}
+                                              className="h-full w-full object-cover"
+                                            />
+                                          ) : (
+                                            <video
+                                              src={evidence.fileUrl}
+                                              controls
+                                              className="h-full w-full object-cover"
+                                            />
+                  )}
+                </div>
+                                        {evidence.caption && (
+                                          <p className="mt-1 text-xs text-gray-600 line-clamp-2">{evidence.caption}</p>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card className="bg-white border border-gray-200">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base font-semibold text-gray-900">Kháng cáo</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="py-8 text-center text-sm text-gray-500">Chưa có kháng cáo nào</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="py-6 text-center text-sm text-gray-500">Không có dữ liệu báo cáo</div>
+          )}
+
+          <DialogFooter className="flex-shrink-0 border-t pt-4">
+            <div className="flex w-full flex-wrap justify-end gap-3">
+              <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
+                Đóng
+              </Button>
+              {selectedReport &&
+                !isDefenseWindowOpen &&
+                isPendingOrUnderReviewStatus(selectedReport.status) && (
                   <>
                     <Button
                       variant="outline"
-                      className="text-red-600 border-red-600 hover:bg-red-50"
-                      onClick={() => {
-                        setShowDetailDialog(false);
-                        setShowRejectDialog(true);
-                      }}
+                      className="border-red-200 text-red-600 hover:bg-red-50"
+                      onClick={() => handleOpenActionDialog('dismiss')}
                     >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Từ chối báo cáo
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Bác bỏ báo cáo
                     </Button>
                     <Button
-                      className="bg-[#257180] hover:bg-[#257180]/90 text-white"
-                      onClick={() => {
-                        setShowDetailDialog(false);
-                        setShowResolveDialog(true);
-                      }}
+                      className="bg-[#257180] text-white hover:bg-[#1f5a66]"
+                      onClick={() => handleOpenActionDialog('resolve')}
                     >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Xử lý báo cáo
+                      <Shield className="mr-2 h-4 w-4" />
+                      Đánh dấu đã giải quyết
                     </Button>
                   </>
                 )}
-              </div>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-3xl" aria-describedby={undefined}>
+          {previewImage && (
+            <img
+              src={previewImage}
+              alt="Bằng chứng"
+              className="max-h-[70vh] w-full rounded-lg object-contain"
+            />
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Resolve Dialog */}
-      <AlertDialog open={showResolveDialog} onOpenChange={setShowResolveDialog}>
+      <AlertDialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xử lý báo cáo</AlertDialogTitle>
+            <AlertDialogTitle>
+              {actionType === 'resolve' ? 'Xác nhận đã giải quyết' : 'Bác bỏ báo cáo'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Vui lòng nhập ghi chú về cách xử lý báo cáo này
+              Vui lòng nhập ghi chú chi tiết về quyết định xử lý để lưu lại lịch sử.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
             <Label htmlFor="admin-note">Ghi chú xử lý</Label>
             <Textarea
               id="admin-note"
-              placeholder="Nhập ghi chú về cách xử lý..."
-              value={adminNote}
-              onChange={(e) => setAdminNote(e.target.value)}
-              className="mt-2"
               rows={4}
+              placeholder="VD: Đã liên hệ hai bên và hoàn tiền cho học viên..."
+              value={actionNote}
+              onChange={(event) => setActionNote(event.target.value)}
+              className="mt-2"
+              disabled={actionSubmitting}
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setAdminNote('')}>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleResolve} className="bg-[#257180] hover:bg-[#1f5a66]">
-              Xác nhận xử lý
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Reject Dialog */}
-      <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Từ chối báo cáo</AlertDialogTitle>
-            <AlertDialogDescription>
-              Vui lòng nhập lý do từ chối báo cáo này
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4">
-            <Label htmlFor="reject-note">Lý do từ chối</Label>
-            <Textarea
-              id="reject-note"
-              placeholder="Nhập lý do từ chối..."
-              value={adminNote}
-              onChange={(e) => setAdminNote(e.target.value)}
-              className="mt-2"
-              rows={4}
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setAdminNote('')}>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReject} className="bg-red-600 hover:bg-red-700">
-              Xác nhận từ chối
+            <AlertDialogCancel
+              disabled={actionSubmitting}
+              className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+            >
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmAction}
+              disabled={actionSubmitting || !actionNote.trim()}
+              className={`text-white disabled:opacity-50 disabled:cursor-not-allowed ${
+                actionType === 'dismiss'
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'bg-[#257180] hover:bg-[#1f5a66]'
+              }`}
+            >
+              {actionSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : actionType === 'dismiss' ? (
+                'Bác bỏ báo cáo'
+              ) : (
+                'Đánh dấu đã giải quyết'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
