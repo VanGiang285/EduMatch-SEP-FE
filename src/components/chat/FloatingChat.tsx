@@ -277,12 +277,31 @@ export function FloatingChat() {
       showErrorRef.current("Lỗi", "Không tìm thấy thông tin người nhận.");
       return;
     }
+    const messageContent = messageText.trim();
     setSending(true);
+    
+    // Optimistic update: Add temporary message immediately
+    // Use negative ID to easily identify temporary messages
+    const tempMessage: ChatMessageDto = {
+      id: -Date.now(), // Negative ID for temporary messages
+      chatRoomId: selectedRoom,
+      senderEmail: currentUserEmail,
+      receiverEmail: receiverEmail,
+      messageText: messageContent,
+      sentAt: new Date().toISOString(), // Use current local time, will be replaced by server response
+      isRead: false,
+    };
+    addMessage(tempMessage);
+    setMessageText("");
+    
     try {
-      await sendMessage(selectedRoom, currentUserEmail, receiverEmail, messageText.trim());
-      setMessageText("");
+      await sendMessage(selectedRoom, currentUserEmail, receiverEmail, messageContent);
+      // Message will be replaced by the real one from server via SignalR
     } catch (error) {
       console.error("Failed to send message:", error);
+      // Remove temporary message on error
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+      setMessageText(messageContent); // Restore message text
       showErrorRef.current("Lỗi", "Không thể gửi tin nhắn. Vui lòng thử lại.");
     } finally {
       setSending(false);
