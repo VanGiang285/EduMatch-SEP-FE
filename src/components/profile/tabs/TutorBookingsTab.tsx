@@ -317,7 +317,7 @@ export function TutorBookingsTab() {
               <Loader2 className="h-8 w-8 animate-spin text-[#257180]" />
             </div>
           ) : schedules.length === 0 ? (
-            <Card>
+            <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Calendar className="h-16 w-16 text-gray-300 mb-4" />
                 <p className="text-gray-600">Chưa có buổi học nào</p>
@@ -374,7 +374,7 @@ export function TutorBookingsTab() {
                   }
 
                   return (
-                    <Card key={schedule.id} className="hover:shadow-md transition-shadow border-l-4 border-l-[#257180]">
+                    <Card key={schedule.id} className="hover:shadow-md transition-shadow border border-[#257180]/20 border-l-4 border-l-[#257180] bg-white">
                       <CardContent className="p-6">
                         <div className="flex flex-col md:flex-row gap-6">
                           {scheduleDate && (
@@ -556,7 +556,7 @@ export function TutorBookingsTab() {
               <p className="ml-3 text-gray-600">Đang tải danh sách đặt lịch...</p>
             </div>
           ) : filteredBookings.length === 0 ? (
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <BookOpen className="h-16 w-16 text-gray-300 mb-4" />
                 <p className="text-gray-600">Không có đặt lịch nào</p>
@@ -576,7 +576,7 @@ export function TutorBookingsTab() {
               return (
                 <Card
                   key={booking.id}
-                  className="hover:shadow-md transition-shadow cursor-pointer"
+                  className="hover:shadow-md transition-shadow cursor-pointer bg-white border border-[#257180]/20"
                   onClick={() => handleViewDetail(booking.id)}
                 >
                   <CardContent className="p-6">

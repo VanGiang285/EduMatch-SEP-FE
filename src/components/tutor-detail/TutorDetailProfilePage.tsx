@@ -735,7 +735,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="border-[#FD8B51]">
+            <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
               <CardContent className="p-6">
                 <div className="flex items-start gap-6">
                   <div className="relative flex-shrink-0">
@@ -872,7 +872,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
               </CardContent>
             </Card>
             {tutor.videoIntroUrl && (
-              <Card className="border-[#FD8B51]">
+              <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
                 <CardContent className="p-6">
                   <div className="relative bg-gradient-to-br from-[#257180] to-[#1e5a66] rounded-lg overflow-hidden aspect-video">
                     <video
@@ -909,7 +909,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                 <TabsTrigger value="availability" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">Lịch trống</TabsTrigger>
               </TabsList>
               <TabsContent value="about" className="space-y-6">
-                <Card className="border-[#FD8B51]">
+                <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
                   <CardHeader>
                     <CardTitle className="font-bold">Về tôi</CardTitle>
                   </CardHeader>
@@ -973,7 +973,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border-[#FD8B51]">
+                <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
                   <CardHeader>
                     <CardTitle className="font-bold">Học vấn & Chứng chỉ</CardTitle>
                   </CardHeader>
@@ -1044,7 +1044,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                   </CardContent>
                 </Card>
 
-                <Card className="border-[#FD8B51]">
+                <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
                   <CardHeader>
                     <CardTitle className="font-bold">Môn học giảng dạy</CardTitle>
                   </CardHeader>
@@ -1061,7 +1061,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
 
               </TabsContent>
               <TabsContent value="reviews" className="space-y-6">
-                <Card className="border-[#FD8B51]">
+                <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="font-bold">Đánh giá từ học viên</CardTitle>
@@ -1222,7 +1222,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
               </TabsContent>
               <TabsContent value="availability" className="space-y-6">
                 <div ref={availabilitySectionRef} className="space-y-6">
-                  <Card className="border-[#FD8B51]">
+                  <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
                     <CardHeader>
                       <div className="space-y-4">
                         <div>
@@ -1233,7 +1233,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                         </div>
 
                         {subjectLevelOptions.length > 0 ? (
-                          <div className="bg-[#FFF6EF] border border-[#FD8B51]/40 rounded-lg p-4 space-y-3">
+                          <div className="bg-[#FFF6EF] border border-[#257180]/20 rounded-lg p-4 space-y-3">
                             <div className="space-y-2">
                               <p className="text-sm font-medium text-gray-800">Chọn môn học</p>
                               <Select value={selectedSubjectKey} onValueChange={setSelectedSubjectKey}>
@@ -1269,7 +1269,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                               </Select>
                             </div>
                             {selectedLevelInfo && (
-                              <div className="flex items-center justify-between rounded-md bg-white/80 border border-[#FD8B51]/30 px-3 py-2 text-sm text-gray-700">
+                              <div className="flex items-center justify-between rounded-md bg-white/80 border border-[#257180]/20 px-3 py-2 text-sm text-gray-700">
                                 <span>Giá mỗi buổi</span>
                                 <span className="font-semibold text-[#FD8B51]">
                                   {FormatService.formatVND(selectedLevelPrice)}
@@ -1479,7 +1479,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
           </div>
           <div className="lg:col-span-1">
             <div className="sticky top-20 space-y-6">
-              <Card className="border-[#257180]/20 shadow-lg">
+              <Card className="border-[#257180]/20 bg-white shadow-lg transition-shadow hover:shadow-md">
                 <CardContent className="p-6">
                   <div className="text-center mb-6">
                     <div>
@@ -1531,7 +1531,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                   </div>
                 </CardContent>
               </Card>
-              <Card className="border-[#FD8B51]">
+              <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
                 <CardHeader>
                   <CardTitle className="text-base font-bold">Thông tin nhanh</CardTitle>
                 </CardHeader>
@@ -1590,7 +1590,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="rounded-lg border border-[#FD8B51]/30 bg-[#FFF6EF] p-4 text-sm text-gray-700 space-y-1">
+            <div className="rounded-lg border border-[#257180]/20 bg-[#FFF6EF] p-4 text-sm text-gray-700 space-y-1">
               <p>
                 <span className="font-semibold text-gray-900">Môn học:</span>{' '}
                 {selectedSubjectInfo?.subjectName}

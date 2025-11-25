@@ -933,7 +933,7 @@ export function ReportsTab() {
         )}
       </div>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -974,7 +974,7 @@ export function ReportsTab() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách báo cáo</CardTitle>
@@ -1176,7 +1176,7 @@ export function ReportsTab() {
               <div className="flex-1 overflow-y-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2 space-y-4">
-                <Card className="bg-white border border-gray-200">
+                <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold text-gray-900">Thông tin cơ bản</CardTitle>
                   </CardHeader>
@@ -1231,7 +1231,7 @@ export function ReportsTab() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white border border-gray-200">
+                <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold text-gray-900">Lý do báo cáo</CardTitle>
                   </CardHeader>
@@ -1260,7 +1260,7 @@ export function ReportsTab() {
                 )}
 
                 {selectedReport.reporterEvidences && selectedReport.reporterEvidences.length > 0 && (
-                  <Card className="bg-white border border-gray-200">
+                  <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base font-semibold text-gray-900">
                         Bằng chứng từ người báo cáo ({selectedReport.reporterEvidences.length})
@@ -1306,7 +1306,7 @@ export function ReportsTab() {
 
                   <div className="lg:col-span-1">
                     {selectedReport.defenses && selectedReport.defenses.length > 0 ? (
-                      <Card className="bg-white border border-gray-200 sticky top-0">
+                      <Card className="bg-white border border-[#257180]/20 sticky top-0 transition-shadow hover:shadow-md">
                         <CardHeader className="pb-3">
                           <CardTitle className="text-base font-semibold text-gray-900">
                             Kháng cáo
@@ -1371,7 +1371,7 @@ export function ReportsTab() {
                         </CardContent>
                       </Card>
                     ) : (
-                      <Card className="bg-white border border-gray-200">
+                      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
                         <CardHeader className="pb-3">
                           <CardTitle className="text-base font-semibold text-gray-900">Kháng cáo</CardTitle>
                         </CardHeader>
