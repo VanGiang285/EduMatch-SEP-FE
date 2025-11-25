@@ -56,11 +56,22 @@ import {
 } from '@/data/mockBusinessAdminData';
 import { ClassRequestService, ClassRequestItemDto, ClassRequestDetailDto } from '@/services/classRequestService';
 import { TutorApplicationService } from '@/services/tutorApplicationService';
-import { TutorApplicationItemDto } from '@/types/backend';
+import { TutorApplicationItemDto, TutorRatingSummary } from '@/types/backend';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { ClassRequestStatus, TeachingMode } from '@/types/enums';
+import { FeedbackService } from '@/services/feedbackService';
+import { Star } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
+
+const getInitials = (value?: string) => {
+  if (!value) return 'NA';
+  const trimmed = value.trim();
+  if (!trimmed) return 'NA';
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+};
 
 type SortField = 'id' | 'learnerName' | 'subjectName' | 'createdAt';
 type SortOrder = 'asc' | 'desc';
@@ -92,6 +103,7 @@ export function ManageClassRequests() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [loadingApplicants, setLoadingApplicants] = useState(false);
   const [applicants, setApplicants] = useState<TutorApplicationItemDto[]>([]);
+  const [applicantRatings, setApplicantRatings] = useState<Map<number, TutorRatingSummary>>(new Map());
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [sortField, setSortField] = useState<SortField>('createdAt');
@@ -166,29 +178,60 @@ export function ManageClassRequests() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
-  // Load chi tiết yêu cầu và danh sách gia sư ứng tuyển khi mở dialog
   useEffect(() => {
     if (selectedRequest?.id && showDetailDialog) {
       const loadDetail = async () => {
         setLoadingDetail(true);
         setLoadingApplicants(false);
         try {
-          // Load chi tiết yêu cầu
           const detailResponse = await ClassRequestService.getClassRequestById(selectedRequest.id);
           if (detailResponse.success && detailResponse.data) {
             setSelectedRequest(detailResponse.data);
             
-            // Nếu đã duyệt (Open), load danh sách gia sư ứng tuyển
             const statusNum = getStatusNumber(detailResponse.data.status);
-            console.log(`[Business Admin] Detail dialog: status="${detailResponse.data.status}" (parsed=${statusNum})`);
             
             if (statusNum === ClassRequestStatus.Open) {
               setLoadingApplicants(true);
               const applicantsResponse = await TutorApplicationService.getApplicationsByClassRequest(selectedRequest.id);
               if (applicantsResponse.success && applicantsResponse.data) {
-                setApplicants(applicantsResponse.data);
+                const applicantsList = applicantsResponse.data;
+                setApplicants(applicantsList);
+                
+                if (applicantsList.length > 0) {
+                  const ratingPromises = applicantsList.map(async (applicant) => {
+                    if (!applicant.tutorId || applicant.tutorId <= 0) {
+                      return null;
+                    }
+                    try {
+                      const response = await FeedbackService.getTutorRatingSummary(applicant.tutorId);
+                      if (response.success && response.data) {
+                        return { tutorId: applicant.tutorId, rating: response.data };
+                      }
+                      return null;
+                    } catch (error) {
+                      return null;
+                    }
+                  });
+
+                  const results = await Promise.all(ratingPromises);
+                  const ratingMap = new Map<number, TutorRatingSummary>();
+                  results.forEach((result) => {
+                    if (result) {
+                      ratingMap.set(result.tutorId, result.rating);
+                    }
+                  });
+                  setApplicantRatings(ratingMap);
+                } else {
+                  setApplicantRatings(new Map());
+                }
+              } else {
+                setApplicants([]);
+                setApplicantRatings(new Map());
               }
               setLoadingApplicants(false);
+            } else {
+              setApplicants([]);
+              setApplicantRatings(new Map());
             }
           }
         } catch (err: any) {
@@ -202,9 +245,10 @@ export function ManageClassRequests() {
     } else {
       setSelectedRequest(null);
       setApplicants([]);
+      setApplicantRatings(new Map());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRequest?.id, showDetailDialog]);
+  }, [selectedRequest?.id, showDetailDialog, showError]);
+
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -564,10 +608,8 @@ export function ManageClassRequests() {
                       </TableRow>
                     ) : (
                       paginatedRequests.map((request, index) => {
-                        const displayIndex = startIndex + index + 1; // ID hiển thị theo index (1, 2, 3...)
+                        const displayIndex = startIndex + index + 1;
                         const statusNum = getStatusNumber(request.status);
-                        console.log(`[Business Admin] Request ${request.id}: status="${request.status}" (type=${typeof request.status}), parsed=${statusNum}`);
-                        const displayName = request.title || `${request.subjectName || ''} ${request.level || ''}`.trim();
                         
                         return (
                           <TableRow key={request.id} className="hover:bg-gray-50">
@@ -576,10 +618,10 @@ export function ManageClassRequests() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10">
-                                  <AvatarImage src={request.avatarUrl} alt={request.learnerName} />
-                                  <AvatarFallback className="bg-[#257180] text-white">
-                                    {request.learnerName?.substring(0, 2).toUpperCase() || 'U'}
+                                <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] font-semibold">
+                                  <AvatarImage src={request.avatarUrl} alt={request.learnerName} className="object-cover" />
+                                  <AvatarFallback>
+                                    {getInitials(request.learnerName || request.learnerEmail)}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
@@ -706,9 +748,14 @@ export function ManageClassRequests() {
             <div className="space-y-6">
               {/* Learner Info */}
               <div className="flex items-start gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarFallback className="bg-[#257180] text-white text-2xl">
-                    {selectedRequest.learnerEmail?.substring(0, 2).toUpperCase() || 'U'}
+                <Avatar className="h-20 w-20 rounded-2xl border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] text-3xl font-semibold">
+                  <AvatarImage
+                    src={(selectedRequest as any).avatarUrl}
+                    alt={selectedRequest.learnerEmail}
+                    className="object-cover"
+                  />
+                  <AvatarFallback>
+                    {getInitials((selectedRequest as any).learnerName || selectedRequest.learnerEmail)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
@@ -854,25 +901,40 @@ export function ManageClassRequests() {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                          {applicants.map((applicant) => (
-                            <div key={applicant.applicationId} className="p-3 bg-gray-50 rounded-lg">
-                              <div className="flex items-center gap-3 mb-2">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage src={applicant.avatarUrl} />
-                                  <AvatarFallback className="bg-[#257180] text-white text-xs">
-                                    {applicant.tutorName?.substring(0, 2).toUpperCase() || 'GS'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium">{applicant.tutorName}</p>
-                                  <p className="text-xs text-gray-500">
-                                    {new Date(applicant.appliedAt).toLocaleDateString('vi-VN')}
-                                  </p>
+                          {applicants.map((applicant) => {
+                            const rating = applicantRatings.get(applicant.tutorId);
+                            return (
+                              <div key={applicant.applicationId} className="p-3 bg-gray-50 rounded-lg">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <Avatar className="h-8 w-8 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] font-semibold">
+                                    <AvatarImage src={applicant.avatarUrl} className="object-cover" />
+                                    <AvatarFallback>
+                                      {getInitials(applicant.tutorName || '')}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">{applicant.tutorName}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <div className="flex items-center gap-1">
+                                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                        <span className="text-xs text-gray-700 font-medium">
+                                          {rating?.averageRating.toFixed(1) || '0.0'}
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          ({rating?.totalFeedbackCount || 0} đánh giá)
+                                        </span>
+                                      </div>
+                                      <span className="text-gray-400">•</span>
+                                      <p className="text-xs text-gray-500">
+                                        {new Date(applicant.appliedAt).toLocaleDateString('vi-VN')}
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
+                                <p className="text-xs text-gray-700 line-clamp-2">{applicant.message}</p>
                               </div>
-                              <p className="text-xs text-gray-700 line-clamp-2">{applicant.message}</p>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </CardContent>
                     </Card>
@@ -883,7 +945,6 @@ export function ManageClassRequests() {
               {/* Actions - Chỉ hiển thị nút Duyệt/Từ chối khi status = Reviewing (1) hoặc Pending */}
               {(() => {
                 const statusNum = getStatusNumber(selectedRequest.status);
-                console.log(`[Business Admin] Detail dialog actions: status="${selectedRequest.status}" (parsed=${statusNum}), Reviewing=${ClassRequestStatus.Reviewing}`);
                 return statusNum === ClassRequestStatus.Reviewing;
               })() && (
                 <div className="flex justify-end gap-3 pt-4 border-t">

@@ -19,6 +19,7 @@ export function BusinessAdminLayout({ children }: BusinessAdminLayoutProps) {
     if (pathname?.includes('/learners')) return 'learners';
     if (pathname?.includes('/tutors')) return 'tutors';
     if (pathname?.includes('/applications')) return 'tutor-applications';
+    if (pathname?.includes('/users')) return 'users';
     if (pathname?.includes('/class-requests')) return 'class-requests';
     if (pathname?.includes('/reports')) return 'reports';
     if (pathname?.includes('/refund-requests')) return 'refund-requests';

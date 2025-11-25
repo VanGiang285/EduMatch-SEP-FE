@@ -54,6 +54,7 @@ export interface TimeSlotDto {
   id: number;
   startTime: string; // time format "HH:mm:ss"
   endTime: string;
+  dayOfWeek?: number;
 }
 
 // ==================== USER & AUTH ====================
@@ -100,6 +101,7 @@ export interface UserProfileDto {
 }
 
 export interface ManageUserDto {
+  id?: number;
   email: string;
   userName?: string;
   phone?: string;
@@ -699,6 +701,14 @@ export interface FeedbackCriterion {
   description?: string;
   createdAt?: string;
   isActive?: boolean;
+}
+
+export interface TutorRatingSummary {
+  id: number;
+  tutorId: number;
+  averageRating: number;
+  totalFeedbackCount: number;
+  updatedAt: string;
 }
 
 // ==================== SEARCH & FILTER ====================

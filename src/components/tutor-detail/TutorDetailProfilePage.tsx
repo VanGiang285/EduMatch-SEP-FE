@@ -13,13 +13,14 @@ import { useTutorDetail } from '@/hooks/useTutorDetail';
 import { useTutorAvailability } from '@/hooks/useTutorAvailability';
 import { EnumHelpers, TeachingMode, TutorAvailabilityStatus, MediaType } from '@/types/enums';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
-import { ReportService, MediaService } from '@/services';
+import { ReportService, MediaService, FeedbackService } from '@/services';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { ROUTES, USER_ROLES } from '@/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/form/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/feedback/dialog';
 import { BookingService, BookingWithSchedulesCreateRequest } from '@/services/bookingService';
+import { TutorRatingSummary, TutorFeedbackDto, FeedbackCriterion } from '@/types/backend';
 import { Label } from '../ui/form/label';
 import { Textarea } from '../ui/form/textarea';
 import { Input } from '../ui/form/input';
@@ -38,16 +39,6 @@ function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMod
     }
   }
   return mode as TeachingMode;
-}
-interface Review {
-  id: number;
-  studentName: string;
-  studentAvatar: string | null;
-  rating: number;
-  comment: string;
-  createdAt: Date;
-  subjectName: string;
-  lessonsCompleted: number;
 }
 
 interface TutorDetailProfilePageProps {
@@ -173,6 +164,10 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [ratingSummary, setRatingSummary] = useState<TutorRatingSummary | null>(null);
+  const [feedbacks, setFeedbacks] = useState<TutorFeedbackDto[]>([]);
+  const [criteria, setCriteria] = useState<FeedbackCriterion[]>([]);
+  const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
 
   // Hiển thị tất cả time slots từ hook (từ API) - chỉ hiển thị các slot mà gia sư đã đăng ký
   // Mỗi slot sẽ hiển thị màu sắc tương ứng: xanh (available), đỏ (booked), xám (không có lịch)
@@ -363,6 +358,70 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   }, [tutorId, loadAvailabilities]);
 
   // Check favorite status when tutor loads (only if authenticated)
+  useEffect(() => {
+    const loadRatingSummary = async () => {
+      if (!tutorId) {
+        setRatingSummary(null);
+        return;
+      }
+
+      try {
+        const response = await FeedbackService.getTutorRatingSummary(tutorId);
+        if (response.success && response.data) {
+          setRatingSummary(response.data);
+        } else {
+          setRatingSummary(null);
+        }
+      } catch (error) {
+        setRatingSummary(null);
+      }
+    };
+
+    loadRatingSummary();
+  }, [tutorId]);
+
+  useEffect(() => {
+    const loadFeedbacks = async () => {
+      if (!tutorId) {
+        setFeedbacks([]);
+        return;
+      }
+
+      setLoadingFeedbacks(true);
+      try {
+        const response = await FeedbackService.getFeedbackByTutor(tutorId);
+        if (response.success && response.data) {
+          setFeedbacks(response.data);
+        } else {
+          setFeedbacks([]);
+        }
+      } catch (error) {
+        setFeedbacks([]);
+      } finally {
+        setLoadingFeedbacks(false);
+      }
+    };
+
+    loadFeedbacks();
+  }, [tutorId]);
+
+  useEffect(() => {
+    const loadCriteria = async () => {
+      try {
+        const response = await FeedbackService.getAllCriteria();
+        if (response.success && response.data) {
+          setCriteria(response.data);
+        } else {
+          setCriteria([]);
+        }
+      } catch (error) {
+        setCriteria([]);
+      }
+    };
+
+    loadCriteria();
+  }, []);
+
   useEffect(() => {
     const checkFavoriteStatus = async () => {
       if (!tutorId || !isAuthenticated) {
@@ -618,16 +677,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     }
   };
 
-  const reviews: Review[] = [];
-  const formatDate = (date: Date) => {
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays < 7) return `${diffDays} ngày trước`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} tuần trước`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)} tháng trước`;
-    return `${Math.floor(diffDays / 365)} năm trước`;
-  };
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 pt-16">
@@ -714,8 +763,12 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                         <div className="flex items-center gap-3 mb-2">
                           <div className="flex items-center gap-1.5">
                             <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                            <span className="text-lg text-gray-900">5.0</span>
-                            <span className="text-sm text-gray-500">(0 đánh giá)</span>
+                            <span className="text-lg text-gray-900">
+                              {ratingSummary?.averageRating.toFixed(1) || '0.0'}
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              ({ratingSummary?.totalFeedbackCount || 0} đánh giá)
+                            </span>
                           </div>
                           <span className="text-gray-400">•</span>
                           <span className="text-sm text-gray-600">0 buổi học</span>
@@ -852,7 +905,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
               <TabsList className="grid w-full grid-cols-3 bg-[#F2E5BF]">
                 <TabsTrigger value="about" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">Giới thiệu</TabsTrigger>
-                <TabsTrigger value="reviews" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">Đánh giá ({reviews.length})</TabsTrigger>
+                <TabsTrigger value="reviews" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">Đánh giá ({ratingSummary?.totalFeedbackCount || 0})</TabsTrigger>
                 <TabsTrigger value="availability" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">Lịch trống</TabsTrigger>
               </TabsList>
               <TabsContent value="about" className="space-y-6">
@@ -1014,48 +1067,152 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       <CardTitle className="font-bold">Đánh giá từ học viên</CardTitle>
                       <div className="flex items-center gap-2">
                         <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                        <span className="text-lg">Chưa có</span>
-                        <span className="text-sm text-gray-600">(0 đánh giá)</span>
+                        <span className="text-lg">
+                          {ratingSummary?.averageRating.toFixed(1) || '0.0'}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          ({ratingSummary?.totalFeedbackCount || 0} đánh giá)
+                        </span>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-6">
-                      {reviews.map((review) => (
-                        <div key={review.id} className="border-b border-gray-200 pb-6 last:border-0 last:pb-0">
-                          <div className="flex items-start gap-4">
-                            <Avatar className="w-12 h-12">
-                              <AvatarImage src={review.studentAvatar || undefined} />
-                              <AvatarFallback className="bg-[#F2E5BF] text-[#257180]">{review.studentName.split(' ').slice(0, 2).map(n => n[0]).join('')}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between mb-2">
-                                <div>
-                                  <h4 className="font-semibold">{review.studentName}</h4>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <div className="flex">
-                                      {[...Array(5)].map((_, i) => (
-                                        <Star
-                                          key={i}
-                                          className={`w-4 h-4 ${i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-                                        />
-                                      ))}
+                    {loadingFeedbacks ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-[#257180]" />
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {feedbacks.map((feedback) => {
+                          const getCriterionName = (criterionId: number) => {
+                            const criterion = criteria.find(c => c.id === criterionId);
+                            if (!criterion) return `Tiêu chí ${criterionId}`;
+
+                            const criterionCode = criterion.code?.toLowerCase() || '';
+                            const criterionName = criterion.name?.toLowerCase() || '';
+
+                            const vietnameseMap: { [key: string]: string } = {
+                              'teaching_quality': 'Chất lượng giảng dạy',
+                              'teachingquality': 'Chất lượng giảng dạy',
+                              'communication': 'Giao tiếp',
+                              'punctuality': 'Đúng giờ',
+                              'professionalism': 'Chuyên nghiệp',
+                              'knowledge': 'Kiến thức',
+                              'patience': 'Kiên nhẫn',
+                              'preparation': 'Chuẩn bị bài học',
+                              'engagement': 'Tương tác',
+                              'feedback': 'Phản hồi',
+                              'flexibility': 'Linh hoạt',
+                              'clarity': 'Rõ ràng',
+                              'enthusiasm': 'Nhiệt tình',
+                              'lesson_quality': 'Chất lượng bài học',
+                              'lessonquality': 'Chất lượng bài học',
+                              'lesson quality': 'Chất lượng bài học',
+                              'support': 'Hỗ trợ',
+                              'teaching_skill': 'Kỹ năng giảng dạy',
+                              'teachingskill': 'Kỹ năng giảng dạy',
+                              'teaching skill': 'Kỹ năng giảng dạy',
+                              'satisfaction': 'Sự hài lòng',
+                            };
+
+                            const normalizedCode = criterionCode.trim();
+                            const normalizedName = criterionName.trim();
+
+                            const mappedName = vietnameseMap[normalizedCode] ||
+                              vietnameseMap[normalizedName] ||
+                              (criterion.name && vietnameseMap[criterion.name.toLowerCase().trim()]) ||
+                              criterion.name;
+
+                            return mappedName;
+                          };
+
+                          const learnerInitials = feedback.learnerEmail
+                            .split('@')[0]
+                            .split('.')
+                            .map(part => part[0])
+                            .join('')
+                            .toUpperCase()
+                            .slice(0, 2) || 'NA';
+
+                          return (
+                            <div key={feedback.id} className="border-b border-gray-200 pb-6 last:border-0 last:pb-0">
+                              <div className="flex items-start gap-4">
+                                <Avatar className="w-12 h-12 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] font-semibold">
+                                  <AvatarFallback>{learnerInitials}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div>
+                                      <h4 className="font-semibold text-gray-900">
+                                        {feedback.learnerEmail.split('@')[0]}
+                                      </h4>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <div className="flex">
+                                          {[...Array(5)].map((_, i) => (
+                                            <Star
+                                              key={i}
+                                              className={`w-4 h-4 ${i < Math.round(feedback.overallRating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                            />
+                                          ))}
+                                        </div>
+                                        <span className="text-sm text-gray-500">
+                                          {feedback.overallRating.toFixed(1)}
+                                        </span>
+                                        <span className="text-sm text-gray-500">•</span>
+                                        <span className="text-sm text-gray-500">
+                                          {new Date(feedback.createdAt).toLocaleDateString('vi-VN', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric'
+                                          })}
+                                        </span>
+                                      </div>
                                     </div>
-                                    <span className="text-sm text-gray-500">• {formatDate(review.createdAt)}</span>
                                   </div>
+
+                                  {feedback.comment && (
+                                    <p className="text-base font-bold text-gray-900 leading-relaxed mt-3 mb-3">
+                                      {feedback.comment}
+                                    </p>
+                                  )}
+
+                                  {feedback.feedbackDetails && feedback.feedbackDetails.length > 0 && (
+                                    <div className="mb-3 mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                      <h5 className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                                        Đánh giá chi tiết
+                                      </h5>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {feedback.feedbackDetails.map((detail) => (
+                                          <div key={detail.criterionId} className="flex items-center justify-between p-2 bg-white rounded border border-gray-100">
+                                            <span className="text-sm font-medium text-gray-800 flex-1">
+                                              {getCriterionName(detail.criterionId)}
+                                            </span>
+                                            <div className="flex items-center gap-1.5 ml-3">
+                                              <div className="flex items-center">
+                                                {[...Array(5)].map((_, i) => (
+                                                  <Star
+                                                    key={i}
+                                                    className={`w-3.5 h-3.5 ${i < detail.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                                  />
+                                                ))}
+                                              </div>
+                                              <span className="text-xs font-semibold text-gray-700 min-w-[30px] text-right">
+                                                {detail.rating}/5
+                                              </span>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="secondary" className="text-xs">{review.subjectName}</Badge>
-                                <span className="text-xs text-gray-500">{review.lessonsCompleted} buổi học</span>
-                              </div>
-                              <p className="text-gray-700 leading-relaxed">{review.comment}</p>
                             </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {reviews.length === 0 && (
+                          );
+                        })}
+                      </div>
+                    )}
+                    {!loadingFeedbacks && feedbacks.length === 0 && (
                       <div className="text-center mt-6">
                         <p className="text-gray-600">Chưa có đánh giá nào.</p>
                       </div>

@@ -40,6 +40,8 @@ export interface CreateAdminAccDto {
 
 export interface UserProfileUpdateRequest {
   userEmail: string;
+  userName?: string;
+  phone?: string;
   dob?: string;
   gender?: Gender;
   avatarUrl?: string;

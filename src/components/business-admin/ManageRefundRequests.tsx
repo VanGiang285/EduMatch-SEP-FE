@@ -30,7 +30,7 @@ import { Label } from '@/components/ui/form/label';
 import { Search, Eye, Loader2, ArrowUpDown, CheckCircle, XCircle } from 'lucide-react';
 import { BookingRefundRequestService } from '@/services';
 import { BookingRefundRequestDto } from '@/types/backend';
-import { BookingRefundRequestStatus } from '@/types/enums';
+import { BookingRefundRequestStatus, EnumHelpers } from '@/types/enums';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { formatCurrency } from '@/data/mockBusinessAdminData';
 import {
@@ -46,8 +46,9 @@ const ITEMS_PER_PAGE = 10;
 type SortField = 'id' | 'learnerEmail' | 'createdAt' | 'status';
 type SortOrder = 'asc' | 'desc';
 
-const getStatusLabel = (status: BookingRefundRequestStatus): string => {
-  switch (status) {
+const getStatusLabel = (status: BookingRefundRequestStatus | string | number | null | undefined): string => {
+  const parsedStatus = EnumHelpers.parseBookingRefundRequestStatus(status);
+  switch (parsedStatus) {
     case BookingRefundRequestStatus.Pending:
       return 'Chờ duyệt';
     case BookingRefundRequestStatus.Approved:
@@ -59,8 +60,9 @@ const getStatusLabel = (status: BookingRefundRequestStatus): string => {
   }
 };
 
-const getStatusColor = (status: BookingRefundRequestStatus): string => {
-  switch (status) {
+const getStatusColor = (status: BookingRefundRequestStatus | string | number | null | undefined): string => {
+  const parsedStatus = EnumHelpers.parseBookingRefundRequestStatus(status);
+  switch (parsedStatus) {
     case BookingRefundRequestStatus.Pending:
       return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     case BookingRefundRequestStatus.Approved:

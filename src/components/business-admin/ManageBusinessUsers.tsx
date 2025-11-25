@@ -1,11 +1,9 @@
-﻿'use client';
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+"use client";
+
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
-import { Input } from '@/components/ui/form/input';
 import { Badge } from '@/components/ui/basic/badge';
-import { Textarea } from '@/components/ui/form/textarea';
 import {
   Table,
   TableBody,
@@ -21,15 +19,14 @@ import {
   DialogTitle,
 } from '@/components/ui/feedback/dialog';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/feedback/alert-dialog';
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/navigation/pagination';
+import { Input } from '@/components/ui/form/input';
 import {
   Select,
   SelectContent,
@@ -38,50 +35,52 @@ import {
   SelectValue,
 } from '@/components/ui/form/select';
 import {
+  Search,
+  Filter,
+  Users,
+  Eye,
+  XCircle,
+  CheckCircle,
+  Loader2,
+  ArrowUpDown,
+  Calendar,
+  Phone,
+  Mail,
+  Star,
+  Shield,
+  MapPin,
+  Globe,
+  Maximize2,
+  FileText,
+  ExternalLink,
+} from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
+import { AdminService } from '@/services/adminService';
+import { ManageUserDto, UserProfileDto } from '@/types/backend';
+import { useAuth } from '@/hooks/useAuth';
+import { useCustomToast } from '@/hooks/useCustomToast';
+import { UserProfileService } from '@/services/userProfileService';
+import { LocationService, ProvinceDto } from '@/services/locationService';
+import { EnumHelpers, Gender, VerifyStatus, TeachingMode } from '@/types/enums';
+import { TutorService } from '@/services/tutorService';
+import { DetailTutorProfile, mapTutorProfileToDetail } from './ManageTutorApplications';
+import { Separator } from '@/components/ui/layout/separator';
+import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from '@/components/ui/navigation/tabs';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/navigation/pagination';
-import { Separator } from '@/components/ui/layout/separator';
-import { Label } from '@/components/ui/form/label';
-import {
-  Search,
-  Eye,
-  CheckCircle,
-  XCircle,
-  FileText,
-  ExternalLink,
-  Calendar,
-  ArrowUpDown,
-  Loader2,
-  Star,
-  Shield,
-  MapPin,
-  Globe,
-  Users,
-  Maximize2,
-} from 'lucide-react';
-import { TutorVerificationRequestService, TutorService } from '@/services';
-import { TutorVerificationRequestDto, TutorProfileDto } from '@/types/backend';
-import { TutorVerificationRequestStatus, TeachingMode, VerifyStatus, EnumHelpers, TutorStatus } from '@/types/enums';
-import { RejectTutorRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
 import { formatCurrency } from '@/data/mockBusinessAdminData';
-import { UserProfileService } from '@/services/userProfileService';
 
-const ITEMS_PER_PAGE = 10;
+type SortField = 'id' | 'name' | 'email' | 'createdAt';
 
-type SortField = 'id' | 'userName' | 'email' | 'createdAt';
-type SortOrder = 'asc' | 'desc';
+const ROLE = {
+  LEARNER: 1,
+  TUTOR: 2,
+  BUSINESS_ADMIN: 3,
+  SYSTEM_ADMIN: 4,
+};
 
 const getInitials = (value?: string) => {
   if (!value) return 'NA';
@@ -92,112 +91,22 @@ const getInitials = (value?: string) => {
   return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
 };
 
-export interface DetailTutorProfile {
-  id: number;
-  userName: string;
-  email: string;
-  avatarUrl?: string;
-  phone?: string;
-  createdAt: string;
-  addressLine?: string;
-  provinceName?: string;
-  subDistrictName?: string;
-  status: number;
-  teachingModes: number;
-  bio?: string;
-  rating: number;
-  totalReviews: number;
-  totalStudents: number;
-  subjects: NonNullable<TutorProfileDto['tutorSubjects']>;
-  educations: NonNullable<TutorProfileDto['tutorEducations']>;
-  certificates: NonNullable<TutorProfileDto['tutorCertificates']>;
-  availabilities: NonNullable<TutorProfileDto['tutorAvailabilities']>;
-}
-
-const getApplicantName = (request: TutorVerificationRequestDto): string => {
-  return (
-    request.tutor?.userName ||
-    request.user?.userName ||
-    request.user?.userProfile?.userEmailNavigation?.userName ||
-    request.userEmail?.split('@')[0] ||
-    'Chưa có tên'
-  );
+const ROLE_BADGES: Record<number, { label: string; className: string }> = {
+  [ROLE.LEARNER]: {
+    label: 'Học viên',
+    className: 'bg-[#257180] text-white border border-[#257180] font-semibold px-3 py-1',
+  },
+  [ROLE.TUTOR]: {
+    label: 'Gia sư',
+    className: 'bg-[#FD8B51] text-white border border-[#FD8B51] font-semibold px-3 py-1',
+  },
+  [ROLE.BUSINESS_ADMIN]: {
+    label: 'Business Admin',
+    className: 'bg-amber-100 text-amber-800 border-2 border-amber-400 font-semibold px-3 py-1',
+  },
 };
 
-const getApplicantAvatar = (request: TutorVerificationRequestDto): string | undefined => {
-  return (
-    request.tutor?.avatarUrl ||
-    request.user?.userProfile?.avatarUrl ||
-    request.user?.tutorProfile?.avatarUrl
-  );
-};
-
-export const mapTutorProfileToDetail = (
-  tutor: TutorProfileDto,
-  request?: TutorVerificationRequestDto
-): DetailTutorProfile => {
-  const statusValue =
-    typeof tutor.status === 'string'
-      ? parseInt(tutor.status, 10) || TutorStatus.Pending
-      : (tutor.status as number) ?? TutorStatus.Pending;
-
-  const teachingModeValue =
-    typeof tutor.teachingModes === 'string'
-      ? parseInt(tutor.teachingModes as string, 10) || TeachingMode.Offline
-      : (tutor.teachingModes as number) ?? TeachingMode.Offline;
-
-  return {
-    id: tutor.id,
-    userName: tutor.userName || (request ? getApplicantName(request) : tutor.userEmail),
-    email: request?.userEmail || tutor.userEmail,
-    avatarUrl: tutor.avatarUrl || (request ? getApplicantAvatar(request) : undefined),
-    phone: tutor.phone,
-    createdAt: tutor.createdAt,
-    addressLine: tutor.addressLine,
-    provinceName: tutor.province?.name,
-    subDistrictName: tutor.subDistrict?.name,
-    status: statusValue,
-    teachingModes: teachingModeValue,
-    bio: tutor.bio,
-    rating: (tutor as any)?.rating ?? 0,
-    totalReviews: (tutor as any)?.totalReviews ?? 0,
-    totalStudents: (tutor as any)?.totalStudents ?? 0,
-    subjects: tutor.tutorSubjects || [],
-    educations: tutor.tutorEducations || [],
-    certificates: tutor.tutorCertificates || [],
-    availabilities: tutor.tutorAvailabilities || [],
-  };
-};
-
-const getStatusLabel = (status: TutorVerificationRequestStatus | number | string | null | undefined): string => {
-  const parsedStatus = EnumHelpers.parseTutorVerificationRequestStatus(status);
-  switch (parsedStatus) {
-    case TutorVerificationRequestStatus.Pending:
-      return 'Chờ duyệt';
-    case TutorVerificationRequestStatus.Approved:
-      return 'Đã duyệt';
-    case TutorVerificationRequestStatus.Rejected:
-      return 'Đã từ chối';
-    default:
-      return 'Không xác định';
-  }
-};
-
-const getStatusColor = (status: TutorVerificationRequestStatus | number | string | null | undefined): string => {
-  const parsedStatus = EnumHelpers.parseTutorVerificationRequestStatus(status);
-  switch (parsedStatus) {
-    case TutorVerificationRequestStatus.Pending:
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case TutorVerificationRequestStatus.Approved:
-      return 'bg-green-100 text-green-800 border-green-200';
-    case TutorVerificationRequestStatus.Rejected:
-      return 'bg-red-100 text-red-800 border-red-200';
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
-const getTeachingModeText = (modes: TeachingMode | string): string => {
+const getTeachingModeText = (modes: TeachingMode | string | number): string => {
   const parsedModes = EnumHelpers.parseTeachingMode(modes);
   const modeLabels: string[] = [];
   if (parsedModes & TeachingMode.Offline) modeLabels.push('Dạy trực tiếp');
@@ -242,55 +151,97 @@ const getVerifyStatusColor = (status: VerifyStatus | number): string => {
   }
 };
 
-export function ManageTutorApplications() {
+const resolveRoleId = (input: ManageUserDto | number | string | undefined | null): number | null => {
+  if (typeof input === 'object' && input !== null) {
+    const record = input as ManageUserDto;
+    const roleFromId = resolveRoleId(record.roleId as number | undefined);
+    if (roleFromId !== null) {
+      return roleFromId;
+    }
+    if (record.roleName) {
+      return resolveRoleId(record.roleName);
+    }
+    return null;
+  }
+
+  if (typeof input === 'number' && !Number.isNaN(input)) {
+    return input;
+  }
+
+  if (typeof input === 'string') {
+    const numeric = Number(input);
+    if (!Number.isNaN(numeric)) {
+      return numeric;
+    }
+
+    const normalized = input.trim().toLowerCase();
+    if (normalized.includes('học') || normalized.includes('learner')) {
+      return ROLE.LEARNER;
+    }
+    if (normalized.includes('gia sư') || normalized.includes('tutor')) {
+      return ROLE.TUTOR;
+    }
+    if (normalized.includes('business')) {
+      return ROLE.BUSINESS_ADMIN;
+    }
+    if (normalized.includes('system')) {
+      return ROLE.SYSTEM_ADMIN;
+    }
+  }
+
+  return null;
+};
+
+export function ManageBusinessUsers() {
+  const { user } = useAuth();
   const { showSuccess, showError } = useCustomToast();
   const showErrorRef = useRef(showError);
   useEffect(() => {
     showErrorRef.current = showError;
   }, [showError]);
+  const [users, setUsers] = useState<ManageUserDto[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<ManageUserDto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<TutorVerificationRequestStatus | 'all'>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedRequest, setSelectedRequest] = useState<TutorVerificationRequestDto | null>(null);
-  const [selectedTutor, setSelectedTutor] = useState<TutorProfileDto | null>(null);
-  const [showDetailDialog, setShowDetailDialog] = useState(false);
-  const [requests, setRequests] = useState<TutorVerificationRequestDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingTutor, setLoadingTutor] = useState(false);
+  const [filterRole, setFilterRole] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [sortField, setSortField] = useState<SortField>('createdAt');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
-  
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActivating, setIsActivating] = useState<string | null>(null);
+  const [isDeactivating, setIsDeactivating] = useState<string | null>(null);
+
+  const [detailType, setDetailType] = useState<'learner' | 'tutor' | null>(null);
+  const [detailLearner, setDetailLearner] = useState<UserProfileDto | null>(null);
+  const [detailTutor, setDetailTutor] = useState<DetailTutorProfile | null>(null);
+  const [detailUser, setDetailUser] = useState<ManageUserDto | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [detailLoadingEmail, setDetailLoadingEmail] = useState<string | null>(null);
   const [avatarCache, setAvatarCache] = useState<Record<string, string>>({});
   const avatarCacheRef = useRef<Record<string, string>>({});
 
-  const detailTutor = useMemo(() => {
-    if (!selectedRequest || !selectedTutor) return null;
-    return mapTutorProfileToDetail(selectedTutor, selectedRequest);
-  }, [selectedRequest, selectedTutor]);
+  useEffect(() => {
+    avatarCacheRef.current = avatarCache;
+  }, [avatarCache]);
+  const [provinces, setProvinces] = useState<ProvinceDto[]>([]);
 
-  const preloadAvatars = useCallback(async (list: TutorVerificationRequestDto[]) => {
-    const targets = list.filter((r) => {
-      const email = r.userEmail || r.tutor?.userEmail || r.user?.email;
-      return email && !avatarCacheRef.current[email];
-    });
+  const preloadAvatars = useCallback(async (list: ManageUserDto[]) => {
+    const targets = list.filter((u) => u.email && !avatarCacheRef.current[u.email]);
     if (!targets.length) return;
 
     await Promise.all(
-      targets.map(async (req) => {
-        const email = req.userEmail || req.tutor?.userEmail || req.user?.email;
-        if (!email) return;
+      targets.map(async (account) => {
+        if (!account.email) return;
         try {
-          const response = await UserProfileService.getUserProfile(email);
+          const response = await UserProfileService.getUserProfile(account.email);
           if (response.success && response.data?.avatarUrl) {
             setAvatarCache((prev) => {
-              if (prev[email]) {
+              if (prev[account.email!]) {
                 return prev;
               }
-              const next = { ...prev, [email]: response.data?.avatarUrl || '' };
+              const next = { ...prev, [account.email!]: response.data?.avatarUrl || '' };
               avatarCacheRef.current = next;
               return next;
             });
@@ -302,227 +253,297 @@ export function ManageTutorApplications() {
     );
   }, []);
 
-  const fetchRequests = useCallback(async () => {
-    try {
-      setLoading(true);
-      let response;
-      
-      if (statusFilter === 'all') {
-        const [pendingRes, approvedRes, rejectedRes] = await Promise.all([
-          TutorVerificationRequestService.getAll(TutorVerificationRequestStatus.Pending),
-          TutorVerificationRequestService.getAll(TutorVerificationRequestStatus.Approved),
-          TutorVerificationRequestService.getAll(TutorVerificationRequestStatus.Rejected),
-        ]);
-        
-        const allRequests: TutorVerificationRequestDto[] = [];
-        if (pendingRes.success && pendingRes.data) allRequests.push(...pendingRes.data);
-        if (approvedRes.success && approvedRes.data) allRequests.push(...approvedRes.data);
-        if (rejectedRes.success && rejectedRes.data) allRequests.push(...rejectedRes.data);
-        
-        setRequests(allRequests);
-        preloadAvatars(allRequests);
-      } else {
-        response = await TutorVerificationRequestService.getAll(statusFilter);
-        if (response.success && response.data) {
-          setRequests(response.data);
-          preloadAvatars(response.data);
-        } else {
-          setRequests([]);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching requests:', error);
-      showErrorRef.current?.('Lỗi', 'Không thể tải danh sách đơn đăng ký');
-      setRequests([]);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (!user?.email) {
+      return;
     }
-  }, [statusFilter, preloadAvatars]);
+
+    const loadUsers = async () => {
+      setIsLoading(true);
+      try {
+        const response = await AdminService.getAllUsers();
+        if (response.success && response.data) {
+          const filtered = response.data
+            .filter((u) => {
+              const roleId = resolveRoleId(u);
+              return roleId !== ROLE.SYSTEM_ADMIN && roleId !== ROLE.BUSINESS_ADMIN;
+            })
+            .filter((u) => u.email !== user?.email);
+          setUsers(filtered);
+          preloadAvatars(filtered);
+        } else {
+          showErrorRef.current?.('Lỗi', response.message || 'Không thể tải danh sách người dùng');
+        }
+      } catch (error) {
+        console.error('Error loading users:', error);
+        showErrorRef.current?.('Lỗi', 'Không thể tải danh sách người dùng.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const loadProvinces = async () => {
+      try {
+        const response = await LocationService.getAllProvinces();
+        if (response.success && response.data) {
+          setProvinces(response.data);
+        }
+      } catch (error) {
+        console.error('Error loading provinces:', error);
+      }
+    };
+
+    loadUsers();
+    loadProvinces();
+  }, [user?.email, preloadAvatars]);
 
   useEffect(() => {
-    fetchRequests();
-  }, [fetchRequests]);
+    let filtered = [...users];
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (u) =>
+          (u.userName?.toLowerCase().includes(term) || false) ||
+          u.email.toLowerCase().includes(term) ||
+          (u.phone?.toLowerCase().includes(term) || false)
+      );
     }
-  };
 
-  const filteredRequests = useMemo(() => {
-    const filtered = requests.filter((req) => {
-      const userName = getApplicantName(req);
-      const email = req.userEmail || '';
-      const matchesSearch =
-        userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        email.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesSearch;
-    });
+    if (filterRole !== 'all') {
+      const selectedRoleId = Number(filterRole);
+      filtered = filtered.filter((u) => resolveRoleId(u) === selectedRoleId);
+    }
+
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter((u) => (filterStatus === 'active' ? u.isActive : !u.isActive));
+    }
 
     filtered.sort((a, b) => {
-      let aValue: any, bValue: any;
-      
+      let valueA: string | number = '';
+      let valueB: string | number = '';
+
       switch (sortField) {
         case 'id':
-          aValue = a.id;
-          bValue = b.id;
+          valueA = a.id || 0;
+          valueB = b.id || 0;
           break;
-        case 'userName':
-          aValue = getApplicantName(a).toLowerCase();
-          bValue = getApplicantName(b).toLowerCase();
+        case 'name':
+          valueA = (a.userName || '').toLowerCase();
+          valueB = (b.userName || '').toLowerCase();
           break;
         case 'email':
-          aValue = a.userEmail.toLowerCase();
-          bValue = b.userEmail.toLowerCase();
+          valueA = a.email.toLowerCase();
+          valueB = b.email.toLowerCase();
           break;
         case 'createdAt':
-          aValue = new Date(a.createdAt).getTime();
-          bValue = new Date(b.createdAt).getTime();
-          break;
         default:
-          return 0;
+          valueA = new Date(a.createAt || a.createdAt || '').getTime();
+          valueB = new Date(b.createAt || b.createdAt || '').getTime();
+          break;
       }
 
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
+      if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
 
-    return filtered;
-  }, [requests, searchTerm, sortField, sortOrder]);
+    setFilteredUsers(filtered);
+    setCurrentPage(1);
+    preloadAvatars(filtered);
+  }, [users, searchTerm, filterRole, filterStatus, sortField, sortDirection, preloadAvatars]);
 
-  const totalPages = Math.ceil(filteredRequests.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedRequests = filteredRequests.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection(field === 'createdAt' ? 'desc' : 'asc');
+    }
+  };
 
-  const handleViewDetail = async (request: TutorVerificationRequestDto) => {
-    setSelectedRequest(request);
-    setShowDetailDialog(true);
-    
-    if (request.tutorId) {
-      try {
-        setLoadingTutor(true);
-        const response = await TutorService.getTutorById(request.tutorId);
+  const totalPages = useMemo(() => Math.ceil(filteredUsers.length / itemsPerPage), [filteredUsers.length, itemsPerPage]);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
+
+  const getStatusBadge = (isActive: boolean | undefined) => {
+    if (isActive) {
+      return <Badge className="bg-green-100 text-green-800 border-green-200">Hoạt động</Badge>;
+    }
+    return <Badge className="bg-gray-100 text-gray-700 border-gray-200">Chưa kích hoạt</Badge>;
+  };
+
+  const getRoleName = (roleId: number | null | undefined) => {
+    switch (roleId) {
+      case ROLE.LEARNER:
+        return 'Học viên';
+      case ROLE.TUTOR:
+        return 'Gia sư';
+      case ROLE.BUSINESS_ADMIN:
+        return 'Business Admin';
+      default:
+        return 'Không xác định';
+    }
+  };
+
+  const handleActivateUser = async (email: string) => {
+    setIsActivating(email);
+    try {
+      const response = await AdminService.activateUser(email);
+      if (response.success) {
+        setUsers((prev) => prev.map((u) => (u.email === email ? { ...u, isActive: true } : u)));
+        showSuccess('Thành công', 'Đã kích hoạt tài khoản');
+      } else {
+        showError('Lỗi', response.message || 'Không thể kích hoạt tài khoản');
+      }
+    } catch (error) {
+      console.error('Error activating user:', error);
+      showError('Lỗi', 'Không thể kích hoạt tài khoản.');
+    } finally {
+      setIsActivating(null);
+    }
+  };
+
+  const handleDeactivateUser = async (email: string) => {
+    setIsDeactivating(email);
+    try {
+      const response = await AdminService.deactivateUser(email);
+      if (response.success) {
+        setUsers((prev) => prev.map((u) => (u.email === email ? { ...u, isActive: false } : u)));
+        showSuccess('Thành công', 'Đã vô hiệu hóa tài khoản');
+      } else {
+        showError('Lỗi', response.message || 'Không thể vô hiệu hóa tài khoản');
+      }
+    } catch (error) {
+      console.error('Error deactivating user:', error);
+      showError('Lỗi', 'Không thể vô hiệu hóa tài khoản.');
+    } finally {
+      setIsDeactivating(null);
+    }
+  };
+
+  const handleViewDetail = async (userData: ManageUserDto) => {
+    const roleId = resolveRoleId(userData);
+    if (roleId !== ROLE.LEARNER && roleId !== ROLE.TUTOR) {
+      return;
+    }
+    setDetailUser(userData);
+    setDetailLoadingEmail(userData.email);
+    setIsDetailLoading(true);
+
+    try {
+      if (roleId === ROLE.LEARNER) {
+        const response = await UserProfileService.getUserProfile(userData.email);
         if (response.success && response.data) {
-          setSelectedTutor(response.data);
+          const profile = response.data;
+          let provinceName = profile.province?.name;
+          if (!provinceName && profile.cityId) {
+            const found = provinces.find((p) => p.id === profile.cityId);
+            provinceName = found?.name;
+          }
+
+          let subDistrictName = profile.subDistrict?.name;
+          if (!subDistrictName && profile.cityId && profile.subDistrictId) {
+            const subDistrictRes = await LocationService.getSubDistrictsByProvinceId(profile.cityId);
+            if (subDistrictRes.success && subDistrictRes.data) {
+              subDistrictName = subDistrictRes.data.find((d) => d.id === profile.subDistrictId)?.name;
+            }
+          }
+
+          const resolvedProvince = provinceName
+            ? profile.province
+              ? { ...profile.province, name: provinceName }
+              : profile.cityId
+                ? { id: profile.cityId, name: provinceName }
+                : profile.province
+            : profile.province;
+
+          const resolvedSubDistrict = subDistrictName
+            ? profile.subDistrict
+              ? { ...profile.subDistrict, name: subDistrictName }
+              : profile.subDistrictId
+                ? {
+                    id: profile.subDistrictId,
+                    provinceId: profile.cityId ?? 0,
+                    name: subDistrictName,
+                  }
+                : profile.subDistrict
+            : profile.subDistrict;
+
+          setDetailLearner({
+            ...profile,
+            province: resolvedProvince,
+            subDistrict: resolvedSubDistrict,
+          });
+          setDetailType('learner');
         } else {
-          showError('Lỗi', 'Không thể tải thông tin gia sư');
+          showError('Lỗi', response.message || 'Không thể tải thông tin học viên');
         }
-      } catch (error) {
-        console.error('Error fetching tutor:', error);
-        showError('Lỗi', 'Không thể tải thông tin gia sư');
-      } finally {
-        setLoadingTutor(false);
-      }
-    }
-  };
-
-  const handleApproveApplication = async () => {
-    if (!selectedRequest?.tutorId) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư');
-      return;
-    }
-
-    try {
-      setIsProcessing(true);
-      const response = await TutorService.approveAndVerifyAll(selectedRequest.tutorId);
-      if (response.success) {
-        showSuccess('Thành công', 'Đã duyệt đơn đăng ký và xác minh tất cả chứng chỉ, bằng cấp');
-        setShowDetailDialog(false);
-        fetchRequests();
-      } else {
-        showError('Lỗi', response.message || 'Không thể duyệt đơn đăng ký');
+      } else if (roleId === ROLE.TUTOR) {
+        const response = await TutorService.getTutorByEmail(userData.email);
+        if (response.success && response.data) {
+          const detail = mapTutorProfileToDetail(response.data);
+          setDetailTutor(detail);
+          setDetailType('tutor');
+        } else {
+          showError('Lỗi', response.message || 'Không thể tải thông tin gia sư');
+        }
       }
     } catch (error) {
-      console.error('Error approving application:', error);
-      showError('Lỗi', 'Không thể duyệt đơn đăng ký');
+      console.error('Error loading detail:', error);
+      showError('Lỗi', 'Không thể tải chi tiết người dùng.');
     } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleRejectApplication = async () => {
-    if (!rejectReason.trim()) {
-      showError('Lỗi', 'Vui lòng nhập lý do từ chối');
-      return;
-    }
-
-    if (!selectedRequest?.tutorId) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư');
-      return;
-    }
-
-    try {
-      setIsProcessing(true);
-      const request: RejectTutorRequest = { reason: rejectReason.trim() };
-      const response = await TutorService.rejectAll(selectedRequest.tutorId, request);
-      if (response.success) {
-        showSuccess('Thành công', 'Đã từ chối đơn đăng ký');
-        setShowRejectDialog(false);
-        setShowDetailDialog(false);
-        setRejectReason('');
-        fetchRequests();
-      } else {
-        showError('Lỗi', response.message || 'Không thể từ chối đơn đăng ký');
-      }
-    } catch (error) {
-      console.error('Error rejecting application:', error);
-      showError('Lỗi', 'Không thể từ chối đơn đăng ký');
-    } finally {
-      setIsProcessing(false);
+      setIsDetailLoading(false);
+      setDetailLoadingEmail(null);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Quản lý Đơn đăng ký Gia sư</h1>
-        <p className="text-gray-600 mt-1">Duyệt đơn đăng ký trở thành gia sư</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Quản lý người dùng</h1>
+          <p className="text-sm text-gray-600 mt-1">Theo dõi học viên và gia sư trong hệ thống</p>
+        </div>
       </div>
 
       <Card className="bg-white">
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Tìm kiếm theo tên hoặc email..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="pl-10"
-              />
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Tìm kiếm theo tên, email hoặc số điện thoại..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
-            <Select
-              value={statusFilter === 'all' ? 'all' : statusFilter.toString()}
-              onValueChange={(value) => {
-                if (value === 'all') {
-                  setStatusFilter('all');
-                } else {
-                  setStatusFilter(parseInt(value) as TutorVerificationRequestStatus);
-                }
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-[200px]">
+
+            <Select value={filterRole} onValueChange={setFilterRole}>
+              <SelectTrigger className="w-full md:w-[200px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Lọc theo vai trò" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả vai trò</SelectItem>
+                <SelectItem value={ROLE.LEARNER.toString()}>Học viên</SelectItem>
+                <SelectItem value={ROLE.TUTOR.toString()}>Gia sư</SelectItem>
+                <SelectItem value={ROLE.BUSINESS_ADMIN.toString()}>Business Admin</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-full md:w-[200px]">
+                <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Lọc theo trạng thái" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value={TutorVerificationRequestStatus.Pending.toString()}>
-                  Chờ duyệt
-                </SelectItem>
-                <SelectItem value={TutorVerificationRequestStatus.Approved.toString()}>
-                  Đã duyệt
-                </SelectItem>
-                <SelectItem value={TutorVerificationRequestStatus.Rejected.toString()}>
-                  Đã từ chối
-                </SelectItem>
+                <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                <SelectItem value="active">Hoạt động</SelectItem>
+                <SelectItem value="inactive">Chưa kích hoạt</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -530,31 +551,35 @@ export function ManageTutorApplications() {
       </Card>
 
       <Card className="bg-white">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Danh sách đơn đăng ký</CardTitle>
-            <Badge variant="outline">{filteredRequests.length} đơn</Badge>
-          </div>
+        <CardHeader className="border-b border-gray-200 bg-gray-50">
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-[#257180]" />
+            Danh sách người dùng
+            <Badge variant="secondary" className="ml-2 bg-[#257180] text-white">
+              {filteredUsers.length} người dùng
+            </Badge>
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          {loading ? (
+        <CardContent className="p-6">
+          {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-[#257180]" />
+              <Loader2 className="w-8 h-8 animate-spin text-[#257180]" />
+              <span className="ml-2 text-gray-600">Đang tải dữ liệu...</span>
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50">
+                    <TableRow className="bg-gray-50 border-b border-gray-200">
                       <TableHead className="w-[80px] text-left">
                         <Button variant="ghost" size="sm" onClick={() => handleSort('id')} className="h-8 px-2">
                           ID <ArrowUpDown className="ml-1 h-3 w-3" />
                         </Button>
                       </TableHead>
                       <TableHead className="text-left">
-                        <Button variant="ghost" size="sm" onClick={() => handleSort('userName')} className="h-8 px-2">
-                          Người đăng ký <ArrowUpDown className="ml-1 h-3 w-3" />
+                        <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-8 px-2">
+                          Tên người dùng <ArrowUpDown className="ml-1 h-3 w-3" />
                         </Button>
                       </TableHead>
                       <TableHead className="text-left">
@@ -562,102 +587,163 @@ export function ManageTutorApplications() {
                           Email <ArrowUpDown className="ml-1 h-3 w-3" />
                         </Button>
                       </TableHead>
-                      <TableHead className="text-left">Trạng thái</TableHead>
+                      <TableHead className="text-left font-semibold text-gray-900">Số điện thoại</TableHead>
+                      <TableHead className="text-left font-semibold text-gray-900">Vai trò</TableHead>
+                      <TableHead className="text-left font-semibold text-gray-900">Trạng thái</TableHead>
                       <TableHead className="text-left">
                         <Button variant="ghost" size="sm" onClick={() => handleSort('createdAt')} className="h-8 px-2">
-                          Ngày đăng ký <ArrowUpDown className="ml-1 h-3 w-3" />
+                          Ngày tạo <ArrowUpDown className="ml-1 h-3 w-3" />
                         </Button>
                       </TableHead>
-                      <TableHead className="text-left">Thao tác</TableHead>
+                      <TableHead className="text-center font-semibold text-gray-900 w-[160px]">Thao tác</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedRequests.length === 0 ? (
+                    {paginatedUsers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                          Không có đơn đăng ký nào
+                        <TableCell colSpan={8} className="text-center py-12 text-gray-500">
+                          Không tìm thấy người dùng nào
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedRequests.map((req, index) => {
-                        const userName = getApplicantName(req) || 'Chưa có tên';
-                        const email = req.userEmail || req.tutor?.userEmail || req.user?.email;
-                        const cachedAvatar = email ? avatarCache[email] : undefined;
-                        const avatarUrl = cachedAvatar || getApplicantAvatar(req);
-                        return (
-                          <TableRow key={req.id} className="hover:bg-gray-50">
-                            <TableCell className="text-left">
-                              <span className="font-mono text-sm text-gray-600">{startIndex + index + 1}</span>
-                            </TableCell>
-                            <TableCell className="text-left">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] font-semibold">
-                                  <AvatarImage src={avatarUrl} alt={userName} className="object-cover" />
-                                  <AvatarFallback>{getInitials(userName)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900">{userName}</p>
-                                  {req.tutor?.phone && (
-                                    <p className="text-xs text-gray-500">{req.tutor.phone}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm text-gray-600 text-left">{req.userEmail}</TableCell>
-                            <TableCell className="text-left">
-                              <Badge className={getStatusColor(req.status)}>
-                                {getStatusLabel(req.status)}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm text-gray-600 text-left">
-                              {new Date(req.createdAt).toLocaleDateString('vi-VN')}
-                            </TableCell>
-                            <TableCell className="text-left">
+                      paginatedUsers.map((record, index) => (
+                        <TableRow key={record.email} className="hover:bg-gray-50 border-b border-gray-200">
+                          <TableCell className="text-left">
+                            <span className="font-mono text-sm text-gray-600">{startIndex + index + 1}</span>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className="flex items-center gap-3 min-w-0 max-w-[220px]">
+                              <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] font-semibold">
+                                <AvatarImage
+                                  src={avatarCache[record.email] || record.avatarUrl}
+                                  alt={record.userName || record.email}
+                                  className="object-cover"
+                                />
+                                <AvatarFallback>{getInitials(record.userName || record.email)}</AvatarFallback>
+                              </Avatar>
+                              <p className="font-medium text-gray-900 truncate" title={record.userName || record.email}>
+                                {record.userName || record.email}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-left text-sm text-gray-700 max-w-[220px]">
+                            <span className="truncate block" title={record.email}>
+                              {record.email}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-left text-sm text-gray-700">{record.phone || '-'}</TableCell>
+                          <TableCell className="text-left">
+                            {(() => {
+                              const roleId = resolveRoleId(record);
+                              const badgeClass =
+                                (roleId && ROLE_BADGES[roleId]?.className) ||
+                                'bg-gray-100 text-gray-700 border-2 border-gray-300 font-semibold px-3 py-1';
+                              return (
+                                <Badge className={badgeClass}>
+                                  {roleId ? ROLE_BADGES[roleId]?.label || getRoleName(roleId) : record.roleName || 'Không xác định'}
+                                </Badge>
+                              );
+                            })()}
+                          </TableCell>
+                          <TableCell className="text-left">{getStatusBadge(record.isActive)}</TableCell>
+                          <TableCell className="text-left text-sm text-gray-700">
+                            {record.createAt || record.createdAt ? (
+                              new Date(record.createAt || record.createdAt || '').toLocaleDateString('vi-VN', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                              })
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {(() => {
+                                const roleId = resolveRoleId(record);
+                                return roleId === ROLE.LEARNER || roleId === ROLE.TUTOR ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="p-2 hover:bg-[#FD8B51] hover:text-white"
+                                    onClick={() => handleViewDetail(record)}
+                                    title="Xem chi tiết"
+                                  >
+                                    {detailLoadingEmail === record.email && isDetailLoading ? (
+                                      <Loader2 className="h-5 w-5 animate-spin" />
+                                    ) : (
+                                      <Eye className="h-5 w-5" />
+                                    )}
+                                  </Button>
+                                ) : null;
+                              })()}
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleViewDetail(req)}
+                                onClick={() =>
+                                  record.isActive ? handleDeactivateUser(record.email) : handleActivateUser(record.email)
+                                }
+                                disabled={isActivating === record.email || isDeactivating === record.email}
                                 className="p-2 hover:bg-[#FD8B51] hover:text-white"
+                                title={record.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
                               >
-                                <Eye className="h-5 w-5" />
+                                {isActivating === record.email || isDeactivating === record.email ? (
+                                  <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : record.isActive ? (
+                                  <XCircle className="h-5 w-5" />
+                                ) : (
+                                  <CheckCircle className="h-5 w-5" />
+                                )}
                               </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
                     )}
                   </TableBody>
                 </Table>
               </div>
 
               {totalPages > 1 && (
-                <div className="mt-6">
+                <div className="flex items-center justify-end px-6 py-4 border-t border-gray-200">
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
-                        <PaginationPrevious 
-                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        <PaginationPrevious
+                          onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                           className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
+                        >
+                          Trước
+                        </PaginationPrevious>
                       </PaginationItem>
-                      
-                      {[...Array(totalPages)].map((_, idx) => (
-                        <PaginationItem key={idx}>
-                          <PaginationLink
-                            onClick={() => setCurrentPage(idx + 1)}
-                            isActive={currentPage === idx + 1}
-                            className="cursor-pointer"
-                          >
-                            {idx + 1}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ))}
-                      
+                      {[...Array(totalPages)].map((_, idx) => {
+                        const pageNum = idx + 1;
+                        if (
+                          pageNum === 1 ||
+                          pageNum === totalPages ||
+                          (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                        ) {
+                          return (
+                            <PaginationItem key={pageNum}>
+                              <PaginationLink
+                                onClick={() => setCurrentPage(pageNum)}
+                                isActive={currentPage === pageNum}
+                                className="cursor-pointer"
+                              >
+                                {pageNum}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      })}
                       <PaginationItem>
-                        <PaginationNext 
-                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        <PaginationNext
+                          onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                           className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
+                        >
+                          Sau
+                        </PaginationNext>
                       </PaginationItem>
                     </PaginationContent>
                   </Pagination>
@@ -668,17 +754,105 @@ export function ManageTutorApplications() {
         </CardContent>
       </Card>
 
-      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
+      <Dialog open={detailType === 'learner'} onOpenChange={(open) => !open && setDetailType(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Chi tiết học viên</DialogTitle>
+          </DialogHeader>
+          {isDetailLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-[#257180]" />
+            </div>
+          ) : detailLearner && detailUser ? (
+            <div className="space-y-6">
+              <Card className="border border-gray-200">
+                <CardContent className="p-6 flex flex-col sm:flex-row gap-6">
+                  <Avatar className="h-24 w-24 rounded-xl border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] text-2xl font-semibold">
+                    <AvatarImage src={detailLearner.avatarUrl} alt={detailUser.userName || detailUser.email} className="object-cover" />
+                    <AvatarFallback>{getInitials(detailUser.userName || detailUser.email)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-2">
+                    <h3 className="text-2xl font-semibold text-gray-900">{detailUser.userName || detailUser.email}</h3>
+                    <p className="text-gray-600 flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      {detailUser.email}
+                    </p>
+                    <p className="text-gray-600 flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      {detailUser.phone || 'Chưa cập nhật'}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border border-gray-200">
+                  <CardHeader>
+                    <CardTitle>Thông tin cá nhân</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-sm text-gray-500">Họ và tên</p>
+                      <p className="font-medium text-gray-900">{detailUser.userName || 'Chưa cập nhật'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Ngày sinh</p>
+                      <p className="font-medium text-gray-900">
+                        {detailLearner.dob ? new Date(detailLearner.dob).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Giới tính</p>
+                      <p className="font-medium text-gray-900">
+                        {EnumHelpers.getGenderLabel((detailLearner.gender as Gender) ?? Gender.Unknown)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Tình trạng tài khoản</p>
+                      <p className="font-medium text-gray-900">
+                        {detailLearner.userEmailNavigation?.isActive ? 'Đang hoạt động' : 'Chưa kích hoạt'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border border-gray-200">
+                  <CardHeader>
+                    <CardTitle>Địa chỉ</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-sm text-gray-500">Tỉnh/Thành phố</p>
+                      <p className="font-medium text-gray-900">{detailLearner.province?.name || 'Chưa cập nhật'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Quận/Huyện</p>
+                      <p className="font-medium text-gray-900">{detailLearner.subDistrict?.name || 'Chưa cập nhật'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Địa chỉ chi tiết</p>
+                      <p className="font-medium text-gray-900">{detailLearner.addressLine || 'Chưa cập nhật'}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          ) : (
+            <div className="text-gray-500 text-center py-6">Không có dữ liệu</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={detailType === 'tutor'} onOpenChange={(open) => !open && setDetailType(null)}>
         <DialogContent className="!max-w-7xl sm:!max-w-7xl max-h-[95vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader className="border-b pb-4">
             <DialogTitle className="text-2xl font-bold text-gray-900">Hồ sơ gia sư</DialogTitle>
           </DialogHeader>
-
-          {loadingTutor ? (
+          {isDetailLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-[#257180]" />
             </div>
-          ) : detailTutor && selectedRequest ? (
+          ) : detailTutor ? (
             <div className="pt-4">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
@@ -717,9 +891,6 @@ export function ManageTutorApplications() {
                               </div>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                              <Badge variant="secondary" className={getStatusColor(selectedRequest.status)}>
-                                Trạng thái đơn: {getStatusLabel(selectedRequest.status)}
-                              </Badge>
                               <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
                                 {getTeachingModeText(detailTutor.teachingModes)}
                               </Badge>
@@ -743,7 +914,7 @@ export function ManageTutorApplications() {
                               <div className="flex items-center gap-2 text-gray-600 min-w-0">
                                 <Calendar className="w-4 h-4 flex-shrink-0" />
                                 <span className="truncate">
-                                  Đăng ký ngày {new Date(selectedRequest.createdAt).toLocaleDateString('vi-VN')}
+                                  Tham gia {new Date(detailTutor.createdAt).toLocaleDateString('vi-VN')}
                                 </span>
                               </div>
                             </div>
@@ -1008,62 +1179,15 @@ export function ManageTutorApplications() {
                           <span className="text-gray-600">Hình thức:</span>
                           <span className="font-medium truncate">{getTeachingModeText(detailTutor.teachingModes)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Đơn đăng ký:</span>
-                          <span className="font-medium">{getStatusLabel(selectedRequest.status)}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-[#257180]/20 shadow-lg">
-                    <CardContent className="p-6">
-                      <div className="space-y-3">
-                        <Button variant="outline" className="w-full" onClick={() => setShowDetailDialog(false)}>
-                          Đóng
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-                          onClick={() => setShowRejectDialog(true)}
-                          disabled={
-                            isProcessing ||
-                            EnumHelpers.parseTutorVerificationRequestStatus(selectedRequest.status) !==
-                              TutorVerificationRequestStatus.Pending
-                          }
-                        >
-                          {isProcessing ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <XCircle className="h-4 w-4 mr-2" />
-                          )}
-                          Từ chối yêu cầu
-                        </Button>
-                        <Button
-                          className="w-full bg-[#257180] hover:bg-[#257180]/90 text-white"
-                          onClick={handleApproveApplication}
-                          disabled={
-                            isProcessing ||
-                            EnumHelpers.parseTutorVerificationRequestStatus(selectedRequest.status) !==
-                              TutorVerificationRequestStatus.Pending
-                          }
-                        >
-                          {isProcessing ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                          )}
-                          Kích hoạt tài khoản
-                        </Button>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
               </div>
             </div>
-          ) : selectedRequest ? (
+          ) : (
             <div className="text-center py-8 text-gray-500">Không tìm thấy thông tin gia sư</div>
-          ) : null}
+          )}
         </DialogContent>
       </Dialog>
 
@@ -1076,41 +1200,7 @@ export function ManageTutorApplications() {
           )}
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Từ chối đơn đăng ký</AlertDialogTitle>
-            <AlertDialogDescription>
-              Vui lòng nhập lý do từ chối đơn đăng ký này
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4">
-            <Label htmlFor="reject-reason">Lý do từ chối</Label>
-            <Textarea
-              id="reject-reason"
-              placeholder="Nhập lý do từ chối..."
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              className="mt-2"
-              rows={4}
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setRejectReason('')}>Hủy</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleRejectApplication} 
-              className="bg-red-600 hover:bg-red-700"
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : null}
-              Xác nhận từ chối
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
+

@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
@@ -38,6 +38,9 @@ import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { useChatContext } from '@/contexts/ChatContext';
+import { LocationService, ProvinceDto } from '@/services/locationService';
+import { FeedbackService } from '@/services/feedbackService';
+import { TutorRatingSummary } from '@/types/backend';
 
 // Helper function để convert string enum từ API sang TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
@@ -85,7 +88,14 @@ export function FindTutorPage() {
   const [favoriteTutors, setFavoriteTutors] = useState<Set<number>>(new Set());
   const [loadingFavorite, setLoadingFavorite] = useState<Set<number>>(new Set());
   const { openChatWithTutor } = useChatContext();
+  const [provinces, setProvinces] = useState<ProvinceDto[]>([]);
+  const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
+  const [tutorRatings, setTutorRatings] = useState<Map<number, TutorRatingSummary>>(new Map());
   const tutorsPerPage = 6;
+  const sortedProvinces = useMemo(
+    () => [...provinces].sort((a, b) => a.name.localeCompare(b.name, 'vi')),
+    [provinces]
+  );
   
   // Note: Using client-side filtering instead of API filtering
   // because backend API doesn't support filter parameters yet
@@ -133,17 +143,7 @@ export function FindTutorPage() {
 
     // Filter by city (using province)
     if (selectedCity !== 'all') {
-      filtered = filtered.filter(tutor => {
-        const cityMap: { [key: string]: number } = {
-          'hanoi': 1,
-          'hcm': 2,
-          'danang': 3,
-          'haiphong': 4,
-          'cantho': 5
-        };
-        const cityId = cityMap[selectedCity];
-        return tutor.province?.id === cityId;
-      });
+      filtered = filtered.filter(tutor => tutor.province?.id?.toString() === selectedCity);
     }
 
     // Filter by teaching mode
@@ -241,6 +241,23 @@ export function FindTutorPage() {
     return () => clearTimeout(timeoutId);
   }, [searchQuery, selectedCity, selectedTeachingMode, setFilters]);
 
+  useEffect(() => {
+    const loadProvinces = async () => {
+      setIsLoadingProvinces(true);
+      try {
+        const response = await LocationService.getAllProvinces();
+        if (response.success && response.data) {
+          setProvinces(response.data);
+        }
+      } catch (error) {
+        console.error('Error loading provinces:', error);
+      } finally {
+        setIsLoadingProvinces(false);
+      }
+    };
+    loadProvinces();
+  }, []);
+
   const totalPages = Math.ceil(filteredAndSortedTutors.length / tutorsPerPage);
   const indexOfLastTutor = currentPage * tutorsPerPage;
   const indexOfFirstTutor = indexOfLastTutor - tutorsPerPage;
@@ -284,6 +301,40 @@ export function FindTutorPage() {
 
     checkFavoriteStatuses();
   }, [tutors, isAuthenticated]);
+
+  // Load rating summaries for all tutors
+  useEffect(() => {
+    const loadRatings = async () => {
+      if (tutors.length === 0) {
+        setTutorRatings(new Map());
+        return;
+      }
+
+      const ratingPromises = tutors.map(async (tutor) => {
+        try {
+          const response = await FeedbackService.getTutorRatingSummary(tutor.id);
+          if (response.success && response.data) {
+            return { tutorId: tutor.id, rating: response.data };
+          }
+          return null;
+        } catch (error) {
+          console.error(`Error loading rating for tutor ${tutor.id}:`, error);
+          return null;
+        }
+      });
+
+      const results = await Promise.all(ratingPromises);
+      const ratingMap = new Map<number, TutorRatingSummary>();
+      results.forEach((result) => {
+        if (result) {
+          ratingMap.set(result.tutorId, result.rating);
+        }
+      });
+      setTutorRatings(ratingMap);
+    };
+
+    loadRatings();
+  }, [tutors]);
 
   // Reset video when currentTutor changes
   useEffect(() => {
@@ -442,15 +493,15 @@ export function FindTutorPage() {
             <SelectWithSearch 
               value={selectedCity} 
               onValueChange={setSelectedCity}
-              placeholder="Thành phố"
-              disabled={isLoadingMasterData}
+              placeholder={isLoadingProvinces ? 'Đang tải...' : 'Thành phố'}
+              disabled={isLoadingMasterData || isLoadingProvinces}
             >
               <SelectWithSearchItem value="all">Tất cả thành phố</SelectWithSearchItem>
-              <SelectWithSearchItem value="hanoi">Hà Nội</SelectWithSearchItem>
-              <SelectWithSearchItem value="hcm">TP. Hồ Chí Minh</SelectWithSearchItem>
-              <SelectWithSearchItem value="danang">Đà Nẵng</SelectWithSearchItem>
-              <SelectWithSearchItem value="haiphong">Hải Phòng</SelectWithSearchItem>
-              <SelectWithSearchItem value="cantho">Cần Thơ</SelectWithSearchItem>
+              {sortedProvinces.map((province) => (
+                <SelectWithSearchItem key={province.id} value={province.id.toString()}>
+                  {province.name}
+                </SelectWithSearchItem>
+              ))}
             </SelectWithSearch>
             </div>
 
@@ -598,8 +649,12 @@ export function FindTutorPage() {
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                             <div className="flex items-center gap-1.5">
                               <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
-                              <span className="text-sm text-black font-medium">5.0</span>
-                              <span className="text-sm text-gray-600">(0 đánh giá)</span>
+                              <span className="text-sm text-black font-medium">
+                                {tutorRatings.get(tutor.id)?.averageRating.toFixed(1) || '0.0'}
+                              </span>
+                              <span className="text-sm text-gray-600">
+                                ({tutorRatings.get(tutor.id)?.totalFeedbackCount || 0} đánh giá)
+                              </span>
                             </div>
                             <Separator orientation="vertical" className="h-4" />
                             <span className="text-sm text-gray-600">0 buổi học</span>

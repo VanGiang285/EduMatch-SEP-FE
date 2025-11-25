@@ -13,8 +13,6 @@ import {
 } from '@/components/ui/navigation/dropdown-menu';
 import {
   LayoutDashboard,
-  Users,
-  GraduationCap,
   FileText,
   ClipboardList,
   AlertCircle,
@@ -26,7 +24,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Receipt,
-  CreditCard
+  CreditCard,
+  User as UserIcon,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
@@ -56,8 +55,7 @@ export function BusinessAdminSidebar({
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/business-admin/dashboard' },
-    { id: 'learners', label: 'Quản lý Học viên', icon: Users, path: '/business-admin/learners' },
-    { id: 'tutors', label: 'Quản lý Gia sư', icon: GraduationCap, path: '/business-admin/tutors' },
+    { id: 'users', label: 'Quản lý Người dùng', icon: UserIcon, path: '/business-admin/users' },
     { id: 'tutor-applications', label: 'Đơn đăng ký Gia sư', icon: FileText, path: '/business-admin/applications' },
     { id: 'class-requests', label: 'Yêu cầu mở lớp', icon: ClipboardList, path: '/business-admin/class-requests' },
     { id: 'reports', label: 'Báo cáo', icon: AlertCircle, path: '/business-admin/reports' },
