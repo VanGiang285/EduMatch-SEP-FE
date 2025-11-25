@@ -1,9 +1,9 @@
 import { toast } from "sonner";
 import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from "lucide-react";
-import React from "react";
+import React, { useCallback } from "react";
 
 export function useCustomToast() {
-  const showSuccess = (title: string, description?: string, duration = 5000) => {
+  const showSuccess = useCallback((title: string, description?: string, duration = 5000) => {
     toast.custom((t) => (
       <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm w-full">
         <div className="flex items-start gap-3">
@@ -25,9 +25,9 @@ export function useCustomToast() {
         </div>
       </div>
     ), { duration });
-  };
+  }, []);
 
-  const showError = (title: string, description?: string, duration = 5000) => {
+  const showError = useCallback((title: string, description?: string, duration = 5000) => {
     toast.custom((t) => (
       <div className="bg-white border border-red-200 rounded-lg shadow-lg p-4 max-w-sm w-full">
         <div className="flex items-start gap-3">
@@ -49,9 +49,9 @@ export function useCustomToast() {
         </div>
       </div>
     ), { duration });
-  };
+  }, []);
 
-  const showWarning = (title: string, description?: string, duration = 5000) => {
+  const showWarning = useCallback((title: string, description?: string, duration = 5000) => {
     toast.custom((t) => (
       <div className="bg-white border border-yellow-200 rounded-lg shadow-lg p-4 max-w-sm w-full">
         <div className="flex items-start gap-3">
@@ -73,9 +73,9 @@ export function useCustomToast() {
         </div>
       </div>
     ), { duration });
-  };
+  }, []);
 
-  const showInfo = (title: string, description?: string, duration = 5000) => {
+  const showInfo = useCallback((title: string, description?: string, duration = 5000) => {
     toast.custom((t) => (
       <div className="bg-white border border-blue-200 rounded-lg shadow-lg p-4 max-w-sm w-full">
         <div className="flex items-start gap-3">
@@ -97,7 +97,7 @@ export function useCustomToast() {
         </div>
       </div>
     ), { duration });
-  };
+  }, []);
 
   return {
     showSuccess,

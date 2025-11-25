@@ -1,5 +1,5 @@
 ﻿'use client';
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
@@ -108,6 +108,7 @@ export function ManageClassRequests() {
   const [isRejecting, setIsRejecting] = useState(false);
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const lastLoadedRequestIdRef = useRef<number | null>(null);
 
   // Load danh sách yêu cầu theo status
   useEffect(() => {
@@ -179,75 +180,93 @@ export function ManageClassRequests() {
   }, [statusFilter]);
 
   useEffect(() => {
-    if (selectedRequest?.id && showDetailDialog) {
-      const loadDetail = async () => {
-        setLoadingDetail(true);
-        setLoadingApplicants(false);
-        try {
-          const detailResponse = await ClassRequestService.getClassRequestById(selectedRequest.id);
-          if (detailResponse.success && detailResponse.data) {
-            setSelectedRequest(detailResponse.data);
-            
-            const statusNum = getStatusNumber(detailResponse.data.status);
-            
-            if (statusNum === ClassRequestStatus.Open) {
-              setLoadingApplicants(true);
-              const applicantsResponse = await TutorApplicationService.getApplicationsByClassRequest(selectedRequest.id);
-              if (applicantsResponse.success && applicantsResponse.data) {
-                const applicantsList = applicantsResponse.data;
-                setApplicants(applicantsList);
-                
-                if (applicantsList.length > 0) {
-                  const ratingPromises = applicantsList.map(async (applicant) => {
-                    if (!applicant.tutorId || applicant.tutorId <= 0) {
-                      return null;
-                    }
-                    try {
-                      const response = await FeedbackService.getTutorRatingSummary(applicant.tutorId);
-                      if (response.success && response.data) {
-                        return { tutorId: applicant.tutorId, rating: response.data };
-                      }
-                      return null;
-                    } catch (error) {
-                      return null;
-                    }
-                  });
+    if (!showDetailDialog) {
+      // Reset state when dialog is closed
+      setSelectedRequest(null);
+      setApplicants([]);
+      setApplicantRatings(new Map());
+      lastLoadedRequestIdRef.current = null;
+      return;
+    }
 
-                  const results = await Promise.all(ratingPromises);
-                  const ratingMap = new Map<number, TutorRatingSummary>();
-                  results.forEach((result) => {
-                    if (result) {
-                      ratingMap.set(result.tutorId, result.rating);
+    // Only load detail if we have a request ID and haven't loaded it yet
+    if (!selectedRequest?.id) {
+      return;
+    }
+
+    // Prevent reloading if we already loaded this request
+    if (lastLoadedRequestIdRef.current === selectedRequest.id) {
+      return;
+    }
+
+    const requestId = selectedRequest.id;
+    lastLoadedRequestIdRef.current = requestId;
+
+    const loadDetail = async () => {
+      setLoadingDetail(true);
+      setLoadingApplicants(false);
+      try {
+        const detailResponse = await ClassRequestService.getClassRequestById(requestId);
+        if (detailResponse.success && detailResponse.data) {
+          setSelectedRequest(detailResponse.data);
+          
+          const statusNum = getStatusNumber(detailResponse.data.status);
+          
+          if (statusNum === ClassRequestStatus.Open) {
+            setLoadingApplicants(true);
+            const applicantsResponse = await TutorApplicationService.getApplicationsByClassRequest(requestId);
+            if (applicantsResponse.success && applicantsResponse.data) {
+              const applicantsList = applicantsResponse.data;
+              setApplicants(applicantsList);
+              
+              if (applicantsList.length > 0) {
+                const ratingPromises = applicantsList.map(async (applicant) => {
+                  if (!applicant.tutorId || applicant.tutorId <= 0) {
+                    return null;
+                  }
+                  try {
+                    const response = await FeedbackService.getTutorRatingSummary(applicant.tutorId);
+                    if (response.success && response.data) {
+                      return { tutorId: applicant.tutorId, rating: response.data };
                     }
-                  });
-                  setApplicantRatings(ratingMap);
-                } else {
-                  setApplicantRatings(new Map());
-                }
+                    return null;
+                  } catch (error) {
+                    return null;
+                  }
+                });
+
+                const results = await Promise.all(ratingPromises);
+                const ratingMap = new Map<number, TutorRatingSummary>();
+                results.forEach((result) => {
+                  if (result) {
+                    ratingMap.set(result.tutorId, result.rating);
+                  }
+                });
+                setApplicantRatings(ratingMap);
               } else {
-                setApplicants([]);
                 setApplicantRatings(new Map());
               }
-              setLoadingApplicants(false);
             } else {
               setApplicants([]);
               setApplicantRatings(new Map());
             }
+            setLoadingApplicants(false);
+          } else {
+            setApplicants([]);
+            setApplicantRatings(new Map());
           }
-        } catch (err: any) {
-          showError('Lỗi', 'Không thể tải thông tin chi tiết');
-        } finally {
-          setLoadingDetail(false);
         }
-      };
+      } catch (err: any) {
+        showError('Lỗi', 'Không thể tải thông tin chi tiết');
+        lastLoadedRequestIdRef.current = null;
+      } finally {
+        setLoadingDetail(false);
+      }
+    };
 
-      loadDetail();
-    } else {
-      setSelectedRequest(null);
-      setApplicants([]);
-      setApplicantRatings(new Map());
-    }
-  }, [selectedRequest?.id, showDetailDialog, showError]);
+    loadDetail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDetailDialog, selectedRequest?.id]);
 
 
   const handleSort = (field: SortField) => {
@@ -314,18 +333,11 @@ export function ManageClassRequests() {
   }, [searchTerm, statusFilter]);
 
   const handleViewDetail = async (request: ClassRequestItemDto) => {
-    // Load chi tiết từ API
-    try {
-      const response = await ClassRequestService.getClassRequestById(request.id);
-      if (response.success && response.data) {
-        setSelectedRequest(response.data);
-        setShowDetailDialog(true);
-      } else {
-        showError('Lỗi', 'Không thể tải thông tin chi tiết');
-      }
-      } catch (err: any) {
-        showError('Lỗi', 'Không thể tải thông tin chi tiết');
-    }
+    // Reset the ref to allow loading
+    lastLoadedRequestIdRef.current = null;
+    // Set the basic request data and open dialog - useEffect will load full detail
+    setSelectedRequest(request as any);
+    setShowDetailDialog(true);
   };
 
   const handleApprove = async (requestId: number) => {
@@ -734,7 +746,7 @@ export function ManageClassRequests() {
 
       {/* Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Chi tiết yêu cầu mở lớp</DialogTitle>
           </DialogHeader>
