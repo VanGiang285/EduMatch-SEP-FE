@@ -2,14 +2,12 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/basic/button";
 import { Input } from "@/components/ui/form/input";
-import { ScrollArea } from "@/components/ui/layout/scroll-area";
-import { Card } from "@/components/ui/layout/card";
-import { Send, Loader2, Sparkles, Bot, Plus, Trash2, MessageSquare, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Send, Loader2, Sparkles, Bot, Plus, MessageSquare, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomToast } from "@/hooks/useCustomToast";
 import { EduAIRobot } from "./EduAIRobot";
 import { AIChatbotService } from "@/services/aiChatbotService";
-import { ChatSessionDto, ChatMessageDto, ChatSuggestionsDto } from "@/types/backend";
+import { ChatSessionDto, ChatMessageDto, ChatSuggestionTutorDto } from "@/types/backend";
 import { useRouter } from "next/navigation";
 
 interface Message {
@@ -18,8 +16,76 @@ interface Message {
   reply?: string;
   sender: "user" | "ai";
   timestamp: Date;
-  suggestions?: ChatSuggestionsDto;
+  suggestions?: ChatSuggestionTutorDto[];
 }
+
+const normalizeTutorSuggestion = (tutor: any): ChatSuggestionTutorDto => {
+  if (!tutor || typeof tutor !== "object") return { name: "" };
+  return {
+    rank: tutor.rank,
+    tutorId: tutor.tutorId,
+    name: tutor.name ?? "Gia sư",
+    subjects: Array.isArray(tutor.subjects) ? tutor.subjects : undefined,
+    levels: Array.isArray(tutor.levels) ? tutor.levels : undefined,
+    teachingExp: tutor.teachingExp,
+    province: tutor.province,
+    subDistrict: tutor.subDistrict,
+    hourlyRates: Array.isArray(tutor.hourlyRates) ? tutor.hourlyRates : undefined,
+    matchScore: typeof tutor.matchScore === "number" ? tutor.matchScore : undefined,
+    profileUrl: tutor.profileUrl,
+  };
+};
+
+const extractJsonPayload = (raw: string): string | null => {
+  if (!raw) return null;
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+  return raw.slice(start, end + 1);
+};
+
+const parseAssistantMessage = (raw: string): { reply: string; suggestions?: ChatSuggestionTutorDto[] } => {
+  if (!raw) return { reply: "" };
+
+  try {
+    const parsed = JSON.parse(raw);
+    const reply = typeof parsed.message === "string" ? parsed.message : raw;
+    const tutors = Array.isArray(parsed.tutors) ? parsed.tutors.map(normalizeTutorSuggestion) : undefined;
+    return { reply, suggestions: tutors && tutors.length > 0 ? tutors : undefined };
+  } catch {
+    const cleaned = extractJsonPayload(raw);
+    if (cleaned) {
+      try {
+        const parsed = JSON.parse(cleaned);
+        const reply = typeof parsed.message === "string" ? parsed.message : raw;
+        const tutors = Array.isArray(parsed.tutors) ? parsed.tutors.map(normalizeTutorSuggestion) : undefined;
+        return { reply, suggestions: tutors && tutors.length > 0 ? tutors : undefined };
+      } catch {
+        return { reply: raw };
+      }
+    }
+    return { reply: raw };
+  }
+};
+
+const extractMessageText = (raw?: string | null): string | undefined => {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed.message === "string" ? parsed.message : raw;
+  } catch {
+    const cleaned = raw ? extractJsonPayload(raw) : null;
+    if (cleaned) {
+      try {
+        const parsed = JSON.parse(cleaned);
+        return typeof parsed.message === "string" ? parsed.message : raw;
+      } catch {
+        return raw;
+      }
+    }
+    return raw;
+  }
+};
 
 export function AIChatPage() {
   const { user, isAuthenticated } = useAuth();
@@ -41,6 +107,28 @@ export function AIChatPage() {
 
   const hasMessages = messages.length > 0;
 
+  const loadSessions = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setLoadingSessions(true);
+    try {
+      const response = await AIChatbotService.listSessions();
+      if (response.success && response.data) {
+        const normalized = response.data.map((session) => ({
+          ...session,
+          lastMessage: extractMessageText(session.lastMessage) ?? session.lastMessage,
+        }));
+        setSessions(normalized);
+      } else {
+        setSessions([]);
+      }
+    } catch (error) {
+      console.error("Error loading sessions:", error);
+      setSessions([]);
+    } finally {
+      setLoadingSessions(false);
+    }
+  }, [isAuthenticated]);
+
   useEffect(() => {
     if (isAuthenticated) {
       loadSessions();
@@ -48,7 +136,7 @@ export function AIChatPage() {
       setSessions([]);
       setCurrentSessionId(null);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loadSessions]);
 
   useEffect(() => {
     if (hasMessages && messagesEndRef.current) {
@@ -67,24 +155,6 @@ export function AIChatPage() {
     }
   }, [hasMessages]);
 
-  const loadSessions = async () => {
-    if (!isAuthenticated) return;
-    setLoadingSessions(true);
-    try {
-      const response = await AIChatbotService.listSessions();
-      if (response.success && response.data) {
-        setSessions(response.data);
-      } else {
-        setSessions([]);
-      }
-    } catch (error) {
-      console.error("Error loading sessions:", error);
-      setSessions([]);
-    } finally {
-      setLoadingSessions(false);
-    }
-  };
-
   const loadChatHistory = async (sessionId: number) => {
     setLoadingHistory(true);
     try {
@@ -92,9 +162,24 @@ export function AIChatPage() {
       if (response.success && response.data) {
         const historyMessages: Message[] = response.data.map((msg: ChatMessageDto) => ({
           id: `${sessionId}-${msg.createdAt}`,
-          text: msg.message,
-          sender: msg.role === "user" ? "user" : "ai",
-          timestamp: new Date(msg.createdAt),
+          ...(() => {
+            if (msg.role === "user") {
+              return {
+                text: msg.message,
+                sender: "user" as const,
+                timestamp: new Date(msg.createdAt),
+              };
+            }
+
+            const parsed = parseAssistantMessage(msg.message);
+            return {
+              text: parsed.reply,
+              reply: parsed.reply,
+              sender: "ai" as const,
+              timestamp: new Date(msg.createdAt),
+              suggestions: parsed.suggestions,
+            };
+          })(),
         }));
         setMessages(historyMessages);
       } else {
@@ -550,69 +635,67 @@ export function AIChatPage() {
                               {displayText}
                             </p>
                           </div>
-                          {!isUser && msg.suggestions && (
+                          {!isUser && msg.suggestions && msg.suggestions.length > 0 && (
                             <div className="w-full mt-3 space-y-3">
-                              {msg.suggestions.message && (
-                                <div className="rounded-lg border border-[#F2E5BF] bg-[#FFF8EC] px-4 py-3 text-sm text-gray-800 whitespace-pre-line leading-relaxed">
-                                  {msg.suggestions.message}
-                                </div>
-                              )}
-                              {msg.suggestions.tutors && msg.suggestions.tutors.length > 0 && (
-                                <div className="space-y-3 w-full">
-                                  {msg.suggestions.tutors.map((tutor, index) => (
-                                    <div
-                                      key={`${tutor.tutorId ?? tutor.rank ?? index}`}
-                                      className="border border-[#E5E7EB] rounded-lg bg-white p-4 shadow-sm space-y-2"
-                                    >
-                                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                                        <button
-                                          type="button"
-                                          onClick={() => handleTutorClick(tutor.profileUrl)}
-                                          className="text-[#257180] font-semibold hover:underline"
-                                        >
-                                          {tutor.name}
-                                        </button>
-                                        {typeof tutor.matchScore === "number" && (
-                                          <span className="text-xs text-gray-500 font-medium">
-                                            Điểm phù hợp {(tutor.matchScore * 100).toFixed(0)}%
-                                          </span>
-                                        )}
-                                      </div>
-                                      {tutor.subjects && tutor.subjects.length > 0 && (
-                                        <p className="text-xs text-gray-600">
-                                          Môn: <span className="font-medium">{tutor.subjects.join(", ")}</span>
-                                        </p>
-                                      )}
-                                      {tutor.levels && tutor.levels.length > 0 && (
-                                        <p className="text-xs text-gray-600">
-                                          Cấp độ: <span className="font-medium">{tutor.levels.join(", ")}</span>
-                                        </p>
-                                      )}
-                                      {(tutor.province || tutor.subDistrict) && (
-                                        <p className="text-xs text-gray-600">
-                                          Khu vực:{" "}
-                                          <span className="font-medium">
-                                            {[tutor.subDistrict, tutor.province].filter(Boolean).join(", ") || "Không rõ"}
-                                          </span>
-                                        </p>
-                                      )}
-                                      {tutor.hourlyRates && tutor.hourlyRates.length > 0 && (
-                                        <p className="text-xs text-gray-600">
-                                          Học phí:{" "}
-                                          <span className="font-medium">
-                                            {tutor.hourlyRates.map((rate) => `${Number(rate).toLocaleString("vi-VN")}đ/h`).join(" · ")}
-                                          </span>
-                                        </p>
-                                      )}
-                                      {tutor.teachingExp && (
-                                        <p className="text-xs text-gray-600 whitespace-pre-line">
-                                          Kinh nghiệm: <span className="font-medium">{tutor.teachingExp}</span>
-                                        </p>
+                              <div className="text-xs font-semibold text-[#257180] uppercase tracking-wide">
+                                Gợi ý gia sư phù hợp
+                              </div>
+                              <div className="space-y-3 w-full">
+                                {msg.suggestions.map((tutor, index) => (
+                                  <div
+                                    key={`${tutor.tutorId ?? tutor.rank ?? index}`}
+                                    className="border border-[#E5E7EB] rounded-lg bg-white p-4 shadow-sm space-y-2"
+                                  >
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleTutorClick(tutor.profileUrl)}
+                                        className="text-[#257180] font-semibold hover:underline"
+                                      >
+                                        {tutor.name}
+                                      </button>
+                                      {typeof tutor.matchScore === "number" && (
+                                        <span className="text-xs text-gray-500 font-medium">
+                                          Điểm phù hợp {(tutor.matchScore * 100).toFixed(0)}%
+                                        </span>
                                       )}
                                     </div>
-                                  ))}
-                                </div>
-                              )}
+                                    {tutor.subjects && tutor.subjects.length > 0 && (
+                                      <p className="text-xs text-gray-600">
+                                        Môn: <span className="font-medium">{tutor.subjects.join(", ")}</span>
+                                      </p>
+                                    )}
+                                    {tutor.levels && tutor.levels.length > 0 && (
+                                      <p className="text-xs text-gray-600">
+                                        Cấp độ: <span className="font-medium">{tutor.levels.join(", ")}</span>
+                                      </p>
+                                    )}
+                                    {(tutor.province || tutor.subDistrict) && (
+                                      <p className="text-xs text-gray-600">
+                                        Khu vực:{" "}
+                                        <span className="font-medium">
+                                          {[tutor.subDistrict, tutor.province].filter(Boolean).join(", ") || "Không rõ"}
+                                        </span>
+                                      </p>
+                                    )}
+                                    {tutor.hourlyRates && tutor.hourlyRates.length > 0 && (
+                                      <p className="text-xs text-gray-600">
+                                        Học phí:{" "}
+                                        <span className="font-medium">
+                                          {tutor.hourlyRates
+                                            .map((rate) => `${Number(rate).toLocaleString("vi-VN")}đ/h`)
+                                            .join(" · ")}
+                                        </span>
+                                      </p>
+                                    )}
+                                    {tutor.teachingExp && (
+                                      <p className="text-xs text-gray-600 whitespace-pre-line">
+                                        Kinh nghiệm: <span className="font-medium">{tutor.teachingExp}</span>
+                                      </p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           )}
                           <p className="text-xs text-gray-500 mt-1.5">
