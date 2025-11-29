@@ -262,6 +262,37 @@ export function useSchedules() {
   );
 
   /**
+   * Cập nhật Status của Schedule (tương ứng ScheduleService.updateStatus)
+   */
+  const updateScheduleStatus = useCallback(
+    async (id: number, status: ScheduleStatus): Promise<ScheduleDto | null> => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await ScheduleService.updateStatus(id, status);
+
+        if (response.success && response.data) {
+          // Cập nhật trong danh sách
+          setSchedules(prev =>
+            prev.map(s => (s.id === id ? response.data! : s))
+          );
+          return response.data;
+        } else {
+          setError(response.error?.message || 'Không thể cập nhật trạng thái buổi học');
+          return null;
+        }
+      } catch (err: any) {
+        setError(err.message || 'Lỗi khi cập nhật trạng thái buổi học');
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  /**
    * Hủy toàn bộ schedules theo bookingId (tương ứng ScheduleService.cancelAllByBooking)
    */
   const cancelAllSchedulesByBooking = useCallback(
@@ -334,6 +365,7 @@ export function useSchedules() {
     loadSchedulesByTutorEmail,
     createSchedule,
     updateSchedule,
+    updateScheduleStatus,
     cancelAllSchedulesByBooking,
     clearSchedules,
 

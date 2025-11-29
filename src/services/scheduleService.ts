@@ -26,7 +26,9 @@ export class ScheduleService {
    * Lấy Schedule theo Id
    */
   static async getById(id: number): Promise<ApiResponse<ScheduleDto>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.SCHEDULES.GET_BY_ID, { id: id.toString() });
+    const endpoint = replaceUrlParams(API_ENDPOINTS.SCHEDULES.GET_BY_ID, {
+      id: id.toString(),
+    });
     return apiClient.get<ScheduleDto>(endpoint);
   }
 
@@ -36,9 +38,12 @@ export class ScheduleService {
   static async getByAvailabilityId(
     availabilityId: number
   ): Promise<ApiResponse<ScheduleDto>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.SCHEDULES.GET_BY_AVAILABILITY_ID, {
-      availabilitiId: availabilityId.toString(),
-    });
+    const endpoint = replaceUrlParams(
+      API_ENDPOINTS.SCHEDULES.GET_BY_AVAILABILITY_ID,
+      {
+        availabilitiId: availabilityId.toString(),
+      }
+    );
     return apiClient.get<ScheduleDto>(endpoint);
   }
 
@@ -53,12 +58,15 @@ export class ScheduleService {
       pageSize?: number;
     }
   ): Promise<ApiResponse<PagedResult<ScheduleDto>>> {
-    return apiClient.get<PagedResult<ScheduleDto>>(API_ENDPOINTS.SCHEDULES.GET_ALL_PAGING, {
-      bookingId,
-      status: params?.status,
-      page: params?.page || 1,
-      pageSize: params?.pageSize || 10,
-    });
+    return apiClient.get<PagedResult<ScheduleDto>>(
+      API_ENDPOINTS.SCHEDULES.GET_ALL_PAGING,
+      {
+        bookingId,
+        status: params?.status,
+        page: params?.page || 1,
+        pageSize: params?.pageSize || 10,
+      }
+    );
   }
 
   /**
@@ -68,10 +76,13 @@ export class ScheduleService {
     bookingId: number,
     status?: ScheduleStatus
   ): Promise<ApiResponse<ScheduleDto[]>> {
-    return apiClient.get<ScheduleDto[]>(API_ENDPOINTS.SCHEDULES.GET_ALL_NO_PAGING, {
-      bookingId,
-      status,
-    });
+    return apiClient.get<ScheduleDto[]>(
+      API_ENDPOINTS.SCHEDULES.GET_ALL_NO_PAGING,
+      {
+        bookingId,
+        status,
+      }
+    );
   }
 
   /**
@@ -89,7 +100,10 @@ export class ScheduleService {
   static async createScheduleList(
     requests: ScheduleCreateRequest[]
   ): Promise<ApiResponse<ScheduleDto[]>> {
-    return apiClient.post<ScheduleDto[]>(API_ENDPOINTS.SCHEDULES.CREATE_LIST, requests);
+    return apiClient.post<ScheduleDto[]>(
+      API_ENDPOINTS.SCHEDULES.CREATE_LIST,
+      requests
+    );
   }
 
   /**
@@ -102,14 +116,30 @@ export class ScheduleService {
   }
 
   /**
+   * Cập nhật Status của Schedule
+   */
+  static async updateStatus(
+    id: number,
+    status: ScheduleStatus
+  ): Promise<ApiResponse<ScheduleDto>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.SCHEDULES.UPDATE_STATUS, {
+      id: id.toString(),
+    });
+    return apiClient.put<ScheduleDto>(endpoint, { status });
+  }
+
+  /**
    * Hủy toàn bộ Schedule theo BookingId
    */
   static async cancelAllByBooking(
     bookingId: number
   ): Promise<ApiResponse<ScheduleDto[]>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.SCHEDULES.CANCEL_ALL_BY_BOOKING, {
-      bookingId: bookingId.toString(),
-    });
+    const endpoint = replaceUrlParams(
+      API_ENDPOINTS.SCHEDULES.CANCEL_ALL_BY_BOOKING,
+      {
+        bookingId: bookingId.toString(),
+      }
+    );
     return apiClient.post<ScheduleDto[]>(endpoint);
   }
 
@@ -124,16 +154,21 @@ export class ScheduleService {
       status?: ScheduleStatus;
     }
   ): Promise<ApiResponse<ScheduleDto[]>> {
-    return apiClient.get<ScheduleDto[]>(API_ENDPOINTS.SCHEDULES.GET_ALL_BY_LEARNER_EMAIL, {
-      learnerEmail,
-      startDate:
-        params?.startDate instanceof Date
-          ? params.startDate.toISOString()
-          : params?.startDate,
-      endDate:
-        params?.endDate instanceof Date ? params.endDate.toISOString() : params?.endDate,
-      status: params?.status,
-    });
+    return apiClient.get<ScheduleDto[]>(
+      API_ENDPOINTS.SCHEDULES.GET_ALL_BY_LEARNER_EMAIL,
+      {
+        learnerEmail,
+        startDate:
+          params?.startDate instanceof Date
+            ? params.startDate.toISOString()
+            : params?.startDate,
+        endDate:
+          params?.endDate instanceof Date
+            ? params.endDate.toISOString()
+            : params?.endDate,
+        status: params?.status,
+      }
+    );
   }
 
   /**
@@ -147,16 +182,20 @@ export class ScheduleService {
       status?: ScheduleStatus;
     }
   ): Promise<ApiResponse<ScheduleDto[]>> {
-    return apiClient.get<ScheduleDto[]>(API_ENDPOINTS.SCHEDULES.GET_ALL_BY_TUTOR_EMAIL, {
-      tutorEmail,
-      startDate:
-        params?.startDate instanceof Date
-          ? params.startDate.toISOString()
-          : params?.startDate,
-      endDate:
-        params?.endDate instanceof Date ? params.endDate.toISOString() : params?.endDate,
-      status: params?.status,
-    });
+    return apiClient.get<ScheduleDto[]>(
+      API_ENDPOINTS.SCHEDULES.GET_ALL_BY_TUTOR_EMAIL,
+      {
+        tutorEmail,
+        startDate:
+          params?.startDate instanceof Date
+            ? params.startDate.toISOString()
+            : params?.startDate,
+        endDate:
+          params?.endDate instanceof Date
+            ? params.endDate.toISOString()
+            : params?.endDate,
+        status: params?.status,
+      }
+    );
   }
 }
-

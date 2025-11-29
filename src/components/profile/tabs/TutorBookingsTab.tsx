@@ -41,7 +41,7 @@ export function TutorBookingsTab() {
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ bookingId: number | null; status: BookingStatus | null }>({ bookingId: null, status: null });
-  const { schedules, loading: loadingSchedules, loadSchedulesByBookingId, clearSchedules } = useSchedules();
+  const { schedules, loading: loadingSchedules, loadSchedulesByBookingId, clearSchedules, updateScheduleStatus } = useSchedules();
   const { learnerProfiles, loadLearnerProfiles, getLearnerProfile } = useLearnerProfiles();
   const { getBooking, loadBookingDetails } = useBookings();
 
@@ -233,6 +233,27 @@ export function TutorBookingsTab() {
     setSelectedBookingId(null);
     setSelectedBooking(null);
     clearSchedules();
+  };
+
+  const handleUpdateScheduleStatus = async (scheduleId: number, status: ScheduleStatus) => {
+    try {
+      const result = await updateScheduleStatus(scheduleId, status);
+      if (result) {
+        showSuccess(
+          status === ScheduleStatus.Completed
+            ? 'Đã xác nhận hoàn thành buổi học'
+            : 'Đã đánh dấu vắng mặt'
+        );
+        // Reload schedules để cập nhật UI
+        if (selectedBookingId) {
+          await loadSchedulesByBookingId(selectedBookingId);
+        }
+      } else {
+        showError('Không thể cập nhật trạng thái buổi học');
+      }
+    } catch (error: any) {
+      showError('Lỗi khi cập nhật trạng thái', error.message);
+    }
   };
 
   // Load booking details khi schedules thay đổi
@@ -478,6 +499,29 @@ export function TutorBookingsTab() {
                                     </div>
                                   )}
                                 </div>
+
+                                {/* Action buttons cho InProgress status */}
+                                {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.InProgress && (
+                                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
+                                    <Button
+                                      size="sm"
+                                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                      onClick={() => handleUpdateScheduleStatus(schedule.id, ScheduleStatus.Completed)}
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                      Xác nhận hoàn thành
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                                      onClick={() => handleUpdateScheduleStatus(schedule.id, ScheduleStatus.Absent)}
+                                    >
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                      Đánh dấu vắng mặt
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

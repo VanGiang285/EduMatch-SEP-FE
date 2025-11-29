@@ -371,6 +371,7 @@ export const API_ENDPOINTS = {
     CREATE: '/api/Schedule/create-schedule',
     CREATE_LIST: '/api/Schedule/create-schedule-list',
     UPDATE: '/api/Schedule/update-schedule',
+    UPDATE_STATUS: '/api/Schedule/update-status/:id',
     CANCEL_ALL_BY_BOOKING: '/api/Schedule/cancel-all-by-booking/:bookingId',
     GET_ALL_BY_LEARNER_EMAIL: '/api/Schedule/get-all-by-learner-email',
     GET_ALL_BY_TUTOR_EMAIL: '/api/Schedule/get-all-by-tutor-email',
