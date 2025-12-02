@@ -1652,6 +1652,17 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     </div>
                   </div>
                   <div className="space-y-3">
+                    {hasAnyTrialLeft && (
+                      <Button
+                        variant="outline"
+                        className="w-full bg-[#257180] text-white border-[#257180] hover:bg-[#1e5a66] hover:border-[#1e5a66]"
+                        size="lg"
+                        onClick={() => handleOpenBookingSelection(true)}
+                      >
+                        <Clock className="w-4 h-4 mr-2" />
+                        Đặt lịch học thử
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
@@ -1661,17 +1672,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       <Clock className="w-4 h-4 mr-2" />
                       Đặt lịch học
                     </Button>
-                    {hasAnyTrialLeft && (
-                      <Button
-                        variant="outline"
-                        className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-                        size="lg"
-                        onClick={() => handleOpenBookingSelection(true)}
-                      >
-                        <Clock className="w-4 h-4 mr-2" />
-                        Đặt lịch học thử
-                      </Button>
-                    )}
+
                     <Button
                       variant="outline"
                       className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
