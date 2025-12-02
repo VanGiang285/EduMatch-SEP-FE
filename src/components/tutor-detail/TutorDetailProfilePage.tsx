@@ -157,10 +157,65 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const [loadingFavorite, setLoadingFavorite] = useState(false);
   const [selectedSubjectKey, setSelectedSubjectKey] = useState('');
   const [selectedLevelKey, setSelectedLevelKey] = useState('');
+  const [isBookingSelectionDialogOpen, setIsBookingSelectionDialogOpen] =
+    useState(false);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
-  const [isBookingSelectionDialogOpen, setIsBookingSelectionDialogOpen] = useState(false);
+  const [isBookingWizardOpen, setIsBookingWizardOpen] = useState(false);
+  const [bookingStep, setBookingStep] = useState(1);
   const [isTrialBooking, setIsTrialBooking] = useState(false);
   const [isCreatingBooking, setIsCreatingBooking] = useState(false);
+  const bookingStepsMeta = React.useMemo(
+    () => [
+      {
+        id: 1,
+        title: 'Chọn lịch học',
+        description: 'Chọn môn, cấp độ và khung giờ phù hợp',
+      },
+      {
+        id: 2,
+        title: 'Xác nhận & thanh toán',
+        description: 'Kiểm tra thông tin và số dư ví trước khi gửi',
+      },
+    ],
+    []
+  );
+
+  const renderBookingSteps = React.useCallback(
+    (currentStep: number) => (
+      <div className="space-y-3 text-center">
+        <p className="text-xs font-semibold text-[#257180] uppercase tracking-[0.2em]">
+          {`Bước ${currentStep}/${bookingStepsMeta.length} - ${bookingStepsMeta[currentStep - 1]?.title || ''
+            }`.toUpperCase()}
+        </p>
+        <div className="flex flex-wrap items-start justify-center gap-6">
+          {bookingStepsMeta.map(step => {
+            const isCurrent = step.id === currentStep;
+            const isCompleted = step.id < currentStep;
+            const barColor = isCurrent
+              ? 'bg-[#257180]'
+              : isCompleted
+                ? 'bg-[#FD8B51]'
+                : 'bg-gray-200';
+            const titleColor = isCurrent
+              ? 'text-[#257180]'
+              : isCompleted
+                ? 'text-[#FD8B51]'
+                : 'text-gray-400';
+            return (
+              <div key={step.id} className="min-w-[220px] flex flex-col gap-1 text-xs">
+                <div className={`h-1.5 rounded-full ${barColor}`} />
+                <div>
+                  <p className={`text-sm font-semibold ${titleColor}`}>{step.title}</p>
+                  <p className="text-[11px] text-gray-500">{step.description}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    ),
+    [bookingStepsMeta]
+  );
 
   // Report states
   const [showReportDialog, setShowReportDialog] = useState(false);
@@ -477,75 +532,21 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
         return;
       }
 
-      if (!selectedSubjectInfo) {
-        showWarning('Vui lòng chọn môn học', 'Hãy chọn môn học trước khi chọn khung giờ.');
-        return;
-      }
-
-      if (!selectedLevelInfo) {
-        showWarning('Vui lòng chọn cấp độ', 'Hãy chọn cấp độ của môn học trước khi chọn khung giờ.');
-        return;
-      }
-
       // Mở modal chọn lịch
       setIsTrialBooking(isTrial);
+      setBookingStep(1);
+      clearSelectedSlots();
       setIsBookingSelectionDialogOpen(true);
     },
     [
+      clearSelectedSlots,
       isAuthenticated,
       router,
-      selectedLevelInfo,
-      selectedSubjectInfo,
       showWarning,
       subjectLevelOptions,
       user?.role,
     ]
   );
-
-  const handleBookingRequest = React.useCallback((): boolean => {
-    if (!isAuthenticated) {
-      showWarning('Vui lòng đăng nhập', 'Bạn cần đăng nhập để đặt lịch học.');
-      if (typeof window !== 'undefined') {
-        const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
-        router.push(`${ROUTES.LOGIN}?redirect=${redirectUrl}`);
-      } else {
-        router.push(ROUTES.LOGIN);
-      }
-      return false;
-    }
-
-    if (user?.role !== USER_ROLES.LEARNER) {
-      showWarning('Chưa hỗ trợ vai trò hiện tại', 'Tính năng đặt lịch chỉ áp dụng cho học viên.');
-      return false;
-    }
-
-    if (subjectLevelOptions.length === 0) {
-      showWarning('Chưa có môn học', 'Gia sư chưa cập nhật môn học hoặc cấp độ để đặt lịch.');
-      return false;
-    }
-    if (!selectedSubjectInfo) {
-      showWarning('Vui lòng chọn môn học', 'Hãy chọn môn học trước khi chọn khung giờ.');
-      return false;
-    }
-    if (!selectedLevelInfo) {
-      showWarning('Vui lòng chọn cấp độ', 'Hãy chọn cấp độ của môn học trước khi chọn khung giờ.');
-      return false;
-    }
-    if (selectedSlots.size === 0) {
-      showWarning('Chưa chọn khung giờ', 'Bạn cần chọn ít nhất một khung giờ học.');
-      return false;
-    }
-    if (selectedSlotDetails.length !== selectedSlots.size) {
-      showWarning('Khung giờ không khả dụng', 'Một số khung giờ đã không còn trống. Vui lòng chọn lại.');
-      return false;
-    }
-    if (selectedSlotDetails.some(detail => !detail.isAvailable)) {
-      showWarning('Khung giờ không còn trống', 'Vui lòng bỏ chọn các khung giờ đã được đặt.');
-      return false;
-    }
-    setIsBookingDialogOpen(true);
-    return true;
-  }, [isAuthenticated, router, selectedLevelInfo, selectedSlotDetails, selectedSlots, selectedSubjectInfo, showWarning, subjectLevelOptions, user?.role]);
 
   const handleConfirmBooking = React.useCallback(async () => {
     if (!user?.email) {
@@ -607,7 +608,8 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       const result = await createBooking(payload);
       if (result) {
         showSuccess('Đặt lịch thành công', 'Bạn có thể xem chi tiết trong tab Lớp học.');
-        setIsBookingDialogOpen(false);
+        setIsBookingWizardOpen(false);
+        setBookingStep(1);
         clearSelectedSlots();
         router.push('/profile?tab=classes');
       } else {
@@ -633,6 +635,36 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     user?.email,
     walletLoading,
   ]);
+
+  // Giữ cho dialog cũ hoạt động: validate trước khi mở dialog xác nhận
+  const handleBookingRequest = React.useCallback((): boolean => {
+    if (!selectedSubjectInfo) {
+      showWarning('Vui lòng chọn môn học', 'Hãy chọn môn học trước khi chọn khung giờ.');
+      return false;
+    }
+    if (!selectedLevelInfo) {
+      showWarning('Vui lòng chọn cấp độ', 'Hãy chọn cấp độ trước khi chọn khung giờ.');
+      return false;
+    }
+    if (selectedSlots.size === 0) {
+      showWarning('Chưa chọn khung giờ', 'Bạn cần chọn ít nhất một khung giờ học.');
+      return false;
+    }
+    if (selectedSlotDetails.length !== selectedSlots.size) {
+      showWarning(
+        'Khung giờ không khả dụng',
+        'Một số khung giờ đã không còn trống. Vui lòng chọn lại.'
+      );
+      return false;
+    }
+    if (selectedSlotDetails.some(detail => !detail.isAvailable)) {
+      showWarning('Khung giờ không còn trống', 'Vui lòng bỏ chọn các khung giờ đã được đặt.');
+      return false;
+    }
+
+    setIsBookingDialogOpen(true);
+    return true;
+  }, [selectedLevelInfo, selectedSlotDetails, selectedSlots, selectedSubjectInfo, showWarning]);
 
   // Report handlers
   const handleReportFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1578,6 +1610,8 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
           </DialogHeader>
 
           <div className="space-y-6">
+            {/* Step indicator */}
+            {renderBookingSteps(1)}
             {/* Môn học & cấp độ */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -1849,6 +1883,8 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Step indicator */}
+            {renderBookingSteps(2)}
             <div className="rounded-lg border border-[#FD8B51]/30 bg-[#FFF6EF] p-4 text-sm text-gray-700 space-y-1">
               <p>
                 <span className="font-semibold text-gray-900">Môn học:</span>{' '}
@@ -1874,6 +1910,12 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                   {FormatService.formatVND(estimatedTotal)}
                 </span>
               </p>
+              {!isTrialBooking && estimatedTotal > balance && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+                  Số dư ví hiện tại ({FormatService.formatVND(balance)}) không đủ để thanh toán đơn
+                  hàng này. Vui lòng nạp thêm tiền trước khi xác nhận.
+                </p>
+              )}
             </div>
             <div className="max-h-64 overflow-y-auto rounded-lg border border-gray-200">
               {selectedSlotDetails.length > 0 ? (
@@ -1900,15 +1942,23 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsBookingDialogOpen(false)}
+              onClick={() => {
+                // Quay lại bước chọn lịch
+                setIsBookingDialogOpen(false);
+                setIsBookingSelectionDialogOpen(true);
+              }}
               disabled={isCreatingBooking}
             >
-              Hủy
+              Quay lại bước chọn lịch
             </Button>
             <Button
               className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
               onClick={handleConfirmBooking}
-              disabled={isCreatingBooking || selectedSlotDetails.length === 0}
+              disabled={
+                isCreatingBooking ||
+                selectedSlotDetails.length === 0 ||
+                (!isTrialBooking && estimatedTotal > balance)
+              }
             >
               {isCreatingBooking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Xác nhận đặt lịch
