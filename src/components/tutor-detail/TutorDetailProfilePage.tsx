@@ -16,7 +16,6 @@ import {
   TeachingMode,
   TutorAvailabilityStatus,
   MediaType,
-  BookingStatus,
 } from '@/types/enums';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { ReportService, MediaService, FeedbackService } from '@/services';
@@ -70,8 +69,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const { showWarning, showInfo, showSuccess, showError } = useCustomToast();
   const { tutor, isLoading, error, loadTutorDetail, clearError } = useTutorDetail();
   const availabilitySectionRef = React.useRef<HTMLDivElement>(null);
-  const { createBooking, payBooking, updateStatus: updateBookingStatus, error: bookingError } =
-    useBookings();
+  const { createBooking, error: bookingError } = useBookings();
   const { subjectStatuses, loadSubjectTrialStatuses, checkHasTrialLesson } =
     useLearnerTrialLessons();
 
@@ -626,20 +624,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       if (!createdBooking) {
         showError('Không thể đặt lịch', bookingError || 'Vui lòng thử lại sau.');
         return;
-      }
-
-      if (!isTrialBooking) {
-        // Tiếp tục thanh toán booking vừa tạo đối với booking thường
-        const paidBooking = await payBooking(createdBooking.id);
-        if (!paidBooking) {
-          // Rollback booking vừa tạo (đổi về Cancelled)
-          await updateBookingStatus(createdBooking.id, BookingStatus.Cancelled);
-          showError(
-            'Thanh toán không thành công',
-            'Không thể trừ tiền cho đơn đặt lịch này. Đơn hàng đã được hủy, vui lòng thử lại.'
-          );
-          return;
-        }
       }
 
       showSuccess(
