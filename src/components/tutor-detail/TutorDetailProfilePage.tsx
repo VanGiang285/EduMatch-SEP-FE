@@ -11,7 +11,13 @@ import { Star, Heart, MapPin, Clock, Calendar as CalendarIcon, MessageCircle, Vi
 import { FormatService } from '@/lib/format';
 import { useTutorDetail } from '@/hooks/useTutorDetail';
 import { useTutorAvailability } from '@/hooks/useTutorAvailability';
-import { EnumHelpers, TeachingMode, TutorAvailabilityStatus, MediaType } from '@/types/enums';
+import {
+  EnumHelpers,
+  TeachingMode,
+  TutorAvailabilityStatus,
+  MediaType,
+  BookingStatus,
+} from '@/types/enums';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { ReportService, MediaService, FeedbackService } from '@/services';
 import { useAuth } from '@/contexts/AuthContext';
@@ -63,7 +69,8 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const { showWarning, showInfo, showSuccess, showError } = useCustomToast();
   const { tutor, isLoading, error, loadTutorDetail, clearError } = useTutorDetail();
   const availabilitySectionRef = React.useRef<HTMLDivElement>(null);
-  const { createBooking, error: bookingError } = useBookings();
+  const { createBooking, payBooking, updateStatus: updateBookingStatus, error: bookingError } =
+    useBookings();
 
   // Sử dụng hook useTutorAvailability - hook sẽ tự load từ API bằng tutorId
   const {
@@ -605,16 +612,30 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
 
     try {
       setIsCreatingBooking(true);
-      const result = await createBooking(payload);
-      if (result) {
-        showSuccess('Đặt lịch thành công', 'Bạn có thể xem chi tiết trong tab Lớp học.');
-        setIsBookingWizardOpen(false);
-        setBookingStep(1);
-        clearSelectedSlots();
-        router.push('/profile?tab=classes');
-      } else {
+      const createdBooking = await createBooking(payload);
+
+      if (!createdBooking) {
         showError('Không thể đặt lịch', bookingError || 'Vui lòng thử lại sau.');
+        return;
       }
+
+      // Tiếp tục thanh toán booking vừa tạo
+      const paidBooking = await payBooking(createdBooking.id);
+      if (!paidBooking) {
+        // Rollback booking vừa tạo (đổi về Cancelled)
+        await updateBookingStatus(createdBooking.id, BookingStatus.Cancelled);
+        showError(
+          'Thanh toán không thành công',
+          'Không thể trừ tiền cho đơn đặt lịch này. Đơn hàng đã được hủy, vui lòng thử lại.'
+        );
+        return;
+      }
+
+      showSuccess('Đặt lịch thành công', 'Bạn có thể xem chi tiết trong tab Lớp học.');
+      setIsBookingWizardOpen(false);
+      setBookingStep(1);
+      clearSelectedSlots();
+      router.push('/profile?tab=classes');
     } catch (error: any) {
       showError('Không thể đặt lịch', error?.message || 'Đã xảy ra lỗi, vui lòng thử lại sau.');
     } finally {
