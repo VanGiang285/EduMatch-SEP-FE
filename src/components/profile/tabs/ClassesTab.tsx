@@ -20,7 +20,6 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react';
-import { BookingService } from '@/services';
 import { BookingDto } from '@/types/backend';
 import { BookingStatus, PaymentStatus, ScheduleStatus, TeachingMode } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
@@ -42,6 +41,10 @@ export function ClassesTab() {
     loading,
     loadLearnerBookings: loadBookings,
     payBooking: payBookingApi,
+    updateStatus: updateBookingStatus,
+    getBookingById,
+    loadBookingDetails,
+    getBooking: getBookingFromCache,
   } = useBookings();
   const [allBookings, setAllBookings] = useState<BookingDto[]>([]); // Lưu tất cả bookings để tính counts
   const [filter, setFilter] = useState<string>('all');
@@ -53,7 +56,6 @@ export function ClassesTab() {
   const [isPaying, setIsPaying] = useState<boolean>(false);
   const { loadTutorProfiles, getTutorProfile, loadTutorProfile } = useTutorProfiles();
   const { schedules, loading: loadingSchedules, loadSchedulesByBookingId, clearSchedules } = useSchedules();
-  const { getBooking, loadBookingDetails } = useBookings();
   const { balance, loading: walletLoading, refetch: refetchWallet } = useWalletContext();
   const [scheduleStatusFilter, setScheduleStatusFilter] = useState<'all' | ScheduleStatus>('all');
 
@@ -99,19 +101,18 @@ export function ClassesTab() {
     if (!selectedBookingId) return;
 
     try {
-      // Load booking detail
-      const bookingResponse = await BookingService.getById(selectedBookingId);
-      if (bookingResponse.success && bookingResponse.data) {
-        setSelectedBooking(bookingResponse.data);
+      const bookingDetail = await getBookingById(selectedBookingId);
+      if (bookingDetail) {
+        setSelectedBooking(bookingDetail);
 
-        // Load tutor profile nếu chưa có
-        const tutorEmail = bookingResponse.data.tutorSubject?.tutorEmail;
+        const tutorEmail = bookingDetail.tutorSubject?.tutorEmail;
         if (tutorEmail) {
           await loadTutorProfile(tutorEmail);
         }
+      } else {
+        showError('Không thể tải chi tiết lớp học', 'Vui lòng thử lại sau.');
       }
 
-      // Load schedules
       await loadSchedulesByBookingId(selectedBookingId);
     } catch (error: any) {
       showError('Lỗi khi tải chi tiết lớp học', error.message);
@@ -295,8 +296,8 @@ export function ClassesTab() {
 
   const handleCancelBooking = async (bookingId: number) => {
     try {
-      const response = await BookingService.updateStatus(bookingId, BookingStatus.Cancelled);
-      if (response.success) {
+      const updated = await updateBookingStatus(bookingId, BookingStatus.Cancelled);
+      if (updated) {
         showSuccess('Đã hủy booking thành công');
 
         // Reload bookings và wallet song song để cập nhật dữ liệu
@@ -309,22 +310,12 @@ export function ClassesTab() {
           await refetchWallet();
         }
 
-        // Cập nhật allBookings từ bookings state mới (sẽ được sync qua useEffect)
-        // Đảm bảo UI cập nhật ngay lập tức
-        setAllBookings((prevBookings) =>
-          prevBookings.map((booking) =>
-            booking.id === bookingId
-              ? { ...booking, status: BookingStatus.Cancelled }
-              : booking
-          )
-        );
-
         // Nếu đang ở detail của booking vừa hủy thì quay về list
         if (selectedBookingId === bookingId) {
           handleBackToList();
         }
       } else {
-        showError('Không thể hủy booking', response.error?.message);
+        showError('Không thể hủy booking', 'Vui lòng thử lại sau.');
       }
     } catch (error: any) {
       showError('Lỗi khi hủy booking', error.message);
@@ -375,15 +366,6 @@ export function ClassesTab() {
             await refetchWallet();
           }
 
-          // Cập nhật allBookings từ bookings state mới (sẽ được sync qua useEffect)
-          // Đảm bảo UI cập nhật ngay lập tức với payment status mới
-          setAllBookings((prevBookings) =>
-            prevBookings.map((b) =>
-              b.id === booking.id
-                ? { ...updatedBooking }
-                : b
-            )
-          );
         } else {
           throw new Error('Thanh toán không thành công. Vui lòng thử lại.');
         }
@@ -490,47 +472,47 @@ export function ClassesTab() {
 
         {/* Schedules List */}
         <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            Danh sách buổi học ({filteredSchedules.length}/{schedules.length})
-          </h3>
 
-          <div className="flex flex-wrap gap-2 mb-4">
-            {[
-              { value: 'all' as const, label: 'Tất cả' },
-              { value: ScheduleStatus.Upcoming, label: 'Sắp diễn ra' },
-              { value: ScheduleStatus.InProgress, label: 'Đang học' },
-              { value: ScheduleStatus.Completed, label: 'Hoàn thành' },
-              { value: ScheduleStatus.Cancelled, label: 'Đã hủy' },
-              { value: ScheduleStatus.Absent, label: 'Vắng' },
-            ].map((option) => (
-              <Button
-                key={`schedule-filter-${option.label}`}
-                size="sm"
-                variant={scheduleStatusFilter === option.value ? 'default' : 'outline'}
-                className={
-                  scheduleStatusFilter === option.value
-                    ? 'bg-[#257180] text-white'
-                    : 'text-gray-600'
-                }
-                onClick={() => setScheduleStatusFilter(option.value)}
-              >
-                {option.label}
-                {option.value === 'all'
-                  ? schedules.length > 0 && <span className="ml-1 text-xs">({schedules.length})</span>
-                  : schedules.length > 0 && (
-                    <span className="ml-1 text-xs">
-                      (
-                      {
-                        schedules.filter(
-                          (schedule) =>
-                            EnumHelpers.parseScheduleStatus(schedule.status) === option.value
-                        ).length
-                      }
-                      )
-                    </span>
-                  )}
-              </Button>
-            ))}
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-sm font-medium text-gray-700">Trạng thái:</span>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: 'all' as const, label: 'Tất cả' },
+                { value: ScheduleStatus.Upcoming, label: 'Sắp diễn ra' },
+                { value: ScheduleStatus.InProgress, label: 'Đang học' },
+                { value: ScheduleStatus.Completed, label: 'Hoàn thành' },
+                { value: ScheduleStatus.Cancelled, label: 'Đã hủy' },
+                { value: ScheduleStatus.Absent, label: 'Vắng' },
+              ].map((option) => (
+                <Button
+                  key={`schedule-filter-${option.label}`}
+                  size="sm"
+                  variant={scheduleStatusFilter === option.value ? 'default' : 'outline'}
+                  className={
+                    scheduleStatusFilter === option.value
+                      ? 'bg-[#257180] text-white'
+                      : 'text-gray-600'
+                  }
+                  onClick={() => setScheduleStatusFilter(option.value)}
+                >
+                  {option.label}
+                  {option.value === 'all'
+                    ? schedules.length > 0 && <span className="ml-1 text-xs">({schedules.length})</span>
+                    : schedules.length > 0 && (
+                      <span className="ml-1 text-xs">
+                        (
+                        {
+                          schedules.filter(
+                            (schedule) =>
+                              EnumHelpers.parseScheduleStatus(schedule.status) === option.value
+                          ).length
+                        }
+                        )
+                      </span>
+                    )}
+                </Button>
+              ))}
+            </div>
           </div>
 
           {loadingSchedules ? (
@@ -561,7 +543,7 @@ export function ClassesTab() {
                   const slot = availability?.slot;
 
                   // Lấy booking từ schedule hoặc từ hook (nếu schedule chỉ có bookingId)
-                  const booking = getBooking(schedule.bookingId, schedule.booking);
+                  const booking = getBookingFromCache(schedule.bookingId, schedule.booking);
                   // Từ booking lấy tutorSubject (tutorSubjectId)
                   const tutorSubject = booking?.tutorSubject;
                   // Từ tutorSubject lấy subject (môn học) và level
