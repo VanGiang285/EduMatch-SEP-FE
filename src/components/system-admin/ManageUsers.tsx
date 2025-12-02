@@ -45,6 +45,82 @@ import { ManageUserDto } from '@/types/backend';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
 
+const ROLE = {
+  LEARNER: 1,
+  TUTOR: 2,
+  BUSINESS_ADMIN: 3,
+  SYSTEM_ADMIN: 4,
+};
+
+const getInitials = (value?: string) => {
+  if (!value) return 'NA';
+  const trimmed = value.trim();
+  if (!trimmed) return 'NA';
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+};
+
+const ROLE_BADGES: Record<number, { label: string; className: string }> = {
+  [ROLE.LEARNER]: {
+    label: 'Học viên',
+    className: 'bg-[#257180] text-white border border-[#257180] font-semibold px-3 py-1',
+  },
+  [ROLE.TUTOR]: {
+    label: 'Gia sư',
+    className: 'bg-[#FD8B51] text-white border border-[#FD8B51] font-semibold px-3 py-1',
+  },
+  [ROLE.BUSINESS_ADMIN]: {
+    label: 'Business Admin',
+    className: 'bg-amber-100 text-amber-800 border-2 border-amber-400 font-semibold px-3 py-1',
+  },
+  [ROLE.SYSTEM_ADMIN]: {
+    label: 'System Admin',
+    className: 'bg-red-100 text-red-800 border-2 border-red-400 font-semibold px-3 py-1',
+  },
+};
+
+const resolveRoleId = (input: ManageUserDto | number | string | undefined | null): number | null => {
+  if (typeof input === 'object' && input !== null) {
+    const record = input as ManageUserDto;
+    const roleFromId = resolveRoleId(record.roleId as number | undefined);
+    if (roleFromId !== null) {
+      return roleFromId;
+    }
+    if (record.roleName) {
+      return resolveRoleId(record.roleName);
+    }
+    return null;
+  }
+
+  if (typeof input === 'number' && !Number.isNaN(input)) {
+    return input;
+  }
+
+  if (typeof input === 'string') {
+    const numeric = Number(input);
+    if (!Number.isNaN(numeric)) {
+      return numeric;
+    }
+
+    const normalized = input.trim().toLowerCase();
+    if (normalized.includes('học') || normalized.includes('learner')) {
+      return ROLE.LEARNER;
+    }
+    if (normalized.includes('gia sư') || normalized.includes('tutor')) {
+      return ROLE.TUTOR;
+    }
+    if (normalized.includes('business')) {
+      return ROLE.BUSINESS_ADMIN;
+    }
+    if (normalized.includes('system')) {
+      return ROLE.SYSTEM_ADMIN;
+    }
+  }
+
+  return null;
+};
+
 export function ManageUsers() {
   const { user } = useAuth();
   const { showSuccess, showError } = useCustomToast();
@@ -71,7 +147,7 @@ export function ManageUsers() {
         if (response.success && response.data) {
           // Filter out current system admin and ensure data has required fields
           const filtered = response.data
-            .filter(u => u.email !== user?.email || u.roleId !== 4)
+            .filter(u => u.email !== user?.email || resolveRoleId(u) !== ROLE.SYSTEM_ADMIN)
             .map(u => ({
               ...u,
               // Ensure roleId exists - map from roleName if needed
@@ -116,17 +192,8 @@ export function ManageUsers() {
 
     // Role filter
     if (filterRole !== 'all') {
-      const roleId = parseInt(filterRole);
-      if (!isNaN(roleId)) {
-        filtered = filtered.filter(u => {
-          // Compare both roleId and roleName for safety
-          return u.roleId === roleId || 
-                 (roleId === 1 && u.roleName === 'Learner') ||
-                 (roleId === 2 && u.roleName === 'Tutor') ||
-                 (roleId === 3 && (u.roleName === 'Business Admin' || u.roleName === 'BusinessAdmin')) ||
-                 (roleId === 4 && (u.roleName === 'System Admin' || u.roleName === 'SystemAdmin'));
-        });
-      }
+      const selectedRoleId = Number(filterRole);
+      filtered = filtered.filter((u) => resolveRoleId(u) === selectedRoleId);
     }
 
     // Status filter
@@ -190,37 +257,25 @@ export function ManageUsers() {
 
   // Get status badge
   const getStatusBadge = (isActive: boolean | undefined) => {
-    if (isActive === true) {
-      return <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">Hoạt động</Badge>;
-    } else {
-      return <Badge variant="secondary" className="bg-gray-100 text-gray-800 border-gray-200">Chưa kích hoạt</Badge>;
+    if (isActive) {
+      return <Badge className="bg-green-100 text-green-800 border-green-200">Hoạt động</Badge>;
     }
-  };
-
-  // Get role badge color
-  const getRoleBadgeColor = (roleId: number) => {
-    switch (roleId) {
-      case 1: // Learner
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 2: // Tutor
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 3: // Business Admin
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 4: // System Admin
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+    return <Badge className="bg-gray-100 text-gray-700 border-gray-200">Chưa kích hoạt</Badge>;
   };
 
   // Get role name
-  const getRoleName = (roleId: number) => {
+  const getRoleName = (roleId: number | null | undefined) => {
     switch (roleId) {
-      case 1: return 'Học viên';
-      case 2: return 'Gia sư';
-      case 3: return 'Business Admin';
-      case 4: return 'System Admin';
-      default: return 'Không xác định';
+      case ROLE.LEARNER:
+        return 'Học viên';
+      case ROLE.TUTOR:
+        return 'Gia sư';
+      case ROLE.BUSINESS_ADMIN:
+        return 'Business Admin';
+      case ROLE.SYSTEM_ADMIN:
+        return 'System Admin';
+      default:
+        return 'Không xác định';
     }
   };
 
@@ -307,7 +362,7 @@ export function ManageUsers() {
       </div>
 
       {/* Filters */}
-      <Card className="hover:shadow-md transition-shadow bg-white">
+      <Card className="bg-white">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             {/* Search */}
@@ -331,10 +386,10 @@ export function ManageUsers() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả vai trò</SelectItem>
-                <SelectItem value="1">Học viên</SelectItem>
-                <SelectItem value="2">Gia sư</SelectItem>
-                <SelectItem value="3">Business Admin</SelectItem>
-                <SelectItem value="4">System Admin</SelectItem>
+                <SelectItem value={ROLE.LEARNER.toString()}>Học viên</SelectItem>
+                <SelectItem value={ROLE.TUTOR.toString()}>Gia sư</SelectItem>
+                <SelectItem value={ROLE.BUSINESS_ADMIN.toString()}>Business Admin</SelectItem>
+                <SelectItem value={ROLE.SYSTEM_ADMIN.toString()}>System Admin</SelectItem>
               </SelectContent>
             </Select>
 
@@ -356,111 +411,108 @@ export function ManageUsers() {
       </Card>
 
       {/* Users Table */}
-      <Card className="hover:shadow-md transition-shadow bg-white">
+      <Card className="bg-white">
         <CardHeader className="border-b border-gray-200 bg-gray-50">
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-[#257180]" />
             Danh sách người dùng
+            <Badge variant="secondary" className="ml-2 bg-[#257180] text-white">
+              {filteredUsers.length} người dùng
+            </Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-[#257180]" />
-              <span className="ml-2 text-gray-600">Đang tải danh sách người dùng...</span>
+              <span className="ml-2 text-gray-600">Đang tải dữ liệu...</span>
             </div>
           ) : (
             <>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50 border-b border-gray-200">
-                  <TableHead className="w-[80px] text-left">
-                    <Button variant="ghost" size="sm" onClick={() => handleSort('id')} className="h-8 px-2">
-                      ID <ArrowUpDown className="ml-1 h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="text-left">
-                    <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-8 px-2">
-                      Tên người dùng <ArrowUpDown className="ml-1 h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="text-left">
-                    <Button variant="ghost" size="sm" onClick={() => handleSort('email')} className="h-8 px-2">
-                      Email <ArrowUpDown className="ml-1 h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="text-left font-semibold text-gray-900">Số điện thoại</TableHead>
-                  <TableHead className="text-left font-semibold text-gray-900">Vai trò</TableHead>
-                  <TableHead className="text-left font-semibold text-gray-900">Trạng thái</TableHead>
-                  <TableHead className="text-left">
-                    <Button variant="ghost" size="sm" onClick={() => handleSort('createdAt')} className="h-8 px-2">
-                      Ngày tạo <ArrowUpDown className="ml-1 h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="text-center font-semibold text-gray-900 w-[140px]">Thao tác</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedUsers.length === 0 ? (
-                  <TableRow className="border-b border-gray-200">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50 border-b border-gray-200">
+                      <TableHead className="w-[80px] text-left">
+                        <Button variant="ghost" size="sm" onClick={() => handleSort('id')} className="h-8 px-2">
+                          ID <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="text-left">
+                        <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-8 px-2">
+                          Tên người dùng <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="text-left">
+                        <Button variant="ghost" size="sm" onClick={() => handleSort('email')} className="h-8 px-2">
+                          Email <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="text-left font-semibold text-gray-900">Số điện thoại</TableHead>
+                      <TableHead className="text-left font-semibold text-gray-900">Vai trò</TableHead>
+                      <TableHead className="text-left font-semibold text-gray-900">Trạng thái</TableHead>
+                      <TableHead className="text-left">
+                        <Button variant="ghost" size="sm" onClick={() => handleSort('createdAt')} className="h-8 px-2">
+                          Ngày tạo <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="text-center font-semibold text-gray-900 w-[160px]">Thao tác</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedUsers.length === 0 ? (
+                      <TableRow>
                         <TableCell colSpan={8} className="text-center py-12 text-gray-500">
-                      <div className="flex flex-col items-center gap-2">
-                        <Users className="h-12 w-12 text-gray-300" />
-                        <p>Không tìm thấy người dùng nào</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedUsers.map((user, index) => (
-                        <TableRow key={user.email} className="hover:bg-gray-50 border-b border-gray-200">
-                      <TableCell className="text-left">
-                        <span className="font-mono text-sm text-gray-600">{startIndex + index + 1}</span>
-                      </TableCell>
-                      <TableCell className="text-left">
-                        <div className="flex items-center gap-3 min-w-0 max-w-[220px]">
-                          <Avatar className="h-10 w-10 rounded-lg">
-                            <AvatarImage src={user.avatarUrl} />
-                            <AvatarFallback className="bg-[#F2E5BF] text-[#257180]">
-                              {(user.userName || user.email || 'U').slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <p
-                            className="font-medium text-gray-900 truncate min-w-0"
-                            title={user.userName || user.email}
-                          >
-                            {user.userName || user.email}
-                          </p>
-                        </div>
-                      </TableCell>
+                          Không tìm thấy người dùng nào
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginatedUsers.map((record, index) => (
+                        <TableRow key={record.email} className="hover:bg-gray-50 border-b border-gray-200">
+                          <TableCell className="text-left">
+                            <span className="font-mono text-sm text-gray-600">{startIndex + index + 1}</span>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div className="flex items-center gap-3 min-w-0 max-w-[220px]">
+                              <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] font-semibold">
+                                <AvatarImage
+                                  src={record.avatarUrl}
+                                  alt={record.userName || record.email}
+                                  className="object-cover"
+                                />
+                                <AvatarFallback>{getInitials(record.userName || record.email)}</AvatarFallback>
+                              </Avatar>
+                              <p className="font-medium text-gray-900 truncate" title={record.userName || record.email}>
+                                {record.userName || record.email}
+                              </p>
+                            </div>
+                          </TableCell>
                           <TableCell className="text-left text-sm text-gray-700 max-w-[220px]">
-                            <span className="truncate block min-w-0" title={user.email}>
-                              {user.email}
+                            <span className="truncate block" title={record.email}>
+                              {record.email}
                             </span>
                           </TableCell>
-                          <TableCell className="text-left text-sm text-gray-700 max-w-[130px]">
-                            <span className="truncate block min-w-0" title={user.phone || '-'}>
-                              {user.phone || '-'}
-                            </span>
-                      </TableCell>
-                      <TableCell className="text-left">
-                            <Badge 
-                              variant="secondary" 
-                              className={`text-xs ${getRoleBadgeColor(user.roleId)}`}
-                              title={user.roleName || getRoleName(user.roleId)}
-                            >
-                              {user.roleName || getRoleName(user.roleId)}
-                            </Badge>
-                      </TableCell>
-                      <TableCell className="text-left">
-                            {getStatusBadge(user.isActive)}
-                      </TableCell>
+                          <TableCell className="text-left text-sm text-gray-700">{record.phone || '-'}</TableCell>
+                          <TableCell className="text-left">
+                            {(() => {
+                              const roleId = resolveRoleId(record);
+                              const badgeClass =
+                                (roleId && ROLE_BADGES[roleId]?.className) ||
+                                'bg-gray-100 text-gray-700 border-2 border-gray-300 font-semibold px-3 py-1';
+                              return (
+                                <Badge className={badgeClass}>
+                                  {roleId ? ROLE_BADGES[roleId]?.label || getRoleName(roleId) : record.roleName || 'Không xác định'}
+                                </Badge>
+                              );
+                            })()}
+                          </TableCell>
+                          <TableCell className="text-left">{getStatusBadge(record.isActive)}</TableCell>
                           <TableCell className="text-left text-sm text-gray-700">
-                            {(user.createAt || user.createdAt) ? (
-                              new Date(user.createAt || user.createdAt || '').toLocaleDateString('vi-VN', {
+                            {record.createAt || record.createdAt ? (
+                              new Date(record.createAt || record.createdAt || '').toLocaleDateString('vi-VN', {
                                 year: 'numeric',
                                 month: '2-digit',
-                                day: '2-digit'
+                                day: '2-digit',
                               })
                             ) : (
                               <span className="text-gray-400">-</span>
@@ -472,19 +524,15 @@ export function ManageUsers() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() =>
-                                  user.isActive ? handleDeactivateUser(user.email) : handleActivateUser(user.email)
+                                  record.isActive ? handleDeactivateUser(record.email) : handleActivateUser(record.email)
                                 }
-                                disabled={isActivating === user.email || isDeactivating === user.email}
-                                className={`p-2 rounded-lg ${
-                                  user.isActive
-                                    ? 'text-red-600 hover:bg-red-50'
-                                    : 'text-green-600 hover:bg-green-50'
-                                }`}
-                                title={user.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                                disabled={isActivating === record.email || isDeactivating === record.email}
+                                className="p-2 hover:bg-[#FD8B51] hover:text-white"
+                                title={record.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
                               >
-                                {isActivating === user.email || isDeactivating === user.email ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : user.isActive ? (
+                                {isActivating === record.email || isDeactivating === record.email ? (
+                                  <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : record.isActive ? (
                                   <XCircle className="h-5 w-5" />
                                 ) : (
                                   <CheckCircle className="h-5 w-5" />
@@ -492,60 +540,57 @@ export function ManageUsers() {
                               </Button>
                             </div>
                           </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-end px-6 py-4 border-t border-gray-200">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious 
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                    >
-                      Trước
-                    </PaginationPrevious>
-                  </PaginationItem>
-                  
-                  {[...Array(totalPages)].map((_, idx) => {
-                    const pageNum = idx + 1;
-                    if (
-                      pageNum === 1 ||
-                      pageNum === totalPages ||
-                      (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
-                    ) {
-                      return (
-                        <PaginationItem key={pageNum}>
-                          <PaginationLink
-                            onClick={() => setCurrentPage(pageNum)}
-                            isActive={currentPage === pageNum}
-                            className="cursor-pointer"
-                          >
-                            {pageNum}
-                          </PaginationLink>
-                        </PaginationItem>
-                      );
-                    }
-                    return null;
-                  })}
-                  
-                  <PaginationItem>
-                    <PaginationNext 
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                    >
-                      Sau
-                    </PaginationNext>
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-end px-6 py-4 border-t border-gray-200">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        >
+                          Trước
+                        </PaginationPrevious>
+                      </PaginationItem>
+                      {[...Array(totalPages)].map((_, idx) => {
+                        const pageNum = idx + 1;
+                        if (
+                          pageNum === 1 ||
+                          pageNum === totalPages ||
+                          (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                        ) {
+                          return (
+                            <PaginationItem key={pageNum}>
+                              <PaginationLink
+                                onClick={() => setCurrentPage(pageNum)}
+                                isActive={currentPage === pageNum}
+                                className="cursor-pointer"
+                              >
+                                {pageNum}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      })}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        >
+                          Sau
+                        </PaginationNext>
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
               )}
             </>
           )}

@@ -115,7 +115,7 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar */}
           <aside className="lg:w-64 flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden sticky top-24">
+            <div className="bg-white rounded-lg shadow-sm border border-[#257180]/20 overflow-hidden sticky top-24">
               <div className="p-4 border-b bg-gray-50">
                 <h3 className="font-semibold">Tài khoản của tôi</h3>
               </div>
@@ -149,7 +149,7 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
 
           {/* Main Content */}
           <main className="flex-1 min-w-0">
-            <div className="bg-white rounded-lg shadow-sm border-2 border-[#FD8B51] p-6">
+            <div className="bg-white rounded-2xl border border-[#257180]/20 p-6 transition-shadow hover:shadow-md">
               {renderTabContent()}
             </div>
           </main>

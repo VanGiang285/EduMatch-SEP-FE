@@ -358,7 +358,7 @@ export function RefundRequestsTab() {
         </Button>
       </div>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -404,7 +404,7 @@ export function RefundRequestsTab() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách yêu cầu hoàn tiền</CardTitle>

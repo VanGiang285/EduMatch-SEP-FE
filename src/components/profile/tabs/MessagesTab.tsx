@@ -324,12 +324,31 @@ export function MessagesTab() {
       showErrorRef.current("Lỗi", "Không tìm thấy thông tin người nhận.");
       return;
     }
+    const messageContent = messageText.trim();
     setSending(true);
+    
+    // Optimistic update: Add temporary message immediately
+    // Use negative ID to easily identify temporary messages
+    const tempMessage: ChatMessageDto = {
+      id: -Date.now(), // Negative ID for temporary messages
+      chatRoomId: selectedConversation,
+      senderEmail: currentUserEmail,
+      receiverEmail: receiverEmail,
+      messageText: messageContent,
+      sentAt: new Date().toISOString(), // Use current local time, will be replaced by server response
+      isRead: false,
+    };
+    addMessage(tempMessage);
+    setMessageText('');
+    
     try {
-      await sendMessage(selectedConversation, currentUserEmail, receiverEmail, messageText.trim());
-      setMessageText('');
+      await sendMessage(selectedConversation, currentUserEmail, receiverEmail, messageContent);
+      // Message will be replaced by the real one from server via SignalR
     } catch (error) {
       console.error("Failed to send message:", error);
+      // Remove temporary message on error
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+      setMessageText(messageContent); // Restore message text
       showErrorRef.current("Lỗi", "Không thể gửi tin nhắn. Vui lòng thử lại.");
     } finally {
       setSending(false);
@@ -341,7 +360,7 @@ export function MessagesTab() {
         <h2 className="text-2xl font-semibold text-gray-900">Tin nhắn</h2>
         <p className="text-gray-600 mt-1">Trò chuyện với gia sư</p>
       </div>
-      <Card className="h-[600px] border border-gray-200 hover:shadow-md transition-shadow">
+      <Card className="h-[600px] border border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
         <CardContent className="p-0 h-full flex">
                 {}
                 <div className="w-80 border-r border-gray-200 flex flex-col">

@@ -244,7 +244,7 @@ export function TutorScheduleTab() {
       </div>
 
       {schedules.length === 0 ? (
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Calendar className="h-16 w-16 text-gray-300 mb-4" />
             <p className="text-gray-600">Chưa có lịch dạy nào</p>
@@ -294,7 +294,7 @@ export function TutorScheduleTab() {
             }
 
             return (
-              <Card key={schedule.id} className="hover:shadow-md transition-shadow">
+              <Card key={schedule.id} className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row gap-6">
                     {/* Date Box */}

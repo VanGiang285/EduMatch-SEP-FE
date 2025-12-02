@@ -159,7 +159,7 @@ export function ScheduleTab() {
     const today = new Date();
 
     return (
-      <Card>
+      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
         <CardContent className="p-6">
           {/* Calendar Header */}
           <div className="flex items-center justify-between mb-6">
@@ -301,7 +301,7 @@ export function ScheduleTab() {
                     const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
 
                     return (
-                      <Card key={schedule.id} className="border-l-4 border-l-[#257180]">
+                      <Card key={schedule.id} className="border border-[#257180]/20 border-l-4 border-l-[#257180] bg-white transition-shadow hover:shadow-md">
                         <CardContent className="p-4">
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                             <div className="flex-1 min-w-0">
@@ -457,7 +457,7 @@ export function ScheduleTab() {
           )}
 
           {filteredSchedules.length === 0 ? (
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Calendar className="h-16 w-16 text-gray-300 mb-4" />
                 <p className="text-gray-600">
@@ -502,7 +502,7 @@ export function ScheduleTab() {
                 }
 
                 return (
-                  <Card key={schedule.id} className="hover:shadow-md transition-shadow border-l-4 border-l-[#257180]">
+                  <Card key={schedule.id} className="hover:shadow-md transition-shadow border border-[#257180]/20 border-l-4 border-l-[#257180] bg-white">
                     <CardContent className="p-6">
                       <div className="flex flex-col md:flex-row gap-6">
                         {scheduleDate && (

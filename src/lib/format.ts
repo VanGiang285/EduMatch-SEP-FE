@@ -3,11 +3,38 @@ import { vi } from 'date-fns/locale';
 export class FormatService {
   static formatDate(date: Date | string, formatStr = 'dd/MM/yyyy'): string {
     try {
-      const dateObj = typeof date === 'string' ? parseISO(date) : date;
+      let dateObj: Date;
+      if (typeof date === 'string') {
+        // Parse ISO string - parseISO handles timezone correctly
+        // If string has 'Z' or timezone offset, it's UTC or has timezone
+        // If no timezone info, assume it's UTC from server (common case)
+        if (date.endsWith('Z')) {
+          // Explicitly UTC
+          dateObj = parseISO(date);
+        } else if (date.includes('+') || (date.includes('-') && date.match(/[+-]\d{2}:\d{2}$/))) {
+          // Has timezone offset
+          dateObj = parseISO(date);
+        } else if (date.includes('T')) {
+          // ISO format without timezone - assume UTC from server
+          dateObj = parseISO(date + 'Z');
+        } else {
+          // Just date string, parse normally
+          dateObj = parseISO(date);
+        }
+      } else {
+        dateObj = date;
+      }
+      // format() will automatically convert to local timezone for display
       return format(dateObj, formatStr, { locale: vi });
     } catch (error) {
-      console.error('Date formatting error:', error);
-      return 'Invalid date';
+      console.error('Date formatting error:', error, 'Input:', date);
+      // Fallback: try direct Date parsing
+      try {
+        const fallbackDate = typeof date === 'string' ? new Date(date) : date;
+        return format(fallbackDate, formatStr, { locale: vi });
+      } catch (fallbackError) {
+        return 'Invalid date';
+      }
     }
   }
   static formatDateTime(date: Date | string): string {

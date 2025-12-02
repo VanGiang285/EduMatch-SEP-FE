@@ -383,20 +383,15 @@ export interface ChatSuggestionTutorDto {
   teachingExp?: string;
   province?: string;
   subDistrict?: string;
-  hourlyRates?: string[];
+  hourlyRates?: (number | string)[];
   matchScore?: number;
   profileUrl?: string;
-}
-
-export interface ChatSuggestionsDto {
-  message?: string;
-  tutors?: ChatSuggestionTutorDto[];
 }
 
 export interface ChatResponseDto {
   sessionId: number;
   reply: string;
-  suggestions?: ChatSuggestionsDto;
+  suggestions?: ChatSuggestionTutorDto[];
 }
 
 export interface ChatSessionDto {

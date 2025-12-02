@@ -414,7 +414,7 @@ export function WalletTab() {
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
             <CardHeader>
               <CardTitle className="text-gray-900">Giao dịch gần đây</CardTitle>
             </CardHeader>
@@ -468,7 +468,7 @@ export function WalletTab() {
         </TabsContent>
 
         <TabsContent value="history" className="mt-6">
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
             <CardHeader>
               <CardTitle className="text-gray-900">Tất cả giao dịch</CardTitle>
             </CardHeader>
@@ -537,7 +537,7 @@ export function WalletTab() {
         </TabsContent>
 
         <TabsContent value="bank-accounts" className="mt-6">
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-gray-900">Tài khoản ngân hàng</CardTitle>

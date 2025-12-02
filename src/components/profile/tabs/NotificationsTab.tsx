@@ -258,14 +258,14 @@ export function NotificationsTab() {
 
         <TabsContent value={filter} className="mt-6">
           {loading ? (
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#257180] mb-4"></div>
                 <p className="text-gray-600">Đang tải thông báo...</p>
               </CardContent>
             </Card>
           ) : filteredNotifications.length === 0 ? (
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Bell className="h-16 w-16 text-gray-300 mb-4" />
                 <p className="text-gray-600">Không có thông báo nào</p>
@@ -282,7 +282,7 @@ export function NotificationsTab() {
                 return (
                   <Card 
                     key={notification.id} 
-                    className={`transition-all hover:shadow-md relative ${
+                    className={`transition-all hover:shadow-md relative bg-white border border-[#257180]/20 ${
                       !notification.isRead ? 'border-l-4 border-l-[#257180] bg-blue-50/30' : ''
                     }`}
                     onMouseEnter={() => handleMouseEnter(notification)}

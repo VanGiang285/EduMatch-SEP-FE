@@ -68,7 +68,7 @@ export function SettingsTab() {
       </div>
 
       {/* Change Password */}
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-900">
             <Lock className="h-5 w-5" />
@@ -181,7 +181,7 @@ export function SettingsTab() {
       </Card>
 
       {/* Other Settings */}
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
         <CardHeader>
           <CardTitle className="text-gray-900">Cài đặt thông báo</CardTitle>
         </CardHeader>
@@ -190,7 +190,7 @@ export function SettingsTab() {
         </CardContent>
       </Card>
 
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
         <CardHeader>
           <CardTitle className="text-gray-900">Quyền riêng tư</CardTitle>
         </CardHeader>

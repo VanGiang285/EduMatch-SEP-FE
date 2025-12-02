@@ -969,7 +969,7 @@ export function TutorProfileTab() {
         </TabsList>
 
         <TabsContent value="basic" className="space-y-6">
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-900">
                 <User className="h-5 w-5" />
@@ -1198,7 +1198,7 @@ export function TutorProfileTab() {
         </TabsContent>
 
         <TabsContent value="description" className="space-y-6">
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-900">
                 <FileText className="h-5 w-5" />
@@ -1234,7 +1234,7 @@ export function TutorProfileTab() {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-900">
                 <Video className="h-5 w-5" />
@@ -1299,7 +1299,7 @@ export function TutorProfileTab() {
         </TabsContent>
 
         <TabsContent value="education" className="space-y-6">
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -1366,7 +1366,7 @@ export function TutorProfileTab() {
         </TabsContent>
 
         <TabsContent value="certificates" className="space-y-6">
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -1436,7 +1436,7 @@ export function TutorProfileTab() {
         </TabsContent>
 
         <TabsContent value="subjects" className="space-y-6">
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -1490,7 +1490,7 @@ export function TutorProfileTab() {
         </TabsContent>
 
         <TabsContent value="availability" className="space-y-6">
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-900">
                 <Calendar className="h-5 w-5" />
