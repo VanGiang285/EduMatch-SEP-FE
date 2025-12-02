@@ -91,7 +91,9 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     handleSlotClick,
     clearSelectedSlots,
     isSlotAvailable,
+    isSlotExistsInMap,
     isSlotSelected,
+    isSlotAtLeast24HoursAway,
     getAvailableTimeSlots,
     timeSlots: timeSlotsFromHook,
     isLoading: isLoadingAvailability,
@@ -640,6 +642,24 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       return;
     }
 
+    // Kiểm tra tất cả các slot đã chọn phải cách thời điểm hiện tại ít nhất 24 giờ
+    const now = new Date();
+    const slotsNot24HoursAway = selectedSlotDetails.filter(detail => {
+      const slotDateTime = new Date(detail.date);
+      const diffMs = slotDateTime.getTime() - now.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+      return diffHours <= 24;
+    });
+
+    if (slotsNot24HoursAway.length > 0) {
+      const firstInvalidSlot = slotsNot24HoursAway[0];
+      showWarning(
+        'Không thể đặt lịch trong vòng 24 giờ',
+        `Bạn chỉ có thể đặt lịch từ 24 giờ trở đi. Khung giờ "${firstInvalidSlot.dateLabel} ${firstInvalidSlot.timeRange}" quá gần thời điểm hiện tại.`
+      );
+      return;
+    }
+
     const payload: BookingWithSchedulesCreateRequest = {
       booking: {
         learnerEmail: user.email,
@@ -715,6 +735,24 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     }
     if (selectedSlotDetails.some(detail => !detail.isAvailable)) {
       showWarning('Khung giờ không còn trống', 'Vui lòng bỏ chọn các khung giờ đã được đặt.');
+      return false;
+    }
+
+    // Kiểm tra tất cả các slot đã chọn phải cách thời điểm hiện tại ít nhất 24 giờ
+    const now = new Date();
+    const slotsNot24HoursAway = selectedSlotDetails.filter(detail => {
+      const slotDateTime = new Date(detail.date);
+      const diffMs = slotDateTime.getTime() - now.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+      return diffHours <= 24;
+    });
+
+    if (slotsNot24HoursAway.length > 0) {
+      const firstInvalidSlot = slotsNot24HoursAway[0];
+      showWarning(
+        'Không thể đặt lịch trong vòng 24 giờ',
+        `Bạn chỉ có thể đặt lịch từ 24 giờ trở đi. Khung giờ "${firstInvalidSlot.dateLabel} ${firstInvalidSlot.timeRange}" quá gần thời điểm hiện tại.`
+      );
       return false;
     }
 
@@ -1846,9 +1884,11 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                               {timeSlot.startTime}
                             </div>
                             {weekDays.map((day) => {
+                              const slotExists = isSlotExistsInMap(day.key, timeSlot);
                               const slotAvailable = isSlotAvailable(day.key, timeSlot);
                               const slotBooked = isSlotBooked(day.key, timeSlot);
                               const slotSelected = isSlotSelected(day.key, timeSlot);
+                              const slot24HoursAway = isSlotAtLeast24HoursAway(day.key, timeSlot);
 
                               let buttonClass = '';
                               let buttonContent = '';
@@ -1858,6 +1898,12 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                                 buttonClass =
                                   'bg-red-100 text-red-800 cursor-not-allowed border border-red-200';
                                 buttonContent = '✗';
+                                disabled = true;
+                              } else if (slotExists && !slot24HoursAway) {
+                                // Slot tồn tại nhưng không đủ 24h - hiển thị màu vàng và disable
+                                buttonClass =
+                                  'bg-yellow-100 text-yellow-800 cursor-not-allowed border border-yellow-200';
+                                buttonContent = '⚠';
                                 disabled = true;
                               } else if (slotAvailable) {
                                 if (slotSelected) {
@@ -1876,7 +1922,15 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                               }
 
                               const onClick = () => {
-                                if (!slotAvailable || slotBooked) return;
+                                if (!slotAvailable || slotBooked) {
+                                  if (slotExists && !slot24HoursAway) {
+                                    showWarning(
+                                      'Không thể đặt lịch trong vòng 24 giờ',
+                                      'Bạn chỉ có thể đặt lịch từ 24 giờ trở đi. Vui lòng chọn khung giờ khác.'
+                                    );
+                                  }
+                                  return;
+                                }
 
                                 if (isTrialBooking && !slotSelected && selectedSlotDetails.length >= 1) {
                                   showWarning(
@@ -1925,6 +1979,10 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     <div className="flex items-center gap-1">
                       <div className="w-3 h-3 bg-orange-100 rounded border border-orange-300"></div>
                       <span>Đã chọn</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-yellow-100 rounded border border-yellow-300"></div>
+                      <span>Quá gần (cần đặt trước 24h)</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-3 h-3 bg-red-100 rounded border border-red-300"></div>

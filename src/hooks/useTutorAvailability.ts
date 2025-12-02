@@ -48,8 +48,18 @@ export interface UseTutorAvailabilityReturn {
     dayKey: string,
     timeSlot: { startTime: string; endTime: string; id: number }
   ) => boolean;
+  /** Kiểm tra xem slot có tồn tại trong availabilityMap hay không (không kiểm tra 24h) */
+  isSlotExistsInMap: (
+    dayKey: string,
+    timeSlot: { startTime: string; endTime: string; id: number }
+  ) => boolean;
   /** Kiểm tra xem slot đã được chọn hay chưa */
   isSlotSelected: (
+    dayKey: string,
+    timeSlot: { startTime: string; endTime: string; id: number }
+  ) => boolean;
+  /** Kiểm tra xem slot có cách thời điểm hiện tại ít nhất 24 giờ không */
+  isSlotAtLeast24HoursAway: (
     dayKey: string,
     timeSlot: { startTime: string; endTime: string; id: number }
   ) => boolean;
@@ -156,7 +166,7 @@ export function useTutorAvailability(): UseTutorAvailabilityReturn {
   });
 
   /**
-   * Tạo map để kiểm tra nhanh slot có sẵn hay không
+   * Tạo map để kiểm tra nhanh slot có sẵn hay không (chỉ kiểm tra tồn tại, không kiểm tra 24h)
    * Key format: "YYYY-MM-DD-HH" (ví dụ: "2024-12-01-14" = 14h ngày 1/12/2024)
    * Chỉ lấy các availability có status = Available
    */
@@ -325,9 +335,40 @@ export function useTutorAvailability(): UseTutorAvailabilityReturn {
   // ========== CÁC HÀM KIỂM TRA ==========
 
   /**
-   * Kiểm tra xem slot có sẵn để đặt hay không
+   * Kiểm tra xem slot có cách thời điểm hiện tại ít nhất 24 giờ không
    */
-  const isSlotAvailable = useCallback(
+  const isSlotAtLeast24HoursAway = useCallback(
+    (
+      dayKey: string,
+      timeSlot: { startTime: string; endTime: string; id: number }
+    ) => {
+      const date = new Date(currentWeekStart);
+      const dayIndex = WEEK_DAYS.findIndex(day => day.key === dayKey);
+      if (dayIndex >= 0) {
+        date.setDate(currentWeekStart.getDate() + dayIndex);
+      }
+
+      // Lấy giờ và phút từ timeSlot.startTime (format: "HH:mm" hoặc "HH:mm:ss")
+      const [hours, minutes] = timeSlot.startTime.split(':').map(Number);
+      date.setHours(hours, minutes || 0, 0, 0);
+
+      // Thời điểm hiện tại
+      const now = new Date();
+
+      // Tính khoảng cách thời gian (milliseconds)
+      const diffMs = date.getTime() - now.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+
+      // Phải cách ít nhất 24 giờ (lớn hơn 24, không bằng)
+      return diffHours > 24;
+    },
+    [currentWeekStart]
+  );
+
+  /**
+   * Kiểm tra xem slot có tồn tại trong availabilityMap hay không (không kiểm tra 24h)
+   */
+  const isSlotExistsInMap = useCallback(
     (
       dayKey: string,
       timeSlot: { startTime: string; endTime: string; id: number }
@@ -337,6 +378,23 @@ export function useTutorAvailability(): UseTutorAvailabilityReturn {
       return Boolean(availabilityMap[buildSlotKey(dateKey, hour)]);
     },
     [currentWeekStart, availabilityMap]
+  );
+
+  /**
+   * Kiểm tra xem slot có sẵn để đặt hay không (bao gồm kiểm tra 24h)
+   */
+  const isSlotAvailable = useCallback(
+    (
+      dayKey: string,
+      timeSlot: { startTime: string; endTime: string; id: number }
+    ) => {
+      // Slot phải tồn tại trong availabilityMap VÀ cách ít nhất 24h
+      return (
+        isSlotExistsInMap(dayKey, timeSlot) &&
+        isSlotAtLeast24HoursAway(dayKey, timeSlot)
+      );
+    },
+    [isSlotExistsInMap, isSlotAtLeast24HoursAway]
   );
 
   /**
@@ -430,7 +488,9 @@ export function useTutorAvailability(): UseTutorAvailabilityReturn {
     handleSlotClick,
     clearSelectedSlots,
     isSlotAvailable,
+    isSlotExistsInMap,
     isSlotSelected,
+    isSlotAtLeast24HoursAway,
     getAvailableTimeSlots,
     timeSlots,
     isLoading,
