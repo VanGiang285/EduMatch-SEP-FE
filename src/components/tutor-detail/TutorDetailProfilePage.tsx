@@ -33,6 +33,7 @@ import { Input } from '../ui/form/input';
 import { ReportCreateRequest, BasicEvidenceRequest } from '@/types/requests';
 import { useBookings } from '@/hooks/useBookings';
 import { useLearnerTrialLessons } from '@/hooks/useLearnerTrialLessons';
+import { useSubject } from '@/hooks/useSubject';
 
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
   if (typeof mode === 'number') {
@@ -72,6 +73,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const { createBooking, error: bookingError } = useBookings();
   const { subjectStatuses, loadSubjectTrialStatuses, checkHasTrialLesson } =
     useLearnerTrialLessons();
+  const { tutorSubjects: tutorSubjectsFromHook, loadTutorSubjects } = useSubject();
 
   // Sử dụng hook useTutorAvailability - hook sẽ tự load từ API bằng tutorId
   const {
@@ -255,6 +257,13 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     );
   }, [timeSlotsFromHook, weekDays, isSlotAvailable, isSlotBooked]);
 
+  // Sử dụng tutorSubjects từ hook (lấy từ API), fallback về tutor.tutorSubjects
+  const tutorSubjectsToUse = React.useMemo(() => {
+    return tutorSubjectsFromHook.length > 0
+      ? tutorSubjectsFromHook
+      : (tutor?.tutorSubjects || []);
+  }, [tutorSubjectsFromHook, tutor?.tutorSubjects]);
+
   // Trạng thái còn slot học thử hay không (theo tutor + list môn từ BE)
   const hasAnyTrialLeft = React.useMemo(() => {
     if (!subjectStatuses || subjectStatuses.length === 0) return true; // chưa load coi như còn
@@ -262,7 +271,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   }, [subjectStatuses]);
 
   const subjectLevelOptions = React.useMemo(() => {
-    if (!tutor?.tutorSubjects || tutor.tutorSubjects.length === 0) {
+    if (!tutorSubjectsToUse || tutorSubjectsToUse.length === 0) {
       return [];
     }
 
@@ -279,9 +288,20 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       }[];
     }>();
 
-    tutor.tutorSubjects.forEach((tutorSubject, index) => {
-      const subjectKey = tutorSubject.subjectId ? String(tutorSubject.subjectId) : `subject-${index}`;
-      const levelKey = tutorSubject.levelId ? `${subjectKey}-${tutorSubject.levelId}` : `${subjectKey}-level-${index}`;
+    tutorSubjectsToUse.forEach((tutorSubject, index) => {
+      // API không trả về subjectId và levelId (có [JsonIgnore] trong backend)
+      // Cần lấy từ nested objects: subject?.id và level?.id
+      const subjectId = tutorSubject.subjectId ?? tutorSubject.subject?.id;
+      const levelId = tutorSubject.levelId ?? tutorSubject.level?.id;
+
+      // Validate: subjectId là bắt buộc, nếu không có thì skip record này
+      if (!subjectId) {
+        console.warn(`TutorSubject ${tutorSubject.id} không có subjectId, bỏ qua.`, tutorSubject);
+        return;
+      }
+
+      const subjectKey = String(subjectId);
+      const levelKey = levelId ? `${subjectKey}-${levelId}` : `${subjectKey}-level-${index}`;
       const subjectName = tutorSubject.subject?.subjectName || 'Môn học';
       const levelName = tutorSubject.level?.name || 'Trình độ';
 
@@ -296,15 +316,15 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       subjectMap.get(subjectKey)?.levels.push({
         key: levelKey,
         levelName,
-        subjectId: tutorSubject.subjectId,
-        levelId: tutorSubject.levelId,
+        subjectId: subjectId, // Đảm bảo subjectId luôn có giá trị (number)
+        levelId: levelId,
         tutorSubjectId: tutorSubject.id,
         hourlyRate: tutorSubject.hourlyRate || 0,
       });
     });
 
     return Array.from(subjectMap.values());
-  }, [tutor?.tutorSubjects]);
+  }, [tutorSubjectsToUse]);
 
   React.useEffect(() => {
     if (subjectLevelOptions.length === 0) {
@@ -343,6 +363,14 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     }
     return selectedSubjectInfo.levels.find(level => level.key === selectedLevelKey) || null;
   }, [selectedSubjectInfo, selectedLevelKey]);
+
+  // Trạng thái học thử của môn hiện đang chọn (nếu đã load từ /api/TrialLessons/subjects)
+  const selectedSubjectTrialStatus = React.useMemo(() => {
+    if (!selectedLevelInfo?.subjectId || !subjectStatuses || subjectStatuses.length === 0) {
+      return null;
+    }
+    return subjectStatuses.find(s => s.subjectId === selectedLevelInfo.subjectId) || null;
+  }, [selectedLevelInfo?.subjectId, subjectStatuses]);
 
   const getDateKeyFromAvailability = React.useCallback((startDate: string) => {
     if (startDate.includes('T')) {
@@ -431,6 +459,13 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       loadAvailabilities(tutorId);
     }
   }, [tutorId, loadAvailabilities]);
+
+  // Load danh sách môn học của gia sư từ API
+  useEffect(() => {
+    if (tutorId) {
+      loadTutorSubjects(tutorId);
+    }
+  }, [tutorId, loadTutorSubjects]);
 
   // Load trạng thái học thử theo môn của learner với tutor này
   useEffect(() => {
@@ -684,8 +719,8 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     }
 
     if (isTrialBooking) {
-      const subjectId = selectedLevelInfo.subjectId;
-      if (!subjectId) {
+      const subjectId = selectedLevelInfo?.subjectId;
+      if (subjectId === undefined || subjectId === null) {
         showWarning(
           'Thiếu thông tin môn học',
           'Không xác định được môn để kiểm tra học thử. Vui lòng chọn lại.'
@@ -693,13 +728,26 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
         return false;
       }
 
-      const hasTrial = await checkHasTrialLesson(tutorId, subjectId);
-      if (hasTrial) {
-        showWarning(
-          'Đã sử dụng học thử',
-          'Bạn đã đăng ký học thử môn này với gia sư này. Mỗi môn chỉ được học thử 1 lần.'
-        );
-        return false;
+      // Ưu tiên dùng danh sách /api/TrialLessons/subjects để biết môn này đã học thử chưa
+      const statusFromList = subjectStatuses?.find(s => s.subjectId === subjectId);
+      if (statusFromList) {
+        if (statusFromList.hasTrialed) {
+          showWarning(
+            'Đã dùng học thử cho môn này',
+            `Bạn đã sử dụng buổi học thử miễn phí cho môn "${statusFromList.subjectName}" với gia sư này.`
+          );
+          return false;
+        }
+      } else {
+        // Fallback: gọi API kiểm tra riêng nếu vì lý do nào đó chưa có trong danh sách
+        const hasTrial = await checkHasTrialLesson(tutorId, subjectId);
+        if (hasTrial) {
+          showWarning(
+            'Đã dùng học thử cho môn này',
+            'Bạn đã đăng ký học thử môn này với gia sư này. Mỗi môn chỉ được học thử 1 lần.'
+          );
+          return false;
+        }
       }
     }
 
@@ -712,6 +760,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     selectedSlotDetails,
     selectedSlots,
     selectedSubjectInfo,
+    subjectStatuses,
     showWarning,
     tutorId,
   ]);
@@ -1090,13 +1139,13 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       <p className="text-gray-700 leading-relaxed">
                         {tutor.teachingExp || 'Chưa có thông tin kinh nghiệm giảng dạy.'}
                       </p>
-                      {tutor.tutorSubjects && tutor.tutorSubjects.length > 0 && (
+                      {tutorSubjectsToUse.length > 0 && (
                         <>
                           <p className="text-gray-700 mt-3">
                             Tôi chuyên dạy các môn học sau:
                           </p>
                           <ul className="mt-3 space-y-2 text-gray-700">
-                            {tutor.tutorSubjects.map((tutorSubject, idx) => (
+                            {tutorSubjectsToUse.map((tutorSubject, idx) => (
                               <li key={idx} className="flex items-start gap-2">
                                 <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
                                 <span>{tutorSubject.subject?.subjectName} - {tutorSubject.level?.name}</span>
@@ -1213,7 +1262,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-2">
-                      {tutor.tutorSubjects?.map((subject, idx) => (
+                      {tutorSubjectsToUse.map((subject, idx) => (
                         <Badge key={idx} variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
                           {subject.subject?.subjectName || `Subject ${subject.subjectId}`}
                         </Badge>
@@ -1535,9 +1584,9 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     <div>
                       <span className="text-gray-600 text-sm">Học phí</span>
                       <div className="mt-2">
-                        {tutor.tutorSubjects && tutor.tutorSubjects.length > 0 ? (
+                        {tutorSubjectsToUse.length > 0 ? (
                           (() => {
-                            const prices = tutor.tutorSubjects.map(ts => ts.hourlyRate || 0);
+                            const prices = tutorSubjectsToUse.map(ts => ts.hourlyRate || 0);
                             const minPrice = Math.min(...prices);
                             const maxPrice = Math.max(...prices);
 
@@ -1604,7 +1653,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Môn học:</span>
-                      <span className="font-medium">{tutor.tutorSubjects?.length || 0}</span>
+                      <span className="font-medium">{tutorSubjectsToUse.length}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Chứng chỉ:</span>

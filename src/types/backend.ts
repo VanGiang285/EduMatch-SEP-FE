@@ -149,9 +149,9 @@ export interface TutorProfileDto {
 export interface TutorSubjectDto {
   id: number;
   tutorId: number;
-  subjectId: number;
+  subjectId?: number; // Có thể không có trong response từ API
   hourlyRate?: number;
-  levelId?: number;
+  levelId?: number; // Có thể không có trong response từ API
   level?: LevelDto;
   subject?: SubjectDto;
   tutorEmail?: string;
