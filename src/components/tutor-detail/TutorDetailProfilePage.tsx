@@ -619,19 +619,26 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
         return;
       }
 
-      // Tiếp tục thanh toán booking vừa tạo
-      const paidBooking = await payBooking(createdBooking.id);
-      if (!paidBooking) {
-        // Rollback booking vừa tạo (đổi về Cancelled)
-        await updateBookingStatus(createdBooking.id, BookingStatus.Cancelled);
-        showError(
-          'Thanh toán không thành công',
-          'Không thể trừ tiền cho đơn đặt lịch này. Đơn hàng đã được hủy, vui lòng thử lại.'
-        );
-        return;
+      if (!isTrialBooking) {
+        // Tiếp tục thanh toán booking vừa tạo đối với booking thường
+        const paidBooking = await payBooking(createdBooking.id);
+        if (!paidBooking) {
+          // Rollback booking vừa tạo (đổi về Cancelled)
+          await updateBookingStatus(createdBooking.id, BookingStatus.Cancelled);
+          showError(
+            'Thanh toán không thành công',
+            'Không thể trừ tiền cho đơn đặt lịch này. Đơn hàng đã được hủy, vui lòng thử lại.'
+          );
+          return;
+        }
       }
 
-      showSuccess('Đặt lịch thành công', 'Bạn có thể xem chi tiết trong tab Lớp học.');
+      showSuccess(
+        isTrialBooking ? 'Đăng ký học thử thành công' : 'Đặt lịch thành công',
+        isTrialBooking
+          ? 'Buổi học thử đã được ghi nhận.'
+          : 'Bạn có thể xem chi tiết trong tab Lớp học.'
+      );
       setIsBookingWizardOpen(false);
       setBookingStep(1);
       clearSelectedSlots();
@@ -1928,7 +1935,9 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
               <p>
                 <span className="font-semibold text-gray-900">Tổng học phí dự kiến:</span>{' '}
                 <span className="text-[#257180] font-semibold">
-                  {FormatService.formatVND(estimatedTotal)}
+                  {isTrialBooking
+                    ? '0đ (học thử)'
+                    : FormatService.formatVND(estimatedTotal)}
                 </span>
               </p>
               {!isTrialBooking && estimatedTotal > balance && (
