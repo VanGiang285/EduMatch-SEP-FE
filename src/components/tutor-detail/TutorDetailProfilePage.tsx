@@ -1526,7 +1526,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full border-green-500 text-green-700 hover:bg-green-600 hover:text-white hover:border-green-600"
+                      className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                       size="lg"
                       onClick={handleGoToAvailability}
                     >
