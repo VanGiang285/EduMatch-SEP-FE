@@ -55,6 +55,7 @@ export function ClassesTab() {
   const { schedules, loading: loadingSchedules, loadSchedulesByBookingId, clearSchedules } = useSchedules();
   const { getBooking, loadBookingDetails } = useBookings();
   const { balance, loading: walletLoading, refetch: refetchWallet } = useWalletContext();
+  const [scheduleStatusFilter, setScheduleStatusFilter] = useState<'all' | ScheduleStatus>('all');
 
   // Load tất cả bookings một lần khi component mount hoặc user thay đổi
   useEffect(() => {
@@ -132,13 +133,22 @@ export function ClassesTab() {
 
   const handleViewDetail = (bookingId: number) => {
     setSelectedBookingId(bookingId);
+    setScheduleStatusFilter('all');
   };
 
   const handleBackToList = () => {
     setSelectedBookingId(null);
     setSelectedBooking(null);
     clearSchedules();
+    setScheduleStatusFilter('all');
   };
+  const filteredSchedules = useMemo(() => {
+    if (scheduleStatusFilter === 'all') return schedules;
+    return schedules.filter(
+      (schedule) => EnumHelpers.parseScheduleStatus(schedule.status) === scheduleStatusFilter
+    );
+  }, [scheduleStatusFilter, schedules]);
+
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -249,6 +259,38 @@ export function ClassesTab() {
         return status !== ScheduleStatus.Upcoming && status !== ScheduleStatus.InProgress;
       }
     ).length;
+  };
+
+  const getScheduleStatusSummary = (booking: BookingDto) => {
+    if (!booking.schedules || booking.schedules.length === 0) return [];
+
+    const summaryMap = new Map<ScheduleStatus, number>();
+    booking.schedules.forEach((schedule) => {
+      const status = EnumHelpers.parseScheduleStatus(schedule.status);
+      summaryMap.set(status, (summaryMap.get(status) || 0) + 1);
+    });
+
+    return Array.from(summaryMap.entries())
+      .filter(([_, count]) => count > 0)
+      .map(([status, count]) => ({ status, count }))
+      .sort((a, b) => a.status - b.status);
+  };
+
+  const getScheduleStatusBgColor = (status: ScheduleStatus) => {
+    switch (status) {
+      case ScheduleStatus.Upcoming:
+        return 'bg-blue-400';
+      case ScheduleStatus.InProgress:
+        return 'bg-yellow-400';
+      case ScheduleStatus.Completed:
+        return 'bg-green-500';
+      case ScheduleStatus.Cancelled:
+        return 'bg-red-400';
+      case ScheduleStatus.Absent:
+        return 'bg-gray-400';
+      default:
+        return 'bg-gray-300';
+    }
   };
 
   const handleCancelBooking = async (bookingId: number) => {
@@ -408,6 +450,12 @@ export function ClassesTab() {
 
   // Render detail view: chỉ hiện danh sách buổi học của booking
   if (selectedBookingId && selectedBooking) {
+    const tutorSubject = selectedBooking.tutorSubject;
+    const subject = tutorSubject?.subject;
+    const level = tutorSubject?.level;
+    const tutorName = tutorSubject?.tutor?.userName;
+    const tutorEmail = tutorSubject?.tutorEmail;
+
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -415,24 +463,81 @@ export function ClassesTab() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Quay lại
           </Button>
+        </div>
+
+        <div className="grid gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900">
-              Lịch học của đơn #{selectedBookingId}
-            </h2>
+            <p className="text-xs uppercase text-gray-500">Môn học</p>
+            <p className="text-sm font-semibold text-gray-900">{subject?.subjectName || 'N/A'}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-gray-500">Cấp độ</p>
+            <p className="text-sm font-semibold text-gray-900">{level?.name || 'Không xác định'}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-gray-500">Email gia sư</p>
+            <p className="text-sm font-semibold text-gray-900">
+              {tutorEmail || 'Chưa có thông tin'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-gray-500">Trạng thái đơn</p>
+            <Badge className={getBookingStatusColor(selectedBooking.status)}>
+              {EnumHelpers.getBookingStatusLabel(selectedBooking.status)}
+            </Badge>
           </div>
         </div>
 
         {/* Schedules List */}
         <div>
           <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            Danh sách buổi học ({schedules.length})
+            Danh sách buổi học ({filteredSchedules.length}/{schedules.length})
           </h3>
+
+          <div className="flex flex-wrap gap-2 mb-4">
+            {[
+              { value: 'all' as const, label: 'Tất cả' },
+              { value: ScheduleStatus.Upcoming, label: 'Sắp diễn ra' },
+              { value: ScheduleStatus.InProgress, label: 'Đang học' },
+              { value: ScheduleStatus.Completed, label: 'Hoàn thành' },
+              { value: ScheduleStatus.Cancelled, label: 'Đã hủy' },
+              { value: ScheduleStatus.Absent, label: 'Vắng' },
+            ].map((option) => (
+              <Button
+                key={`schedule-filter-${option.label}`}
+                size="sm"
+                variant={scheduleStatusFilter === option.value ? 'default' : 'outline'}
+                className={
+                  scheduleStatusFilter === option.value
+                    ? 'bg-[#257180] text-white'
+                    : 'text-gray-600'
+                }
+                onClick={() => setScheduleStatusFilter(option.value)}
+              >
+                {option.label}
+                {option.value === 'all'
+                  ? schedules.length > 0 && <span className="ml-1 text-xs">({schedules.length})</span>
+                  : schedules.length > 0 && (
+                    <span className="ml-1 text-xs">
+                      (
+                      {
+                        schedules.filter(
+                          (schedule) =>
+                            EnumHelpers.parseScheduleStatus(schedule.status) === option.value
+                        ).length
+                      }
+                      )
+                    </span>
+                  )}
+              </Button>
+            ))}
+          </div>
 
           {loadingSchedules ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-[#257180]" />
             </div>
-          ) : schedules.length === 0 ? (
+          ) : filteredSchedules.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Calendar className="h-16 w-16 text-gray-300 mb-4" />
@@ -441,7 +546,7 @@ export function ClassesTab() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {schedules
+              {filteredSchedules
                 .sort((a, b) => {
                   const dateA = a.availability?.startDate
                     ? new Date(a.availability.startDate).getTime()
@@ -695,6 +800,7 @@ export function ClassesTab() {
               const nextSession = getNextSession(booking);
               const finishedSessions = getFinishedSessions(booking);
               const progress = (finishedSessions / booking.totalSessions) * 100;
+              const scheduleStatusSummary = getScheduleStatusSummary(booking);
 
               return (
                 <Card
@@ -780,7 +886,36 @@ export function ClassesTab() {
                               {finishedSessions}/{booking.totalSessions} buổi
                             </span>
                           </div>
-                          <Progress value={progress} className="h-2" />
+                          {scheduleStatusSummary.length > 0 ? (
+                            <>
+                              <div className="flex h-2 w-full overflow-hidden rounded bg-gray-200">
+                                {scheduleStatusSummary.map(({ status, count }) => (
+                                  <div
+                                    key={`${booking.id}-${status}`}
+                                    className={`${getScheduleStatusBgColor(status)} h-full`}
+                                    style={{
+                                      width: `${(count / booking.totalSessions) * 100}%`,
+                                    }}
+                                    title={`${EnumHelpers.getScheduleStatusLabel(status)}: ${count} buổi`}
+                                  />
+                                ))}
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
+                                {scheduleStatusSummary.map(({ status, count }) => (
+                                  <div key={`legend-${booking.id}-${status}`} className="flex items-center gap-1">
+                                    <span
+                                      className={`inline-block h-2 w-2 rounded-full ${getScheduleStatusBgColor(status)}`}
+                                    />
+                                    <span>
+                                      {EnumHelpers.getScheduleStatusLabel(status)}: {count}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          ) : (
+                            <Progress value={progress} className="h-2" />
+                          )}
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-3 space-y-2">
