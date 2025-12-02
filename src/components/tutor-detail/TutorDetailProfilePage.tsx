@@ -33,6 +33,7 @@ import { Textarea } from '../ui/form/textarea';
 import { Input } from '../ui/form/input';
 import { ReportCreateRequest, BasicEvidenceRequest } from '@/types/requests';
 import { useBookings } from '@/hooks/useBookings';
+import { useLearnerTrialLessons } from '@/hooks/useLearnerTrialLessons';
 
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
   if (typeof mode === 'number') {
@@ -71,6 +72,8 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const availabilitySectionRef = React.useRef<HTMLDivElement>(null);
   const { createBooking, payBooking, updateStatus: updateBookingStatus, error: bookingError } =
     useBookings();
+  const { subjectStatuses, loadSubjectTrialStatuses, checkHasTrialLesson } =
+    useLearnerTrialLessons();
 
   // Sử dụng hook useTutorAvailability - hook sẽ tự load từ API bằng tutorId
   const {
@@ -254,6 +257,12 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     );
   }, [timeSlotsFromHook, weekDays, isSlotAvailable, isSlotBooked]);
 
+  // Trạng thái còn slot học thử hay không (theo tutor + list môn từ BE)
+  const hasAnyTrialLeft = React.useMemo(() => {
+    if (!subjectStatuses || subjectStatuses.length === 0) return true; // chưa load coi như còn
+    return subjectStatuses.some(s => !s.hasTrialed);
+  }, [subjectStatuses]);
+
   const subjectLevelOptions = React.useMemo(() => {
     if (!tutor?.tutorSubjects || tutor.tutorSubjects.length === 0) {
       return [];
@@ -425,6 +434,13 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     }
   }, [tutorId, loadAvailabilities]);
 
+  // Load trạng thái học thử theo môn của learner với tutor này
+  useEffect(() => {
+    if (tutorId && isAuthenticated && user?.role === USER_ROLES.LEARNER) {
+      loadSubjectTrialStatuses(tutorId);
+    }
+  }, [isAuthenticated, loadSubjectTrialStatuses, tutorId, user?.role]);
+
   // Check favorite status when tutor loads (only if authenticated)
   useEffect(() => {
     const loadRatingSummary = async () => {
@@ -517,7 +533,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   }, [availabilitySectionRef, setActiveTab]);
 
   const handleOpenBookingSelection = React.useCallback(
-    (isTrial: boolean) => {
+    async (isTrial: boolean) => {
       if (!isAuthenticated) {
         showWarning('Vui lòng đăng nhập', 'Bạn cần đăng nhập để đặt lịch học.');
         if (typeof window !== 'undefined') {
@@ -545,14 +561,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       clearSelectedSlots();
       setIsBookingSelectionDialogOpen(true);
     },
-    [
-      clearSelectedSlots,
-      isAuthenticated,
-      router,
-      showWarning,
-      subjectLevelOptions,
-      user?.role,
-    ]
+    [clearSelectedSlots, isAuthenticated, router, showWarning, subjectLevelOptions, user?.role]
   );
 
   const handleConfirmBooking = React.useCallback(async () => {
@@ -664,8 +673,8 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     walletLoading,
   ]);
 
-  // Giữ cho dialog cũ hoạt động: validate trước khi mở dialog xác nhận
-  const handleBookingRequest = React.useCallback((): boolean => {
+  // Validate trước khi mở dialog xác nhận + check quota học thử theo môn
+  const handleBookingRequest = React.useCallback(async (): Promise<boolean> => {
     if (!selectedSubjectInfo) {
       showWarning('Vui lòng chọn môn học', 'Hãy chọn môn học trước khi chọn khung giờ.');
       return false;
@@ -690,9 +699,38 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       return false;
     }
 
+    if (isTrialBooking) {
+      const subjectId = selectedLevelInfo.subjectId;
+      if (!subjectId) {
+        showWarning(
+          'Thiếu thông tin môn học',
+          'Không xác định được môn để kiểm tra học thử. Vui lòng chọn lại.'
+        );
+        return false;
+      }
+
+      const hasTrial = await checkHasTrialLesson(tutorId, subjectId);
+      if (hasTrial) {
+        showWarning(
+          'Đã sử dụng học thử',
+          'Bạn đã đăng ký học thử môn này với gia sư này. Mỗi môn chỉ được học thử 1 lần.'
+        );
+        return false;
+      }
+    }
+
     setIsBookingDialogOpen(true);
     return true;
-  }, [selectedLevelInfo, selectedSlotDetails, selectedSlots, selectedSubjectInfo, showWarning]);
+  }, [
+    checkHasTrialLesson,
+    isTrialBooking,
+    selectedLevelInfo,
+    selectedSlotDetails,
+    selectedSlots,
+    selectedSubjectInfo,
+    showWarning,
+    tutorId,
+  ]);
 
   // Report handlers
   const handleReportFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1552,15 +1590,17 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       <Clock className="w-4 h-4 mr-2" />
                       Đặt lịch học
                     </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-                      size="lg"
-                      onClick={() => handleOpenBookingSelection(true)}
-                    >
-                      <Clock className="w-4 h-4 mr-2" />
-                      Đặt lịch học thử
-                    </Button>
+                    {hasAnyTrialLeft && (
+                      <Button
+                        variant="outline"
+                        className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                        size="lg"
+                        onClick={() => handleOpenBookingSelection(true)}
+                      >
+                        <Clock className="w-4 h-4 mr-2" />
+                        Đặt lịch học thử
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
@@ -1880,8 +1920,8 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
             </Button>
             <Button
               className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
-              onClick={() => {
-                const ok = handleBookingRequest();
+              onClick={async () => {
+                const ok = await handleBookingRequest();
                 if (ok) {
                   setIsBookingSelectionDialogOpen(false);
                 }

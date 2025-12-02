@@ -29,7 +29,6 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useSchedules } from '@/hooks/useSchedules';
 import { useBookings } from '@/hooks/useBookings';
-import { useWalletContext } from '@/contexts/WalletContext';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
@@ -40,7 +39,6 @@ export function ClassesTab() {
     bookings,
     loading,
     loadLearnerBookings: loadBookings,
-    payBooking: payBookingApi,
     updateStatus: updateBookingStatus,
     getBookingById,
     loadBookingDetails,
@@ -51,12 +49,9 @@ export function ClassesTab() {
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
   const [cancelDialogBookingId, setCancelDialogBookingId] = useState<number | null>(null);
-  const [payDialogBookingId, setPayDialogBookingId] = useState<number | null>(null);
-  const [payingBookingId, setPayingBookingId] = useState<number | null>(null);
-  const [isPaying, setIsPaying] = useState<boolean>(false);
   const { loadTutorProfiles, getTutorProfile, loadTutorProfile } = useTutorProfiles();
-  const { schedules, loading: loadingSchedules, loadSchedulesByBookingId, clearSchedules } = useSchedules();
-  const { balance, loading: walletLoading, refetch: refetchWallet } = useWalletContext();
+  const { schedules, loading: loadingSchedules, loadSchedulesByBookingId, clearSchedules } =
+    useSchedules();
   const [scheduleStatusFilter, setScheduleStatusFilter] = useState<'all' | ScheduleStatus>('all');
 
   // Load tất cả bookings một lần khi component mount hoặc user thay đổi
@@ -302,12 +297,7 @@ export function ClassesTab() {
 
         // Reload bookings và wallet song song để cập nhật dữ liệu
         if (user?.email) {
-          await Promise.all([
-            loadBookings(user.email),
-            refetchWallet ? refetchWallet() : Promise.resolve()
-          ]);
-        } else if (refetchWallet) {
-          await refetchWallet();
+          await loadBookings(user.email);
         }
 
         // Nếu đang ở detail của booking vừa hủy thì quay về list
@@ -323,62 +313,6 @@ export function ClassesTab() {
   };
 
   // Tính toán counts cho từng trạng thái dựa trên tất cả bookings
-  const handlePayBooking = useCallback(
-    async (booking: BookingDto) => {
-      if (!booking || !booking.id) return;
-      if (!booking.totalAmount) {
-        showWarning('Không tìm thấy số tiền cần thanh toán. Vui lòng thử lại sau.');
-        return;
-      }
-      if (walletLoading) {
-        showWarning('Đang kiểm tra số dư ví, vui lòng đợi...');
-        return;
-      }
-      if (balance < booking.totalAmount) {
-        showWarning(
-          'Số dư không đủ',
-          `Số dư ví của bạn hiện là ${new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-          }).format(balance)}, không đủ để thanh toán ${new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-          }).format(booking.totalAmount)}. Vui lòng nạp thêm tiền.`
-        );
-        return;
-      }
-
-      setPayingBookingId(booking.id);
-      setIsPaying(true);
-
-      try {
-        const updatedBooking = await payBookingApi(booking.id);
-        if (updatedBooking) {
-          showSuccess('Thanh toán thành công', 'Số dư ví đã được trừ tương ứng.');
-
-          // Reload bookings và wallet song song để cập nhật dữ liệu
-          if (user?.email) {
-            await Promise.all([
-              loadBookings(user.email),
-              refetchWallet ? refetchWallet() : Promise.resolve()
-            ]);
-          } else if (refetchWallet) {
-            await refetchWallet();
-          }
-
-        } else {
-          throw new Error('Thanh toán không thành công. Vui lòng thử lại.');
-        }
-      } catch (error: any) {
-        showError('Không thể thanh toán', error?.message || 'Vui lòng thử lại sau.');
-      } finally {
-        setIsPaying(false);
-        setPayingBookingId(null);
-      }
-    },
-    [balance, loadBookings, payBookingApi, refetchWallet, showError, showSuccess, showWarning, user?.email, walletLoading]
-  );
-
   const handleRequestRefund = useCallback(
     (booking: BookingDto) => {
       showWarning(
@@ -909,24 +843,6 @@ export function ClassesTab() {
                           </div>
 
                           <div className="pt-2 border-t border-gray-200 space-y-2">
-                            {EnumHelpers.parseBookingStatus(booking.status) !== BookingStatus.Cancelled &&
-                              EnumHelpers.parsePaymentStatus(booking.paymentStatus) === PaymentStatus.Pending && (
-                                <Button
-                                  size="sm"
-                                  className="w-full bg-[#FD8B51] hover:bg-[#CB6040] text-white"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setPayDialogBookingId(booking.id);
-                                  }}
-                                  disabled={isPaying && payingBookingId === booking.id}
-                                >
-                                  {isPaying && payingBookingId === booking.id && (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  )}
-                                  Thanh toán
-                                </Button>
-                              )}
-
                             {EnumHelpers.parseBookingStatus(booking.status) === BookingStatus.Pending && (
                               <Button
                                 size="sm"
@@ -990,39 +906,6 @@ export function ClassesTab() {
           )}
         </TabsContent>
       </Tabs>
-
-      {/* Confirm Dialog cho Thanh toán */}
-      <ConfirmDialog
-        open={payDialogBookingId !== null}
-        onOpenChange={(open) => {
-          if (!open) setPayDialogBookingId(null);
-        }}
-        title="Xác nhận thanh toán"
-        description={
-          payDialogBookingId
-            ? (() => {
-              const booking = allBookings.find((b) => b.id === payDialogBookingId);
-              return booking
-                ? `Bạn có chắc chắn muốn thanh toán ${formatCurrency(booking.totalAmount)} cho đơn hàng #${booking.id} không?`
-                : 'Bạn có chắc chắn muốn thanh toán đơn hàng này không?';
-            })()
-            : 'Bạn có chắc chắn muốn thanh toán đơn hàng này không?'
-        }
-        confirmText="Thanh toán"
-        cancelText="Hủy"
-        type="success"
-        onConfirm={async () => {
-          const id = payDialogBookingId;
-          setPayDialogBookingId(null);
-          if (id != null) {
-            const booking = allBookings.find((b) => b.id === id);
-            if (booking) {
-              await handlePayBooking(booking);
-            }
-          }
-        }}
-        onCancel={() => setPayDialogBookingId(null)}
-      />
 
       {/* Confirm Dialog cho Hủy đơn */}
       <ConfirmDialog
