@@ -20,7 +20,6 @@ import {
   ArrowLeft,
   Clock,
 } from 'lucide-react';
-import { BookingService } from '@/services';
 import { BookingDto } from '@/types/backend';
 import { BookingStatus, PaymentStatus, ScheduleStatus } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
@@ -36,14 +35,25 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 export function TutorBookingsTab() {
   const { user } = useAuth();
   const { showError, showSuccess } = useCustomToast();
-  const { bookings, loading, tutorId, loadingTutorId, loadTutorProfile, loadTutorBookings: loadBookings } = useBookings();
+  const {
+    bookings,
+    loading,
+    tutorId,
+    loadingTutorId,
+    loadTutorProfile,
+    loadTutorBookings: loadBookings,
+    updateStatus: updateBookingStatus,
+    getBookingById,
+    loadBookingDetails,
+    getBooking: getBookingFromCache,
+  } = useBookings();
   const [filter, setFilter] = useState<string>('all');
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ bookingId: number | null; status: BookingStatus | null }>({ bookingId: null, status: null });
   const { schedules, loading: loadingSchedules, loadSchedulesByBookingId, clearSchedules, updateScheduleStatus } = useSchedules();
   const { learnerProfiles, loadLearnerProfiles, getLearnerProfile } = useLearnerProfiles();
-  const { getBooking, loadBookingDetails } = useBookings();
+  const [scheduleStatusFilter, setScheduleStatusFilter] = useState<'all' | ScheduleStatus>('all');
 
   useEffect(() => {
     // Load tutor profile khi có email
@@ -76,18 +86,13 @@ export function TutorBookingsTab() {
 
   const handleUpdateStatus = async (bookingId: number, status: BookingStatus) => {
     try {
-      const response = await BookingService.updateStatus(bookingId, status);
-      if (response.success) {
+      const updated = await updateBookingStatus(bookingId, status);
+      if (updated) {
         showSuccess(
-          status === BookingStatus.Confirmed
-            ? 'Đã chấp nhận'
-            : 'Đã hủy'
+          status === BookingStatus.Confirmed ? 'Đã chấp nhận' : 'Đã hủy'
         );
 
-        // Reload bookings với filter hiện tại
-        const params: {
-          status?: BookingStatus;
-        } = {};
+        const params: { status?: BookingStatus } = {};
 
         if (filter !== 'all') {
           switch (filter) {
@@ -112,7 +117,7 @@ export function TutorBookingsTab() {
           handleBackToList();
         }
       } else {
-        showError('Không thể cập nhật trạng thái', response.error?.message);
+        showError('Không thể cập nhật trạng thái', 'Vui lòng thử lại sau.');
       }
     } catch (error: any) {
       showError('Lỗi khi cập nhật trạng thái', error.message);
@@ -220,12 +225,68 @@ export function TutorBookingsTab() {
     ).length;
   };
 
+  const getScheduleStatusSummary = (booking: BookingDto) => {
+    if (!booking.schedules || booking.schedules.length === 0) return [];
+
+    const summaryMap = new Map<ScheduleStatus, number>();
+    booking.schedules.forEach((schedule) => {
+      const status = EnumHelpers.parseScheduleStatus(schedule.status);
+      summaryMap.set(status, (summaryMap.get(status) || 0) + 1);
+    });
+
+    return Array.from(summaryMap.entries())
+      .filter(([_, count]) => count > 0)
+      .map(([status, count]) => ({ status, count }))
+      .sort((a, b) => a.status - b.status);
+  };
+
+  const getScheduleStatusBgColor = (status: ScheduleStatus) => {
+    switch (status) {
+      case ScheduleStatus.Upcoming:
+        return 'bg-blue-400';
+      case ScheduleStatus.InProgress:
+        return 'bg-yellow-400';
+      case ScheduleStatus.Completed:
+        return 'bg-green-500';
+      case ScheduleStatus.Cancelled:
+        return 'bg-red-400';
+      case ScheduleStatus.Absent:
+        return 'bg-gray-400';
+      default:
+        return 'bg-gray-300';
+    }
+  };
+
+  const filteredSchedules = useMemo(() => {
+    if (scheduleStatusFilter === 'all') return schedules;
+    return schedules.filter(
+      (schedule) =>
+        EnumHelpers.parseScheduleStatus(schedule.status) === scheduleStatusFilter
+    );
+  }, [scheduleStatusFilter, schedules]);
+
   const handleViewDetail = async (bookingId: number) => {
     setSelectedBookingId(bookingId);
-    const booking = bookings.find((b) => b.id === bookingId);
-    if (booking) {
-      setSelectedBooking(booking);
+    setScheduleStatusFilter('all');
+
+    const bookingFromList = bookings.find((b) => b.id === bookingId);
+    if (bookingFromList) {
+      setSelectedBooking(bookingFromList);
+    } else {
+      setSelectedBooking(null);
+    }
+
+    try {
+      const detail = await getBookingById(bookingId);
+      if (detail) {
+        setSelectedBooking(detail);
+        if (detail.learnerEmail) {
+          await loadLearnerProfiles([detail.learnerEmail]);
+        }
+      }
       await loadSchedulesByBookingId(bookingId);
+    } catch (error: any) {
+      showError('Lỗi khi tải chi tiết lớp học', error.message);
     }
   };
 
@@ -233,6 +294,7 @@ export function TutorBookingsTab() {
     setSelectedBookingId(null);
     setSelectedBooking(null);
     clearSchedules();
+    setScheduleStatusFilter('all');
   };
 
   const handleUpdateScheduleStatus = async (scheduleId: number, status: ScheduleStatus) => {
@@ -313,6 +375,13 @@ export function TutorBookingsTab() {
 
   // Render detail view: chỉ hiện bảng lịch / buổi học của booking được chọn
   if (selectedBookingId && selectedBooking) {
+    const tutorSubject = selectedBooking.tutorSubject;
+    const subject = tutorSubject?.subject;
+    const level = tutorSubject?.level;
+    const learnerEmail = selectedBooking.learnerEmail;
+    const learnerProfile = learnerEmail ? getLearnerProfile(learnerEmail) : undefined;
+    const scheduleSummary = getScheduleStatusSummary(selectedBooking);
+
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -320,24 +389,81 @@ export function TutorBookingsTab() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Quay lại
           </Button>
+        </div>
+
+        <div className="grid gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900">
-              Lịch học của đơn #{selectedBookingId}
-            </h2>
+            <p className="text-xs uppercase text-gray-500">Môn học</p>
+            <p className="text-sm font-semibold text-gray-900">{subject?.subjectName || 'N/A'}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-gray-500">Cấp độ</p>
+            <p className="text-sm font-semibold text-gray-900">{level?.name || 'Không xác định'}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-gray-500">Email học viên</p>
+            <p className="text-sm font-semibold text-gray-900">
+              {learnerEmail || 'Chưa có thông tin'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-gray-500">Trạng thái đơn</p>
+            <Badge className={getBookingStatusColor(selectedBooking.status)}>
+              {EnumHelpers.getBookingStatusLabel(selectedBooking.status)}
+            </Badge>
           </div>
         </div>
 
         {/* Schedules List */}
         <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            Danh sách buổi học ({schedules.length})
-          </h3>
+
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-sm font-medium text-gray-700">Trạng thái:</span>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: 'all' as const, label: 'Tất cả' },
+                { value: ScheduleStatus.Upcoming, label: 'Sắp diễn ra' },
+                { value: ScheduleStatus.InProgress, label: 'Đang học' },
+                { value: ScheduleStatus.Completed, label: 'Hoàn thành' },
+                { value: ScheduleStatus.Cancelled, label: 'Đã hủy' },
+                { value: ScheduleStatus.Absent, label: 'Vắng' },
+              ].map((option) => (
+                <Button
+                  key={`schedule-filter-${option.label}`}
+                  size="sm"
+                  variant={scheduleStatusFilter === option.value ? 'default' : 'outline'}
+                  className={
+                    scheduleStatusFilter === option.value
+                      ? 'bg-[#257180] text-white'
+                      : 'text-gray-600'
+                  }
+                  onClick={() => setScheduleStatusFilter(option.value)}
+                >
+                  {option.label}
+                  {option.value === 'all'
+                    ? schedules.length > 0 && <span className="ml-1 text-xs">({schedules.length})</span>
+                    : schedules.length > 0 && (
+                      <span className="ml-1 text-xs">
+                        (
+                        {
+                          schedules.filter(
+                            (schedule) =>
+                              EnumHelpers.parseScheduleStatus(schedule.status) === option.value
+                          ).length
+                        }
+                        )
+                      </span>
+                    )}
+                </Button>
+              ))}
+            </div>
+          </div>
 
           {loadingSchedules ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-[#257180]" />
             </div>
-          ) : schedules.length === 0 ? (
+          ) : filteredSchedules.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Calendar className="h-16 w-16 text-gray-300 mb-4" />
@@ -346,7 +472,7 @@ export function TutorBookingsTab() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {schedules
+              {filteredSchedules
                 .sort((a, b) => {
                   const dateA = a.availability?.startDate
                     ? new Date(a.availability.startDate).getTime()
@@ -361,7 +487,7 @@ export function TutorBookingsTab() {
                   const slot = availability?.slot;
 
                   // Lấy booking từ schedule hoặc từ hook (nếu schedule chỉ có bookingId)
-                  const booking = getBooking(schedule.bookingId, schedule.booking);
+                  const booking = getBookingFromCache(schedule.bookingId, schedule.booking);
                   // Từ booking lấy tutorSubject (tutorSubjectId)
                   const tutorSubject = booking?.tutorSubject;
                   // Từ tutorSubject lấy subject (môn học) và level
@@ -616,6 +742,7 @@ export function TutorBookingsTab() {
               const nextSession = getNextSession(booking);
               const finishedSessions = getFinishedSessions(booking);
               const progress = (finishedSessions / booking.totalSessions) * 100;
+              const scheduleStatusSummary = getScheduleStatusSummary(booking);
 
               return (
                 <Card
@@ -693,7 +820,36 @@ export function TutorBookingsTab() {
                               {finishedSessions}/{booking.totalSessions} buổi
                             </span>
                           </div>
-                          <Progress value={progress} className="h-2" />
+                          {scheduleStatusSummary.length > 0 ? (
+                            <>
+                              <div className="flex h-2 w-full overflow-hidden rounded bg-gray-200">
+                                {scheduleStatusSummary.map(({ status, count }) => (
+                                  <div
+                                    key={`${booking.id}-${status}`}
+                                    className={`${getScheduleStatusBgColor(status)} h-full`}
+                                    style={{
+                                      width: `${(count / booking.totalSessions) * 100}%`,
+                                    }}
+                                    title={`${EnumHelpers.getScheduleStatusLabel(status)}: ${count} buổi`}
+                                  />
+                                ))}
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
+                                {scheduleStatusSummary.map(({ status, count }) => (
+                                  <div key={`legend-${booking.id}-${status}`} className="flex items-center gap-1">
+                                    <span
+                                      className={`inline-block h-2 w-2 rounded-full ${getScheduleStatusBgColor(status)}`}
+                                    />
+                                    <span>
+                                      {EnumHelpers.getScheduleStatusLabel(status)}: {count}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          ) : (
+                            <Progress value={progress} className="h-2" />
+                          )}
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-3 space-y-1">
