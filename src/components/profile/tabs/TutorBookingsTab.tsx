@@ -816,9 +816,7 @@ export function TutorBookingsTab() {
                         <div>
                           <div className="flex justify-between text-sm mb-2">
                             <span className="text-gray-600">Tiến độ</span>
-                            <span className="font-medium">
-                              {finishedSessions}/{booking.totalSessions} buổi
-                            </span>
+
                           </div>
                           {scheduleStatusSummary.length > 0 ? (
                             <>
