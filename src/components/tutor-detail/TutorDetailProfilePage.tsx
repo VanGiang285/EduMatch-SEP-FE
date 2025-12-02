@@ -1524,7 +1524,20 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       <Clock className="w-4 h-4 mr-2" />
                       Đặt lịch học
                     </Button>
-                    <Button variant="outline" className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
+                    <Button
+                      variant="outline"
+                      className="w-full border-green-500 text-green-700 hover:bg-green-600 hover:text-white hover:border-green-600"
+                      size="lg"
+                      onClick={handleGoToAvailability}
+                    >
+                      <Clock className="w-4 h-4 mr-2" />
+                      Đặt lịch học thử
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                      size="lg"
+                    >
                       <MessageCircle className="w-4 h-4 mr-2" />
                       Gửi tin nhắn
                     </Button>

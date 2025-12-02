@@ -16,6 +16,7 @@ export interface BookingWithSchedulesCreateRequest {
     learnerEmail: string;
     tutorSubjectId: number;
     totalSessions?: number;
+    isTrial?: boolean;
   };
   schedules: Array<{
     availabilitiId: number;
@@ -37,7 +38,9 @@ export class BookingService {
    * Lấy Booking theo Id
    */
   static async getById(id: number): Promise<ApiResponse<BookingDto>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.GET_BY_ID, { id: id.toString() });
+    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.GET_BY_ID, {
+      id: id.toString(),
+    });
     return apiClient.get<BookingDto>(endpoint);
   }
 
@@ -154,9 +157,12 @@ export class BookingService {
     id: number,
     paymentStatus: PaymentStatus
   ): Promise<ApiResponse<BookingDto>> {
-    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.UPDATE_PAYMENT_STATUS, {
-      id: id.toString(),
-    });
+    const endpoint = replaceUrlParams(
+      API_ENDPOINTS.BOOKINGS.UPDATE_PAYMENT_STATUS,
+      {
+        id: id.toString(),
+      }
+    );
     return apiClient.put<BookingDto>(endpoint, paymentStatus);
   }
 
