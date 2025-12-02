@@ -192,14 +192,14 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
             const isCurrent = step.id === currentStep;
             const isCompleted = step.id < currentStep;
             const barColor = isCurrent
-              ? 'bg-[#257180]'
+              ? 'bg-[#FD8B51]'
               : isCompleted
-                ? 'bg-[#FD8B51]'
+                ? 'bg-[#257180]'
                 : 'bg-gray-200';
             const titleColor = isCurrent
-              ? 'text-[#257180]'
+              ? 'text-[#FD8B51]'
               : isCompleted
-                ? 'text-[#FD8B51]'
+                ? 'text-[#257180]'
                 : 'text-gray-400';
             return (
               <div key={step.id} className="min-w-[220px] flex flex-col gap-1 text-xs">
