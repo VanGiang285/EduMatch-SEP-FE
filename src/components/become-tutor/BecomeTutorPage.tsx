@@ -29,8 +29,10 @@ import {
   Trash2,
   GraduationCap,
   AlertCircle,
-  Loader2
+  Loader2,
+  ArrowLeft
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { FormatService } from "@/lib/format";
 import { useBecomeTutor } from "@/hooks/useBecomeTutor";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,14 +46,39 @@ export function BecomeTutorPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
-  const { user, isAuthenticated } = useAuth();
-  const { isSubmitting, error, submitApplication, clearError } = useBecomeTutor();
+  const { user, isAuthenticated, register } = useAuth();
+  const { isSubmitting, error, submitApplication, clearError, isAuthenticated: isTutorAuthenticated } = useBecomeTutor();
   const { subjects, levels, educationInstitutions, timeSlots, error: masterDataError, loadMasterData } = useBecomeTutorMasterData();
 
   // Note: Authentication and authorization are now handled at page level
+  const [pendingRegistration, setPendingRegistration] = useState<{
+    fullName: string;
+    email: string;
+    password: string;
+  } | null>(null);
+  const router = useRouter();
+
   useEffect(() => {
-    console.log('🔍 BecomeTutorPage - User authenticated and authorized:', { isAuthenticated, user });
-  }, [isAuthenticated, user]);
+    if (typeof window === "undefined") return;
+    const stored = sessionStorage.getItem("PENDING_TUTOR_REGISTER");
+    if (stored) {
+      try {
+        const data = JSON.parse(stored);
+        if (data && data.fullName && data.email && data.password) {
+          setPendingRegistration(data);
+          setFormData(prev => ({
+            ...prev,
+            introduction: {
+              ...prev.introduction,
+              fullName: data.fullName,
+              email: data.email,
+            },
+          }));
+        }
+      } catch {
+      }
+    }
+  }, []);
 
   const getDefaultDates = () => {
     const today = new Date();
@@ -583,15 +610,16 @@ export function BecomeTutorPage() {
       educationUrls: [] as string[]
     };
 
-    if (!user?.email) {
-      throw new Error('Vui lòng đăng nhập để tiếp tục');
+    const ownerEmail = user?.email || pendingRegistration?.email;
+    if (!ownerEmail) {
+      throw new Error('Vui lòng đăng nhập hoặc cung cấp email để tiếp tục');
     }
 
     // Upload profile image
     if (formData.photo.profileImage) {
       const avatarResponse = await MediaService.uploadFile({
         file: formData.photo.profileImage,
-        ownerEmail: user.email,
+        ownerEmail: ownerEmail,
         mediaType: 'Image'
       });
       if (avatarResponse.success && avatarResponse.data) {
@@ -612,7 +640,7 @@ export function BecomeTutorPage() {
     if (formData.video.videoFile) {
       const videoResponse = await MediaService.uploadFile({
         file: formData.video.videoFile,
-        ownerEmail: user.email,
+        ownerEmail: ownerEmail,
         mediaType: 'Video'
       });
       if (videoResponse.success && videoResponse.data) {
@@ -633,7 +661,7 @@ export function BecomeTutorPage() {
         if (cert.certificateFile) {
           const certResponse = await MediaService.uploadFile({
             file: cert.certificateFile,
-            ownerEmail: user.email,
+            ownerEmail: ownerEmail,
             mediaType: 'Image'
           });
           if (certResponse.success && certResponse.data) {
@@ -657,7 +685,7 @@ export function BecomeTutorPage() {
         if (edu.degreeFile) {
           const eduResponse = await MediaService.uploadFile({
             file: edu.degreeFile,
-            ownerEmail: user.email,
+            ownerEmail: ownerEmail,
             mediaType: 'Image'
           });
           if (eduResponse.success && eduResponse.data) {
@@ -689,7 +717,6 @@ export function BecomeTutorPage() {
     const availabilities = Object.entries(formData.availability.schedule).flatMap(([date, daySchedule]) =>
       Object.values(daySchedule).flatMap(slotIds =>
         slotIds.map(slotId => ({
-          tutorId: 1,
           slotId: slotId,
           startDate: date + 'T00:00:00'
         }))
@@ -707,7 +734,6 @@ export function BecomeTutorPage() {
         }
 
         return {
-          tutorId: 1,
           subjectId: subject.subjectId,
           hourlyRate: hourlyRate,
           levelId: levelId
@@ -717,7 +743,6 @@ export function BecomeTutorPage() {
 
     const certificates = formData.certifications.items.length > 0
       ? formData.certifications.items.map((cert, idx) => ({
-          tutorId: 1,
           certificateTypeId: cert.certificateTypeId,
           issueDate: cert.issueDate,
           expiryDate: cert.expiryDate,
@@ -727,7 +752,6 @@ export function BecomeTutorPage() {
 
     const educations = formData.education.items.length > 0
       ? formData.education.items.map((edu, idx) => ({
-          tutorId: 1,
           institutionId: edu.institutionId,
           issueDate: edu.issueDate,
           certificateEducationUrl: uploadedFiles.educationUrls[idx] || undefined
@@ -777,21 +801,21 @@ export function BecomeTutorPage() {
       return;
     }
 
-    if (!user?.email) {
-      alert('Vui lòng đăng nhập để tiếp tục');
-      return;
-    }
-
     try {
       setIsUploadingFiles(true);
       clearError();
 
-      // Step 1: Upload files trước
-      console.log('📤 Bắt đầu upload files...');
       const uploadedFiles = await uploadFiles();
-      console.log('✅ Upload files thành công:', uploadedFiles);
-
       const request = buildBecomeTutorRequest(uploadedFiles);
+
+      if (pendingRegistration) {
+        await register(pendingRegistration.fullName, pendingRegistration.email, pendingRegistration.password);
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("PENDING_TUTOR_REGISTER");
+        }
+        setPendingRegistration(null);
+      }
+
       await submitApplication(request);
     } catch (err: any) {
       console.error('❌ Error in handleSubmit:', err);
@@ -1101,14 +1125,33 @@ export function BecomeTutorPage() {
           </div>
         </div>
       )}
-      <div className="bg-white border-b border-gray-200 px-6 py-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-2 leading-tight tracking-tight">TRỞ THÀNH GIA SƯ EDUMATCH</h1>
-            <p className="text-gray-600 text-sm sm:text-base leading-relaxed">Chia sẻ kiến thức và kiếm thu nhập từ đam mê của bạn</p>
+      {!pendingRegistration && (
+        <div className="bg-white border-b border-gray-200 px-6 py-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-2 leading-tight tracking-tight">
+                TRỞ THÀNH GIA SƯ EDUMATCH
+              </h1>
+              <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
+                Chia sẻ kiến thức và kiếm thu nhập từ đam mê của bạn
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+      {pendingRegistration && (
+        <div className="max-w-6xl mx-auto px-6 pt-6">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex items-center gap-2 text-sm border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+            onClick={() => router.push("/register")}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Quay lại trang đăng ký
+          </Button>
+        </div>
+      )}
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1 space-y-6">

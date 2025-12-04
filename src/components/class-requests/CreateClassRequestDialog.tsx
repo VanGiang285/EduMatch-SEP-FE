@@ -11,7 +11,6 @@ import { Card, CardContent } from '../ui/layout/card';
 import { Separator } from '../ui/layout/separator';
 import { RadioGroup, RadioGroupItem } from '../ui/form/radio-group';
 import { 
-  mockSubjects, 
   mockGradeLevels,
   mockTimeSlots,
   mockDaysOfWeek 
@@ -22,6 +21,8 @@ import { ClassRequestService } from '@/services/classRequestService';
 import { CreateClassRequestRequest, CreateClassRequestSlotRequest } from '@/types/requests';
 import { TeachingMode } from '@/types/enums';
 import { useCustomToast } from '@/hooks/useCustomToast';
+import { SubjectService } from '@/services/subjectService';
+import { SubjectDto } from '@/types/backend';
 
 interface CreateClassRequestDialogProps {
   open: boolean;
@@ -39,6 +40,7 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
   const { showSuccess, showError } = useCustomToast();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   
   // Form data - initialize with editingRequest if available
   const [subjectId, setSubjectId] = useState<string>(editingRequest?.subjectId?.toString() || '');
@@ -88,6 +90,23 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
     }
     setStep(1);
   }, [editingRequest, open]);
+
+  React.useEffect(() => {
+    const loadSubjects = async () => {
+      try {
+        const response = await SubjectService.getAllSubjects();
+        if (response.success && response.data) {
+          setSubjects(response.data);
+        } else {
+          setSubjects([]);
+        }
+      } catch {
+        setSubjects([]);
+      }
+    };
+
+    loadSubjects();
+  }, []);
 
   // Get available grades based on selected subject
   const getAvailableGrades = () => {
@@ -294,9 +313,9 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
                   placeholder="Chọn môn học"
                   className="mt-2"
                 >
-                  {mockSubjects.map((subject) => (
+                  {subjects.map((subject) => (
                     <SelectWithSearchItem key={subject.id} value={subject.id.toString()}>
-                      {subject.name}
+                      {subject.subjectName}
                     </SelectWithSearchItem>
                   ))}
                 </SelectWithSearch>

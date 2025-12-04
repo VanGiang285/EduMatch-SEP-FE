@@ -174,9 +174,9 @@ export function WalletTab() {
     // Remove spaces from account number before sending
     const accountNumberWithoutSpaces = newBankAccount.accountNumber.replace(/\s/g, '');
 
-    // Validate account number has exactly 16 digits
-    if (accountNumberWithoutSpaces.length !== 16) {
-      showError('Lỗi', 'Số tài khoản phải có đúng 16 chữ số');
+    // Validate account number length to allow both bank accounts and phone numbers
+    if (accountNumberWithoutSpaces.length < 6 || accountNumberWithoutSpaces.length > 20) {
+      showError('Lỗi', 'Số tài khoản phải có từ 6 đến 20 ký tự');
       return;
     }
 

@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCustomToast } from "@/hooks/useCustomToast";
 import { AuthService } from "@/services/authService";
-import { ROLE_NAME_TO_ROLE_MAP, USER_ROLES } from "@/constants";
+import { ROLE_NAME_TO_ROLE_MAP, USER_ROLES, ERROR_MESSAGES } from "@/constants";
 interface LoginPageProps {
   onSwitchToRegister: () => void;
   onForgotPassword?: () => void;
@@ -107,9 +107,14 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
         } catch (resendError) {
           console.warn('Failed to resend verification email:', resendError);
         }
+        setError('Tài khoản chưa được xác thực. Vui lòng kiểm tra email để kích hoạt tài khoản.');
+      } else if (message && (message.includes('locked') || message.includes('deactivated') || message.includes('inactive'))) {
+        setError('Tài khoản của bạn đang bị khóa hoặc tạm ngưng. Vui lòng liên hệ quản trị viên để được hỗ trợ.');
+      } else if (message && (message.includes('Google') || message.includes('login provider') || message.includes('external'))) {
+        setError('Tài khoản này được đăng ký bằng Google. Vui lòng đăng nhập bằng Google.');
+      } else {
+        setError(ERROR_MESSAGES.INVALID_CREDENTIALS);
       }
-
-      setError('Tài khoản hoặc mật khẩu sai');
     } finally {
       setIsLoading(false);
     }
