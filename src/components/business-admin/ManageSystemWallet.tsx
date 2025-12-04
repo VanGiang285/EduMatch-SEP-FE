@@ -73,7 +73,7 @@ import { WalletTransactionType, WalletTransactionReason } from '@/types/backend'
 import { SystemFeeCreateRequest, SystemFeeUpdateRequest } from '@/types/requests';
 import { useCustomToast } from '@/hooks/useCustomToast';
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 10;
 const SYSTEM_FEE_ITEMS_PER_PAGE = 10;
 
 export function ManageSystemWallet() {
@@ -131,14 +131,23 @@ export function ManageSystemWallet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load transactions
+  // Load transactions (sử dụng giao dịch ví hệ thống)
   useEffect(() => {
     const loadTransactions = async () => {
       setIsLoadingTransactions(true);
       try {
         const response = await WalletService.getSystemWalletTransactions();
         if (response.success && response.data) {
-          setTransactions(response.data);
+          const normalized = response.data.map((t) => ({
+            ...t,
+            transactionType: WalletService.normalizeTransactionType(
+              t.transactionType as number | string
+            ),
+            reason: WalletService.normalizeTransactionReason(
+              t.reason as number | string
+            ),
+          }));
+          setTransactions(normalized);
         } else {
           showError('Lỗi', response.message || 'Không thể tải lịch sử giao dịch');
         }
@@ -470,12 +479,8 @@ export function ManageSystemWallet() {
                       <span className="font-semibold">{formatCurrency(dashboard.platformRevenueBalance)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Tổng số dư bị khóa (gia sư):</span>
-                      <span className="font-semibold">{formatCurrency(dashboard.totalTutorLockedBalance)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Tổng số dư khả dụng (người dùng):</span>
-                      <span className="font-semibold">{formatCurrency(dashboard.totalUserAvailableBalance)}</span>
+                      <span className="text-gray-600">Số dư sẽ trả cho gia sư:</span>
+                      <span className="font-semibold">{formatCurrency(dashboard.pendingTutorPayoutBalance)}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -545,17 +550,19 @@ export function ManageSystemWallet() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedTransactions.length === 0 ? (
+                  {paginatedTransactions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                       Không tìm thấy giao dịch nào
                     </TableCell>
                   </TableRow>
-                ) : (
-                  paginatedTransactions.map((transaction) => (
+                  ) : (
+                  paginatedTransactions.map((transaction, index) => (
                     <TableRow key={transaction.id} className="hover:bg-gray-50">
                       <TableCell>
-                        <span className="font-mono text-sm text-gray-600">#{transaction.id}</span>
+                        <span className="font-mono text-sm text-gray-600">
+                          {startIndex + index + 1}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">

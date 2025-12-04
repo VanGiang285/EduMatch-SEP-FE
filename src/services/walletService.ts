@@ -1,7 +1,7 @@
 import { apiClient, replaceUrlParams } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
 import { ApiResponse } from '@/types/api';
-import { WalletDto, WalletTransactionDto, WithdrawalDto, UserBankAccountDto, BankDto, WalletTransactionType, WalletTransactionReason, WalletTransactionStatus, WithdrawalStatus, AdminWithdrawalDto, SystemWalletDashboardDto } from '@/types/backend';
+import { WalletDto, WalletTransactionDto, WithdrawalDto, UserBankAccountDto, BankDto, WalletTransactionType, WalletTransactionReason, WalletTransactionStatus, WithdrawalStatus, SystemWalletDashboardDto } from '@/types/backend';
 import { CreateDepositRequest, CreateWithdrawalRequest, CreateUserBankAccountRequest } from '@/types/requests';
 
 export class WalletService {
@@ -136,25 +136,6 @@ export class WalletService {
   // Lấy danh sách yêu cầu rút tiền của user hiện tại
   static async getMyWithdrawals(): Promise<ApiResponse<WithdrawalDto[]>> {
     return apiClient.get<WithdrawalDto[]>(API_ENDPOINTS.WALLET.GET_MY_WITHDRAWALS);
-  }
-
-  // Lấy danh sách yêu cầu rút tiền đang chờ duyệt (admin)
-  static async getPendingWithdrawals(): Promise<ApiResponse<AdminWithdrawalDto[]>> {
-    return apiClient.get<AdminWithdrawalDto[]>(API_ENDPOINTS.WALLET.GET_PENDING_WITHDRAWALS);
-  }
-
-  // Duyệt yêu cầu rút tiền (admin)
-  // Response trả về message (string) thông báo thành công
-  static async approveWithdrawal(withdrawalId: number): Promise<ApiResponse<string>> {
-    const url = replaceUrlParams(API_ENDPOINTS.WALLET.APPROVE_WITHDRAWAL, { id: withdrawalId.toString() });
-    return apiClient.post<string>(url);
-  }
-
-  // Từ chối yêu cầu rút tiền (admin)
-  // Cần gửi body với { Reason: string }
-  static async rejectWithdrawal(withdrawalId: number, rejectReason: string): Promise<ApiResponse<string>> {
-    const url = replaceUrlParams(API_ENDPOINTS.WALLET.REJECT_WITHDRAWAL, { id: withdrawalId.toString() });
-    return apiClient.post<string>(url, { Reason: rejectReason });
   }
 
   // Lấy danh sách ngân hàng

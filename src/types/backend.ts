@@ -573,9 +573,76 @@ export interface AdminWithdrawalDto {
 }
 
 export interface SystemWalletDashboardDto {
+  pendingTutorPayoutBalance: number;
   platformRevenueBalance: number;
-  totalTutorLockedBalance: number;
   totalUserAvailableBalance: number;
+}
+
+export interface AdminSummaryStatsDto {
+  users: UserStatsDto;
+  tutors: TutorStatsDto;
+  bookings: BookingStatsDto;
+  revenue: RevenueStatsDto;
+  refunds: RefundStatsDto;
+  reports: ReportStatsDto;
+}
+
+export interface BookingStatsDto {
+  total: number;
+  pending: number;
+  confirmed: number;
+  completed: number;
+  cancelled: number;
+}
+
+export interface UserStatsDto {
+  total: number;
+  active: number;
+  learners: number;
+  tutors: number;
+  newLast30Days: number;
+}
+
+export interface TutorStatsDto {
+  approved: number;
+  pending: number;
+  rejected: number;
+  suspended: number;
+  deactivated: number;
+}
+
+export interface RevenueStatsDto {
+  platformRevenueBalance: number;
+  pendingTutorPayoutBalance: number;
+  totalUserAvailableBalance: number;
+}
+
+export interface RefundStatsDto {
+  pending: number;
+  approved: number;
+  rejected: number;
+}
+
+export interface ReportStatsDto {
+  pending: number;
+  underReview: number;
+  resolved: number;
+  dismissed: number;
+  overduePending: number;
+}
+
+export interface MonthlyAdminStatsDto {
+  year: number;
+  month: number;
+  users: UserStatsDto;
+  bookings: BookingStatsDto;
+  revenue: MonthlyRevenueStatsDto;
+}
+
+export interface MonthlyRevenueStatsDto {
+  tutorPayoutAmount: number;
+  refundedAmount: number;
+  netPlatformRevenueAmount: number;
 }
 
 // ==================== NOTIFICATIONS ====================
