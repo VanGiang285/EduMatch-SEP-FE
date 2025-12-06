@@ -5,11 +5,12 @@ import { Checkbox } from "../ui/form/checkbox";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { TermsAndPrivacyModal } from "../common/TermsAndPrivacyModal";
 import { GoogleSignInButton } from "./GoogleSignInButton";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, User, GraduationCap } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-// import { useRouter } from "next/navigation"; // Removed unused import
+import { useRouter } from "next/navigation";
 import { useCustomToast } from "@/hooks/useCustomToast";
+import { RadioGroup, RadioGroupItem } from "../ui/form/radio-group";
 interface RegisterPageProps {
   onSwitchToLogin: () => void;
 }
@@ -24,9 +25,10 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [passwordMatchError, setPasswordMatchError] = useState("");
+  const [role, setRole] = useState<"learner" | "tutor">("learner");
   const { register } = useAuth();
   const { showSuccess } = useCustomToast();
-  // const router = useRouter(); // Removed unused variable
+  const router = useRouter();
   
   // Check password match real-time
   const checkPasswordMatch = (pwd: string, confirmPwd: string) => {
@@ -91,10 +93,24 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
     
     try {
       setIsLoading(true);
-      await register(trimmedFullName, trimmedEmail, trimmedPassword);
-      showSuccess("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
-      // Redirect to email verification page
-      window.location.href = `/login?email=${encodeURIComponent(trimmedEmail)}`;
+
+      if (role === "learner") {
+        await register(trimmedFullName, trimmedEmail, trimmedPassword);
+        showSuccess("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
+        router.push(`/login?email=${encodeURIComponent(trimmedEmail)}`);
+        return;
+      }
+
+      if (typeof window !== "undefined") {
+        const pendingData = {
+          fullName: trimmedFullName,
+          email: trimmedEmail,
+          password: trimmedPassword,
+        };
+        sessionStorage.setItem("PENDING_TUTOR_REGISTER", JSON.stringify(pendingData));
+      }
+
+      router.push("/become-tutor?from-register=1");
     } catch (error: any) {
       // Xử lý các loại lỗi từ backend
       let errorMessage = "Đăng ký thất bại";
@@ -151,7 +167,55 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
               </p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6" noValidate>
-              {/* Full Name Input */}
+              <div className="space-y-2 sm:space-y-3">
+                <Label className="text-black text-sm sm:text-base">Bạn muốn đăng ký với vai trò</Label>
+                <RadioGroup
+                  value={role}
+                  onValueChange={(value) => setRole(value as "learner" | "tutor")}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
+                >
+                  <div
+                    className={`rounded-xl border p-3 sm:p-4 transition-all ${
+                      role === "learner"
+                        ? "border-[#257180] bg-[#E4F3F5] shadow-sm"
+                        : "border-gray-200 bg-white hover:border-[#257180]/60 hover:bg-gray-50"
+                    }`}
+                  >
+                    <label
+                      htmlFor="role-learner"
+                      className="flex items-center gap-3 cursor-pointer select-none"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-[#257180]/10 flex items-center justify-center text-[#257180]">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <p className="font-semibold text-sm sm:text-base text-black">
+                        Học viên
+                      </p>
+                    </label>
+                    <RadioGroupItem value="learner" id="role-learner" className="sr-only" />
+                  </div>
+                  <div
+                    className={`rounded-xl border p-3 sm:p-4 transition-all ${
+                      role === "tutor"
+                        ? "border-[#FD8B51] bg-[#FFF3EC] shadow-sm"
+                        : "border-gray-200 bg-white hover:border-[#FD8B51]/60 hover:bg-gray-50"
+                    }`}
+                  >
+                    <label
+                      htmlFor="role-tutor"
+                      className="flex items-center gap-3 cursor-pointer select-none"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-[#FD8B51]/10 flex items-center justify-center text-[#FD8B51]">
+                        <GraduationCap className="w-5 h-5" />
+                      </div>
+                      <p className="font-semibold text-sm sm:text-base text-black">
+                        Gia sư
+                      </p>
+                    </label>
+                    <RadioGroupItem value="tutor" id="role-tutor" className="sr-only" />
+                  </div>
+                </RadioGroup>
+              </div>
               <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="fullName" className="text-black text-sm sm:text-base">Họ và tên</Label>
                 <Input
@@ -163,7 +227,6 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                   className="h-10 sm:h-11 lg:h-12 border border-gray-300 rounded-lg bg-white text-sm sm:text-base focus:border-[#257180] focus:ring-1 focus:ring-[#257180]"
                 />
               </div>
-              {/* Email Input */}
               <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="email" className="text-black text-sm sm:text-base">Email</Label>
                 <Input
@@ -175,7 +238,6 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                   className="h-10 sm:h-11 lg:h-12 border border-gray-300 rounded-lg bg-white text-sm sm:text-base focus:border-[#257180] focus:ring-1 focus:ring-[#257180]"
                 />
               </div>
-              {/* Password Input */}
               <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="password" className="text-black text-sm sm:text-base">Mật khẩu</Label>
                 <div className="relative">

@@ -1,7 +1,7 @@
 import { apiClient, replaceUrlParams } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
 import { ApiResponse } from '@/types/api';
-import { ManageUserDto } from '@/types/backend';
+import { AdminSummaryStatsDto, ManageUserDto, MonthlyAdminStatsDto } from '@/types/backend';
 import { CreateAdminAccDto } from '@/types/requests';
 
 export class AdminService {
@@ -57,5 +57,13 @@ export class AdminService {
   // Lấy danh sách system admin
   static async getAllSystemAdmins(): Promise<ApiResponse<ManageUserDto[]>> {
     return this.getUsersByRole(4);
+  }
+
+  static async getAdminSummaryStats(): Promise<ApiResponse<AdminSummaryStatsDto>> {
+    return apiClient.get<AdminSummaryStatsDto>(API_ENDPOINTS.ADMIN_STATS.SUMMARY);
+  }
+
+  static async getMonthlyAdminStats(year: number): Promise<ApiResponse<MonthlyAdminStatsDto[]>> {
+    return apiClient.get<MonthlyAdminStatsDto[]>(API_ENDPOINTS.ADMIN_STATS.MONTHLY, { year });
   }
 }

@@ -73,6 +73,10 @@ export interface TutorProfileCreateRequest {
 
 export interface TutorProfileUpdateRequest {
   id: number;
+  phone: string; // Required by backend
+  userName: string; // Required by backend
+  userEmail: string; // Required by backend
+  dateOfBirth: string; // Required by backend (ISO date string)
   bio?: string;
   teachingExp?: string;
   videoIntroUrl?: string;
