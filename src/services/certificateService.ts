@@ -101,8 +101,13 @@ export class CertificateService {
 
   // Thêm chứng chỉ cho gia sư
   static async createTutorCertificate(tutorId: number, request: Omit<TutorCertificateCreateRequest, 'tutorId'>): Promise<ApiResponse<TutorCertificateDto>> {
+    if (!tutorId || tutorId <= 0) {
+      throw new Error('Tutor ID must be greater than 0');
+    }
     const url = API_ENDPOINTS.CERTIFICATES.CREATE_TUTOR_CERTIFICATE.replace(':tutorId', tutorId.toString());
-    return apiClient.post<TutorCertificateDto>(url, { ...request, tutorId: 0 }); // Backend sẽ set từ route
+    const requestBody = { ...request, tutorId };
+    console.log('Creating certificate with tutorId:', tutorId, 'requestBody:', requestBody);
+    return apiClient.post<TutorCertificateDto>(url, requestBody); // Send actual tutorId
   }
 
   // Cập nhật chứng chỉ của gia sư

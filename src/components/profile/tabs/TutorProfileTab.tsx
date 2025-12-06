@@ -36,11 +36,15 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { TutorService, CertificateService, SubjectService } from '@/services';
+import { MasterDataService } from '@/services/masterDataService';
+import { AvailabilityService } from '@/services/availabilityService';
+import { MediaService } from '@/services/mediaService';
+import { UserProfileService } from '@/services/userProfileService';
 import { LocationService, ProvinceDto, SubDistrictDto } from '@/services/locationService';
 import { useCustomToast } from '@/hooks/useCustomToast';
-import { TutorProfileDto, TutorEducationDto, TutorCertificateDto, TutorSubjectDto } from '@/types/backend';
+import { TutorProfileDto, TutorEducationDto, TutorCertificateDto, TutorSubjectDto, TutorAvailabilityDto } from '@/types/backend';
 import { TutorProfileUpdateRequest, TutorEducationCreateRequest, TutorCertificateCreateRequest, TutorSubjectCreateRequest, TutorEducationUpdateRequest, TutorCertificateUpdateRequest, TutorSubjectUpdateRequest } from '@/types/requests';
-import { TeachingMode, VerifyStatus, EnumHelpers } from '@/types/enums';
+import { TeachingMode, VerifyStatus, EnumHelpers, TutorAvailabilityStatus, DayOfWeekEnum, MediaType } from '@/types/enums';
 
 // Types dựa trên database schema
 interface TutorEducation {
@@ -83,6 +87,9 @@ export function TutorProfileTab() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingCertificate, setIsUploadingCertificate] = useState(false);
+  const [isUploadingEducation, setIsUploadingEducation] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [tutorProfile, setTutorProfile] = useState<TutorProfileDto | null>(null);
   const [tutorId, setTutorId] = useState<number | null>(null);
   const [provinces, setProvinces] = useState<ProvinceDto[]>([]);
@@ -178,32 +185,8 @@ export function TutorProfileTab() {
         hourlyRate: 150000,
       }
     ] as TutorSubject[],
-    // Lịch khả dụng từ tutor_availabilities
-    availabilities: {
-      monday: [
-        { slotId: 1, startTime: '08:00', endTime: '09:00', status: 0 },
-        { slotId: 2, startTime: '09:00', endTime: '10:00', status: 0 },
-        { slotId: 3, startTime: '14:00', endTime: '15:00', status: 1 },
-      ],
-      tuesday: [
-        { slotId: 4, startTime: '08:00', endTime: '09:00', status: 0 },
-        { slotId: 5, startTime: '10:00', endTime: '11:00', status: 0 },
-      ],
-      wednesday: [
-        { slotId: 6, startTime: '08:00', endTime: '09:00', status: 0 },
-        { slotId: 7, startTime: '14:00', endTime: '15:00', status: 0 },
-      ],
-      thursday: [
-        { slotId: 8, startTime: '08:00', endTime: '09:00', status: 2 },
-        { slotId: 9, startTime: '15:00', endTime: '16:00', status: 0 },
-      ],
-      friday: [
-        { slotId: 10, startTime: '08:00', endTime: '09:00', status: 0 },
-        { slotId: 11, startTime: '09:00', endTime: '10:00', status: 0 },
-      ],
-      saturday: [],
-      sunday: [],
-    },
+    // Lịch khả dụng từ tutor_availabilities (array of TutorAvailabilityDto)
+    availabilities: [] as TutorAvailabilityDto[],
   });
 
   // Form states for modals
@@ -213,13 +196,12 @@ export function TutorProfileTab() {
     certificateTypes: [] as any[],
     subjects: [] as any[],
     levels: [] as any[],
+    timeSlots: [] as any[],
     isLoading: false,
   });
 
   const [newEducation, setNewEducation] = useState({
     institutionId: 0,
-    institutionName: '',
-    institutionType: 2,
     issueDate: '',
     certificateUrl: '',
     certificateFile: null as File | null,
@@ -243,9 +225,9 @@ export function TutorProfileTab() {
   });
 
   const [newTimeSlot, setNewTimeSlot] = useState({
-    dayOfWeek: 'monday',
-    startTime: '',
-    endTime: '',
+    dayOfWeek: DayOfWeekEnum.Monday.toString(),
+    slotId: 0,
+    startDate: '', // ISO date string for the specific date
   });
 
   const [showTimeSlotModal, setShowTimeSlotModal] = useState(false);
@@ -255,18 +237,22 @@ export function TutorProfileTab() {
     const loadMasterData = async () => {
       setMasterData(prev => ({ ...prev, isLoading: true }));
       try {
-        const [institutionsRes, certificateTypesRes, subjectsRes, levelsRes] = await Promise.all([
+        const [institutionsRes, certificateTypesRes, subjectsRes, levelsRes, timeSlotsRes] = await Promise.all([
           CertificateService.getAllInstitutions(),
           CertificateService.getAllCertificateTypesWithSubjects(),
           SubjectService.getAllSubjects(),
           CertificateService.getAllLevels(),
+          MasterDataService.getAllTimeSlots(),
         ]);
+
+        console.log('Loaded timeSlots:', timeSlotsRes.success ? timeSlotsRes.data : 'Failed');
 
         setMasterData({
           institutions: institutionsRes.success ? institutionsRes.data || [] : [],
           certificateTypes: certificateTypesRes.success ? certificateTypesRes.data || [] : [],
           subjects: subjectsRes.success ? subjectsRes.data || [] : [],
           levels: levelsRes.success ? levelsRes.data || [] : [],
+          timeSlots: timeSlotsRes.success ? timeSlotsRes.data || [] : [],
           isLoading: false,
         });
       } catch (error) {
@@ -342,22 +328,20 @@ export function TutorProfileTab() {
     { value: 3, label: 'Giới tính khác' },
   ];
 
-  const verifyStatusColors = (status: number) => {
-    switch(status) {
-      case 0: return 'bg-yellow-100 text-yellow-800';
-      case 1: return 'bg-green-100 text-green-800';
-      case 2: return 'bg-red-100 text-red-800';
+  const verifyStatusColors = (status: number | string | VerifyStatus) => {
+    const parsedStatus = EnumHelpers.parseVerifyStatus(status);
+    switch(parsedStatus) {
+      case VerifyStatus.Pending: return 'bg-yellow-100 text-yellow-800';
+      case VerifyStatus.Verified: return 'bg-green-100 text-green-800';
+      case VerifyStatus.Rejected: return 'bg-red-100 text-red-800';
+      case VerifyStatus.Expired: return 'bg-orange-100 text-orange-800';
+      case VerifyStatus.Removed: return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const verifyStatusText = (status: number) => {
-    switch(status) {
-      case 0: return 'Chờ duyệt';
-      case 1: return 'Đã xác minh';
-      case 2: return 'Bị từ chối';
-      default: return 'Không xác định';
-    }
+  const verifyStatusText = (status: number | string | VerifyStatus) => {
+    return EnumHelpers.getVerifyStatusLabel(status);
   };
 
   const formatCurrency = (amount: number) => {
@@ -452,6 +436,9 @@ export function TutorProfileTab() {
             hourlyRate: subj.hourlyRate || 0,
           }));
 
+          // Load availabilities from tutorProfile
+          const availabilities: TutorAvailabilityDto[] = profile.tutorAvailabilities || [];
+
           setProfileData(prev => ({
             ...prev,
             basic: {
@@ -478,6 +465,7 @@ export function TutorProfileTab() {
             educations,
             certificates,
             subjects,
+            availabilities,
           }));
         } else {
           // Không có tutor profile - có thể chưa đăng ký làm gia sư
@@ -507,8 +495,43 @@ export function TutorProfileTab() {
 
     setIsSaving(true);
     try {
+      // Combine firstName and lastName for userName
+      const userName = `${profileData.basic.firstName} ${profileData.basic.lastName}`.trim();
+      
+      // Get required fields with fallback to tutorProfile values
+      const phone = profileData.basic.phone || tutorProfile.phone || '';
+      const finalUserName = userName || tutorProfile.userName || '';
+      const userEmail = profileData.basic.email || tutorProfile.userEmail || '';
+      const dateOfBirth = profileData.basic.dob || tutorProfile.dob || '';
+      
+      // Validate required fields
+      if (!phone) {
+        showError('Lỗi', 'Vui lòng nhập số điện thoại.');
+        setIsSaving(false);
+        return;
+      }
+      if (!finalUserName) {
+        showError('Lỗi', 'Vui lòng nhập họ và tên.');
+        setIsSaving(false);
+        return;
+      }
+      if (!userEmail) {
+        showError('Lỗi', 'Email không được để trống.');
+        setIsSaving(false);
+        return;
+      }
+      if (!dateOfBirth) {
+        showError('Lỗi', 'Vui lòng nhập ngày sinh.');
+        setIsSaving(false);
+        return;
+      }
+      
       const updateRequest: TutorProfileUpdateRequest = {
         id: tutorId,
+        phone: phone,
+        userName: finalUserName,
+        userEmail: userEmail,
+        dateOfBirth: dateOfBirth,
         bio: profileData.tutorProfile.bio,
         teachingExp: profileData.tutorProfile.teachingExp,
         videoIntroUrl: profileData.tutorProfile.videoIntroUrl,
@@ -587,6 +610,9 @@ export function TutorProfileTab() {
             hourlyRate: subj.hourlyRate || 0,
           }));
 
+          // Load availabilities from tutorProfile
+          const availabilities: TutorAvailabilityDto[] = profile.tutorAvailabilities || [];
+
     setProfileData(prev => ({
       ...prev,
           tutorProfile: {
@@ -599,6 +625,7 @@ export function TutorProfileTab() {
           educations,
           certificates,
           subjects,
+          availabilities,
         }));
       }
     } catch (error) {
@@ -608,7 +635,7 @@ export function TutorProfileTab() {
 
   // Handlers for education
   const handleAddEducation = async () => {
-    if (!tutorId) {
+    if (!tutorId || tutorId <= 0) {
       showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
       return;
     }
@@ -618,11 +645,52 @@ export function TutorProfileTab() {
       return;
     }
 
+    if (!newEducation.certificateFile) {
+      showError('Lỗi', 'Vui lòng tải lên bằng cấp (PDF, JPG, PNG).');
+      return;
+    }
+
+    if (!user?.email) {
+      showError('Lỗi', 'Không tìm thấy thông tin người dùng.');
+      return;
+    }
+
+    setIsUploadingEducation(true);
     try {
+      // Upload file to Cloudinary first
+      const uploadResponse = await MediaService.uploadFile({
+        file: newEducation.certificateFile,
+        ownerEmail: user.email,
+        mediaType: 'Image' as MediaType,
+      });
+
+      if (!uploadResponse.success || !uploadResponse.data) {
+        showError('Lỗi', uploadResponse.message || 'Không thể upload file. Vui lòng thử lại.');
+        setIsUploadingEducation(false);
+        return;
+      }
+
+      // Get URL from upload response
+      // ApiResponse unwraps data.data to data, so uploadResponse.data is the UploadToCloudResponse
+      // But the actual response structure has data: { ok, secureUrl, ... }
+      const uploadData = uploadResponse.data as any;
+      const certificateUrl = uploadData?.data?.secureUrl || uploadData?.data?.originalUrl || uploadData?.secureUrl || uploadData?.originalUrl;
+      
+      console.log('Upload response data:', uploadResponse.data);
+      console.log('Extracted certificateUrl:', certificateUrl);
+      
+      if (!certificateUrl) {
+        console.error('Cannot extract URL from upload response:', uploadResponse);
+        showError('Lỗi', 'Không thể lấy URL file sau khi upload.');
+        setIsUploadingEducation(false);
+        return;
+      }
+
+      // Create education with uploaded URL
       const request: Omit<TutorEducationCreateRequest, 'tutorId'> = {
         institutionId: newEducation.institutionId,
         issueDate: newEducation.issueDate || undefined,
-        certificateEducationUrl: newEducation.certificateUrl || undefined,
+        certificateEducationUrl: certificateUrl,
       };
 
       const response = await CertificateService.createTutorEducation(tutorId, request);
@@ -631,8 +699,6 @@ export function TutorProfileTab() {
     setShowEducationModal(false);
     setNewEducation({
           institutionId: 0,
-      institutionName: '',
-      institutionType: 2,
       issueDate: '',
           certificateUrl: '',
       certificateFile: null,
@@ -645,7 +711,9 @@ export function TutorProfileTab() {
       }
     } catch (error: any) {
       console.error('Error adding education:', error);
-      showError('Lỗi', 'Không thể thêm học vấn. Vui lòng thử lại.');
+      showError('Lỗi', error.message || 'Không thể thêm học vấn. Vui lòng thử lại.');
+    } finally {
+      setIsUploadingEducation(false);
     }
   };
 
@@ -677,7 +745,7 @@ export function TutorProfileTab() {
 
   // Handlers for certificate
   const handleAddCertificate = async () => {
-    if (!tutorId) {
+    if (!tutorId || tutorId <= 0) {
       showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
       return;
     }
@@ -687,12 +755,53 @@ export function TutorProfileTab() {
       return;
     }
 
+    if (!newCertificate.certificateFile) {
+      showError('Lỗi', 'Vui lòng tải lên chứng chỉ (PDF, JPG, PNG).');
+      return;
+    }
+
+    if (!user?.email) {
+      showError('Lỗi', 'Không tìm thấy thông tin người dùng.');
+      return;
+    }
+
+    setIsUploadingCertificate(true);
     try {
+      // Upload file to Cloudinary first
+      const uploadResponse = await MediaService.uploadFile({
+        file: newCertificate.certificateFile,
+        ownerEmail: user.email,
+        mediaType: 'Image' as MediaType,
+      });
+
+      if (!uploadResponse.success || !uploadResponse.data) {
+        showError('Lỗi', uploadResponse.message || 'Không thể upload file. Vui lòng thử lại.');
+        setIsUploadingCertificate(false);
+        return;
+      }
+
+      // Get URL from upload response
+      // ApiResponse unwraps data.data to data, so uploadResponse.data is the UploadToCloudResponse
+      // But the actual response structure has data: { ok, secureUrl, ... }
+      const uploadData = uploadResponse.data as any;
+      const certificateUrl = uploadData?.data?.secureUrl || uploadData?.data?.originalUrl || uploadData?.secureUrl || uploadData?.originalUrl;
+      
+      console.log('Upload response data:', uploadResponse.data);
+      console.log('Extracted certificateUrl:', certificateUrl);
+      
+      if (!certificateUrl) {
+        console.error('Cannot extract URL from upload response:', uploadResponse);
+        showError('Lỗi', 'Không thể lấy URL file sau khi upload.');
+        setIsUploadingCertificate(false);
+        return;
+      }
+
+      // Create certificate with uploaded URL
       const request: Omit<TutorCertificateCreateRequest, 'tutorId'> = {
         certificateTypeId: newCertificate.certificateTypeId,
         issueDate: newCertificate.issueDate || undefined,
       expiryDate: newCertificate.expiryDate || undefined,
-        certificateUrl: newCertificate.certificateUrl || undefined,
+        certificateUrl: certificateUrl,
       };
 
       const response = await CertificateService.createTutorCertificate(tutorId, request);
@@ -715,7 +824,9 @@ export function TutorProfileTab() {
       }
     } catch (error: any) {
       console.error('Error adding certificate:', error);
-      showError('Lỗi', 'Không thể thêm chứng chỉ. Vui lòng thử lại.');
+      showError('Lỗi', error.message || 'Không thể thêm chứng chỉ. Vui lòng thử lại.');
+    } finally {
+      setIsUploadingCertificate(false);
     }
   };
 
@@ -814,43 +925,75 @@ export function TutorProfileTab() {
   };
 
   // Handlers for time slots
-  const handleAddTimeSlot = () => {
-    const newSlot = {
-      slotId: Date.now(),
-      startTime: newTimeSlot.startTime,
-      endTime: newTimeSlot.endTime,
-      status: 0, // Trống
-    };
-    
-    setProfileData(prev => ({
-      ...prev,
-      availabilities: {
-        ...prev.availabilities,
-        [newTimeSlot.dayOfWeek]: [
-          ...prev.availabilities[newTimeSlot.dayOfWeek as keyof typeof prev.availabilities],
-          newSlot
-        ]
+  const handleAddTimeSlot = async () => {
+    if (!tutorId || tutorId <= 0) {
+      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      return;
+    }
+
+    if (!newTimeSlot.slotId || !newTimeSlot.startDate) {
+      showError('Lỗi', 'Vui lòng chọn slot và ngày bắt đầu.');
+      return;
+    }
+
+    try {
+      // Convert date to ISO 8601 date-time format
+      const selectedSlot = masterData.timeSlots.find(slot => slot.id === newTimeSlot.slotId);
+      const startDateTime = selectedSlot 
+        ? `${newTimeSlot.startDate}T${selectedSlot.startTime}:00`
+        : `${newTimeSlot.startDate}T00:00:00`;
+
+      const request: TutorAvailabilityCreateRequest = {
+        tutorId: tutorId,
+        slotId: newTimeSlot.slotId,
+        startDate: startDateTime, // ISO 8601 date-time
+      };
+
+      const response = await AvailabilityService.createAvailabilities([request]);
+      if (response.success && response.data) {
+        showSuccess('Thành công', 'Thêm khung giờ thành công.');
+        setShowTimeSlotModal(false);
+        setNewTimeSlot({
+          dayOfWeek: DayOfWeekEnum.Monday.toString(),
+          slotId: 0,
+          startDate: '',
+        });
+        
+        // Reload tutor profile
+        await reloadTutorProfile();
+      } else {
+        showError('Lỗi', response.message || 'Không thể thêm khung giờ.');
       }
-    }));
-    
-    setShowTimeSlotModal(false);
-    setNewTimeSlot({
-      dayOfWeek: 'monday',
-      startTime: '',
-      endTime: '',
-    });
+    } catch (error: any) {
+      console.error('Error adding time slot:', error);
+      showError('Lỗi', 'Không thể thêm khung giờ. Vui lòng thử lại.');
+    }
   };
 
-  const handleDeleteTimeSlot = (dayKey: string, slotId: number) => {
-    setProfileData(prev => ({
-      ...prev,
-      availabilities: {
-        ...prev.availabilities,
-        [dayKey]: prev.availabilities[dayKey as keyof typeof prev.availabilities].filter(
-          (slot: any) => slot.slotId !== slotId
-        )
+  const handleDeleteTimeSlot = async (availabilityId: number) => {
+    if (!tutorId || tutorId <= 0) {
+      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      return;
+    }
+
+    if (!confirm('Bạn có chắc chắn muốn xóa khung giờ này?')) {
+      return;
+    }
+
+    try {
+      const response = await AvailabilityService.deleteAvailabilities([availabilityId]);
+      if (response.success) {
+        showSuccess('Thành công', 'Xóa khung giờ thành công.');
+        
+        // Reload tutor profile
+        await reloadTutorProfile();
+      } else {
+        showError('Lỗi', response.message || 'Không thể xóa khung giờ.');
       }
-    }));
+    } catch (error: any) {
+      console.error('Error deleting time slot:', error);
+      showError('Lỗi', 'Không thể xóa khung giờ. Vui lòng thử lại.');
+    }
   };
 
   // Loading state
@@ -949,15 +1092,6 @@ export function TutorProfileTab() {
         </Alert>
       )}
 
-      <Alert className={profileData.tutorProfile.status === 1 ? 'bg-green-50 border-green-200' : 'bg-black-50 border-black-200'}>
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-blue-800">
-          {profileData.tutorProfile.status === 0 && 'Hồ sơ gia sư của bạn đang chờ duyệt.'}
-          {profileData.tutorProfile.status === 1 && 'Hồ sơ gia sư của bạn đã được xác minh và công khai.'}
-          {profileData.tutorProfile.status === 2 && 'Hồ sơ gia sư của bạn đã bị từ chối.'}
-        </AlertDescription>
-      </Alert>
-
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="basic">Thông tin cơ bản</TabsTrigger>
@@ -1003,10 +1137,90 @@ export function TutorProfileTab() {
                   </div>
                 </div>
                 <div>
-                  <Button disabled={!isEditing} variant="outline">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Tải ảnh lên
-                    <span className="ml-2 text-xs text-gray-500">(Tính năng đang phát triển)</span>
+                  <input
+                    type="file"
+                    id="avatar-upload"
+                    accept="image/jpeg,image/jpg,image/png"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      if (!user?.email) {
+                        showError('Lỗi', 'Không tìm thấy thông tin người dùng.');
+                        return;
+                      }
+
+                      // Validate file size (5MB)
+                      if (file.size > 5 * 1024 * 1024) {
+                        showError('Lỗi', 'Kích thước file không được vượt quá 5MB.');
+                        return;
+                      }
+
+                      // Validate file type
+                      if (!file.type.match(/^image\/(jpeg|jpg|png)$/)) {
+                        showError('Lỗi', 'Chỉ chấp nhận file JPG, JPEG, PNG.');
+                        return;
+                      }
+
+                      setIsUploadingAvatar(true);
+                      try {
+                        const uploadResponse = await UserProfileService.uploadAvatar(file, user.email);
+                        
+                        if (uploadResponse.success && uploadResponse.data?.avatarUrl) {
+                          // Update local state
+                          setProfileData(prev => ({
+                            ...prev,
+                            basic: {
+                              ...prev.basic,
+                              avatarUrl: uploadResponse.data!.avatarUrl,
+                            },
+                          }));
+
+                          // Update user profile with new avatar
+                          const updateResponse = await UserProfileService.updateUserProfile({
+                            userEmail: user.email,
+                            avatarUrl: uploadResponse.data!.avatarUrl,
+                            avatarUrlPublicId: uploadResponse.data!.avatarUrlPublicId,
+                          });
+
+                          if (updateResponse.success) {
+                            showSuccess('Thành công', 'Cập nhật ảnh đại diện thành công.');
+                            // Reload tutor profile to get updated avatar
+                            await reloadTutorProfile();
+                          } else {
+                            showError('Lỗi', 'Upload thành công nhưng không thể cập nhật profile.');
+                          }
+                        } else {
+                          showError('Lỗi', uploadResponse.message || 'Không thể upload ảnh. Vui lòng thử lại.');
+                        }
+                      } catch (error: any) {
+                        console.error('Error uploading avatar:', error);
+                        showError('Lỗi', error.message || 'Không thể upload ảnh. Vui lòng thử lại.');
+                      } finally {
+                        setIsUploadingAvatar(false);
+                        // Reset input
+                        e.target.value = '';
+                      }
+                    }}
+                    disabled={!isEditing || isUploadingAvatar}
+                  />
+                  <Button 
+                    disabled={!isEditing || isUploadingAvatar} 
+                    variant="outline"
+                    onClick={() => document.getElementById('avatar-upload')?.click()}
+                  >
+                    {isUploadingAvatar ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Đang upload...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Tải ảnh lên
+                      </>
+                    )}
                   </Button>
                   <p className="text-sm text-gray-600 mt-2">JPG, PNG. Tối đa 5MB</p>
                 </div>
@@ -1506,17 +1720,22 @@ export function TutorProfileTab() {
               </Alert>
 
               {[
-                { key: 'monday', label: 'Thứ Hai' },
-                { key: 'tuesday', label: 'Thứ Ba' },
-                { key: 'wednesday', label: 'Thứ Tư' },
-                { key: 'thursday', label: 'Thứ Năm' },
-                { key: 'friday', label: 'Thứ Sáu' },
-                { key: 'saturday', label: 'Thứ Bảy' },
-                { key: 'sunday', label: 'Chủ Nhật' },
+                { dayOfWeek: DayOfWeekEnum.Sunday, label: 'Chủ Nhật' },
+                { dayOfWeek: DayOfWeekEnum.Monday, label: 'Thứ Hai' },
+                { dayOfWeek: DayOfWeekEnum.Tuesday, label: 'Thứ Ba' },
+                { dayOfWeek: DayOfWeekEnum.Wednesday, label: 'Thứ Tư' },
+                { dayOfWeek: DayOfWeekEnum.Thursday, label: 'Thứ Năm' },
+                { dayOfWeek: DayOfWeekEnum.Friday, label: 'Thứ Sáu' },
+                { dayOfWeek: DayOfWeekEnum.Saturday, label: 'Thứ Bảy' },
               ].map((day) => {
-                const daySlots = profileData.availabilities[day.key as keyof typeof profileData.availabilities] || [];
+                // Filter availabilities by dayOfWeek from slot
+                const dayAvailabilities = profileData.availabilities.filter(av => {
+                  const slotDayOfWeek = av.slot?.dayOfWeek;
+                  return slotDayOfWeek !== undefined && slotDayOfWeek === day.dayOfWeek;
+                });
+                
                 return (
-                  <div key={day.key} className="space-y-3">
+                  <div key={day.dayOfWeek} className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium text-gray-900">{day.label}</h4>
                       {isEditing && (
@@ -1525,7 +1744,7 @@ export function TutorProfileTab() {
                           variant="outline"
                           className="text-[#257180] border-[#257180] hover:bg-[#257180] hover:text-white"
                           onClick={() => {
-                            setNewTimeSlot({ ...newTimeSlot, dayOfWeek: day.key });
+                            setNewTimeSlot({ dayOfWeek: day.dayOfWeek.toString(), slotId: 0, startDate: '' });
                             setShowTimeSlotModal(true);
                           }}
                         >
@@ -1535,38 +1754,51 @@ export function TutorProfileTab() {
                       )}
                     </div>
                     
-                    {daySlots.length === 0 ? (
+                    {dayAvailabilities.length === 0 ? (
                       <p className="text-sm text-gray-600 italic">Chưa có khung giờ nào</p>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {daySlots.map((slot: any) => {
+                        {dayAvailabilities.map((availability) => {
+                          const status = EnumHelpers.parseTutorAvailabilityStatus(availability.status);
+                          const slot = availability.slot;
+                          const startTime = slot?.startTime ? slot.startTime.substring(0, 5) : '';
+                          const endTime = slot?.endTime ? slot.endTime.substring(0, 5) : '';
+                          
                           let statusColor = 'bg-green-50 border-green-200 text-green-800';
                           let statusText = 'Trống';
-                          if (slot.status === 1) {
+                          if (status === TutorAvailabilityStatus.Booked) {
                             statusColor = 'bg-yellow-50 border-yellow-200 text-yellow-800';
                             statusText = 'Đã đặt';
-                          } else if (slot.status === 2) {
+                          } else if (status === TutorAvailabilityStatus.InProgress) {
                             statusColor = 'bg-blue-50 border-blue-200 text-blue-800';
-                            statusText = 'Có lịch học';
+                            statusText = 'Đang học';
+                          } else if (status === TutorAvailabilityStatus.Cancelled) {
+                            statusColor = 'bg-red-50 border-red-200 text-red-800';
+                            statusText = 'Đã hủy';
                           }
                           
                           return (
                             <div 
-                              key={slot.slotId} 
+                              key={availability.id} 
                               className={`flex items-center justify-between p-3 rounded-lg border border-gray-200 ${statusColor}`}
                             >
                               <div className="flex-1">
                                 <p className="font-medium text-sm">
-                                  {slot.startTime} - {slot.endTime}
+                                  {startTime && endTime ? `${startTime} - ${endTime}` : 'N/A'}
                                 </p>
                                 <p className="text-xs mt-0.5">{statusText}</p>
+                                {availability.startDate && (
+                                  <p className="text-xs mt-0.5 text-gray-600">
+                                    {new Date(availability.startDate).toLocaleDateString('vi-VN')}
+                                  </p>
+                                )}
                               </div>
-                              {isEditing && slot.status === 0 && (
+                              {isEditing && status === TutorAvailabilityStatus.Available && (
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
                                   className="h-8 w-8 p-0 hover:bg-red-100"
-                                  onClick={() => handleDeleteTimeSlot(day.key, slot.slotId)}
+                                  onClick={() => handleDeleteTimeSlot(availability.id)}
                                 >
                                   <Trash2 className="w-3 h-3 text-red-600" />
                                 </Button>
@@ -1591,27 +1823,21 @@ export function TutorProfileTab() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="institutionName">Tên trường</Label>
-              <Input
-                id="institutionName"
-                value={newEducation.institutionName}
-                onChange={(e) => setNewEducation({ ...newEducation, institutionName: e.target.value })}
-                placeholder="Ví dụ: Đại học Quốc gia Hà Nội"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="institutionType">Loại trường</Label>
+              <Label htmlFor="institutionId">Tên trường *</Label>
               <Select 
-                value={newEducation.institutionType.toString()}
-                onValueChange={(value) => setNewEducation({ ...newEducation, institutionType: parseInt(value) })}
+                value={newEducation.institutionId.toString()}
+                onValueChange={(value) => {
+                  const institutionId = parseInt(value);
+                  setNewEducation({ ...newEducation, institutionId });
+                }}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Chọn trường học" />
                 </SelectTrigger>
                 <SelectContent>
-                  {institutionTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value.toString()}>
-                      {type.label}
+                  {masterData.institutions.map((institution) => (
+                    <SelectItem key={institution.id} value={institution.id.toString()}>
+                      {institution.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1627,13 +1853,17 @@ export function TutorProfileTab() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="eduCertFile">Tải lên bằng cấp (PDF, JPG, PNG)</Label>
+              <Label htmlFor="eduCertFile">Tải lên bằng cấp (PDF, JPG, PNG) *</Label>
               <Input
                 id="eduCertFile"
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
                 onChange={(e) => setNewEducation({ ...newEducation, certificateFile: e.target.files?.[0] || null })}
+                required
               />
+              {newEducation.certificateFile && (
+                <p className="text-sm text-green-600">Đã chọn: {newEducation.certificateFile.name}</p>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -1642,11 +1872,18 @@ export function TutorProfileTab() {
             </Button>
             <Button 
               onClick={handleAddEducation}
-              disabled={!newEducation.institutionId || !newEducation.issueDate}
+              disabled={!newEducation.institutionId || !newEducation.issueDate || !newEducation.certificateFile || isUploadingEducation}
               size="lg"
               className="bg-[#257180] hover:bg-[#257180]/90 text-white"
             >
-              Thêm
+              {isUploadingEducation ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Đang upload...
+                </>
+              ) : (
+                'Thêm'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1704,13 +1941,17 @@ export function TutorProfileTab() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="certFile">Tải lên chứng chỉ (PDF, JPG, PNG)</Label>
+              <Label htmlFor="certFile">Tải lên chứng chỉ (PDF, JPG, PNG) *</Label>
               <Input
                 id="certFile"
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
                 onChange={(e) => setNewCertificate({ ...newCertificate, certificateFile: e.target.files?.[0] || null })}
+                required
               />
+              {newCertificate.certificateFile && (
+                <p className="text-sm text-green-600">Đã chọn: {newCertificate.certificateFile.name}</p>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -1719,11 +1960,18 @@ export function TutorProfileTab() {
             </Button>
             <Button 
               onClick={handleAddCertificate}
-              disabled={!newCertificate.certificateTypeId || !newCertificate.issueDate}
+              disabled={!newCertificate.certificateTypeId || !newCertificate.issueDate || !newCertificate.certificateFile || isUploadingCertificate}
               size="lg"
               className="bg-[#257180] hover:bg-[#257180]/90 text-white"
             >
-              Thêm
+              {isUploadingCertificate ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Đang upload...
+                </>
+              ) : (
+                'Thêm'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1829,40 +2077,84 @@ export function TutorProfileTab() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="monday">Thứ Hai</SelectItem>
-                  <SelectItem value="tuesday">Thứ Ba</SelectItem>
-                  <SelectItem value="wednesday">Thứ Tư</SelectItem>
-                  <SelectItem value="thursday">Thứ Năm</SelectItem>
-                  <SelectItem value="friday">Thứ Sáu</SelectItem>
-                  <SelectItem value="saturday">Thứ Bảy</SelectItem>
-                  <SelectItem value="sunday">Chủ Nhật</SelectItem>
+                  <SelectItem value={DayOfWeekEnum.Sunday.toString()}>Chủ Nhật</SelectItem>
+                  <SelectItem value={DayOfWeekEnum.Monday.toString()}>Thứ Hai</SelectItem>
+                  <SelectItem value={DayOfWeekEnum.Tuesday.toString()}>Thứ Ba</SelectItem>
+                  <SelectItem value={DayOfWeekEnum.Wednesday.toString()}>Thứ Tư</SelectItem>
+                  <SelectItem value={DayOfWeekEnum.Thursday.toString()}>Thứ Năm</SelectItem>
+                  <SelectItem value={DayOfWeekEnum.Friday.toString()}>Thứ Sáu</SelectItem>
+                  <SelectItem value={DayOfWeekEnum.Saturday.toString()}>Thứ Bảy</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startTime">Giờ bắt đầu</Label>
-                <Input
-                  id="startTime"
-                  type="time"
-                  value={newTimeSlot.startTime}
-                  onChange={(e) => setNewTimeSlot({ ...newTimeSlot, startTime: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endTime">Giờ kết thúc</Label>
-                <Input
-                  id="endTime"
-                  type="time"
-                  value={newTimeSlot.endTime}
-                  onChange={(e) => setNewTimeSlot({ ...newTimeSlot, endTime: e.target.value })}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="slotId">Khung giờ *</Label>
+              <Select 
+                value={newTimeSlot.slotId.toString()}
+                onValueChange={(value) => {
+                  const slotId = parseInt(value);
+                  setNewTimeSlot({ ...newTimeSlot, slotId });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn khung giờ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {masterData.timeSlots.length === 0 ? (
+                    <SelectItem value="0" disabled>Đang tải...</SelectItem>
+                  ) : (
+                    masterData.timeSlots
+                      .filter(slot => {
+                        // TimeSlot có thể có hoặc không có dayOfWeek
+                        // Nếu có dayOfWeek thì filter theo dayOfWeek, nếu không thì hiển thị tất cả
+                        const slotDayOfWeek = (slot as any).dayOfWeek;
+                        if (slotDayOfWeek !== undefined && slotDayOfWeek !== null) {
+                          return slotDayOfWeek === parseInt(newTimeSlot.dayOfWeek);
+                        }
+                        // Nếu không có dayOfWeek, hiển thị tất cả slots
+                        return true;
+                      })
+                      .map((slot) => (
+                        <SelectItem key={slot.id} value={slot.id.toString()}>
+                          {slot.startTime.substring(0, 5)} - {slot.endTime.substring(0, 5)}
+                          {(slot as any).dayOfWeek !== undefined && (slot as any).dayOfWeek !== null && (
+                            <span className="text-xs text-gray-500 ml-2">
+                              ({EnumHelpers.getDayOfWeekLabel((slot as any).dayOfWeek)})
+                            </span>
+                          )}
+                        </SelectItem>
+                      ))
+                  )}
+                </SelectContent>
+              </Select>
+              {masterData.timeSlots.length === 0 && (
+                <p className="text-sm text-gray-500">Đang tải danh sách khung giờ...</p>
+              )}
+              {masterData.timeSlots.length > 0 && masterData.timeSlots.filter(slot => {
+                const slotDayOfWeek = (slot as any).dayOfWeek;
+                if (slotDayOfWeek !== undefined && slotDayOfWeek !== null) {
+                  return slotDayOfWeek === parseInt(newTimeSlot.dayOfWeek);
+                }
+                return true;
+              }).length === 0 && (
+                <p className="text-sm text-gray-500">Không có khung giờ nào cho ngày này</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="startDate">Ngày bắt đầu *</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={newTimeSlot.startDate}
+                onChange={(e) => setNewTimeSlot({ ...newTimeSlot, startDate: e.target.value })}
+                min={new Date().toISOString().split('T')[0]}
+              />
+              <p className="text-xs text-gray-500">Chọn ngày cụ thể để thêm khung giờ này</p>
             </div>
             <Alert className="bg-blue-50 border-blue-200">
               <Info className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800 text-sm">
-                Mỗi khung giờ tương ứng với 1 slot (1 giờ học). Ví dụ: 08:00 - 09:00
+                Mỗi khung giờ tương ứng với 1 slot (1 giờ học). Bạn cần chọn ngày cụ thể để thêm khung giờ.
               </AlertDescription>
             </Alert>
           </div>
@@ -1872,7 +2164,7 @@ export function TutorProfileTab() {
             </Button>
             <Button 
               onClick={handleAddTimeSlot}
-              disabled={!newTimeSlot.startTime || !newTimeSlot.endTime}
+              disabled={!newTimeSlot.slotId || !newTimeSlot.startDate}
               size="lg"
               className="bg-[#257180] hover:bg-[#257180]/90 text-white"
             >
