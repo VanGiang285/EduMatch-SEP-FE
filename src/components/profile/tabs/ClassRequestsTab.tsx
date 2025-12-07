@@ -36,7 +36,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
-import { Search, Eye, Plus, MapPin, ArrowUpDown, Users, Edit, Trash2, Loader2, Clock, BookOpen, GraduationCap, FileText, Star } from 'lucide-react';
+import { Search, Eye, Plus, MapPin, ArrowUpDown, Users, Edit, Trash2, Loader2, Clock, BookOpen, GraduationCap, FileText, Star, AlertCircle } from 'lucide-react';
 import { 
   getClassRequestStatusText,
   getClassRequestStatusColor,
@@ -55,16 +55,15 @@ const ITEMS_PER_PAGE = 8;
 type SortField = 'createdAt';
 type SortOrder = 'asc' | 'desc';
 
-// Map status filter value to ClassRequestStatus enum
 const getStatusFromFilter = (filter: string): ClassRequestStatus | null => {
   switch (filter) {
-    case 'pending': return ClassRequestStatus.Reviewing; // 1 - Chờ duyệt
-    case 'open': return ClassRequestStatus.Open; // 0 - Đã duyệt/Đang mở
-    case 'selected': return ClassRequestStatus.Selected; // 2 - Đã chọn
-    case 'closed': return ClassRequestStatus.Closed; // 3 - Đã đóng
-    case 'cancelled': return ClassRequestStatus.Cancelled; // 4 - Đã hủy
-    case 'expired': return ClassRequestStatus.Expired; // 5 - Hết hạn
-    default: return null; // 'all' - Tất cả trạng thái
+    case 'pending': return ClassRequestStatus.Reviewing;
+    case 'open': return ClassRequestStatus.Open;
+    case 'selected': return ClassRequestStatus.Selected;
+    case 'closed': return ClassRequestStatus.Closed;
+    case 'cancelled': return ClassRequestStatus.Cancelled;
+    case 'expired': return ClassRequestStatus.Expired;
+    default: return null;
   }
 };
 
@@ -72,7 +71,7 @@ export function ClassRequestsTab() {
   const { showSuccess, showError } = useCustomToast();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all'); // Default: Tất cả trạng thái
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRequest, setSelectedRequest] = useState<ClassRequestDetailDto | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
@@ -91,7 +90,6 @@ export function ClassRequestsTab() {
   const [tutorDetails, setTutorDetails] = useState<Record<number, TutorProfileDto>>({});
   const [loadingTutorProfiles, setLoadingTutorProfiles] = useState(false);
 
-  // Helper để parse status number
   const getStatusNumber = (status: string | number | null | undefined): number => {
     if (status === null || status === undefined) {
       return -1;
@@ -123,16 +121,19 @@ export function ClassRequestsTab() {
     return statusMap[statusStr] ?? -1;
   };
 
-  // Helper để lấy teaching mode text
-  const getModeText = (mode: string | number | null | undefined): string => {
-    if (mode === null || mode === undefined) {
+  const getModeText = (mode: string | number | null | undefined, teachingMode?: number | string | null | undefined): string => {
+    let modeValue = mode;
+    if ((modeValue === null || modeValue === undefined) && (teachingMode !== null && teachingMode !== undefined)) {
+      modeValue = teachingMode;
+    }
+    if (modeValue === null || modeValue === undefined) {
       return 'Không xác định';
     }
     let modeNum: number = -1;
-    if (typeof mode === 'number') {
-      modeNum = mode;
-    } else if (typeof mode === 'string') {
-      const parsed = parseInt(mode, 10);
+    if (typeof modeValue === 'number') {
+      modeNum = modeValue;
+    } else if (typeof modeValue === 'string') {
+      const parsed = parseInt(modeValue, 10);
       if (!isNaN(parsed)) {
         modeNum = parsed;
       } else {
@@ -141,7 +142,7 @@ export function ClassRequestsTab() {
           'Online': TeachingMode.Online,
           'Hybrid': TeachingMode.Hybrid,
         };
-        modeNum = modeMap[mode] ?? -1;
+        modeNum = modeMap[modeValue] ?? -1;
       }
     } else {
       return 'Không xác định';
@@ -152,7 +153,6 @@ export function ClassRequestsTab() {
     return 'Không xác định';
   };
 
-  // Load danh sách yêu cầu theo status filter
   useEffect(() => {
     const loadRequests = async () => {
       setLoading(true);
@@ -161,7 +161,6 @@ export function ClassRequestsTab() {
         let allRequests: ClassRequestItemDto[] = [];
 
         if (statusFilter === 'all') {
-          // Load tất cả các status
           const [pendingRes, openRes, expiredRes, rejectedRes, cancelledRes] = await Promise.all([
             ClassRequestService.getPendingClassRequestsByLearner(),
             ClassRequestService.getOpenClassRequestsByLearner(),
@@ -176,7 +175,6 @@ export function ClassRequestsTab() {
           const rejectedData = rejectedRes.success && rejectedRes.data ? rejectedRes.data : [];
           const cancelledData = cancelledRes.success && cancelledRes.data ? cancelledRes.data : [];
           
-          // Merge tất cả và loại bỏ duplicate
           const merged = [...pendingData, ...openData, ...expiredData, ...rejectedData, ...cancelledData];
           allRequests = merged.filter((req, index, self) => 
             index === self.findIndex(r => r.id === req.id)
@@ -202,7 +200,6 @@ export function ClassRequestsTab() {
             allRequests = response.data;
           }
         } else {
-          // Selected, Closed - cần load từ open và filter
           const [pendingRes, openRes] = await Promise.all([
             ClassRequestService.getPendingClassRequestsByLearner(),
             ClassRequestService.getOpenClassRequestsByLearner(),
@@ -234,10 +231,8 @@ export function ClassRequestsTab() {
     };
 
     loadRequests();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
-  // Load chi tiết yêu cầu khi mở dialog
   useEffect(() => {
     if (selectedRequest?.id && showDetailDialog) {
       const loadDetail = async () => {
@@ -248,7 +243,6 @@ export function ClassRequestsTab() {
           if (detailResponse.success && detailResponse.data) {
             setSelectedRequest(detailResponse.data);
             
-            // Nếu đã duyệt (Open), load danh sách gia sư ứng tuyển
             const statusNum = getStatusNumber(detailResponse.data.status);
             if (statusNum === ClassRequestStatus.Open) {
               setLoadingApplicants(true);
@@ -271,7 +265,6 @@ export function ClassRequestsTab() {
       setSelectedRequest(null);
       setApplicants([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRequest?.id, showDetailDialog]);
 
   useEffect(() => {
@@ -328,7 +321,6 @@ export function ClassRequestsTab() {
     }
   };
 
-  // Filter and sort requests
   const filteredRequests = useMemo(() => {
     const filtered = requests.filter((request) => {
       const matchesSearch = request.subjectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -347,13 +339,11 @@ export function ClassRequestsTab() {
     return filtered;
   }, [requests, searchTerm, sortOrder]);
 
-  // Pagination
   const totalPages = Math.ceil(filteredRequests.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedRequests = filteredRequests.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const handleViewDetail = async (request: ClassRequestItemDto) => {
-    // Load chi tiết từ API
     try {
       const response = await ClassRequestService.getClassRequestById(request.id);
       if (response.success && response.data) {
@@ -371,8 +361,18 @@ export function ClassRequestsTab() {
     router.push(`/tutor/${tutorId}`);
   };
 
-  const handleEdit = (request: any) => {
-    setEditingRequest(request);
+  const handleEdit = async (request: any) => {
+    try {
+      const detailResponse = await ClassRequestService.getClassRequestById(request.id);
+      if (detailResponse.success && detailResponse.data) {
+        setEditingRequest(detailResponse.data);
+        setSelectedRequest(detailResponse.data);
+      } else {
+        setEditingRequest(request);
+      }
+    } catch (err) {
+      setEditingRequest(request);
+    }
     setShowCreateDialog(true);
     setShowDetailDialog(false);
   };
@@ -393,7 +393,6 @@ export function ClassRequestsTab() {
         setShowDeleteDialog(false);
         setShowDetailDialog(false);
         setRequestToDelete(null);
-        // Reload danh sách
         if (statusFilter === 'all') {
           const [pendingRes, openRes, expiredRes, rejectedRes, cancelledRes] = await Promise.all([
             ClassRequestService.getPendingClassRequestsByLearner(),
@@ -444,7 +443,6 @@ export function ClassRequestsTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900">Yêu cầu mở lớp</h2>
@@ -460,11 +458,9 @@ export function ClassRequestsTab() {
         </Button>
       </div>
 
-      {/* Filters */}
       <Card className="border border-[#257180]/20 bg-white hover:shadow-md transition-shadow">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
             <div className="md:col-span-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -480,7 +476,6 @@ export function ClassRequestsTab() {
               </div>
             </div>
 
-            {/* Status Filter */}
             <Select value={statusFilter} onValueChange={(value) => {
               setStatusFilter(value);
               setCurrentPage(1);
@@ -502,7 +497,6 @@ export function ClassRequestsTab() {
         </CardContent>
       </Card>
 
-      {/* Requests Table */}
       <Card className="border border-[#257180]/20 bg-white hover:shadow-md transition-shadow">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -565,7 +559,7 @@ export function ClassRequestsTab() {
                       </TableCell>
                       <TableCell className="text-left">
                         <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20">
-                            {getModeText(request.mode)}
+                            {getModeText(request.mode, request.teachingMode)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-left">
@@ -610,7 +604,6 @@ export function ClassRequestsTab() {
             </Table>
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="mt-6">
               <Pagination>
@@ -647,16 +640,47 @@ export function ClassRequestsTab() {
         </CardContent>
       </Card>
 
-      {/* Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-2xl sm:text-3xl font-bold text-gray-900">
-              {selectedRequest ? (selectedRequest.title || `${selectedRequest.subjectName || ''} ${selectedRequest.level || ''}`.trim()) : 'Chi tiết yêu cầu mở lớp'}
-            </DialogTitle>
-            <DialogDescription className="text-sm sm:text-base text-gray-600">
-              Thông tin chi tiết về yêu cầu và danh sách gia sư ứng tuyển
-            </DialogDescription>
+        <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white border border-[#257180]/20">
+          <DialogHeader className="pb-4 border-b border-gray-200">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  {selectedRequest ? (selectedRequest.title || `${selectedRequest.subjectName || ''} ${selectedRequest.level || ''}`.trim()) : 'Chi tiết yêu cầu mở lớp'}
+                </DialogTitle>
+                <DialogDescription className="text-sm sm:text-base text-gray-600">
+                  Thông tin chi tiết về yêu cầu và danh sách gia sư ứng tuyển
+                </DialogDescription>
+              </div>
+              {selectedRequest && (() => {
+                const statusNum = getStatusNumber(selectedRequest.status);
+                if (statusNum === ClassRequestStatus.Reviewing) {
+                  return (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(selectedRequest)}
+                        className="border-[#257180] text-[#257180] hover:bg-[#257180] hover:text-white"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Chỉnh sửa
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteClick(selectedRequest as any)}
+                        className="border-red-500 text-red-600 hover:bg-red-500 hover:text-white"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Xóa
+                      </Button>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </div>
           </DialogHeader>
           
           {loadingDetail ? (
@@ -666,47 +690,18 @@ export function ClassRequestsTab() {
             </div>
           ) : selectedRequest ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
-              {/* Left Column: Request Details */}
               <div className="space-y-6 lg:col-span-2">
-                {/* Header Info */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    {(() => {
-                      const statusNum = getStatusNumber(selectedRequest.status);
-                      return (
-                        <>
-                          <Badge className={getClassRequestStatusColor(statusNum)}>
-                            {getClassRequestStatusText(statusNum)}
-                          </Badge>
-                          {statusNum === ClassRequestStatus.Reviewing && (
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="lg"
-                                onClick={() => handleEdit(selectedRequest)}
-                                className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Chỉnh sửa
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="lg"
-                                onClick={() => handleDeleteClick(selectedRequest as any)}
-                                className="text-red-600 hover:text-white hover:bg-red-600 hover:border-red-600"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Xóa
-                              </Button>
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
+                <div className="flex items-center gap-3">
+                  {(() => {
+                    const statusNum = getStatusNumber(selectedRequest.status);
+                    return (
+                      <Badge className={getClassRequestStatusColor(statusNum)}>
+                        {getClassRequestStatusText(statusNum)}
+                      </Badge>
+                    );
+                  })()}
                 </div>
 
-                {/* Description - Mô tả chi tiết */}
                 {selectedRequest.description && (
                   <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-start gap-3">
@@ -719,7 +714,6 @@ export function ClassRequestsTab() {
                   </div>
                 )}
 
-                {/* Class Info */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="min-w-0">
                       <p className="text-sm text-gray-600 flex items-center gap-1">
@@ -763,7 +757,7 @@ export function ClassRequestsTab() {
                     <div className="min-w-0">
                       <p className="text-sm text-gray-600">Hình thức</p>
                       <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20 mt-1">
-                        {getModeText(selectedRequest.mode)}
+                        {getModeText(selectedRequest.mode, selectedRequest.teachingMode)}
                       </Badge>
                     </div>
                     <div className="min-w-0">
@@ -780,7 +774,6 @@ export function ClassRequestsTab() {
                     )}
                   </div>
 
-                {/* Slots */}
                 {selectedRequest.slots && selectedRequest.slots.length > 0 && (
                   <div className="p-4 bg-white rounded-lg border border-gray-200">
                     <p className="text-sm text-gray-600 flex items-center gap-1 mb-3">
@@ -805,7 +798,6 @@ export function ClassRequestsTab() {
                   </div>
                 )}
 
-                {/* Location */}
                 {((selectedRequest.addressLine && selectedRequest.addressLine !== 'string') || selectedRequest.subDistrictName || selectedRequest.provinceName) && (
                   <div className="p-4 border border-gray-200 rounded-lg">
                     <div className="flex items-start gap-3">
@@ -825,7 +817,6 @@ export function ClassRequestsTab() {
                   </div>
                 )}
 
-                {/* Dates */}
                 <div className="grid grid-cols-2 gap-4 p-4 border border-gray-200 rounded-lg">
                   <div>
                     <p className="text-sm text-gray-600">Ngày tạo</p>
@@ -844,7 +835,6 @@ export function ClassRequestsTab() {
                 </div>
               </div>
 
-              {/* Right Column: Applicants */}
               <div className="border-l-2 border-gray-200 pl-6 lg:col-span-1">
                 <h4 className="text-xl font-semibold mb-5 flex items-center gap-2 text-gray-900">
                   <GraduationCap className="h-6 w-6 text-[#257180]" />
@@ -943,7 +933,6 @@ export function ClassRequestsTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Create/Edit Class Request Dialog */}
       <CreateClassRequestDialog 
         open={showCreateDialog}
         onOpenChange={(open) => {
@@ -951,40 +940,142 @@ export function ClassRequestsTab() {
           if (!open) setEditingRequest(null);
         }}
         editingRequest={editingRequest}
+        onSuccess={async () => {
+          const updatedRequestId = editingRequest?.id;
+          setEditingRequest(null);
+          const targetStatus = getStatusFromFilter(statusFilter);
+          let allRequests: ClassRequestItemDto[] = [];
+
+          if (statusFilter === 'all') {
+            const [pendingRes, openRes, expiredRes, rejectedRes, cancelledRes] = await Promise.all([
+              ClassRequestService.getPendingClassRequestsByLearner(),
+              ClassRequestService.getOpenClassRequestsByLearner(),
+              ClassRequestService.getExpiredClassRequestsByLearner(),
+              ClassRequestService.getRejectedClassRequestsByLearner(),
+              ClassRequestService.getCanceledClassRequestsByLearner(),
+            ]);
+            
+            const pendingData = pendingRes.success && pendingRes.data ? pendingRes.data : [];
+            const openData = openRes.success && openRes.data ? openRes.data : [];
+            const expiredData = expiredRes.success && expiredRes.data ? expiredRes.data : [];
+            const rejectedData = rejectedRes.success && rejectedRes.data ? rejectedRes.data : [];
+            const cancelledData = cancelledRes.success && cancelledRes.data ? cancelledRes.data : [];
+            
+            const merged = [...pendingData, ...openData, ...expiredData, ...rejectedData, ...cancelledData];
+            allRequests = merged.filter((req, index, self) => 
+              index === self.findIndex(r => r.id === req.id)
+            );
+          } else if (statusFilter === 'pending') {
+            const response = await ClassRequestService.getPendingClassRequestsByLearner();
+            if (response.success && response.data) {
+              allRequests = response.data;
+            }
+          } else if (statusFilter === 'open') {
+            const response = await ClassRequestService.getOpenClassRequestsByLearner();
+            if (response.success && response.data) {
+              allRequests = response.data;
+            }
+          } else if (statusFilter === 'expired') {
+            const response = await ClassRequestService.getExpiredClassRequestsByLearner();
+            if (response.success && response.data) {
+              allRequests = response.data;
+            }
+          } else if (statusFilter === 'cancelled') {
+            const response = await ClassRequestService.getCanceledClassRequestsByLearner();
+            if (response.success && response.data) {
+              allRequests = response.data;
+            }
+          } else {
+            const [pendingRes, openRes] = await Promise.all([
+              ClassRequestService.getPendingClassRequestsByLearner(),
+              ClassRequestService.getOpenClassRequestsByLearner(),
+            ]);
+            const pendingData = pendingRes.success && pendingRes.data ? pendingRes.data : [];
+            const openData = openRes.success && openRes.data ? openRes.data : [];
+            const merged = [...pendingData, ...openData];
+            const uniqueRequests = merged.filter((req, index, self) => 
+              index === self.findIndex(r => r.id === req.id)
+            );
+            
+            if (targetStatus !== null) {
+              allRequests = uniqueRequests.filter(req => {
+                const reqStatus = getStatusNumber(req.status);
+                return reqStatus === targetStatus;
+              });
+            } else {
+              allRequests = uniqueRequests;
+            }
+          }
+
+          if (updatedRequestId) {
+            await new Promise(resolve => setTimeout(resolve, 800));
+            try {
+              const detailResponse = await ClassRequestService.getClassRequestById(updatedRequestId);
+              if (detailResponse.success && detailResponse.data) {
+                setSelectedRequest(detailResponse.data);
+                
+                const updatedMode = detailResponse.data.mode || detailResponse.data.teachingMode?.toString();
+                
+                setRequests(prevRequests => 
+                  prevRequests.map(r => {
+                    if (r.id === updatedRequestId) {
+                      return { 
+                        ...r, 
+                        mode: updatedMode || r.mode,
+                        teachingMode: detailResponse.data.teachingMode
+                      };
+                    }
+                    return r;
+                  })
+                );
+              }
+            } catch (err) {
+            }
+          } else {
+            setRequests(allRequests);
+          }
+          
+          if (!updatedRequestId) {
+            setRequests(allRequests);
+          }
+        }}
       />
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xác nhận xóa yêu cầu</DialogTitle>
+        <DialogContent className="sm:max-w-md border border-[#257180]/20">
+          <DialogHeader className="pb-4 border-b border-gray-200">
+            <DialogTitle className="text-xl font-semibold text-gray-900">Xác nhận xóa yêu cầu</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-gray-600">
-              Bạn có chắc chắn muốn xóa yêu cầu mở lớp <span className="font-semibold">&quot;{requestToDelete?.title || `#${requestToDelete?.id}`}&quot;</span> không?
-            </p>
-            <p className="text-sm text-red-600 mt-2">
-              Hành động này không thể hoàn tác.
-            </p>
+          <div className="py-6">
+            <div className="flex items-start gap-3 mb-4">
+              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-gray-700 mb-2">
+                  Bạn có chắc chắn muốn xóa yêu cầu mở lớp <span className="font-semibold text-gray-900">&quot;{requestToDelete?.title || `#${requestToDelete?.id}`}&quot;</span> không?
+                </p>
+                <p className="text-sm text-red-600">
+                  Hành động này không thể hoàn tác.
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button
               variant="outline"
-              size="lg"
               onClick={() => {
                 setShowDeleteDialog(false);
                 setRequestToDelete(null);
               }}
               disabled={isDeleting}
-              className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Hủy
             </Button>
             <Button
               variant="destructive"
-              size="lg"
               onClick={handleDelete}
               disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               {isDeleting ? (
                 <>
