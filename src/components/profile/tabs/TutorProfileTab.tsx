@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/form/textarea';
 import { Badge } from '@/components/ui/basic/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/form/radio-group';
+import { Checkbox } from '@/components/ui/form/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Separator } from '@/components/ui/layout/separator';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
@@ -219,8 +220,7 @@ export function TutorProfileTab() {
   const [newSubject, setNewSubject] = useState({
     subjectId: 0,
     subjectName: '',
-    levelId: 0,
-    levelName: '',
+    selectedLevels: [] as number[],
     hourlyRate: '',
   });
 
@@ -856,42 +856,50 @@ export function TutorProfileTab() {
     }
   };
 
-  // Handlers for subject
   const handleAddSubject = async () => {
     if (!tutorId) {
       showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
       return;
     }
 
-    if (!newSubject.subjectId || !newSubject.levelId || !newSubject.hourlyRate) {
-      showError('Lỗi', 'Vui lòng điền đầy đủ thông tin môn học.');
+    if (!newSubject.subjectId || newSubject.selectedLevels.length === 0 || !newSubject.hourlyRate) {
+      showError('Lỗi', 'Vui lòng điền đầy đủ thông tin môn học và chọn ít nhất một cấp độ.');
       return;
     }
 
     try {
-      const request: Omit<TutorSubjectCreateRequest, 'tutorId'> = {
-        subjectId: newSubject.subjectId,
-        levelId: newSubject.levelId,
-      hourlyRate: parseFloat(newSubject.hourlyRate),
-    };
-
-      const response = await SubjectService.createTutorSubject(tutorId, request);
-      if (response.success && response.data) {
-        showSuccess('Thành công', 'Thêm môn học thành công.');
-    setShowSubjectModal(false);
-    setNewSubject({
-          subjectId: 0,
-      subjectName: '',
-          levelId: 0,
-      levelName: '',
-      hourlyRate: '',
-    });
-        
-        // Reload tutor profile
-        await reloadTutorProfile();
-      } else {
-        showError('Lỗi', response.message || 'Không thể thêm môn học.');
+      const hourlyRate = parseFloat(newSubject.hourlyRate);
+      if (isNaN(hourlyRate) || hourlyRate <= 0) {
+        showError('Lỗi', 'Vui lòng nhập giá hợp lệ.');
+        return;
       }
+
+      const requests: Omit<TutorSubjectCreateRequest, 'tutorId'>[] = newSubject.selectedLevels.map(levelId => ({
+        subjectId: newSubject.subjectId,
+        levelId: levelId,
+        hourlyRate: hourlyRate,
+      }));
+
+      const results = await Promise.all(
+        requests.map(request => SubjectService.createTutorSubject(tutorId, request))
+      );
+
+      const failed = results.filter(r => !r.success);
+      if (failed.length > 0) {
+        showError('Lỗi', `Không thể thêm ${failed.length} môn học. Vui lòng thử lại.`);
+        return;
+      }
+
+      showSuccess('Thành công', `Thêm ${results.length} môn học thành công.`);
+      setShowSubjectModal(false);
+      setNewSubject({
+        subjectId: 0,
+        subjectName: '',
+        selectedLevels: [],
+        hourlyRate: '',
+      });
+        
+      await reloadTutorProfile();
     } catch (error: any) {
       console.error('Error adding subject:', error);
       showError('Lỗi', 'Không thể thêm môn học. Vui lòng thử lại.');
@@ -2009,29 +2017,45 @@ export function TutorProfileTab() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="levelId">Cấp độ *</Label>
-              <Select 
-                value={newSubject.levelId.toString()}
-                onValueChange={(value) => {
-                  const level = masterData.levels.find(l => l.id === parseInt(value));
-                  setNewSubject({ 
-                    ...newSubject, 
-                    levelId: parseInt(value),
-                    levelName: level?.name || '',
-                  });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn cấp độ" />
-                </SelectTrigger>
-                <SelectContent>
-                  {masterData.levels.map((level) => (
-                    <SelectItem key={level.id} value={level.id.toString()}>
-                      {level.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Cấp độ * (có thể chọn nhiều)</Label>
+              <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                {masterData.levels.length === 0 ? (
+                  <p className="text-sm text-gray-500">Đang tải danh sách cấp độ...</p>
+                ) : (
+                  masterData.levels.map((level) => (
+                    <div key={level.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`level-${level.id}`}
+                        checked={newSubject.selectedLevels.includes(level.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setNewSubject({
+                              ...newSubject,
+                              selectedLevels: [...newSubject.selectedLevels, level.id],
+                            });
+                          } else {
+                            setNewSubject({
+                              ...newSubject,
+                              selectedLevels: newSubject.selectedLevels.filter(id => id !== level.id),
+                            });
+                          }
+                        }}
+                      />
+                      <Label
+                        htmlFor={`level-${level.id}`}
+                        className="text-sm font-normal cursor-pointer flex-1"
+                      >
+                        {level.name}
+                      </Label>
+                    </div>
+                  ))
+                )}
+              </div>
+              {newSubject.selectedLevels.length > 0 && (
+                <p className="text-xs text-gray-500">
+                  Đã chọn: {newSubject.selectedLevels.length} cấp độ
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="hourlyRate">Giá mỗi slot (₫)</Label>
@@ -2051,7 +2075,7 @@ export function TutorProfileTab() {
             </Button>
             <Button 
               onClick={handleAddSubject}
-              disabled={!newSubject.subjectId || !newSubject.levelId || !newSubject.hourlyRate}
+              disabled={!newSubject.subjectId || newSubject.selectedLevels.length === 0 || !newSubject.hourlyRate}
               size="lg"
               className="bg-[#257180] hover:bg-[#257180]/90 text-white"
             >

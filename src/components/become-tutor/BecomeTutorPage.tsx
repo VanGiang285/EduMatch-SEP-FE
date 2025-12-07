@@ -40,7 +40,13 @@ import { useBecomeTutorMasterData } from "@/hooks/useBecomeTutorMasterData";
 import { MediaService } from "@/services/mediaService";
 import { CertificateService } from "@/services/certificateService";
 import { LocationService, ProvinceDto, SubDistrictDto } from "@/services/locationService";
-import { BecomeTutorRequest } from "@/types/requests";
+import { 
+  BecomeTutorRequest,
+  TutorAvailabilityCreateRequest,
+  TutorSubjectCreateRequest,
+  TutorCertificateCreateRequest,
+  TutorEducationCreateRequest
+} from "@/types/requests";
 import { TeachingMode, InstitutionType } from "@/types/enums";
 export function BecomeTutorPage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -714,12 +720,18 @@ export function BecomeTutorPage() {
       educationUrls: string[];
     }
   ): BecomeTutorRequest => {
+    const PLACEHOLDER_TUTOR_ID = 1;
+
     const availabilities = Object.entries(formData.availability.schedule).flatMap(([date, daySchedule]) =>
       Object.values(daySchedule).flatMap(slotIds =>
-        slotIds.map(slotId => ({
-          slotId: slotId,
-          startDate: date + 'T00:00:00'
-        }))
+        slotIds.map(slotId => {
+          const availability: TutorAvailabilityCreateRequest = {
+            tutorId: PLACEHOLDER_TUTOR_ID,
+            slotId: slotId,
+            startDate: date + 'T00:00:00'
+          };
+          return availability;
+        })
       )
     );
 
@@ -733,29 +745,39 @@ export function BecomeTutorPage() {
           throw new Error(`Vui lòng nhập giá cho môn học: ${subjectName}`);
         }
 
-        return {
+        const subjectData: TutorSubjectCreateRequest = {
+          tutorId: PLACEHOLDER_TUTOR_ID,
           subjectId: subject.subjectId,
           hourlyRate: hourlyRate,
           levelId: levelId
         };
+        return subjectData;
       })
     );
 
     const certificates = formData.certifications.items.length > 0
-      ? formData.certifications.items.map((cert, idx) => ({
-          certificateTypeId: cert.certificateTypeId,
-          issueDate: cert.issueDate,
-          expiryDate: cert.expiryDate,
-          certificateUrl: uploadedFiles.certificateUrls[idx] || undefined
-        }))
+      ? formData.certifications.items.map((cert, idx) => {
+          const certData: TutorCertificateCreateRequest = {
+            tutorId: PLACEHOLDER_TUTOR_ID,
+            certificateTypeId: cert.certificateTypeId,
+            issueDate: cert.issueDate,
+            expiryDate: cert.expiryDate,
+            certificateUrl: uploadedFiles.certificateUrls[idx] || undefined
+          };
+          return certData;
+        })
       : [];
 
     const educations = formData.education.items.length > 0
-      ? formData.education.items.map((edu, idx) => ({
-          institutionId: edu.institutionId,
-          issueDate: edu.issueDate,
-          certificateEducationUrl: uploadedFiles.educationUrls[idx] || undefined
-        }))
+      ? formData.education.items.map((edu, idx) => {
+          const eduData: TutorEducationCreateRequest = {
+            tutorId: PLACEHOLDER_TUTOR_ID,
+            institutionId: edu.institutionId,
+            issueDate: edu.issueDate,
+            certificateEducationUrl: uploadedFiles.educationUrls[idx] || undefined
+          };
+          return eduData;
+        })
       : [];
     
     if (educations.length === 0) {
@@ -791,6 +813,10 @@ export function BecomeTutorPage() {
       subjects: subjects,
       availabilities: availabilities
     };
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📤 Become Tutor Request:', JSON.stringify(request, null, 2));
+    }
 
     return request;
   };

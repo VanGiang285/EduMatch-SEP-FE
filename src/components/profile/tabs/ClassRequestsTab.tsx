@@ -36,7 +36,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
-import { Search, Eye, Plus, MapPin, ArrowUpDown, Users, Edit, Trash2, Loader2, Clock, BookOpen, GraduationCap, FileText, Star } from 'lucide-react';
+import { Search, Eye, Plus, MapPin, ArrowUpDown, Users, Edit, Trash2, Loader2, Clock, BookOpen, GraduationCap, FileText, Star, AlertCircle } from 'lucide-react';
 import { 
   getClassRequestStatusText,
   getClassRequestStatusColor,
@@ -649,14 +649,46 @@ export function ClassRequestsTab() {
 
       {/* Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-2xl sm:text-3xl font-bold text-gray-900">
-              {selectedRequest ? (selectedRequest.title || `${selectedRequest.subjectName || ''} ${selectedRequest.level || ''}`.trim()) : 'Chi tiết yêu cầu mở lớp'}
-            </DialogTitle>
-            <DialogDescription className="text-sm sm:text-base text-gray-600">
-              Thông tin chi tiết về yêu cầu và danh sách gia sư ứng tuyển
-            </DialogDescription>
+        <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white border border-[#257180]/20">
+          <DialogHeader className="pb-4 border-b border-gray-200">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  {selectedRequest ? (selectedRequest.title || `${selectedRequest.subjectName || ''} ${selectedRequest.level || ''}`.trim()) : 'Chi tiết yêu cầu mở lớp'}
+                </DialogTitle>
+                <DialogDescription className="text-sm sm:text-base text-gray-600">
+                  Thông tin chi tiết về yêu cầu và danh sách gia sư ứng tuyển
+                </DialogDescription>
+              </div>
+              {selectedRequest && (() => {
+                const statusNum = getStatusNumber(selectedRequest.status);
+                if (statusNum === ClassRequestStatus.Reviewing) {
+                  return (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(selectedRequest)}
+                        className="border-[#257180] text-[#257180] hover:bg-[#257180] hover:text-white"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Chỉnh sửa
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteClick(selectedRequest as any)}
+                        className="border-red-500 text-red-600 hover:bg-red-500 hover:text-white"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Xóa
+                      </Button>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </div>
           </DialogHeader>
           
           {loadingDetail ? (
@@ -669,41 +701,15 @@ export function ClassRequestsTab() {
               {/* Left Column: Request Details */}
               <div className="space-y-6 lg:col-span-2">
                 {/* Header Info */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    {(() => {
-                      const statusNum = getStatusNumber(selectedRequest.status);
-                      return (
-                        <>
-                          <Badge className={getClassRequestStatusColor(statusNum)}>
-                            {getClassRequestStatusText(statusNum)}
-                          </Badge>
-                          {statusNum === ClassRequestStatus.Reviewing && (
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="lg"
-                                onClick={() => handleEdit(selectedRequest)}
-                                className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Chỉnh sửa
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="lg"
-                                onClick={() => handleDeleteClick(selectedRequest as any)}
-                                className="text-red-600 hover:text-white hover:bg-red-600 hover:border-red-600"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Xóa
-                              </Button>
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
+                <div className="flex items-center gap-3">
+                  {(() => {
+                    const statusNum = getStatusNumber(selectedRequest.status);
+                    return (
+                      <Badge className={getClassRequestStatusColor(statusNum)}>
+                        {getClassRequestStatusText(statusNum)}
+                      </Badge>
+                    );
+                  })()}
                 </div>
 
                 {/* Description - Mô tả chi tiết */}
@@ -951,40 +957,112 @@ export function ClassRequestsTab() {
           if (!open) setEditingRequest(null);
         }}
         editingRequest={editingRequest}
+        onSuccess={async () => {
+          setEditingRequest(null);
+          const targetStatus = getStatusFromFilter(statusFilter);
+          let allRequests: ClassRequestItemDto[] = [];
+
+          if (statusFilter === 'all') {
+            const [pendingRes, openRes, expiredRes, rejectedRes, cancelledRes] = await Promise.all([
+              ClassRequestService.getPendingClassRequestsByLearner(),
+              ClassRequestService.getOpenClassRequestsByLearner(),
+              ClassRequestService.getExpiredClassRequestsByLearner(),
+              ClassRequestService.getRejectedClassRequestsByLearner(),
+              ClassRequestService.getCanceledClassRequestsByLearner(),
+            ]);
+            
+            const pendingData = pendingRes.success && pendingRes.data ? pendingRes.data : [];
+            const openData = openRes.success && openRes.data ? openRes.data : [];
+            const expiredData = expiredRes.success && expiredRes.data ? expiredRes.data : [];
+            const rejectedData = rejectedRes.success && rejectedRes.data ? rejectedRes.data : [];
+            const cancelledData = cancelledRes.success && cancelledRes.data ? cancelledRes.data : [];
+            
+            const merged = [...pendingData, ...openData, ...expiredData, ...rejectedData, ...cancelledData];
+            allRequests = merged.filter((req, index, self) => 
+              index === self.findIndex(r => r.id === req.id)
+            );
+          } else if (statusFilter === 'pending') {
+            const response = await ClassRequestService.getPendingClassRequestsByLearner();
+            if (response.success && response.data) {
+              allRequests = response.data;
+            }
+          } else if (statusFilter === 'open') {
+            const response = await ClassRequestService.getOpenClassRequestsByLearner();
+            if (response.success && response.data) {
+              allRequests = response.data;
+            }
+          } else if (statusFilter === 'expired') {
+            const response = await ClassRequestService.getExpiredClassRequestsByLearner();
+            if (response.success && response.data) {
+              allRequests = response.data;
+            }
+          } else if (statusFilter === 'cancelled') {
+            const response = await ClassRequestService.getCanceledClassRequestsByLearner();
+            if (response.success && response.data) {
+              allRequests = response.data;
+            }
+          } else {
+            const [pendingRes, openRes] = await Promise.all([
+              ClassRequestService.getPendingClassRequestsByLearner(),
+              ClassRequestService.getOpenClassRequestsByLearner(),
+            ]);
+            const pendingData = pendingRes.success && pendingRes.data ? pendingRes.data : [];
+            const openData = openRes.success && openRes.data ? openRes.data : [];
+            const merged = [...pendingData, ...openData];
+            const uniqueRequests = merged.filter((req, index, self) => 
+              index === self.findIndex(r => r.id === req.id)
+            );
+            
+            if (targetStatus !== null) {
+              allRequests = uniqueRequests.filter(req => {
+                const reqStatus = getStatusNumber(req.status);
+                return reqStatus === targetStatus;
+              });
+            } else {
+              allRequests = uniqueRequests;
+            }
+          }
+
+          setRequests(allRequests);
+        }}
       />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xác nhận xóa yêu cầu</DialogTitle>
+        <DialogContent className="sm:max-w-md border border-[#257180]/20">
+          <DialogHeader className="pb-4 border-b border-gray-200">
+            <DialogTitle className="text-xl font-semibold text-gray-900">Xác nhận xóa yêu cầu</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-gray-600">
-              Bạn có chắc chắn muốn xóa yêu cầu mở lớp <span className="font-semibold">&quot;{requestToDelete?.title || `#${requestToDelete?.id}`}&quot;</span> không?
-            </p>
-            <p className="text-sm text-red-600 mt-2">
-              Hành động này không thể hoàn tác.
-            </p>
+          <div className="py-6">
+            <div className="flex items-start gap-3 mb-4">
+              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-gray-700 mb-2">
+                  Bạn có chắc chắn muốn xóa yêu cầu mở lớp <span className="font-semibold text-gray-900">&quot;{requestToDelete?.title || `#${requestToDelete?.id}`}&quot;</span> không?
+                </p>
+                <p className="text-sm text-red-600">
+                  Hành động này không thể hoàn tác.
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button
               variant="outline"
-              size="lg"
               onClick={() => {
                 setShowDeleteDialog(false);
                 setRequestToDelete(null);
               }}
               disabled={isDeleting}
-              className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Hủy
             </Button>
             <Button
               variant="destructive"
-              size="lg"
               onClick={handleDelete}
               disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               {isDeleting ? (
                 <>

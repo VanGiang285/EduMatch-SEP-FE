@@ -333,6 +333,19 @@ export interface CreateClassRequestSlotRequest {
 
 export interface UpdateClassRequestRequest {
   id: number;
+  subjectId: number;
+  levelId?: number;
+  teachingMode: TeachingMode;
+  expectedTotalSessions: number;
+  expectedSessions?: number;
+  targetUnitPriceMin?: number;
+  targetUnitPriceMax?: number;
+  title: string;
+  learningGoal: string;
+  tutorRequirement: string;
+  expectedStartDate: string;
+  addressLine?: string;
+  slots: CreateClassRequestSlotRequest[];
   status?: number; // ClassRequestStatus
 }
 

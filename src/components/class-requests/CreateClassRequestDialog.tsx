@@ -15,10 +15,10 @@ import {
   mockTimeSlots,
   mockDaysOfWeek 
 } from '@/data/mockClassRequests';
-import { Home, Video, MapPin, DollarSign, Loader2 } from 'lucide-react';
+import { Home, Video, MapPin, DollarSign, Loader2, Info, Calendar, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ClassRequestService } from '@/services/classRequestService';
-import { CreateClassRequestRequest, CreateClassRequestSlotRequest } from '@/types/requests';
+import { CreateClassRequestRequest, CreateClassRequestSlotRequest, UpdateClassRequestRequest } from '@/types/requests';
 import { TeachingMode } from '@/types/enums';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { SubjectService } from '@/services/subjectService';
@@ -57,23 +57,59 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
   const [expectedStartDate, setExpectedStartDate] = useState<string>(editingRequest?.expectedStartDate || '');
   const [selectedSlots, setSelectedSlots] = useState<TimeSlotSelection[]>([]);
 
-  // Reset form when editingRequest changes
+  const findSlotIdByTime = (startTime: string, endTime: string): number | null => {
+    const start = startTime.substring(0, 5);
+    const end = endTime.substring(0, 5);
+    const slot = mockTimeSlots.find(
+      s => s.startTime.substring(0, 5) === start && s.endTime.substring(0, 5) === end
+    );
+    return slot ? slot.id : null;
+  };
+
   React.useEffect(() => {
-      if (editingRequest) {
-        setSubjectId(editingRequest.subjectId?.toString() || '');
-        setGradeId(editingRequest.gradeId?.toString() || '');
-        setTitle(editingRequest.title || '');
-        setLearningGoal(editingRequest.learningGoal || '');
-        setTutorRequirement(editingRequest.tutorRequirement || '');
-        setTeachingMode(editingRequest.teachingMode?.toString() || '1');
-        setSessionPerWeek(editingRequest.sessionPerWeek?.toString() || '2');
-        setTotalSessions(editingRequest.totalSessions?.toString() || '12');
-        setMinPrice(editingRequest.minPrice?.toString() || '150000');
-        setMaxPrice(editingRequest.maxPrice?.toString() || '200000');
-        setLocation(editingRequest.location || '');
-        setExpectedStartDate(editingRequest.expectedStartDate || '');
+    if (editingRequest) {
+      const subject = subjects.find(s => s.subjectName === editingRequest.subjectName);
+      setSubjectId(subject?.id?.toString() || editingRequest.subjectId?.toString() || '');
+      
+      const grade = mockGradeLevels.find(g => g.name === editingRequest.level);
+      setGradeId(grade?.id?.toString() || editingRequest.gradeId?.toString() || '');
+      
+      setTitle(editingRequest.title || '');
+      setLearningGoal(editingRequest.learningGoal || '');
+      setTutorRequirement(editingRequest.tutorRequirement || '');
+      
+      const modeNum = typeof editingRequest.mode === 'number' 
+        ? editingRequest.mode 
+        : editingRequest.mode === 'Online' || editingRequest.mode === '1' ? 1 
+        : editingRequest.mode === 'Offline' || editingRequest.mode === '0' ? 0 
+        : 1;
+      setTeachingMode(modeNum.toString());
+      
+      setSessionPerWeek(editingRequest.sessionPerWeek?.toString() || editingRequest.expectedSessions?.toString() || '2');
+      setTotalSessions(editingRequest.totalSessions?.toString() || editingRequest.expectedSessions?.toString() || '12');
+      setMinPrice(editingRequest.minPrice?.toString() || editingRequest.targetUnitPriceMin?.toString() || '150000');
+      setMaxPrice(editingRequest.maxPrice?.toString() || editingRequest.targetUnitPriceMax?.toString() || '200000');
+      setLocation(editingRequest.location || editingRequest.addressLine || '');
+      setExpectedStartDate(editingRequest.expectedStartDate || '');
+
+      if (editingRequest.slots && Array.isArray(editingRequest.slots)) {
+        const mappedSlots: TimeSlotSelection[] = editingRequest.slots
+          .map((slot: any) => {
+            const slotId = findSlotIdByTime(slot.startTime || '', slot.endTime || '');
+            if (slotId !== null && slot.dayOfWeek !== undefined) {
+              return {
+                dayOfWeek: slot.dayOfWeek,
+                slotId: slotId,
+              };
+            }
+            return null;
+          })
+          .filter((s): s is TimeSlotSelection => s !== null);
+        setSelectedSlots(mappedSlots);
       } else {
-      // Reset to defaults when creating new
+        setSelectedSlots([]);
+      }
+    } else {
       setSubjectId('');
       setGradeId('');
       setTitle('');
@@ -89,7 +125,7 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
       setSelectedSlots([]);
     }
     setStep(1);
-  }, [editingRequest, open]);
+  }, [editingRequest, open, subjects]);
 
   React.useEffect(() => {
     const loadSubjects = async () => {
@@ -159,10 +195,91 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
 
   const handleSubmit = async () => {
     if (editingRequest) {
-      // TODO: Implement update
-      toast.success('Cập nhật yêu cầu mở lớp thành công!');
-      setStep(1);
-      onOpenChange(false);
+      setIsSubmitting(true);
+      try {
+        if (!title.trim()) {
+          showError('Lỗi', 'Vui lòng nhập tiêu đề yêu cầu');
+          setIsSubmitting(false);
+          return;
+        }
+        if (!learningGoal.trim()) {
+          showError('Lỗi', 'Vui lòng nhập mục tiêu học tập');
+          setIsSubmitting(false);
+          return;
+        }
+        if (!tutorRequirement.trim()) {
+          showError('Lỗi', 'Vui lòng nhập yêu cầu gia sư');
+          setIsSubmitting(false);
+          return;
+        }
+        if (!expectedStartDate) {
+          showError('Lỗi', 'Vui lòng chọn ngày bắt đầu dự kiến');
+          setIsSubmitting(false);
+          return;
+        }
+        const sessionsNum = parseInt(totalSessions);
+        if (isNaN(sessionsNum) || sessionsNum < 1 || sessionsNum > 100) {
+          showError('Lỗi', 'Số buổi phải từ 1 đến 100');
+          setIsSubmitting(false);
+          return;
+        }
+        if (selectedSlots.length === 0) {
+          showError('Lỗi', 'Vui lòng chọn ít nhất một khung giờ học');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const slots: CreateClassRequestSlotRequest[] = selectedSlots.map(slot => ({
+          dayOfWeek: slot.dayOfWeek,
+          slotId: slot.slotId,
+        }));
+
+        const updateRequest: UpdateClassRequestRequest = {
+          id: editingRequest.id,
+          subjectId: parseInt(subjectId),
+          levelId: gradeId ? parseInt(gradeId) : undefined,
+          teachingMode: parseInt(teachingMode) as TeachingMode,
+          expectedTotalSessions: sessionsNum,
+          expectedSessions: sessionsNum,
+          targetUnitPriceMin: minPrice ? parseInt(minPrice) : undefined,
+          targetUnitPriceMax: maxPrice ? parseInt(maxPrice) : undefined,
+          title: title.trim(),
+          learningGoal: learningGoal.trim(),
+          tutorRequirement: tutorRequirement.trim(),
+          expectedStartDate: expectedStartDate,
+          addressLine: location || undefined,
+          slots: slots,
+        };
+
+        const response = await ClassRequestService.updateClassRequest(editingRequest.id, updateRequest);
+
+        if (response.success) {
+          showSuccess('Thành công', 'Cập nhật yêu cầu mở lớp thành công!');
+          setStep(1);
+          onOpenChange(false);
+          if (onSuccess) {
+            onSuccess();
+          }
+        } else {
+          throw new Error(response.message || 'Cập nhật yêu cầu thất bại');
+        }
+      } catch (err: any) {
+        if (err.status === 400 && (err.details?.errors || err.details)) {
+          const errors = err.details?.errors || err.details;
+          const errorMessages: string[] = [];
+          if (errors.Title) errorMessages.push(`Tiêu đề: ${Array.isArray(errors.Title) ? errors.Title.join(', ') : errors.Title}`);
+          if (errors.LearningGoal) errorMessages.push(`Mục tiêu học tập: ${Array.isArray(errors.LearningGoal) ? errors.LearningGoal.join(', ') : errors.LearningGoal}`);
+          if (errors.TutorRequirement) errorMessages.push(`Yêu cầu gia sư: ${Array.isArray(errors.TutorRequirement) ? errors.TutorRequirement.join(', ') : errors.TutorRequirement}`);
+          if (errors.ExpectedSessions) errorMessages.push(`Số buổi: ${Array.isArray(errors.ExpectedSessions) ? errors.ExpectedSessions.join(', ') : errors.ExpectedSessions}`);
+          if (errors.ExpectedStartDate) errorMessages.push(`Ngày bắt đầu: ${Array.isArray(errors.ExpectedStartDate) ? errors.ExpectedStartDate.join(', ') : errors.ExpectedStartDate}`);
+          if (errors.Slots) errorMessages.push(`Khung giờ: ${Array.isArray(errors.Slots) ? errors.Slots.join(', ') : errors.Slots}`);
+          showError('Lỗi validation', errorMessages.length > 0 ? errorMessages.join('\n') : 'Vui lòng kiểm tra lại thông tin đã nhập');
+        } else {
+          showError('Lỗi', err.message || 'Không thể cập nhật yêu cầu. Vui lòng thử lại.');
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
 
@@ -517,68 +634,99 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
 
         {/* Step 3: Time Slots Selection */}
         {step === 3 && (
-          <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800">
-                <strong>Hướng dẫn:</strong> Chọn các khung giờ bạn mong muốn học. Mỗi ô tương ứng với 1 giờ học.
-                Bạn có thể chọn nhiều khung giờ khác nhau.
-              </p>
-              <p className="text-sm text-blue-700 mt-2">
-                Đã chọn: <strong>{selectedSlots.length}</strong> khung giờ
-              </p>
+          <div className="space-y-6">
+            <div className="bg-[#F2E5BF]/30 border border-[#257180]/20 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-[#257180] flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 mb-1">
+                    Hướng dẫn chọn khung giờ
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Chọn các khung giờ bạn mong muốn học. Mỗi ô tương ứng với 1 giờ học. Bạn có thể chọn nhiều khung giờ khác nhau trong tuần.
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <Badge className="bg-[#257180] text-white">
+                      Đã chọn: {selectedSlots.length} khung giờ
+                    </Badge>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th className="border p-2 bg-gray-100 sticky left-0 z-10">Giờ</th>
-                    {mockDaysOfWeek.map((day) => (
-                      <th key={day.id} className="border p-2 bg-gray-100 text-sm">
-                        {day.name}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-[#257180] text-white">
+                      <th className="border border-[#257180] p-3 text-left font-semibold sticky left-0 z-10 bg-[#257180] min-w-[120px]">
+                        Khung giờ
                       </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {mockTimeSlots
-                    .filter((slot) => slot.id >= 6 && slot.id <= 22) // Only show 6:00 - 22:00
-                    .map((slot) => (
-                      <tr key={slot.id}>
-                        <td className="border p-2 text-sm font-medium bg-gray-50 sticky left-0 z-10">
-                          {slot.display}
-                        </td>
-                        {mockDaysOfWeek.map((day) => (
-                          <td key={day.id} className="border p-0">
-                            <button
-                              type="button"
-                              onClick={() => handleSlotToggle(day.id, slot.id)}
-                              className={`w-full h-12 transition-colors ${
-                                isSlotSelected(day.id, slot.id)
-                                  ? 'bg-[#257180] hover:bg-[#1f5a66] text-white'
-                                  : 'hover:bg-gray-100'
-                              }`}
-                            >
-                              {isSlotSelected(day.id, slot.id) && '✓'}
-                            </button>
+                      {mockDaysOfWeek.map((day) => (
+                        <th key={day.id} className="border border-[#257180] p-3 text-center font-semibold min-w-[100px]">
+                          {day.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mockTimeSlots
+                      .filter((slot) => slot.id >= 6 && slot.id <= 22)
+                      .map((slot) => (
+                        <tr key={slot.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="border border-gray-200 p-3 text-sm font-medium bg-gray-50 sticky left-0 z-10">
+                            <div className="flex flex-col">
+                              <span className="text-gray-900">{slot.startTime.substring(0, 5)}</span>
+                              <span className="text-gray-500 text-xs">- {slot.endTime.substring(0, 5)}</span>
+                            </div>
                           </td>
-                        ))}
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+                          {mockDaysOfWeek.map((day) => {
+                            const isSelected = isSlotSelected(day.id, slot.id);
+                            return (
+                              <td key={day.id} className="border border-gray-200 p-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSlotToggle(day.id, slot.id)}
+                                  className={`w-full h-14 transition-all duration-200 ${
+                                    isSelected
+                                      ? 'bg-[#257180] text-white hover:bg-[#1e5a66]'
+                                      : 'bg-white hover:bg-[#F2E5BF]/30 text-gray-600 hover:text-[#257180]'
+                                  }`}
+                                >
+                                  {isSelected ? (
+                                    <div className="flex items-center justify-center">
+                                      <CheckCircle className="h-5 w-5" />
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs">+</span>
+                                  )}
+                                </button>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {selectedSlots.length > 0 && (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="font-medium mb-2">Khung giờ đã chọn:</p>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <p className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-[#257180]" />
+                  Khung giờ đã chọn ({selectedSlots.length})
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {selectedSlots.map((slot, index) => {
                     const day = mockDaysOfWeek.find((d) => d.id === slot.dayOfWeek);
                     const timeSlot = mockTimeSlots.find((t) => t.id === slot.slotId);
                     return (
-                      <Badge key={index} variant="secondary" className="bg-[#257180] text-white">
-                        {day?.shortName} {timeSlot?.display}
+                      <Badge 
+                        key={index} 
+                        className="bg-[#257180] text-white hover:bg-[#1e5a66] cursor-default px-3 py-1.5"
+                      >
+                        {day?.shortName} {timeSlot?.startTime.substring(0, 5)}-{timeSlot?.endTime.substring(0, 5)}
                       </Badge>
                     );
                   })}
