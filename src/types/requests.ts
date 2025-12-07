@@ -1,8 +1,3 @@
-/**
- * Backend Request Models
- * Tương ứng với C# Request classes trong Backend
- */
-
 import {
   Gender,
   TeachingMode,
@@ -12,8 +7,6 @@ import {
   TutorAvailabilityStatus,
   TutorVerificationRequestStatus,
 } from './enums';
-
-// ==================== AUTH REQUESTS ====================
 
 export interface LoginRequest {
   email: string;
@@ -36,8 +29,6 @@ export interface CreateAdminAccDto {
   password: string;
 }
 
-// ==================== USER PROFILE REQUESTS ====================
-
 export interface UserProfileUpdateRequest {
   userEmail: string;
   userName?: string;
@@ -53,14 +44,12 @@ export interface UserProfileUpdateRequest {
   longitude?: number;
 }
 
-// ==================== TUTOR PROFILE REQUESTS ====================
-
 export interface TutorProfileCreateRequest {
   userEmail: string;
   userName?: string;
   phone?: string;
   bio?: string;
-  dateOfBirth?: string; // ISO date string
+  dateOfBirth?: string;
   avatarUrl?: string;
   provinceId?: number;
   subDistrictId?: number;
@@ -73,10 +62,10 @@ export interface TutorProfileCreateRequest {
 
 export interface TutorProfileUpdateRequest {
   id: number;
-  phone: string; // Required by backend
-  userName: string; // Required by backend
-  userEmail: string; // Required by backend
-  dateOfBirth: string; // Required by backend (ISO date string)
+  phone: string;
+  userName: string;
+  userEmail: string;
+  dateOfBirth: string;
   bio?: string;
   teachingExp?: string;
   videoIntroUrl?: string;
@@ -91,13 +80,11 @@ export interface UpdateTutorStatusRequest {
   status: TutorStatus;
 }
 
-// ==================== TUTOR SUBJECT REQUESTS ====================
-
 export interface TutorSubjectCreateRequest {
-  tutorId?: number; // Optional - Backend sẽ set khi tạo mới
+  tutorId?: number;
   subjectId: number;
-  hourlyRate: number; // Required
-  levelId: number; // Required
+  hourlyRate: number;
+  levelId: number;
 }
 
 export interface TutorSubjectUpdateRequest {
@@ -108,13 +95,11 @@ export interface TutorSubjectUpdateRequest {
   levelId?: number;
 }
 
-// ==================== TUTOR EDUCATION REQUESTS ====================
-
 export interface TutorEducationCreateRequest {
-  tutorId?: number; // Optional - Backend sẽ set khi tạo mới
+  tutorId?: number;
   institutionId: number;
   issueDate?: string;
-  certificateEducationUrl?: string; // Backend dùng tên này
+  certificateEducationUrl?: string;
 }
 
 export interface TutorEducationUpdateRequest {
@@ -144,10 +129,8 @@ export interface EducationInstitutionUpdateRequest {
   verifiedAt?: string;
 }
 
-// ==================== TUTOR CERTIFICATE REQUESTS ====================
-
 export interface TutorCertificateCreateRequest {
-  tutorId?: number; // Optional - Backend sẽ set khi tạo mới
+  tutorId?: number;
   certificateTypeId: number;
   issueDate?: string;
   expiryDate?: string;
@@ -180,12 +163,10 @@ export interface CertificateTypeUpdateRequest {
   verifiedAt?: string;
 }
 
-// ==================== TUTOR AVAILABILITY REQUESTS ====================
-
 export interface TutorAvailabilityCreateRequest {
-  tutorId?: number; // Optional - Backend sẽ set khi tạo mới
-  slotId: number; // Required
-  startDate: string; // Required, ISO 8601 date-time
+  tutorId?: number;
+  slotId: number;
+  startDate: string;
 }
 
 export interface TutorAvailabilityUpdateRequest {
@@ -197,8 +178,6 @@ export interface TutorAvailabilityUpdateRequest {
   status?: TutorAvailabilityStatus;
 }
 
-// ==================== BECOME TUTOR REQUEST ====================
-
 export interface BecomeTutorRequest {
   tutorProfile: TutorProfileCreateRequest;
   educations: TutorEducationCreateRequest[];
@@ -207,15 +186,11 @@ export interface BecomeTutorRequest {
   availabilities: TutorAvailabilityCreateRequest[];
 }
 
-// ==================== VERIFY REQUESTS ====================
-
 export interface VerifyUpdateRequest {
   id: number;
   verified: VerifyStatus;
   rejectReason?: string;
 }
-
-// ==================== LEVEL REQUESTS ====================
 
 export interface LevelCreateRequest {
   name: string;
@@ -226,8 +201,6 @@ export interface LevelUpdateRequest {
   name: string;
 }
 
-// ==================== SUBJECT REQUESTS ====================
-
 export interface SubjectCreateRequest {
   subjectName: string;
 }
@@ -237,10 +210,8 @@ export interface SubjectUpdateRequest {
   subjectName: string;
 }
 
-// ==================== TIME SLOT REQUESTS ====================
-
 export interface TimeSlotCreateRequest {
-  startTime: string; // "HH:mm:ss"
+  startTime: string;
   endTime: string;
 }
 
@@ -249,8 +220,6 @@ export interface TimeSlotUpdateRequest {
   startTime: string;
   endTime: string;
 }
-
-// ==================== BOOKING REQUESTS ====================
 
 export interface CreateBookingRequest {
   tutorSubjectId: number;
@@ -261,11 +230,9 @@ export interface CreateBookingRequest {
 
 export interface UpdateBookingRequest {
   id: number;
-  status?: number; // BookingStatus
-  paymentStatus?: number; // PaymentStatus
+  status?: number;
+  paymentStatus?: number;
 }
-
-// ==================== SYSTEM FEE REQUESTS ====================
 
 export interface SystemFeeCreateRequest {
   name: string;
@@ -282,10 +249,8 @@ export interface SystemFeeUpdateRequest {
   isActive?: boolean;
 }
 
-// ==================== WALLET REQUESTS ====================
-
 export interface CreateDepositRequest {
-  amount: number; // Range: 50,000 - 5,000,000 VND
+  amount: number;
 }
 
 export interface CreateWithdrawalRequest {
@@ -301,11 +266,9 @@ export interface CreateUserBankAccountRequest {
 
 export interface ProcessWithdrawalRequest {
   withdrawalId: number;
-  status: number; // WithdrawalStatus
+  status: number;
   rejectReason?: string;
 }
-
-// ==================== CLASS REQUEST REQUESTS ====================
 
 export interface CreateClassRequestRequest {
   subjectId: number;
@@ -315,38 +278,41 @@ export interface CreateClassRequestRequest {
   subDistrictId?: number;
   addressLine?: string;
   expectedTotalSessions: number;
-  expectedSessions?: number; // Alias for expectedTotalSessions (backend may use this)
+  expectedSessions?: number;
   targetUnitPriceMin?: number;
   targetUnitPriceMax?: number;
   description?: string;
-  title?: string; // Required by backend
-  learningGoal?: string; // Required by backend
-  tutorRequirement?: string; // Required by backend
-  expectedStartDate?: string; // Required by backend (ISO date string)
+  title?: string;
+  learningGoal?: string;
+  tutorRequirement?: string;
+  expectedStartDate?: string;
   slots: CreateClassRequestSlotRequest[];
 }
 
 export interface CreateClassRequestSlotRequest {
-  dayOfWeek: number; // 0-6
+  dayOfWeek: number;
   slotId: number;
 }
 
 export interface UpdateClassRequestRequest {
   id: number;
   subjectId: number;
-  levelId?: number;
-  teachingMode: TeachingMode;
-  expectedTotalSessions: number;
-  expectedSessions?: number;
-  targetUnitPriceMin?: number;
-  targetUnitPriceMax?: number;
+  levelId: number;
+  mode: TeachingMode;
+  expectedSessions: number;
+  targetUnitPriceMin: number;
+  targetUnitPriceMax: number;
   title: string;
   learningGoal: string;
   tutorRequirement: string;
   expectedStartDate: string;
   addressLine?: string;
+  provinceId?: number;
+  subDistrictId?: number;
+  latitude?: number;
+  longitude?: number;
   slots: CreateClassRequestSlotRequest[];
-  status?: number; // ClassRequestStatus
+  status?: number;
 }
 
 export interface CreateClassApplicationRequest {
@@ -361,41 +327,33 @@ export interface UpdateClassApplicationRequest {
   status?: number; // ClassApplicationStatus
 }
 
-// ==================== CLASS REQUEST ADDITIONAL REQUESTS ====================
-
 export interface IsApprovedClassRequestDto {
   isApproved: boolean;
-  rejectionReason?: string; // null nếu duyệt
+  rejectionReason?: string;
 }
 
 export interface CancelClassRequestDto {
   reason: string;
 }
 
-// ==================== TUTOR APPLICATION REQUESTS ====================
-
 export interface TutorApplyRequest {
   classRequestId: number;
-  message: string; // Required
+  message: string;
 }
 
 export interface TutorApplicationEditRequest {
-  tutorApplicationId: number; // Required
-  message: string; // Required
+  tutorApplicationId: number;
+  message: string;
 }
-
-// ==================== GOOGLE MEETING REQUESTS ====================
 
 export interface CreateMeetingRequest {
   summary: string;
   description?: string;
-  startTime: string; // ISO 8601
+  startTime: string;
   endTime: string;
   attendeeEmails?: string[];
   timeZone?: string;
 }
-
-// ==================== BOOKING REFUND REQUESTS ====================
 
 export interface BookingRefundRequestCreateRequest {
   bookingId: number;
@@ -404,8 +362,6 @@ export interface BookingRefundRequestCreateRequest {
   reason?: string;
   fileUrls?: string[];
 }
-
-// ==================== REFUND POLICY REQUESTS ====================
 
 export interface RefundPolicyCreateRequest {
   name: string;
@@ -420,8 +376,6 @@ export interface RefundPolicyUpdateRequest {
   refundPercentage?: number;
 }
 
-// ==================== TUTOR VERIFICATION REQUESTS ====================
-
 export interface TutorVerificationRequestFilter {
   email?: string;
   tutorId?: number;
@@ -432,14 +386,10 @@ export interface RejectTutorRequest {
   reason: string;
 }
 
-// ==================== AI CHATBOT REQUESTS ====================
-
 export interface ChatRequest {
   sessionId?: number;
   message: string;
 }
-
-// ==================== REPORT EVIDENCE REQUESTS ====================
 
 export interface ReportEvidenceCreateRequest {
   mediaType: number;
@@ -465,18 +415,14 @@ export interface BasicEvidenceRequest {
   caption?: string;
 }
 
-// ==================== REPORT DEFENSE REQUESTS ====================
-
 export interface ReportDefenseCreateRequest {
   note: string;
   evidences?: BasicEvidenceRequest[];
 }
 
 export interface ReportDefenseUpdateRequest {
-  note: string; // Required, 3-2000 characters
+  note: string;
 }
-
-// ==================== REPORT REQUESTS ====================
 
 export interface ReportCreateRequest {
   reportedUserEmail: string;
@@ -497,8 +443,6 @@ export interface TutorComplaintRequest {
   defenseNote: string;
 }
 
-// ==================== FEEDBACK REQUESTS ====================
-
 export interface CreateTutorFeedbackRequest {
   bookingId: number;
   tutorId: number;
@@ -508,12 +452,12 @@ export interface CreateTutorFeedbackRequest {
 
 export interface CreateTutorFeedbackDetailRequest {
   criterionId: number;
-  rating: number; // 1-5
+  rating: number;
 }
 
 export interface UpdateTutorFeedbackRequest {
   bookingId: number;
   tutorId: number;
   comment?: string;
-  feedbackDetails: import('./backend').TutorFeedbackDetailDto[]; // Use existing detail DTO from backend.ts
+  feedbackDetails: import('./backend').TutorFeedbackDetailDto[];
 }

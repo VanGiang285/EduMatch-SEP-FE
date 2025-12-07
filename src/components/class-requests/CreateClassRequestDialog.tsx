@@ -42,7 +42,6 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   
-  // Form data - initialize with editingRequest if available
   const [subjectId, setSubjectId] = useState<string>(editingRequest?.subjectId?.toString() || '');
   const [gradeId, setGradeId] = useState<string>(editingRequest?.gradeId?.toString() || '');
   const [title, setTitle] = useState<string>(editingRequest?.title || '');
@@ -144,21 +143,16 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
     loadSubjects();
   }, []);
 
-  // Get available grades based on selected subject
   const getAvailableGrades = () => {
     if (!subjectId) return [];
     
     const subjectIdNum = parseInt(subjectId);
     
-    // Define which grades are available for each subject
     if ([1, 2, 3, 4, 5, 6].includes(subjectIdNum)) {
-      // Math, Physics, Chemistry, Biology, Literature, English - all grades
       return mockGradeLevels;
     } else if ([7, 8].includes(subjectIdNum)) {
-      // History, Geography - typically grade 6-12
       return mockGradeLevels.filter(g => g.id >= 6);
     } else if (subjectIdNum === 9) {
-      // Computer Science - typically grade 6-12
       return mockGradeLevels.filter(g => g.id >= 6);
     }
     
@@ -234,21 +228,32 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
           slotId: slot.slotId,
         }));
 
+        if (!gradeId) {
+          showError('Lỗi', 'Vui lòng chọn lớp học');
+          setIsSubmitting(false);
+          return;
+        }
+        if (!minPrice || !maxPrice) {
+          showError('Lỗi', 'Vui lòng nhập mức giá mong muốn');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const teachingModeNum = parseInt(teachingMode) as TeachingMode;
         const updateRequest: UpdateClassRequestRequest = {
           id: editingRequest.id,
           subjectId: parseInt(subjectId),
-          levelId: gradeId ? parseInt(gradeId) : undefined,
-          teachingMode: parseInt(teachingMode) as TeachingMode,
-          expectedTotalSessions: sessionsNum,
-          expectedSessions: sessionsNum,
-          targetUnitPriceMin: minPrice ? parseInt(minPrice) : undefined,
-          targetUnitPriceMax: maxPrice ? parseInt(maxPrice) : undefined,
+          levelId: parseInt(gradeId), // Backend yêu cầu Required
+          mode: teachingModeNum, // Backend yêu cầu field này (int), không phải teachingMode
+          expectedSessions: sessionsNum, // Backend yêu cầu Required
+          targetUnitPriceMin: parseInt(minPrice), // Backend yêu cầu Required
+          targetUnitPriceMax: parseInt(maxPrice), // Backend yêu cầu Required
           title: title.trim(),
           learningGoal: learningGoal.trim(),
           tutorRequirement: tutorRequirement.trim(),
-          expectedStartDate: expectedStartDate,
+          expectedStartDate: expectedStartDate, // Backend yêu cầu Required (DateOnly)
           addressLine: location || undefined,
-          slots: slots,
+          slots: slots, // Backend yêu cầu Required
         };
 
         const response = await ClassRequestService.updateClassRequest(editingRequest.id, updateRequest);
@@ -258,6 +263,7 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
           setStep(1);
           onOpenChange(false);
           if (onSuccess) {
+            await new Promise(resolve => setTimeout(resolve, 300));
             onSuccess();
           }
         } else {
@@ -283,20 +289,15 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
       return;
     }
 
-    // Tạo yêu cầu mới
     setIsSubmitting(true);
     try {
-      // Map selectedSlots to CreateClassRequestSlotRequest format
       const slots: CreateClassRequestSlotRequest[] = selectedSlots.map(slot => {
         const timeSlot = mockTimeSlots.find(t => t.id === slot.slotId);
         return {
           dayOfWeek: slot.dayOfWeek,
           slotId: slot.slotId,
-          // Backend có thể cần startTime và endTime từ timeSlot
         };
       });
-
-      // Validate required fields
       if (!title.trim()) {
         showError('Lỗi', 'Vui lòng nhập tiêu đề yêu cầu');
         return;
@@ -324,13 +325,13 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
         levelId: gradeId ? parseInt(gradeId) : undefined,
         teachingMode: parseInt(teachingMode) as TeachingMode,
         expectedTotalSessions: sessionsNum,
-        expectedSessions: sessionsNum, // Backend may use this field name
+        expectedSessions: sessionsNum,
         targetUnitPriceMin: minPrice ? parseInt(minPrice) : undefined,
         targetUnitPriceMax: maxPrice ? parseInt(maxPrice) : undefined,
         title: title.trim(),
         learningGoal: learningGoal.trim(),
         tutorRequirement: tutorRequirement.trim(),
-        expectedStartDate: expectedStartDate, // ISO date string
+        expectedStartDate: expectedStartDate,
         addressLine: location || undefined,
         slots: slots,
       };
@@ -339,7 +340,6 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
 
       if (response.success && response.data) {
         showSuccess('Thành công', 'Tạo yêu cầu mở lớp thành công!');
-        // Reset form
         setStep(1);
         setSubjectId('');
         setGradeId('');
@@ -355,7 +355,6 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
         setExpectedStartDate('');
         setSelectedSlots([]);
         onOpenChange(false);
-        // Call callback để reload danh sách
         if (onSuccess) {
           onSuccess();
         }
@@ -363,11 +362,9 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
         throw new Error(response.message || 'Tạo yêu cầu thất bại');
       }
     } catch (err: any) {
-      // Kiểm tra nếu là lỗi 403 (Forbidden) - check status code
       if (err.status === 403 || err.message?.includes('403') || err.message?.includes('Forbidden')) {
         showError('Lỗi', 'Bạn không có quyền tạo yêu cầu. Vui lòng đăng nhập với tài khoản Learner.');
       } else if (err.status === 400 && (err.details?.errors || err.details)) {
-        // Xử lý validation errors từ backend
         const errors = err.details?.errors || err.details;
         const errorMessages: string[] = [];
         if (errors.Title) errorMessages.push(`Tiêu đề: ${Array.isArray(errors.Title) ? errors.Title.join(', ') : errors.Title}`);
@@ -402,7 +399,6 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
           </DialogDescription>
         </DialogHeader>
 
-        {/* Progress indicator */}
         <div className="flex items-center gap-2 mb-6">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center flex-1">
@@ -415,7 +411,6 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
           ))}
         </div>
 
-        {/* Step 1: Subject & Description */}
         {step === 1 && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
@@ -534,7 +529,6 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
           </div>
         )}
 
-        {/* Step 2: Teaching Mode & Budget */}
         {step === 2 && (
           <div className="space-y-6">
             <div>
@@ -632,7 +626,6 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
           </div>
         )}
 
-        {/* Step 3: Time Slots Selection */}
         {step === 3 && (
           <div className="space-y-6">
             <div className="bg-[#F2E5BF]/30 border border-[#257180]/20 rounded-lg p-4">
@@ -736,7 +729,6 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
           </div>
         )}
 
-        {/* Footer Buttons */}
         <div className="flex items-center justify-between pt-6 border-t mt-6">
           <div>
             {step > 1 && (

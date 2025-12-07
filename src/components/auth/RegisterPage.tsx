@@ -134,7 +134,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   };
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center p-2 sm:p-4 lg:p-8 pt-20">
-      <div className="w-full max-w-6xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden lg:grid lg:grid-cols-2 border border-[#FD8B51]">
+      <div className="w-full max-w-6xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden lg:grid lg:grid-cols-2 border border-[#257180]/20">
         {/* Phần bên trái - Hình ảnh và caption */}
         <div className="relative hidden lg:flex lg:flex-col lg:justify-end overflow-hidden">
           <ImageWithFallback
