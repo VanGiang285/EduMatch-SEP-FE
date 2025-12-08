@@ -231,7 +231,9 @@ export const EnumHelpers = {
   /**
    * Convert string/number sang VerifyStatus enum
    */
-  parseVerifyStatus: (status: VerifyStatus | string | number | undefined | null): VerifyStatus => {
+  parseVerifyStatus: (
+    status: VerifyStatus | string | number | undefined | null
+  ): VerifyStatus => {
     if (typeof status === 'number') {
       return status as VerifyStatus;
     }
@@ -262,7 +264,9 @@ export const EnumHelpers = {
   /**
    * Lấy label tiếng Việt cho VerifyStatus
    */
-  getVerifyStatusLabel: (status: VerifyStatus | string | number | undefined | null): string => {
+  getVerifyStatusLabel: (
+    status: VerifyStatus | string | number | undefined | null
+  ): string => {
     const parsedStatus = EnumHelpers.parseVerifyStatus(status);
     switch (parsedStatus) {
       case VerifyStatus.Pending:
@@ -366,23 +370,27 @@ export const EnumHelpers = {
   },
 
   /**
-   * Convert string enum sang number enum cho PaymentStatus
+   * Convert từ API sang PaymentStatus enum
    */
-  parsePaymentStatus: (status: PaymentStatus | string): PaymentStatus => {
-    if (typeof status === 'number') return status;
-    switch (status) {
-      case 'Pending':
-      case '0':
-        return PaymentStatus.Pending;
-      case 'Paid':
-      case '1':
-        return PaymentStatus.Paid;
-      case 'Refunded':
-      case '2':
-        return PaymentStatus.Refunded;
-      default:
-        return PaymentStatus.Pending;
+  parsePaymentStatus: (
+    status: PaymentStatus | string | number
+  ): PaymentStatus => {
+    if (typeof status === 'number') {
+      return status as PaymentStatus;
     }
+    if (typeof status === 'string') {
+      switch (status) {
+        case 'Pending':
+          return PaymentStatus.Pending;
+        case 'Paid':
+          return PaymentStatus.Paid;
+        case 'Refunded':
+          return PaymentStatus.Refunded;
+        default:
+          return PaymentStatus.Pending;
+      }
+    }
+    return PaymentStatus.Pending;
   },
 
   /**
@@ -522,7 +530,7 @@ export const EnumHelpers = {
    * Convert string/number sang TutorVerificationRequestStatus
    */
   parseTutorVerificationRequestStatus: (
-    status: TutorVerificationRequestStatus | string | number | undefined | null,
+    status: TutorVerificationRequestStatus | string | number | undefined | null
   ): TutorVerificationRequestStatus => {
     if (typeof status === 'number') {
       return status as TutorVerificationRequestStatus;
@@ -551,7 +559,7 @@ export const EnumHelpers = {
    * Convert string/number sang BookingRefundRequestStatus
    */
   parseBookingRefundRequestStatus: (
-    status: BookingRefundRequestStatus | string | number | undefined | null,
+    status: BookingRefundRequestStatus | string | number | undefined | null
   ): BookingRefundRequestStatus => {
     if (typeof status === 'number') {
       return status as BookingRefundRequestStatus;
@@ -574,6 +582,108 @@ export const EnumHelpers = {
       }
     }
     return BookingRefundRequestStatus.Pending;
+  },
+
+  /**
+   * Convert từ API sang ScheduleCompletionStatus enum
+   */
+  parseScheduleCompletionStatus: (
+    status: ScheduleCompletionStatus | string | number
+  ): ScheduleCompletionStatus => {
+    if (typeof status === 'number') {
+      return status as ScheduleCompletionStatus;
+    }
+    if (typeof status === 'string') {
+      switch (status) {
+        case 'PendingConfirm':
+          return ScheduleCompletionStatus.PendingConfirm;
+        case 'LearnerConfirmed':
+          return ScheduleCompletionStatus.LearnerConfirmed;
+        case 'AutoCompleted':
+          return ScheduleCompletionStatus.AutoCompleted;
+        case 'ReportedOnHold':
+          return ScheduleCompletionStatus.ReportedOnHold;
+        case 'Cancelled':
+          return ScheduleCompletionStatus.Cancelled;
+        default:
+          return ScheduleCompletionStatus.PendingConfirm;
+      }
+    }
+    return ScheduleCompletionStatus.PendingConfirm;
+  },
+
+  /**
+   * Lấy label tiếng Việt cho ScheduleCompletionStatus
+   */
+  getScheduleCompletionStatusLabel: (
+    status: ScheduleCompletionStatus | string | number
+  ): string => {
+    const parsedStatus = EnumHelpers.parseScheduleCompletionStatus(status);
+    switch (parsedStatus) {
+      case ScheduleCompletionStatus.PendingConfirm:
+        return 'Chờ xác nhận';
+      case ScheduleCompletionStatus.LearnerConfirmed:
+        return 'Học viên đã xác nhận';
+      case ScheduleCompletionStatus.AutoCompleted:
+        return 'Tự động hoàn thành';
+      case ScheduleCompletionStatus.ReportedOnHold:
+        return 'Báo cáo/Tạm giữ';
+      case ScheduleCompletionStatus.Cancelled:
+        return 'Đã hủy';
+      default:
+        return 'Không xác định';
+    }
+  },
+
+  /**
+   * Convert từ API sang TutorPayoutStatus enum
+   */
+  parseTutorPayoutStatus: (
+    status: TutorPayoutStatus | string | number
+  ): TutorPayoutStatus => {
+    if (typeof status === 'number') {
+      return status as TutorPayoutStatus;
+    }
+    if (typeof status === 'string') {
+      switch (status) {
+        case 'Pending':
+          return TutorPayoutStatus.Pending;
+        case 'OnHold':
+          return TutorPayoutStatus.OnHold;
+        case 'ReadyForPayout':
+          return TutorPayoutStatus.ReadyForPayout;
+        case 'Paid':
+          return TutorPayoutStatus.Paid;
+        case 'Cancelled':
+          return TutorPayoutStatus.Cancelled;
+        default:
+          return TutorPayoutStatus.Pending;
+      }
+    }
+    return TutorPayoutStatus.Pending;
+  },
+
+  /**
+   * Lấy label tiếng Việt cho TutorPayoutStatus
+   */
+  getTutorPayoutStatusLabel: (
+    status: TutorPayoutStatus | string | number
+  ): string => {
+    const parsedStatus = EnumHelpers.parseTutorPayoutStatus(status);
+    switch (parsedStatus) {
+      case TutorPayoutStatus.Pending:
+        return 'Chờ thanh toán';
+      case TutorPayoutStatus.OnHold:
+        return 'Tạm giữ';
+      case TutorPayoutStatus.ReadyForPayout:
+        return 'Sẵn sàng thanh toán';
+      case TutorPayoutStatus.Paid:
+        return 'Đã thanh toán';
+      case TutorPayoutStatus.Cancelled:
+        return 'Đã hủy';
+      default:
+        return 'Không xác định';
+    }
   },
 };
 
