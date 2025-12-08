@@ -198,4 +198,54 @@ export class ScheduleService {
       }
     );
   }
+
+  /**
+   * Học viên xác nhận lịch học đã hoàn thành và kích hoạt thanh toán ngay lập tức.
+   */
+  static async finishSchedule(id: number): Promise<ApiResponse<object>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.SCHEDULES.FINISH, {
+      id: id.toString(),
+    });
+    return apiClient.post<object>(endpoint);
+  }
+
+  /**
+   * Học viên hoặc gia sư hủy việc hoàn thành lịch học (không thanh toán).
+   */
+  static async cancelScheduleCompletion(
+    id: number
+  ): Promise<ApiResponse<object>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.SCHEDULES.CANCEL, {
+      id: id.toString(),
+    });
+    return apiClient.post<object>(endpoint);
+  }
+
+  /**
+   * Đánh dấu lịch học là đã báo cáo/tạm giữ (liên kết với một báo cáo hiện có).
+   */
+  static async reportSchedule(
+    id: number,
+    reportId: number
+  ): Promise<ApiResponse<object>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.SCHEDULES.REPORT, {
+      id: id.toString(),
+      reportId: reportId.toString(),
+    });
+    return apiClient.post<object>(endpoint);
+  }
+
+  /**
+   * Admin giải quyết: giải phóng thanh toán hoặc hủy sau khi xem xét.
+   */
+  static async resolveReport(
+    id: number,
+    releaseToTutor: boolean = true
+  ): Promise<ApiResponse<object>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.SCHEDULES.RESOLVE_REPORT, {
+      id: id.toString(),
+    });
+    const url = `${endpoint}?releaseToTutor=${releaseToTutor}`;
+    return apiClient.post<object>(url);
+  }
 }
