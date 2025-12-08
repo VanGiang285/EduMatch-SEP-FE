@@ -17,6 +17,8 @@ import {
   BookingRefundRequestStatus,
   TutorVerificationRequestStatus,
   ReportStatus,
+  ScheduleCompletionStatus,
+  TutorPayoutStatus,
 } from './enums';
 
 // ==================== COMMON ====================
@@ -273,6 +275,39 @@ export interface BookingDto {
   schedules?: ScheduleDto[];
 }
 
+export interface ScheduleCompletionDto {
+  id: number;
+  scheduleId: number;
+  bookingId: number;
+  tutorId: number;
+  learnerEmail: string;
+  status: ScheduleCompletionStatus | string | number;
+  confirmationDeadline: string;
+  confirmedAt?: string;
+  autoCompletedAt?: string;
+  reportId?: number;
+  note?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TutorPayoutDto {
+  id: number;
+  scheduleId: number;
+  bookingId: number;
+  tutorWalletId: number;
+  amount: number;
+  systemFeeAmount: number;
+  status: TutorPayoutStatus | string | number;
+  payoutTrigger: number;
+  scheduledPayoutDate: string; // DateOnly format "YYYY-MM-DD"
+  releasedAt?: string;
+  walletTransactionId?: number;
+  holdReason?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface ScheduleDto {
   id: number;
   availabilitiId: number;
@@ -284,9 +319,10 @@ export interface ScheduleDto {
   createdAt: string;
   updatedAt?: string;
   availability?: TutorAvailabilityDto;
-  booking?: BookingDto;
-  hasMeetingSession?: boolean;
+  hasMeetingSession: boolean;
   meetingSession?: MeetingSessionDto;
+  scheduleCompletion?: ScheduleCompletionDto;
+  tutorPayout?: TutorPayoutDto;
 }
 
 export interface SystemFeeDto {

@@ -81,6 +81,22 @@ export enum ScheduleStatus {
   Absent = 4,
 }
 
+export enum ScheduleCompletionStatus {
+  PendingConfirm = 0,
+  LearnerConfirmed = 1,
+  AutoCompleted = 2,
+  ReportedOnHold = 3,
+  Cancelled = 4,
+}
+
+export enum TutorPayoutStatus {
+  Pending = 0,
+  OnHold = 1,
+  ReadyForPayout = 2,
+  Paid = 3,
+  Cancelled = 4,
+}
+
 export enum ClassRequestStatus {
   Open = 0,
   Reviewing = 1,
