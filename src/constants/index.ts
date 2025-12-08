@@ -386,6 +386,10 @@ export const API_ENDPOINTS = {
     CANCEL_ALL_BY_BOOKING: '/api/Schedule/cancel-all-by-booking/:bookingId',
     GET_ALL_BY_LEARNER_EMAIL: '/api/Schedule/get-all-by-learner-email',
     GET_ALL_BY_TUTOR_EMAIL: '/api/Schedule/get-all-by-tutor-email',
+    FINISH: '/api/Schedule/:id/finish',
+    CANCEL: '/api/Schedule/:id/cancel',
+    REPORT: '/api/Schedule/:id/report/:reportId',
+    RESOLVE_REPORT: '/api/Schedule/:id/resolve-report',
   },
 
   // ==================== REVIEWS ====================
