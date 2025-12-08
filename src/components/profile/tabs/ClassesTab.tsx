@@ -857,19 +857,6 @@ export function ClassesTab() {
                               </Button>
                             )}
 
-                            {EnumHelpers.parseBookingStatus(booking.status) === BookingStatus.Confirmed && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="w-full border-[#257180] text-[#257180] hover:bg-[#257180] hover:text-white"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRequestRefund(booking);
-                                }}
-                              >
-                                Yêu cầu hoàn tiền
-                              </Button>
-                            )}
                           </div>
                         </div>
 
