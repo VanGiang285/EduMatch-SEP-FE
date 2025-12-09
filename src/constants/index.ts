@@ -391,6 +391,16 @@ export const API_ENDPOINTS = {
     REPORT: '/api/Schedule/:id/report/:reportId',
     RESOLVE_REPORT: '/api/Schedule/:id/resolve-report',
   },
+  // ==================== SCHEDULE CHANGE REQUESTS ====================
+  SCHEDULE_CHANGE_REQUESTS: {
+    GET_BY_ID: '/api/ScheduleChangeRequest/get-by-id/:id',
+    CREATE: '/api/ScheduleChangeRequest/create',
+    UPDATE_STATUS: '/api/ScheduleChangeRequest/update-status/:id',
+    GET_ALL_BY_REQUESTER_EMAIL:
+      '/api/ScheduleChangeRequest/get-all-by-requester-email',
+    GET_ALL_BY_REQUESTED_TO_EMAIL:
+      '/api/ScheduleChangeRequest/get-all-by-requested-to-email',
+  },
 
   // ==================== REVIEWS ====================
   REVIEWS: {

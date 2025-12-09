@@ -19,6 +19,7 @@ import {
   ReportStatus,
   ScheduleCompletionStatus,
   TutorPayoutStatus,
+  ScheduleChangeRequestStatus,
 } from './enums';
 
 // ==================== COMMON ====================
@@ -324,6 +325,22 @@ export interface ScheduleDto {
   scheduleCompletion?: ScheduleCompletionDto;
   tutorPayout?: TutorPayoutDto;
   booking?: BookingDto;
+}
+
+export interface ScheduleChangeRequestDto {
+  id: number;
+  scheduleId: number;
+  requesterEmail: string;
+  requestedToEmail: string;
+  oldAvailabilitiId: number;
+  newAvailabilitiId: number;
+  reason?: string;
+  status: ScheduleChangeRequestStatus | string | number;
+  createdAt: string;
+  processedAt?: string;
+  schedule?: ScheduleDto;
+  oldAvailability?: TutorAvailabilityDto;
+  newAvailability?: TutorAvailabilityDto;
 }
 
 export interface SystemFeeDto {

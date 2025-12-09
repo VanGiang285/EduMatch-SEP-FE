@@ -89,6 +89,13 @@ export enum ScheduleCompletionStatus {
   Cancelled = 4,
 }
 
+export enum ScheduleChangeRequestStatus {
+  Pending = 0,
+  Approved = 1,
+  Rejected = 2,
+  Cancelled = 3,
+}
+
 export enum TutorPayoutStatus {
   Pending = 0,
   OnHold = 1,
@@ -613,6 +620,36 @@ export const EnumHelpers = {
   },
 
   /**
+   * Convert từ API sang ScheduleChangeRequestStatus enum
+   */
+  parseScheduleChangeRequestStatus: (
+    status: ScheduleChangeRequestStatus | string | number
+  ): ScheduleChangeRequestStatus => {
+    if (typeof status === 'number') {
+      return status as ScheduleChangeRequestStatus;
+    }
+    if (typeof status === 'string') {
+      switch (status) {
+        case 'Pending':
+          return ScheduleChangeRequestStatus.Pending;
+        case 'Approved':
+          return ScheduleChangeRequestStatus.Approved;
+        case 'Rejected':
+          return ScheduleChangeRequestStatus.Rejected;
+        case 'Cancelled':
+          return ScheduleChangeRequestStatus.Cancelled;
+        default:
+          return ScheduleChangeRequestStatus.Pending;
+      }
+    }
+    return ScheduleChangeRequestStatus.Pending;
+  },
+
+  /**
+   * Lấy label tiếng Việt cho ScheduleChangeRequestStatus
+   */
+
+  /**
    * Lấy label tiếng Việt cho ScheduleCompletionStatus
    */
   getScheduleCompletionStatusLabel: (
@@ -629,6 +666,27 @@ export const EnumHelpers = {
       case ScheduleCompletionStatus.ReportedOnHold:
         return 'Báo cáo/Tạm giữ';
       case ScheduleCompletionStatus.Cancelled:
+        return 'Đã hủy';
+      default:
+        return 'Không xác định';
+    }
+  },
+
+  /**
+   * Lấy label tiếng Việt cho ScheduleChangeRequestStatus
+   */
+  getScheduleChangeRequestStatusLabel: (
+    status: ScheduleChangeRequestStatus | string | number
+  ): string => {
+    const parsedStatus = EnumHelpers.parseScheduleChangeRequestStatus(status);
+    switch (parsedStatus) {
+      case ScheduleChangeRequestStatus.Pending:
+        return 'Chờ xử lý';
+      case ScheduleChangeRequestStatus.Approved:
+        return 'Đã chấp nhận';
+      case ScheduleChangeRequestStatus.Rejected:
+        return 'Đã từ chối';
+      case ScheduleChangeRequestStatus.Cancelled:
         return 'Đã hủy';
       default:
         return 'Không xác định';
