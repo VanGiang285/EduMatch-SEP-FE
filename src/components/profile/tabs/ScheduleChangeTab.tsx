@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/layout/card";
 import { Badge } from "@/components/ui/basic/badge";
 import { Button } from "@/components/ui/basic/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/feedback/dialog";
 import { Loader2 } from "lucide-react";
 import { ScheduleStatus, ScheduleChangeRequestStatus } from "@/types/enums";
 import { EnumHelpers } from "@/types/enums";
@@ -15,7 +16,7 @@ import { useTutorProfiles } from "@/hooks/useTutorProfiles";
 import { useScheduleChangeRequests } from "@/hooks/useScheduleChangeRequests";
 import { useTutorAvailableSlots } from "@/hooks/useTutorAvailableSlots";
 import { ScheduleDto, TutorAvailabilityDto } from "@/types/backend";
-import { format } from "date-fns";
+import { format, addHours } from "date-fns";
 import { vi } from "date-fns/locale";
 import { USER_ROLES } from "@/constants";
 import {
@@ -43,6 +44,8 @@ export function ScheduleChangeTab() {
         loading: loadingChangeRequest,
         fetchByRequesterEmail,
         fetchByRequestedToEmail,
+        updateStatus,
+        fetchById,
     } = useScheduleChangeRequests();
 
     const isTutor = user?.role === USER_ROLES.TUTOR;
@@ -60,6 +63,28 @@ export function ScheduleChangeTab() {
     const [statusFilter, setStatusFilter] = useState<
         'all' | 'pending' | 'approved' | 'rejected' | 'cancelled'
     >('all');
+    const [confirmDialog, setConfirmDialog] = useState<{
+        open: boolean;
+        requestId?: number;
+        action?: 'approve' | 'reject';
+    }>({ open: false });
+
+    const loadMissingSchedules = useCallback(
+        async (list: any[]) => {
+            const results = await Promise.all(
+                list.map(async (item) => {
+                    if (item.schedule) return item;
+                    const full = await fetchById(item.id);
+                    if (full && full.schedule) {
+                        return { ...item, schedule: full.schedule };
+                    }
+                    return item;
+                })
+            );
+            return results;
+        },
+        [fetchById]
+    );
     const [changeDialog, setChangeDialog] = useState<{
         schedule?: ScheduleDto;
         availableSlots: TutorAvailabilityDto[];
@@ -96,9 +121,13 @@ export function ScheduleChangeTab() {
             }
             setLoadingRequests(true);
             try {
-                const [fromMe, toMe] = await Promise.all([
+                const [fromMeRaw, toMeRaw] = await Promise.all([
                     fetchByRequesterEmail(user.email),
                     fetchByRequestedToEmail(user.email),
+                ]);
+                const [fromMe, toMe] = await Promise.all([
+                    loadMissingSchedules(fromMeRaw),
+                    loadMissingSchedules(toMeRaw),
                 ]);
                 setRequestsFromMe(fromMe);
                 setRequestsToMe(toMe);
@@ -109,7 +138,7 @@ export function ScheduleChangeTab() {
             }
         };
         loadRequests();
-    }, [user?.email, fetchByRequesterEmail, fetchByRequestedToEmail]);
+    }, [user?.email, fetchByRequesterEmail, fetchByRequestedToEmail, loadMissingSchedules]);
 
     // Load booking details cho các schedules (để lấy tutorSubject, tutorEmail, ...)
     useEffect(() => {
@@ -355,7 +384,7 @@ export function ScheduleChangeTab() {
         [requestsToMe, filterByStatus]
     );
 
-    const renderRequestRows = (items: any[]) => {
+    const renderRequestRows = (items: any[], isIncoming: boolean) => {
         if (!items || items.length === 0) {
             return (
                 <tr className="border-b border-gray-100">
@@ -368,7 +397,7 @@ export function ScheduleChangeTab() {
         return items.map((item) => {
             const schedule = item.schedule as ScheduleDto | undefined;
             const av = schedule?.availability;
-            const startDate = av?.startDate ? new Date(av.startDate) : null;
+            const startDate = av?.startDate ? addHours(new Date(av.startDate), 7) : null; // UTC -> UTC+7
             const slot = av?.slot;
             const booking = schedule?.booking;
             const tutorSubject = booking?.tutorSubject;
@@ -376,23 +405,33 @@ export function ScheduleChangeTab() {
             const level = tutorSubject?.level;
             const statusLabel = EnumHelpers.getScheduleChangeRequestStatusLabel?.(item.status) ?? item.status;
 
+            const scheduleStatus = schedule ? EnumHelpers.parseScheduleStatus(schedule.status) : null;
             return (
                 <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-2 px-3 text-sm text-gray-700">#{item.id}</td>
+                    <td className="py-2 px-3 text-sm text-gray-700">{item.id}</td>
                     <td className="py-2 px-3 text-sm text-gray-900 font-medium">
-                        {subject?.subjectName || 'Môn học'}
-                        {level?.name ? ` - ${level.name}` : ''}
+                        <div className="flex flex-col gap-1">
+                            <div>
+                                {subject?.subjectName || 'Môn học'}
+                                {level?.name ? ` - ${level.name}` : ''}
+                            </div>
+                            {scheduleStatus !== null && (
+                                <Badge className={`${getScheduleStatusColor(scheduleStatus)} w-fit text-xs`}>
+                                    {EnumHelpers.getScheduleStatusLabel(scheduleStatus)}
+                                </Badge>
+                            )}
+                        </div>
                     </td>
-                    <td className="py-2 px-3 text-sm text-gray-700">
-                        {tutorSubject?.tutorEmail || booking?.learnerEmail || 'N/A'}
-                    </td>
+
                     <td className="py-2 px-3 text-sm text-gray-700">
                         {startDate
                             ? `${format(startDate, "dd/MM/yyyy", { locale: vi })} ${slot?.startTime?.slice(0, 5) || ''} - ${slot?.endTime?.slice(0, 5) || ''}`
                             : 'N/A'}
                     </td>
                     <td className="py-2 px-3 text-sm text-gray-700">
-                        {item.createdAt ? format(new Date(item.createdAt), "dd/MM/yyyy HH:mm", { locale: vi }) : 'N/A'}
+                        {item.createdAt
+                            ? format(addHours(new Date(item.createdAt), 7), "dd/MM/yyyy HH:mm", { locale: vi })
+                            : 'N/A'}
                     </td>
                     <td className="py-2 px-3 text-sm">
                         <Badge className="bg-slate-100 text-gray-800 border-slate-200">{statusLabel}</Badge>
@@ -405,6 +444,37 @@ export function ScheduleChangeTab() {
                             Nhận: {item.requestedToEmail}
                         </div>
                     </td>
+                    {isIncoming && (
+                        <td className="py-2 px-3 text-sm text-gray-700">
+                            {EnumHelpers.parseScheduleChangeRequestStatus(item.status) === ScheduleChangeRequestStatus.Pending ? (
+                                <div className="flex flex-wrap gap-2">
+                                    <Button
+                                        size="sm"
+                                        className="bg-[#257180] text-white hover:bg-[#1f616f]"
+                                        disabled={loadingChangeRequest}
+                                        onClick={() =>
+                                            setConfirmDialog({ open: true, requestId: item.id, action: 'approve' })
+                                        }
+                                    >
+                                        Chấp nhận
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-red-300 text-red-700 hover:bg-red-50"
+                                        disabled={loadingChangeRequest}
+                                        onClick={() =>
+                                            setConfirmDialog({ open: true, requestId: item.id, action: 'reject' })
+                                        }
+                                    >
+                                        Từ chối
+                                    </Button>
+                                </div>
+                            ) : (
+                                <span className="text-xs text-gray-500">Đã xử lý</span>
+                            )}
+                        </td>
+                    )}
                 </tr>
             );
         });
@@ -481,22 +551,72 @@ export function ScheduleChangeTab() {
                                 <tr>
                                     <th className="py-2 px-3 text-left">ID</th>
                                     <th className="py-2 px-3 text-left">Môn học</th>
-                                    <th className="py-2 px-3 text-left">Đối tác</th>
                                     <th className="py-2 px-3 text-left">Lịch cũ</th>
                                     <th className="py-2 px-3 text-left">Ngày tạo</th>
                                     <th className="py-2 px-3 text-left">Trạng thái</th>
                                     <th className="py-2 px-3 text-left">Gửi / Nhận</th>
+                                    {view === 'to' && <th className="py-2 px-3 text-left">Thao tác</th>}
                                 </tr>
                             </thead>
                             <tbody>
                                 {view === 'from'
-                                    ? renderRequestRows(filteredFromMe)
-                                    : renderRequestRows(filteredToMe)}
+                                    ? renderRequestRows(filteredFromMe, false)
+                                    : renderRequestRows(filteredToMe, true)}
                             </tbody>
                         </table>
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog
+                open={confirmDialog.open}
+                onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Xác nhận xử lý</DialogTitle>
+                        <DialogDescription>
+                            {confirmDialog.action === 'approve'
+                                ? 'Bạn chắc chắn chấp nhận yêu cầu đổi lịch này?'
+                                : 'Bạn chắc chắn từ chối yêu cầu đổi lịch này?'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setConfirmDialog({ open: false })}
+                            disabled={loadingChangeRequest}
+                        >
+                            Hủy
+                        </Button>
+                        <Button
+                            className={confirmDialog.action === 'approve' ? 'bg-[#257180] text-white hover:bg-[#1f616f]' : 'bg-red-500 text-white hover:bg-red-600'}
+                            disabled={!confirmDialog.requestId || loadingChangeRequest}
+                            onClick={async () => {
+                                if (!confirmDialog.requestId || !confirmDialog.action) return;
+                                const targetStatus =
+                                    confirmDialog.action === 'approve'
+                                        ? ScheduleChangeRequestStatus.Approved
+                                        : ScheduleChangeRequestStatus.Rejected;
+                                const res = await updateStatus(confirmDialog.requestId, targetStatus);
+                                if (res) {
+                                    setRequestsToMe(prev =>
+                                        prev.map(r =>
+                                            r.id === confirmDialog.requestId ? { ...r, status: targetStatus } : r
+                                        )
+                                    );
+                                    showSuccess('Đã cập nhật trạng thái yêu cầu.');
+                                } else {
+                                    showError('Cập nhật trạng thái thất bại.');
+                                }
+                                setConfirmDialog({ open: false });
+                            }}
+                        >
+                            {confirmDialog.action === 'approve' ? 'Chấp nhận' : 'Từ chối'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
         </div>
     );

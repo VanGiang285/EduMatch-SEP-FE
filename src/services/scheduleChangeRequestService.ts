@@ -81,11 +81,8 @@ export class ScheduleChangeRequestService {
   ): Promise<ApiResponse<ScheduleChangeRequestDto[]>> {
     const endpoint = replaceUrlParams(
       API_ENDPOINTS.SCHEDULE_CHANGE_REQUESTS.GET_ALL_BY_SCHEDULE_ID,
-      { scheduleId: scheduleId.toString() },
-      {
-        status,
-      }
+      { scheduleId: scheduleId.toString() }
     );
-    return apiClient.get<ScheduleChangeRequestDto[]>(endpoint);
+    return apiClient.get<ScheduleChangeRequestDto[]>(endpoint, { status });
   }
 }
