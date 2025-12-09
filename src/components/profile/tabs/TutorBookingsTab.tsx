@@ -21,7 +21,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { BookingDto } from '@/types/backend';
-import { BookingStatus, PaymentStatus, ScheduleStatus } from '@/types/enums';
+import { BookingStatus, PaymentStatus, ScheduleStatus, TutorPayoutStatus } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomToast } from '@/hooks/useCustomToast';
@@ -179,6 +179,24 @@ export function TutorBookingsTab() {
     }
   };
 
+  const getTutorPayoutStatusColor = (status: TutorPayoutStatus | string | number) => {
+    const parsedStatus = EnumHelpers.parseTutorPayoutStatus(status);
+    switch (parsedStatus) {
+      case TutorPayoutStatus.Pending:
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case TutorPayoutStatus.OnHold:
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      case TutorPayoutStatus.ReadyForPayout:
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case TutorPayoutStatus.Paid:
+        return 'bg-green-100 text-green-800 border-green-200';
+      case TutorPayoutStatus.Cancelled:
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
   const getNextSession = (booking: BookingDto) => {
     if (!booking.schedules || booking.schedules.length === 0) return null;
 
@@ -264,6 +282,22 @@ export function TutorBookingsTab() {
         EnumHelpers.parseScheduleStatus(schedule.status) === scheduleStatusFilter
     );
   }, [scheduleStatusFilter, schedules]);
+
+  const payoutSummary = useMemo(() => {
+    let received = 0;
+    let notReceived = 0;
+    schedules.forEach((s) => {
+      const payout = s.tutorPayout;
+      if (!payout) return;
+      const status = EnumHelpers.parseTutorPayoutStatus(payout.status);
+      if (status === TutorPayoutStatus.Paid) {
+        received += payout.amount || 0;
+      } else if (status !== TutorPayoutStatus.Cancelled) {
+        notReceived += payout.amount || 0;
+      }
+    });
+    return { received, notReceived };
+  }, [schedules]);
 
   const handleViewDetail = async (bookingId: number) => {
     setSelectedBookingId(bookingId);
@@ -414,6 +448,25 @@ export function TutorBookingsTab() {
           </div>
         </div>
 
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Card className="bg-white border border-[#257180]/20">
+            <CardContent className="p-4">
+              <p className="text-xs uppercase text-gray-500">Đã nhận</p>
+              <p className="text-xl font-semibold text-green-700">
+                {formatCurrency(payoutSummary.received)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border border-[#257180]/20">
+            <CardContent className="p-4">
+              <p className="text-xs uppercase text-gray-500">Chưa nhận</p>
+              <p className="text-xl font-semibold text-orange-700">
+                {formatCurrency(payoutSummary.notReceived)}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Schedules List */}
         <div>
 
@@ -507,6 +560,7 @@ export function TutorBookingsTab() {
                   }
 
                   const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
+                  const tutorPayout = schedule.tutorPayout;
 
                   // Lấy endDate: ưu tiên lấy từ slot.endTime, nếu không có mới dùng availability.endDate
                   let endDate: Date | null = null;
@@ -621,6 +675,23 @@ export function TutorBookingsTab() {
                                             {schedule.meetingSession.meetLink}
                                           </span>
                                         </a>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {tutorPayout && (
+                                    <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="text-xs text-gray-500">Thanh toán cho gia sư</div>
+                                        <Badge className={getTutorPayoutStatusColor(tutorPayout.status)}>
+                                          {EnumHelpers.getTutorPayoutStatusLabel(tutorPayout.status)}
+                                        </Badge>
+                                      </div>
+                                      <div className="flex items-center justify-between text-sm text-gray-700">
+                                        <span>Số tiền nhận</span>
+                                        <span className="font-semibold text-[#257180]">
+                                          {formatCurrency(tutorPayout.amount)}
+                                        </span>
                                       </div>
                                     </div>
                                   )}
