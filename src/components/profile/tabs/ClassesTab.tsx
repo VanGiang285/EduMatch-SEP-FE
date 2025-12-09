@@ -19,6 +19,7 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { BookingDto } from '@/types/backend';
 import {
@@ -37,10 +38,12 @@ import { useSchedules } from '@/hooks/useSchedules';
 import { useBookings } from '@/hooks/useBookings';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { useRouter } from 'next/navigation';
 
 export function ClassesTab() {
   const { user } = useAuth();
   const { showError, showSuccess, showWarning } = useCustomToast();
+  const router = useRouter();
   const {
     bookings,
     loading,
@@ -527,8 +530,8 @@ export function ClassesTab() {
                   }
 
                   const parsedScheduleStatus = EnumHelpers.parseScheduleStatus(schedule.status);
-                  // Chỉ hiện nút khi buổi học đã ở trạng thái Completed
-                  const canConfirmCompletion = parsedScheduleStatus === ScheduleStatus.Completed;
+                  // Chỉ hiện nút khi buổi học ở trạng thái Pending
+                  const isPending = parsedScheduleStatus === ScheduleStatus.Pending;
 
                   return (
                     <Card key={schedule.id} className="hover:shadow-md transition-shadow border border-[#257180]/20 border-l-4 border-l-[#257180] bg-white">
@@ -658,8 +661,18 @@ export function ClassesTab() {
                                 </div>
                               </div>
                             </div>
-                            {canConfirmCompletion && (
-                              <div className="mt-4 flex justify-end">
+                            {isPending && (
+                              <div className="mt-4 flex justify-end gap-2">
+                                <Button
+                                  onClick={() => {
+                                    router.push('/profile?tab=reports');
+                                  }}
+                                  variant="outline"
+                                  className="border-red-300 text-red-700 hover:bg-red-50"
+                                >
+                                  <AlertTriangle className="h-4 w-4 mr-2" />
+                                  Báo cáo
+                                </Button>
                                 <Button
                                   onClick={async () => {
                                     const success = await finishSchedule(schedule.id);
