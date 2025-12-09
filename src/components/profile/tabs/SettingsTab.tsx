@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { AuthService } from '@/services';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 
 export function SettingsTab() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -25,6 +26,7 @@ export function SettingsTab() {
   const [loading, setLoading] = useState(false);
   const { showError, showSuccess } = useCustomToast();
   const { logout } = useAuth();
+  const router = useRouter();
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -67,10 +69,13 @@ export function SettingsTab() {
           confirmPassword: '',
         });
         setErrors({});
-        showSuccess('Đổi mật khẩu thành công', response.data?.message);
+        showSuccess('Đổi mật khẩu thành công', 'Mật khẩu của bạn đã được thay đổi thành công. Vui lòng đăng nhập lại.');
         if (response.data?.requiresLogout) {
           await logout();
         }
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
       } else {
         showError('Không thể đổi mật khẩu', response.error?.message);
       }
@@ -206,24 +211,6 @@ export function SettingsTab() {
         </CardContent>
       </Card>
 
-      {/* Other Settings */}
-      <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
-        <CardHeader>
-          <CardTitle className="text-gray-900">Cài đặt thông báo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-600">Tính năng đang phát triển...</p>
-        </CardContent>
-      </Card>
-
-      <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
-        <CardHeader>
-          <CardTitle className="text-gray-900">Quyền riêng tư</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-600">Tính năng đang phát triển...</p>
-        </CardContent>
-      </Card>
     </div>
   );
 }

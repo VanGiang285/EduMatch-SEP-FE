@@ -324,6 +324,9 @@ export function ClassesTab() {
         if (updatedBooking) {
           showSuccess('Thanh toán thành công', 'Số dư ví đã được trừ tương ứng.');
 
+          // Dispatch event để cập nhật wallet balance realtime
+          window.dispatchEvent(new Event('wallet:update'));
+
           // Reload bookings và wallet song song để cập nhật dữ liệu
           if (user?.email) {
             await Promise.all([

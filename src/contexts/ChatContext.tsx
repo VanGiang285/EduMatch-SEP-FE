@@ -27,19 +27,34 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     tutorName?: string,
     tutorAvatar?: string
   ) => {
+    console.log('ChatContext.openChatWithTutor called with:', {
+      tutorId,
+      tutorEmail,
+      tutorName,
+      tutorAvatar,
+      userEmail: user?.email
+    });
+
     if (!user?.email) {
+      console.error('User email is missing');
       showError("Lỗi", "Vui lòng đăng nhập để nhắn tin.");
       return;
     }
 
     try {
+      console.log('Calling ChatService.getOrCreateChatRoom...');
       // Get or create chat room
       const roomResponse = await ChatService.getOrCreateChatRoom(tutorId, user.email);
+      console.log('ChatService.getOrCreateChatRoom response:', roomResponse);
+      
       if (roomResponse.success && roomResponse.data) {
+        console.log('Setting selectedRoomId and opening floating chat:', roomResponse.data.id);
         // Set selected room and open floating chat
         setSelectedRoomId(roomResponse.data.id);
         setIsFloatingChatOpen(true);
+        console.log('Floating chat should be open now');
       } else {
+        console.error('Failed to create/get chat room:', roomResponse);
         showError("Lỗi", "Không thể tạo phòng chat. Vui lòng thử lại.");
       }
     } catch (error) {
