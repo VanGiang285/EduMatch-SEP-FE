@@ -400,6 +400,8 @@ export const API_ENDPOINTS = {
       '/api/ScheduleChangeRequest/get-all-by-requester-email',
     GET_ALL_BY_REQUESTED_TO_EMAIL:
       '/api/ScheduleChangeRequest/get-all-by-requested-to-email',
+    GET_ALL_BY_SCHEDULE_ID:
+      '/api/ScheduleChangeRequest/get-all-by-schedule-id/:scheduleId',
   },
 
   // ==================== REVIEWS ====================

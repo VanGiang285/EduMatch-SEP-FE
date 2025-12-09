@@ -74,4 +74,18 @@ export class ScheduleChangeRequestService {
       }
     );
   }
+
+  static async getAllByScheduleId(
+    scheduleId: number,
+    status?: ScheduleChangeRequestStatus
+  ): Promise<ApiResponse<ScheduleChangeRequestDto[]>> {
+    const endpoint = replaceUrlParams(
+      API_ENDPOINTS.SCHEDULE_CHANGE_REQUESTS.GET_ALL_BY_SCHEDULE_ID,
+      { scheduleId: scheduleId.toString() },
+      {
+        status,
+      }
+    );
+    return apiClient.get<ScheduleChangeRequestDto[]>(endpoint);
+  }
 }

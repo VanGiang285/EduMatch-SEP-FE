@@ -181,6 +181,30 @@ export function useScheduleChangeRequests() {
     []
   );
 
+  const fetchByScheduleId = useCallback(
+    async (
+      scheduleId: number,
+      status?: ScheduleChangeRequestStatus
+    ): Promise<ScheduleChangeRequestDto[]> => {
+      if (!scheduleId) return [];
+      try {
+        const res = await ScheduleChangeRequestService.getAllByScheduleId(
+          scheduleId,
+          status
+        );
+        if (res.success && res.data) return res.data;
+        setError(
+          res.error?.message || res.message || 'Không thể tải yêu cầu đổi lịch'
+        );
+        return [];
+      } catch (err: any) {
+        setError(err.message || 'Lỗi khi tải yêu cầu đổi lịch');
+        return [];
+      }
+    },
+    []
+  );
+
   return {
     items,
     loading,
@@ -191,5 +215,6 @@ export function useScheduleChangeRequests() {
     loadByRequestedToEmail,
     fetchByRequesterEmail,
     fetchByRequestedToEmail,
+    fetchByScheduleId,
   };
 }
