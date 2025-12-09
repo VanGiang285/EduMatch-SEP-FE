@@ -18,6 +18,7 @@ function ProfileContent() {
         'profile': 'profile',
         'tutorProfile': 'tutorProfile',
         'schedule': 'schedule',
+        'scheduleChange': 'scheduleChange',
         'classes': 'classes',
         'classRequests': 'classRequests',
         'tutorApplications': 'tutorApplications',

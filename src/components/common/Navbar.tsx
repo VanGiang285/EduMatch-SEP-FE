@@ -212,6 +212,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                           <Calendar className="h-4 w-4 mr-2" />
                           {isTutor ? 'Lịch dạy' : 'Lịch học'}
                         </DropdownMenuItem>
+
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=scheduleChange')}
                           className="cursor-pointer"
@@ -219,6 +220,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                           <ClipboardList className="h-4 w-4 mr-2" />
                           Yêu cầu chuyển lịch
                         </DropdownMenuItem>
+
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=classes')}
                           className="cursor-pointer"

@@ -211,7 +211,9 @@ export function useScheduleChangeRequests() {
       try {
         const res = await ScheduleChangeRequestService.getById(id);
         if (res.success && res.data) return res.data;
-        setError(res.error?.message || res.message || 'Không thể tải yêu cầu đổi lịch');
+        setError(
+          res.error?.message || res.message || 'Không thể tải yêu cầu đổi lịch'
+        );
         return null;
       } catch (err: any) {
         setError(err.message || 'Lỗi khi tải yêu cầu đổi lịch');

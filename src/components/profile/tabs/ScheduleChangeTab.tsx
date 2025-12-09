@@ -327,18 +327,20 @@ export function ScheduleChangeTab() {
         user?.email,
     ]);
 
-    const getScheduleStatusColor = (status: ScheduleStatus | string) => {
-        const parsedStatus = EnumHelpers.parseScheduleStatus(status);
-        switch (parsedStatus) {
-            case ScheduleStatus.Upcoming:
-                return "bg-blue-100 text-blue-800 border-blue-200";
-            case ScheduleStatus.InProgress:
+
+
+
+    // Màu cho trạng thái ScheduleChangeRequest
+    const getChangeRequestStatusColor = (status: ScheduleChangeRequestStatus | string) => {
+        const parsed = EnumHelpers.parseScheduleChangeRequestStatus(status);
+        switch (parsed) {
+            case ScheduleChangeRequestStatus.Pending:
                 return "bg-yellow-100 text-yellow-800 border-yellow-200";
-            case ScheduleStatus.Completed:
+            case ScheduleChangeRequestStatus.Approved:
                 return "bg-green-100 text-green-800 border-green-200";
-            case ScheduleStatus.Cancelled:
+            case ScheduleChangeRequestStatus.Rejected:
                 return "bg-red-100 text-red-800 border-red-200";
-            case ScheduleStatus.Absent:
+            case ScheduleChangeRequestStatus.Cancelled:
                 return "bg-gray-100 text-gray-800 border-gray-200";
             default:
                 return "bg-gray-100 text-gray-800 border-gray-200";
@@ -394,18 +396,21 @@ export function ScheduleChangeTab() {
                 </tr>
             );
         }
-        return items.map((item) => {
+        const sortedItems = [...items].sort((a, b) => {
+            const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return aTime - bTime; // tăng dần theo thời gian tạo
+        });
+
+        return sortedItems.map((item) => {
             const schedule = item.schedule as ScheduleDto | undefined;
-            const av = schedule?.availability;
-            const startDate = av?.startDate ? addHours(new Date(av.startDate), 7) : null; // UTC -> UTC+7
-            const slot = av?.slot;
-            const booking = schedule?.booking;
+            const oldAv = item.oldAvailability;
+            const slot = oldAv?.slot;
+            const booking = getBooking(schedule?.bookingId, schedule?.booking);
             const tutorSubject = booking?.tutorSubject;
             const subject = tutorSubject?.subject;
             const level = tutorSubject?.level;
             const statusLabel = EnumHelpers.getScheduleChangeRequestStatusLabel?.(item.status) ?? item.status;
-
-            const scheduleStatus = schedule ? EnumHelpers.parseScheduleStatus(schedule.status) : null;
             return (
                 <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-2 px-3 text-sm text-gray-700">{item.id}</td>
@@ -413,19 +418,14 @@ export function ScheduleChangeTab() {
                         <div className="flex flex-col gap-1">
                             <div>
                                 {subject?.subjectName || 'Môn học'}
-                                {level?.name ? ` - ${level.name}` : ''}
+
                             </div>
-                            {scheduleStatus !== null && (
-                                <Badge className={`${getScheduleStatusColor(scheduleStatus)} w-fit text-xs`}>
-                                    {EnumHelpers.getScheduleStatusLabel(scheduleStatus)}
-                                </Badge>
-                            )}
                         </div>
                     </td>
 
-                    <td className="py-2 px-3 text-sm text-gray-700">
-                        {startDate
-                            ? `${format(startDate, "dd/MM/yyyy", { locale: vi })} ${slot?.startTime?.slice(0, 5) || ''} - ${slot?.endTime?.slice(0, 5) || ''}`
+                    <td className="py-2 px-3 text-sm text-gray-700 whitespace-pre-line">
+                        {oldAv?.startDate
+                            ? `Cũ: ${format((new Date(oldAv.startDate)), "dd/MM/yyyy", { locale: vi })}\n${oldAv?.slot?.startTime?.slice(0, 5) || ''} - ${oldAv?.slot?.endTime?.slice(0, 5) || ''}`
                             : 'N/A'}
                     </td>
                     <td className="py-2 px-3 text-sm text-gray-700">
@@ -434,7 +434,9 @@ export function ScheduleChangeTab() {
                             : 'N/A'}
                     </td>
                     <td className="py-2 px-3 text-sm">
-                        <Badge className="bg-slate-100 text-gray-800 border-slate-200">{statusLabel}</Badge>
+                        <Badge className={`${getChangeRequestStatusColor(item.status)} border`}>
+                            {statusLabel}
+                        </Badge>
                     </td>
                     <td className="py-2 px-3 text-sm text-gray-700">
                         <div className="text-xs text-gray-500">
