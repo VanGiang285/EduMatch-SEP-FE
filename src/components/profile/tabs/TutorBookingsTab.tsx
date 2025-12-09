@@ -296,7 +296,7 @@ export function TutorBookingsTab() {
         notReceived += payout.amount || 0;
       }
     });
-    return { received, notReceived };
+    return { received, notReceived, total: received + notReceived };
   }, [schedules]);
 
   const handleViewDetail = async (bookingId: number) => {
@@ -462,6 +462,14 @@ export function TutorBookingsTab() {
               <p className="text-xs uppercase text-gray-500">Chưa nhận</p>
               <p className="text-xl font-semibold text-orange-700">
                 {formatCurrency(payoutSummary.notReceived)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border border-[#257180]/20">
+            <CardContent className="p-4">
+              <p className="text-xs uppercase text-gray-500">Tổng dự kiến nhận</p>
+              <p className="text-xl font-semibold text-[#257180]">
+                {formatCurrency(payoutSummary.total)}
               </p>
             </CardContent>
           </Card>
