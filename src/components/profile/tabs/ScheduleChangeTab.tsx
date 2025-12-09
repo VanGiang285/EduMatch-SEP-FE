@@ -66,34 +66,75 @@ export function ScheduleChangeTab() {
         },
         [fetchById]
     );
-    // Load danh sách các yêu cầu đổi lịch (tôi gửi / gửi cho tôi)
+
+    // Hàm load requests có thể gọi lại từ nhiều nơi
+    const loadRequests = useCallback(async () => {
+        if (!user?.email) {
+            setRequestsFromMe([]);
+            setRequestsToMe([]);
+            return;
+        }
+        setLoadingRequests(true);
+        try {
+            const [fromMeRaw, toMeRaw] = await Promise.all([
+                fetchByRequesterEmail(user.email),
+                fetchByRequestedToEmail(user.email),
+            ]);
+            const [fromMe, toMe] = await Promise.all([
+                loadMissingSchedules(fromMeRaw),
+                loadMissingSchedules(toMeRaw),
+            ]);
+            setRequestsFromMe(fromMe);
+            setRequestsToMe(toMe);
+        } catch (err) {
+            // errors already handled inside hooks
+        } finally {
+            setLoadingRequests(false);
+        }
+    }, [user?.email, fetchByRequesterEmail, fetchByRequestedToEmail, loadMissingSchedules]);
+
+    // Load danh sách các yêu cầu đổi lịch (tôi gửi / gửi cho tôi) khi mount hoặc user thay đổi
     useEffect(() => {
-        const loadRequests = async () => {
-            if (!user?.email) {
-                setRequestsFromMe([]);
-                setRequestsToMe([]);
-                return;
-            }
-            setLoadingRequests(true);
-            try {
-                const [fromMeRaw, toMeRaw] = await Promise.all([
-                    fetchByRequesterEmail(user.email),
-                    fetchByRequestedToEmail(user.email),
-                ]);
-                const [fromMe, toMe] = await Promise.all([
-                    loadMissingSchedules(fromMeRaw),
-                    loadMissingSchedules(toMeRaw),
-                ]);
-                setRequestsFromMe(fromMe);
-                setRequestsToMe(toMe);
-            } catch (err) {
-                // errors already handled inside hooks
-            } finally {
-                setLoadingRequests(false);
+        loadRequests();
+    }, [loadRequests]);
+
+    // Tự động reload khi window focus lại (khi người dùng quay lại tab)
+    useEffect(() => {
+        const handleFocus = () => {
+            loadRequests();
+        };
+        window.addEventListener('focus', handleFocus);
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, [loadRequests]);
+
+    // Tự động reload khi tab trở nên visible (khi người dùng chuyển sang tab)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                loadRequests();
             }
         };
-        loadRequests();
-    }, [user?.email, fetchByRequesterEmail, fetchByRequestedToEmail, loadMissingSchedules]);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [loadRequests]);
+
+    // Polling định kỳ để cập nhật trạng thái (mỗi 5 giây để cập nhật nhanh hơn)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            // Chỉ reload nếu tab đang visible để tránh lãng phí tài nguyên
+            if (!document.hidden) {
+                loadRequests();
+            }
+        }, 5000); // 5 giây
+
+        return () => {
+            clearInterval(interval);
+        };
+    }, [loadRequests]);
 
     // Load booking details dựa trên schedule trong các yêu cầu
     useEffect(() => {
@@ -414,11 +455,8 @@ export function ScheduleChangeTab() {
                                         : ScheduleChangeRequestStatus.Rejected;
                                 const res = await updateStatus(confirmDialog.requestId, targetStatus);
                                 if (res) {
-                                    setRequestsToMe(prev =>
-                                        prev.map(r =>
-                                            r.id === confirmDialog.requestId ? { ...r, status: targetStatus } : r
-                                        )
-                                    );
+                                    // Reload lại toàn bộ requests để cập nhật trạng thái
+                                    await loadRequests();
                                     showSuccess('Đã cập nhật trạng thái yêu cầu.');
                                 } else {
                                     showError('Cập nhật trạng thái thất bại.');
