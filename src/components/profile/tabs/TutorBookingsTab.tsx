@@ -172,8 +172,10 @@ export function TutorBookingsTab() {
         return 'bg-green-100 text-green-800 border-green-200';
       case ScheduleStatus.Cancelled:
         return 'bg-red-100 text-red-800 border-red-200';
-      case ScheduleStatus.Absent:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+      case ScheduleStatus.Pending:
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case ScheduleStatus.Processing:
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -268,8 +270,10 @@ export function TutorBookingsTab() {
         return 'bg-green-500';
       case ScheduleStatus.Cancelled:
         return 'bg-red-400';
-      case ScheduleStatus.Absent:
-        return 'bg-gray-400';
+      case ScheduleStatus.Pending:
+        return 'bg-yellow-400';
+      case ScheduleStatus.Processing:
+        return 'bg-blue-400';
       default:
         return 'bg-gray-300';
     }
@@ -331,26 +335,6 @@ export function TutorBookingsTab() {
     setScheduleStatusFilter('all');
   };
 
-  const handleUpdateScheduleStatus = async (scheduleId: number, status: ScheduleStatus) => {
-    try {
-      const result = await updateScheduleStatus(scheduleId, status);
-      if (result) {
-        showSuccess(
-          status === ScheduleStatus.Completed
-            ? 'Đã xác nhận hoàn thành buổi học'
-            : 'Đã đánh dấu vắng mặt'
-        );
-        // Reload schedules để cập nhật UI
-        if (selectedBookingId) {
-          await loadSchedulesByBookingId(selectedBookingId);
-        }
-      } else {
-        showError('Không thể cập nhật trạng thái buổi học');
-      }
-    } catch (error: any) {
-      showError('Lỗi khi cập nhật trạng thái', error.message);
-    }
-  };
 
   // Load booking details khi schedules thay đổi
   useEffect(() => {
@@ -487,7 +471,8 @@ export function TutorBookingsTab() {
                 { value: ScheduleStatus.InProgress, label: 'Đang học' },
                 { value: ScheduleStatus.Completed, label: 'Hoàn thành' },
                 { value: ScheduleStatus.Cancelled, label: 'Đã hủy' },
-                { value: ScheduleStatus.Absent, label: 'Vắng' },
+                { value: ScheduleStatus.Pending, label: 'Chờ xử lý' },
+                { value: ScheduleStatus.Processing, label: 'Đang xử lý' },
               ].map((option) => (
                 <Button
                   key={`schedule-filter-${option.label}`}
@@ -704,29 +689,6 @@ export function TutorBookingsTab() {
                                     </div>
                                   )}
                                 </div>
-
-                                {/* Action buttons cho InProgress status */}
-                                {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.InProgress && (
-                                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
-                                    <Button
-                                      size="sm"
-                                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                                      onClick={() => handleUpdateScheduleStatus(schedule.id, ScheduleStatus.Completed)}
-                                    >
-                                      <CheckCircle className="h-4 w-4 mr-2" />
-                                      Xác nhận hoàn thành
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                                      onClick={() => handleUpdateScheduleStatus(schedule.id, ScheduleStatus.Absent)}
-                                    >
-                                      <XCircle className="h-4 w-4 mr-2" />
-                                      Đánh dấu vắng mặt
-                                    </Button>
-                                  </div>
-                                )}
                               </div>
                             </div>
                           </div>

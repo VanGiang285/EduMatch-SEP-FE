@@ -76,9 +76,10 @@ export enum BookingStatus {
 export enum ScheduleStatus {
   Upcoming = 0,
   InProgress = 1,
-  Completed = 2,
-  Cancelled = 3,
-  Absent = 4,
+  Pending = 2,
+  Processing = 3,
+  Completed = 4,
+  Cancelled = 5,
 }
 
 export enum ScheduleCompletionStatus {
@@ -471,15 +472,18 @@ export const EnumHelpers = {
       case 'InProgress':
       case '1':
         return ScheduleStatus.InProgress;
-      case 'Completed':
+      case 'Pending':
       case '2':
+        return ScheduleStatus.Pending;
+      case 'Processing':
+      case '3':
+        return ScheduleStatus.Processing;
+      case 'Completed':
+      case '4':
         return ScheduleStatus.Completed;
       case 'Cancelled':
-      case '3':
+      case '5':
         return ScheduleStatus.Cancelled;
-      case 'Absent':
-      case '4':
-        return ScheduleStatus.Absent;
       default:
         return ScheduleStatus.Upcoming;
     }
@@ -499,8 +503,10 @@ export const EnumHelpers = {
         return 'Hoàn thành';
       case ScheduleStatus.Cancelled:
         return 'Đã hủy';
-      case ScheduleStatus.Absent:
-        return 'Vắng mặt';
+      case ScheduleStatus.Pending:
+        return 'Chờ xử lý';
+      case ScheduleStatus.Processing:
+        return 'Đang xử lý';
       default:
         return 'Không xác định';
     }
