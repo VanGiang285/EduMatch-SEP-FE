@@ -1,0 +1,56 @@
+import { apiClient, replaceUrlParams } from '@/lib/api';
+import { API_ENDPOINTS } from '@/constants';
+import { ApiResponse } from '@/types/api';
+import { BookingNoteDto } from '@/types/backend';
+import {
+  BookingNoteCreateRequest,
+  BookingNoteUpdateRequest,
+} from '@/types/requests';
+
+export class BookingNoteService {
+  static async getById(id: number): Promise<ApiResponse<BookingNoteDto>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKING_NOTES.GET_BY_ID, {
+      id: id.toString(),
+    });
+    return apiClient.get<BookingNoteDto>(endpoint);
+  }
+
+  static async getByBookingId(
+    bookingId: number
+  ): Promise<ApiResponse<BookingNoteDto[]>> {
+    const endpoint = replaceUrlParams(
+      API_ENDPOINTS.BOOKING_NOTES.GET_BY_BOOKING,
+      {
+        bookingId: bookingId.toString(),
+      }
+    );
+    return apiClient.get<BookingNoteDto[]>(endpoint);
+  }
+
+  static async create(
+    request: BookingNoteCreateRequest
+  ): Promise<ApiResponse<BookingNoteDto>> {
+    return apiClient.post<BookingNoteDto>(
+      API_ENDPOINTS.BOOKING_NOTES.CREATE,
+      request
+    );
+  }
+
+  static async update(
+    request: BookingNoteUpdateRequest
+  ): Promise<ApiResponse<BookingNoteDto>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKING_NOTES.UPDATE, {
+      id: request.id.toString(),
+    });
+    return apiClient.put<BookingNoteDto>(endpoint, request);
+  }
+
+  static async delete(id: number): Promise<ApiResponse<string>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKING_NOTES.DELETE, {
+      id: id.toString(),
+    });
+    return apiClient.delete<string>(endpoint);
+  }
+}
+
+

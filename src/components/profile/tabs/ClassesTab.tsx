@@ -31,6 +31,7 @@ import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useSchedules } from '@/hooks/useSchedules';
 import { useBookings } from '@/hooks/useBookings';
 import { useWalletContext } from '@/contexts/WalletContext';
+import { BookingNotesPanel } from '@/components/booking/BookingNotesPanel';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
@@ -422,7 +423,6 @@ export function ClassesTab() {
           </div>
         </div>
 
-        {/* Schedules List */}
         <div>
           <h3 className="text-xl font-semibold text-gray-900 mb-4">
             Danh sách buổi học ({schedules.length})
@@ -623,6 +623,8 @@ export function ClassesTab() {
             </div>
           )}
         </div>
+
+        <BookingNotesPanel bookingId={selectedBookingId} />
       </div>
     );
   }

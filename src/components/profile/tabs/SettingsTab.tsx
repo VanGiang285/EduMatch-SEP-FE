@@ -7,6 +7,9 @@ import { Input } from '@/components/ui/form/input';
 import { Label } from '@/components/ui/form/label';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { AuthService } from '@/services';
+import { useCustomToast } from '@/hooks/useCustomToast';
+import { useAuth } from '@/hooks/useAuth';
 
 export function SettingsTab() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -19,6 +22,9 @@ export function SettingsTab() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { showError, showSuccess } = useCustomToast();
+  const { logout } = useAuth();
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -43,21 +49,36 @@ export function SettingsTab() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     setSuccess(false);
     if (!validateForm()) return;
 
-    // Handle password change logic here
-    console.log('Change password:', formData);
-    
-    // Simulate success
-    setSuccess(true);
-    setFormData({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    });
-    setErrors({});
+    setLoading(true);
+    try {
+      const response = await AuthService.changePassword({
+        oldPass: formData.currentPassword,
+        newPass: formData.newPassword,
+      });
+      if (response.success) {
+        setSuccess(true);
+        setFormData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+        });
+        setErrors({});
+        showSuccess('Đổi mật khẩu thành công', response.data?.message);
+        if (response.data?.requiresLogout) {
+          await logout();
+        }
+      } else {
+        showError('Không thể đổi mật khẩu', response.error?.message);
+      }
+    } catch (error: any) {
+      showError('Lỗi khi đổi mật khẩu', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -174,8 +195,13 @@ export function SettingsTab() {
             )}
           </div>
 
-          <Button onClick={handleChangePassword} size="lg" className="w-full md:w-auto bg-[#257180] hover:bg-[#257180]/90 text-white">
-            Đổi mật khẩu
+          <Button
+            onClick={handleChangePassword}
+            size="lg"
+            disabled={loading}
+            className="w-full md:w-auto bg-[#257180] hover:bg-[#257180]/90 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Đang đổi mật khẩu...' : 'Đổi mật khẩu'}
           </Button>
         </CardContent>
       </Card>

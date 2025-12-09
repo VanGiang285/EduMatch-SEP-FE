@@ -17,6 +17,7 @@ import {
   BookingRefundRequestStatus,
   TutorVerificationRequestStatus,
   ReportStatus,
+  MediaType,
 } from './enums';
 
 // ==================== COMMON ====================
@@ -351,6 +352,24 @@ export interface BookingRefundRequestDto {
   refundPolicy?: RefundPolicyDto;
   learner?: UserDto;
   refundRequestEvidences?: RefundRequestEvidenceDto[];
+}
+
+export interface BookingNoteMediaDto {
+  id: number;
+  bookingNoteId: number;
+  mediaType: MediaType;
+  fileUrl: string;
+  filePublicId?: string;
+  createdAt: string;
+}
+
+export interface BookingNoteDto {
+  id: number;
+  bookingId: number;
+  content: string;
+  createdByEmail?: string;
+  createdAt: string;
+  media?: BookingNoteMediaDto[];
 }
 
 export interface TutorVerificationRequestDto {

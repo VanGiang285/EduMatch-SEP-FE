@@ -2,7 +2,12 @@ import { apiClient } from '@/lib/api';
 import { API_ENDPOINTS, STORAGE_KEYS } from '@/constants';
 import { ApiResponse } from '@/types/api';
 import { User } from '@/types';
-import { LoginRequest, RegisterRequest, GoogleLoginRequest } from '@/types/requests';
+import {
+  LoginRequest,
+  RegisterRequest,
+  GoogleLoginRequest,
+  ChangePasswordRequest,
+} from '@/types/requests';
 import { ApiResponseBackend, UserDto } from '@/types/backend';
 
 export interface LoginResponse {
@@ -26,6 +31,15 @@ export interface VerifyEmailResponse {
 }
 
 export interface ResendVerificationResponse {
+  message: string;
+}
+
+export interface ChangePasswordResponse {
+  message: string;
+  requiresLogout?: boolean;
+}
+
+export interface ResetPasswordResponse {
   message: string;
 }
 
@@ -78,6 +92,24 @@ export class AuthService {
   // Gửi lại email xác thực
   static async resendVerification(email: string): Promise<ApiResponse<ResendVerificationResponse>> {
     return apiClient.post<ResendVerificationResponse>(API_ENDPOINTS.AUTH.RESEND_VERIFY, JSON.stringify(email));
+  }
+
+  static async changePassword(
+    request: ChangePasswordRequest
+  ): Promise<ApiResponse<ChangePasswordResponse>> {
+    return apiClient.put<ChangePasswordResponse>(
+      API_ENDPOINTS.AUTH.CHANGE_PASSWORD,
+      request
+    );
+  }
+
+  static async resetPassword(
+    email: string
+  ): Promise<ApiResponse<ResetPasswordResponse>> {
+    return apiClient.post<ResetPasswordResponse>(
+      API_ENDPOINTS.AUTH.RESET_PASSWORD,
+      email
+    );
   }
 
   // Kiểm tra user đã đăng nhập chưa

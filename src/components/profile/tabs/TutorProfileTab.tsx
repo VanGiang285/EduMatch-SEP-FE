@@ -36,6 +36,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useChatContext } from '@/contexts/ChatContext';
 import { TutorService, CertificateService, SubjectService } from '@/services';
 import { MasterDataService } from '@/services/masterDataService';
 import { AvailabilityService } from '@/services/availabilityService';
@@ -83,6 +84,7 @@ interface TutorSubject {
 export function TutorProfileTab() {
   const { user } = useAuth();
   const { showSuccess, showError } = useCustomToast();
+  const { openChatWithTutor } = useChatContext();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -1039,10 +1041,22 @@ export function TutorProfileTab() {
         </div>
         <div>
           {!isEditing ? (
-            <Button onClick={() => setIsEditing(true)} size="lg" className="bg-[#257180] hover:bg-[#257180]/90 text-white">
-              <Edit3 className="w-4 h-4 mr-2" />
-              Chỉnh sửa
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                className="bg-[#257180] hover:bg-[#1e5a66] text-white shadow-sm"
+                onClick={() => {
+                  if (tutorProfile?.userEmail) {
+                    openChatWithTutor(tutorProfile.userEmail);
+                  }
+                }}
+              >
+                Nhắn tin
+              </Button>
+              <Button onClick={() => setIsEditing(true)} size="lg" className="bg-[#257180] hover:bg-[#257180]/90 text-white">
+                <Edit3 className="w-4 h-4 mr-2" />
+                Chỉnh sửa
+              </Button>
+            </div>
           ) : (
             <div className="flex gap-2">
               <Button 
