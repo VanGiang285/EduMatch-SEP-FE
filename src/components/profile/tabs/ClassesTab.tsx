@@ -21,7 +21,13 @@ import {
   XCircle,
 } from 'lucide-react';
 import { BookingDto } from '@/types/backend';
-import { BookingStatus, PaymentStatus, ScheduleStatus, TeachingMode } from '@/types/enums';
+import {
+  BookingStatus,
+  PaymentStatus,
+  ScheduleCompletionStatus,
+  ScheduleStatus,
+  TeachingMode,
+} from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomToast } from '@/hooks/useCustomToast';
@@ -50,8 +56,13 @@ export function ClassesTab() {
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
   const [cancelDialogBookingId, setCancelDialogBookingId] = useState<number | null>(null);
   const { loadTutorProfiles, getTutorProfile, loadTutorProfile } = useTutorProfiles();
-  const { schedules, loading: loadingSchedules, loadSchedulesByBookingId, clearSchedules } =
-    useSchedules();
+  const {
+    schedules,
+    loading: loadingSchedules,
+    loadSchedulesByBookingId,
+    clearSchedules,
+    finishSchedule,
+  } = useSchedules();
   const [scheduleStatusFilter, setScheduleStatusFilter] = useState<'all' | ScheduleStatus>('all');
 
   // Load tất cả bookings một lần khi component mount hoặc user thay đổi
@@ -510,6 +521,10 @@ export function ClassesTab() {
                     endDate = new Date(availability.endDate);
                   }
 
+                  const parsedScheduleStatus = EnumHelpers.parseScheduleStatus(schedule.status);
+                  // Chỉ hiện nút khi buổi học đã ở trạng thái Completed
+                  const canConfirmCompletion = parsedScheduleStatus === ScheduleStatus.Completed;
+
                   return (
                     <Card key={schedule.id} className="hover:shadow-md transition-shadow border border-[#257180]/20 border-l-4 border-l-[#257180] bg-white">
                       <CardContent className="p-6">
@@ -635,6 +650,24 @@ export function ClassesTab() {
                                 </div>
                               </div>
                             </div>
+                            {canConfirmCompletion && (
+                              <div className="mt-4 flex justify-end">
+                                <Button
+                                  onClick={async () => {
+                                    const success = await finishSchedule(schedule.id);
+                                    if (success) {
+                                      showSuccess('Đã xác nhận buổi học thành công');
+                                    } else {
+                                      showError('Không thể xác nhận buổi học', 'Vui lòng thử lại sau.');
+                                    }
+                                  }}
+                                  disabled={loadingSchedules}
+                                  className="bg-[#257180] text-white hover:bg-[#1f616f]"
+                                >
+                                  Xác nhận đã học
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </CardContent>

@@ -323,6 +323,7 @@ export interface ScheduleDto {
   meetingSession?: MeetingSessionDto;
   scheduleCompletion?: ScheduleCompletionDto;
   tutorPayout?: TutorPayoutDto;
+  booking?: BookingDto;
 }
 
 export interface SystemFeeDto {
