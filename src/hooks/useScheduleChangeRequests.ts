@@ -132,6 +132,55 @@ export function useScheduleChangeRequests() {
     []
   );
 
+  // Helpers: fetch nhưng không đụng tới items state
+  const fetchByRequesterEmail = useCallback(
+    async (
+      email: string,
+      status?: ScheduleChangeRequestStatus
+    ): Promise<ScheduleChangeRequestDto[]> => {
+      if (!email) return [];
+      try {
+        const res = await ScheduleChangeRequestService.getAllByRequesterEmail(
+          email,
+          status
+        );
+        if (res.success && res.data) return res.data;
+        setError(
+          res.error?.message || res.message || 'Không thể tải yêu cầu đổi lịch'
+        );
+        return [];
+      } catch (err: any) {
+        setError(err.message || 'Lỗi khi tải yêu cầu đổi lịch');
+        return [];
+      }
+    },
+    []
+  );
+
+  const fetchByRequestedToEmail = useCallback(
+    async (
+      email: string,
+      status?: ScheduleChangeRequestStatus
+    ): Promise<ScheduleChangeRequestDto[]> => {
+      if (!email) return [];
+      try {
+        const res = await ScheduleChangeRequestService.getAllByRequestedToEmail(
+          email,
+          status
+        );
+        if (res.success && res.data) return res.data;
+        setError(
+          res.error?.message || res.message || 'Không thể tải yêu cầu đổi lịch'
+        );
+        return [];
+      } catch (err: any) {
+        setError(err.message || 'Lỗi khi tải yêu cầu đổi lịch');
+        return [];
+      }
+    },
+    []
+  );
+
   return {
     items,
     loading,
@@ -140,5 +189,7 @@ export function useScheduleChangeRequests() {
     updateStatus,
     loadByRequesterEmail,
     loadByRequestedToEmail,
+    fetchByRequesterEmail,
+    fetchByRequestedToEmail,
   };
 }

@@ -17,6 +17,7 @@ import { NotificationsTab } from './tabs/NotificationsTab';
 import { TutorApplicationsTab } from './tabs/TutorApplicationsTab';
 import { RefundRequestsTab } from './tabs/RefundRequestsTab';
 import { ReportsTab } from './tabs/ReportsTab';
+import { ScheduleChangeTab } from './tabs/ScheduleChangeTab';
 import { Badge } from '@/components/ui/basic/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -66,6 +67,7 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
     { id: 'profile', label: 'Thông tin người dùng', icon: User },
     ...(isTutor ? [{ id: 'tutorProfile', label: 'Hồ sơ gia sư', icon: GraduationCap }] : []),
     { id: 'schedule', label: isTutor ? 'Lịch dạy' : 'Lịch học', icon: Calendar },
+    { id: 'scheduleChange', label: 'Yêu cầu chuyển lịch', icon: ClipboardList },
     { id: 'classes', label: isTutor ? 'Lịch đặt' : 'Lớp học', icon: BookOpen },
     ...(!isTutor ? [{ id: 'classRequests', label: 'Yêu cầu mở lớp', icon: FileText }] : []),
     ...(isTutor ? [{ id: 'tutorApplications', label: 'Ứng tuyển lớp dạy', icon: ClipboardList }] : []),
@@ -86,6 +88,8 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
         return <TutorProfileTab />;
       case 'schedule':
         return isTutor ? <TutorScheduleTab /> : <ScheduleTab />;
+      case 'scheduleChange':
+        return <ScheduleChangeTab />;
       case 'classes':
         return isTutor ? <TutorBookingsTab /> : <ClassesTab />;
       case 'classRequests':
