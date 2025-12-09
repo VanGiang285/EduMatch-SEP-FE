@@ -6,18 +6,16 @@ import { Badge } from "@/components/ui/basic/badge";
 import { Button } from "@/components/ui/basic/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/feedback/dialog";
 import { Loader2 } from "lucide-react";
-import { ScheduleStatus, ScheduleChangeRequestStatus } from "@/types/enums";
+import { ScheduleChangeRequestStatus } from "@/types/enums";
 import { EnumHelpers } from "@/types/enums";
 import { useAuth } from "@/hooks/useAuth";
 import { useCustomToast } from "@/hooks/useCustomToast";
-import { useSchedules } from "@/hooks/useSchedules";
 import { useBookings } from "@/hooks/useBookings";
 import { useTutorProfiles } from "@/hooks/useTutorProfiles";
 import { useScheduleChangeRequests } from "@/hooks/useScheduleChangeRequests";
 import { ScheduleDto } from "@/types/backend";
 import { format, addHours } from "date-fns";
 import { vi } from "date-fns/locale";
-import { USER_ROLES } from "@/constants";
 import {
     Select,
     SelectTrigger,
@@ -28,14 +26,7 @@ import {
 
 export function ScheduleChangeTab() {
     const { user } = useAuth();
-    const { showError, showWarning, showSuccess } = useCustomToast();
-    const {
-        schedules,
-        loading,
-        loadLearnerSchedules,
-        loadSchedulesByTutorEmail,
-        clearSchedules,
-    } = useSchedules();
+    const { showError, showSuccess } = useCustomToast();
     const { loadBookingDetails, getBooking } = useBookings();
     const { getTutorProfile, loadTutorProfiles } = useTutorProfiles();
     const {
@@ -45,8 +36,6 @@ export function ScheduleChangeTab() {
         updateStatus,
         fetchById,
     } = useScheduleChangeRequests();
-
-    const isTutor = user?.role === USER_ROLES.TUTOR;
 
     const [loadingRequests, setLoadingRequests] = useState(false);
     const [requestsFromMe, setRequestsFromMe] = useState<any[]>([]);
@@ -77,20 +66,6 @@ export function ScheduleChangeTab() {
         },
         [fetchById]
     );
-    // Load upcoming schedules: cho learner (lịch học) hoặc tutor (lịch dạy)
-    useEffect(() => {
-        if (user?.email) {
-            if (isTutor) {
-                loadSchedulesByTutorEmail(user.email, { status: ScheduleStatus.Upcoming });
-            } else {
-                loadLearnerSchedules(user.email, { status: ScheduleStatus.Upcoming });
-            }
-        } else {
-            clearSchedules();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.email, isTutor]);
-
     // Load danh sách các yêu cầu đổi lịch (tôi gửi / gửi cho tôi)
     useEffect(() => {
         const loadRequests = async () => {
@@ -120,37 +95,39 @@ export function ScheduleChangeTab() {
         loadRequests();
     }, [user?.email, fetchByRequesterEmail, fetchByRequestedToEmail, loadMissingSchedules]);
 
-    // Load booking details cho các schedules (để lấy tutorSubject, tutorEmail, ...)
+    // Load booking details dựa trên schedule trong các yêu cầu
     useEffect(() => {
-        if (schedules.length > 0) {
-            const bookingIdsToLoad = schedules
-                .filter((schedule) => schedule.bookingId && !schedule.booking)
-                .map((schedule) => schedule.bookingId!);
-
-            if (bookingIdsToLoad.length > 0) {
-                loadBookingDetails(bookingIdsToLoad);
-            }
+        const allRequests = [...requestsFromMe, ...requestsToMe];
+        const bookingIdsToLoad = Array.from(
+            new Set(
+                allRequests
+                    .map((req) => req?.schedule?.bookingId)
+                    .filter((id): id is number => !!id)
+            )
+        );
+        if (bookingIdsToLoad.length > 0) {
+            loadBookingDetails(bookingIdsToLoad);
         }
-    }, [schedules, loadBookingDetails]);
+    }, [requestsFromMe, requestsToMe, loadBookingDetails]);
 
-    // Load tutor profiles để hiển thị thông tin gia sư
+    // Load tutor profiles dựa trên booking của các schedule trong yêu cầu
     useEffect(() => {
-        if (schedules.length > 0) {
-            const tutorEmails: string[] = [];
+        const allRequests = [...requestsFromMe, ...requestsToMe];
+        const tutorEmails: string[] = [];
 
-            schedules.forEach((schedule) => {
-                const booking = getBooking(schedule.bookingId, schedule.booking);
-                const tutorEmail = booking?.tutorSubject?.tutorEmail;
-                if (tutorEmail && !tutorEmails.includes(tutorEmail)) {
-                    tutorEmails.push(tutorEmail);
-                }
-            });
-
-            if (tutorEmails.length > 0) {
-                loadTutorProfiles(tutorEmails);
+        allRequests.forEach((req) => {
+            const schedule = req?.schedule as ScheduleDto | undefined;
+            const booking = getBooking(schedule?.bookingId, schedule?.booking);
+            const tutorEmail = booking?.tutorSubject?.tutorEmail;
+            if (tutorEmail && !tutorEmails.includes(tutorEmail)) {
+                tutorEmails.push(tutorEmail);
             }
+        });
+
+        if (tutorEmails.length > 0) {
+            loadTutorProfiles(tutorEmails);
         }
-    }, [schedules, getBooking, loadTutorProfiles]);
+    }, [requestsFromMe, requestsToMe, getBooking, loadTutorProfiles]);
 
 
     // Màu cho trạng thái ScheduleChangeRequest
