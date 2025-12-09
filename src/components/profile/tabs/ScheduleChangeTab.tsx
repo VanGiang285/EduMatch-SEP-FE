@@ -14,8 +14,7 @@ import { useSchedules } from "@/hooks/useSchedules";
 import { useBookings } from "@/hooks/useBookings";
 import { useTutorProfiles } from "@/hooks/useTutorProfiles";
 import { useScheduleChangeRequests } from "@/hooks/useScheduleChangeRequests";
-import { useTutorAvailableSlots } from "@/hooks/useTutorAvailableSlots";
-import { ScheduleDto, TutorAvailabilityDto } from "@/types/backend";
+import { ScheduleDto } from "@/types/backend";
 import { format, addHours } from "date-fns";
 import { vi } from "date-fns/locale";
 import { USER_ROLES } from "@/constants";
@@ -40,7 +39,6 @@ export function ScheduleChangeTab() {
     const { loadBookingDetails, getBooking } = useBookings();
     const { getTutorProfile, loadTutorProfiles } = useTutorProfiles();
     const {
-        create: createScheduleChangeRequest,
         loading: loadingChangeRequest,
         fetchByRequesterEmail,
         fetchByRequestedToEmail,
@@ -50,12 +48,6 @@ export function ScheduleChangeTab() {
 
     const isTutor = user?.role === USER_ROLES.TUTOR;
 
-    const {
-        slots: availableSlotsRaw,
-        loadSlots: loadTutorAvailableSlots,
-    } = useTutorAvailableSlots();
-
-    const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
     const [loadingRequests, setLoadingRequests] = useState(false);
     const [requestsFromMe, setRequestsFromMe] = useState<any[]>([]);
     const [requestsToMe, setRequestsToMe] = useState<any[]>([]);
@@ -85,18 +77,6 @@ export function ScheduleChangeTab() {
         },
         [fetchById]
     );
-    const [changeDialog, setChangeDialog] = useState<{
-        schedule?: ScheduleDto;
-        availableSlots: TutorAvailabilityDto[];
-        selectedNewAvailabilityId: number | null;
-        loading: boolean;
-    }>({
-        schedule: undefined,
-        availableSlots: [],
-        selectedNewAvailabilityId: null,
-        loading: false,
-    });
-
     // Load upcoming schedules: cho learner (lịch học) hoặc tutor (lịch dạy)
     useEffect(() => {
         if (user?.email) {
@@ -172,163 +152,6 @@ export function ScheduleChangeTab() {
         }
     }, [schedules, getBooking, loadTutorProfiles]);
 
-    const buildKeyFromAvailability = (av?: TutorAvailabilityDto | null) => {
-        if (!av?.startDate) return "";
-        const date = av.startDate.includes("T") ? av.startDate.split("T")[0] : av.startDate;
-        const hour =
-            av.slot?.startTime?.split(":")[0]?.padStart(2, "0") ||
-            (av.startDate.includes("T")
-                ? av.startDate.split("T")[1]?.split(":")[0]?.padStart(2, "0")
-                : "");
-        return `${date}-${hour}`;
-    };
-
-    const buildKeyFromSchedule = (sch?: ScheduleDto) => {
-        const av = sch?.availability;
-        if (!av?.startDate) return "";
-        const date = av.startDate.includes("T") ? av.startDate.split("T")[0] : av.startDate;
-        const hour =
-            av.slot?.startTime?.split(":")[0]?.padStart(2, "0") ||
-            (av.startDate.includes("T")
-                ? av.startDate.split("T")[1]?.split(":")[0]?.padStart(2, "0")
-                : "");
-        return `${date}-${hour}`;
-    };
-
-    const loadChangeDialogData = useCallback(
-        async (schedule: ScheduleDto) => {
-            if (!user?.email) {
-                showWarning("Vui lòng đăng nhập", "Bạn cần đăng nhập để yêu cầu đổi lịch.");
-                return;
-            }
-
-            const booking = getBooking(schedule.bookingId, schedule.booking);
-            const tutorSubject = booking?.tutorSubject;
-            const tutor = tutorSubject?.tutor;
-            const tutorId = tutor?.id;
-            const tutorEmail = tutorSubject?.tutorEmail;
-
-            if (!tutorId || !tutorEmail) {
-                showError("Không tìm thấy thông tin gia sư cho buổi học này.");
-                return;
-            }
-
-            setSelectedScheduleId(schedule.id);
-            setChangeDialog({
-                schedule,
-                availableSlots: [],
-                selectedNewAvailabilityId: null,
-                loading: true,
-            });
-
-            try {
-                const slotRes = await loadTutorAvailableSlots(tutorId);
-                // Tính các khung giờ learner đã bận (từ tất cả schedules Upcoming, trừ chính schedule đang đổi)
-                const busyKeys = new Set<string>();
-                schedules
-                    .filter(
-                        (s) =>
-                            EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Upcoming &&
-                            s.id !== schedule.id
-                    )
-                    .forEach((s) => {
-                        const key = buildKeyFromSchedule(s);
-                        if (key) busyKeys.add(key);
-                    });
-
-                const now = new Date();
-                const cutoff = now.getTime() + 24 * 60 * 60 * 1000; // 24h
-
-                const availableSlots = slotRes.filter((av) => {
-                    if (!av.startDate) return false;
-                    const start = new Date(av.startDate);
-                    if (start.getTime() < cutoff) return false; // chỉ cho chuyển cách 24h
-                    const key = buildKeyFromAvailability(av);
-                    if (busyKeys.has(key)) return false; // không trùng lịch học khác của learner
-                    return true;
-                });
-
-                if (availableSlots.length === 0) {
-                    showWarning(
-                        "Không còn slot phù hợp",
-                        "Không tìm thấy lịch rảnh thỏa điều kiện (>=24h, không trùng lịch bạn)."
-                    );
-                }
-
-                setChangeDialog({
-                    schedule,
-                    availableSlots,
-                    selectedNewAvailabilityId: availableSlots[0]?.id ?? null,
-                    loading: false,
-                });
-            } catch (err: any) {
-                showError("Lỗi khi tải lịch rảnh", err.message || "Vui lòng thử lại sau.");
-                setChangeDialog((prev) => ({ ...prev, loading: false }));
-            }
-        },
-        [getBooking, schedules, showError, showWarning, user?.email]
-    );
-
-    const handleSubmitChangeRequest = useCallback(async () => {
-        const dialog = changeDialog;
-        if (!dialog.schedule || !dialog.selectedNewAvailabilityId || !user?.email) {
-            showWarning("Thiếu thông tin", "Vui lòng chọn một lịch mới trước khi gửi yêu cầu.");
-            return;
-        }
-
-        const booking = getBooking(dialog.schedule.bookingId, dialog.schedule.booking);
-        const tutorEmail = booking?.tutorSubject?.tutorEmail;
-        const learnerEmail = booking?.learnerEmail;
-
-        // Learner gửi -> gửi cho gia sư | Tutor gửi -> gửi cho học viên
-        const requestedToEmail = !isTutor ? tutorEmail : learnerEmail;
-
-        if (!requestedToEmail) {
-            showError(
-                "Không tìm thấy người nhận yêu cầu",
-                !isTutor ? "Không tìm thấy email gia sư cho buổi học này."
-                    : "Không tìm thấy email học viên cho buổi học này."
-            );
-            return;
-        }
-
-        const payload = {
-            scheduleId: dialog.schedule.id,
-            requesterEmail: user.email,
-            requestedToEmail,
-            oldAvailabilitiId: dialog.schedule.availabilitiId,
-            newAvailabilitiId: dialog.selectedNewAvailabilityId,
-            reason: undefined,
-        };
-
-        const res = await createScheduleChangeRequest(payload);
-        if (res) {
-            showSuccess("Đã gửi yêu cầu chuyển lịch thành công");
-            // Sau khi tạo yêu cầu, có thể reload danh sách lịch để cập nhật
-            if (user.email) {
-                loadLearnerSchedules(user.email, { status: ScheduleStatus.Upcoming });
-            }
-            setSelectedScheduleId(null);
-            setChangeDialog({
-                schedule: undefined,
-                availableSlots: [],
-                selectedNewAvailabilityId: null,
-                loading: false,
-            });
-        }
-    }, [
-        changeDialog,
-        createScheduleChangeRequest,
-        getBooking,
-        loadLearnerSchedules,
-        showError,
-        showSuccess,
-        showWarning,
-        user?.email,
-    ]);
-
-
-
 
     // Màu cho trạng thái ScheduleChangeRequest
     const getChangeRequestStatusColor = (status: ScheduleChangeRequestStatus | string) => {
@@ -399,12 +222,13 @@ export function ScheduleChangeTab() {
         const sortedItems = [...items].sort((a, b) => {
             const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
             const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return aTime - bTime; // tăng dần theo thời gian tạo
+            return bTime - aTime; // tăng dần theo thời gian tạo
         });
 
         return sortedItems.map((item) => {
             const schedule = item.schedule as ScheduleDto | undefined;
             const oldAv = item.oldAvailability;
+            const newAv = item.newAvailability;
             const slot = oldAv?.slot;
             const booking = getBooking(schedule?.bookingId, schedule?.booking);
             const tutorSubject = booking?.tutorSubject;
@@ -423,10 +247,21 @@ export function ScheduleChangeTab() {
                         </div>
                     </td>
 
-                    <td className="py-2 px-3 text-sm text-gray-700 whitespace-pre-line">
-                        {oldAv?.startDate
-                            ? `Cũ: ${format((new Date(oldAv.startDate)), "dd/MM/yyyy", { locale: vi })}\n${oldAv?.slot?.startTime?.slice(0, 5) || ''} - ${oldAv?.slot?.endTime?.slice(0, 5) || ''}`
-                            : 'N/A'}
+                    <td className="py-2 px-3 text-sm text-gray-700">
+                        <div className="flex flex-col gap-1">
+                            <div>
+                                <span className="font-semibold">Cũ:</span>{" "}
+                                {oldAv?.startDate
+                                    ? `${format(new Date(oldAv.startDate), "dd/MM/yyyy", { locale: vi })}\n${oldAv?.slot?.startTime?.slice(0, 5) || ''} - ${oldAv?.slot?.endTime?.slice(0, 5) || ''}`
+                                    : "N/A"}
+                            </div>
+                            <div>
+                                <span className="font-semibold text-[#257180]">Mới:</span>{" "}
+                                {newAv?.startDate
+                                    ? `${format(new Date(newAv.startDate), "dd/MM/yyyy", { locale: vi })}\n${newAv?.slot?.startTime?.slice(0, 5) || ''} - ${newAv?.slot?.endTime?.slice(0, 5) || ''}`
+                                    : "N/A"}
+                            </div>
+                        </div>
                     </td>
                     <td className="py-2 px-3 text-sm text-gray-700">
                         {item.createdAt
