@@ -19,6 +19,13 @@ import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { ScheduleDto, ScheduleChangeRequestDto, TutorAvailabilityDto } from '@/types/backend';
 import { useRouter } from 'next/navigation';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/form/select';
 
 export function ScheduleTab() {
   const { user } = useAuth();
@@ -41,6 +48,7 @@ export function ScheduleTab() {
   } = useTutorAvailability(12);
   const { showError, showSuccess } = useCustomToast();
   const [pendingBySchedule, setPendingBySchedule] = useState<Record<number, boolean>>({});
+  const [statusFilter, setStatusFilter] = useState<'all' | ScheduleStatus>('all');
   const [slotDialog, setSlotDialog] = useState<{
     open: boolean;
     schedule?: ScheduleDto;
@@ -54,12 +62,10 @@ export function ScheduleTab() {
       const params: {
         startDate?: string;
         endDate?: string;
-        status?: ScheduleStatus;
       } = {};
 
-      // Chỉ lấy lịch sắp học (Upcoming) từ ngày hiện tại trở đi
+      // Chỉ lấy lịch từ hiện tại trở đi
       params.startDate = new Date().toISOString();
-      params.status = ScheduleStatus.Upcoming;
 
       loadSchedules(user.email, params);
     }
@@ -147,8 +153,19 @@ export function ScheduleTab() {
     }
   };
 
-  // Danh sách lịch sắp học (đã lọc Upcoming ở hook)
-  const filteredSchedules = schedules;
+  const allowedSchedules = schedules.filter(s =>
+    [ScheduleStatus.Upcoming, ScheduleStatus.InProgress].includes(
+      EnumHelpers.parseScheduleStatus(s.status)
+    )
+  );
+
+  // Danh sách lịch đang học / sắp học, có filter trạng thái
+  const filteredSchedules = allowedSchedules.filter(s =>
+    statusFilter === 'all'
+      ? true
+      : EnumHelpers.parseScheduleStatus(s.status) === statusFilter
+  );
+
 
   const buildBusyKey = (av?: TutorAvailabilityDto | null) => {
     if (!av?.startDate) return '';
@@ -249,8 +266,25 @@ export function ScheduleTab() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Lịch học sắp tới</h2>
-          <p className="text-gray-600 mt-1">Chỉ hiển thị các buổi học sắp diễn ra.</p>
+          <h2 className="text-2xl font-semibold text-gray-900">Lịch học</h2>
+          <p className="text-gray-600 mt-1">Hiển thị các buổi đang học và sắp diễn ra.</p>
+        </div>
+        <div className="w-64">
+          <Select
+            value={statusFilter === 'all' ? 'all' : statusFilter.toString()}
+            onValueChange={(value) =>
+              setStatusFilter(value === 'all' ? 'all' : (Number(value) as ScheduleStatus))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Lọc trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả</SelectItem>
+              <SelectItem value={ScheduleStatus.Upcoming.toString()}>Sắp diễn ra</SelectItem>
+              <SelectItem value={ScheduleStatus.InProgress.toString()}>Đang học</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
