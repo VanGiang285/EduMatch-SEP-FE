@@ -96,7 +96,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     isSlotAvailable,
     isSlotExistsInMap,
     isSlotSelected,
-    isSlotAtLeast24HoursAway,
+    isSlotAtLeastHoursAway,
     getAvailableTimeSlots,
     timeSlots: timeSlotsFromHook,
     isLoading: isLoadingAvailability,
@@ -1940,7 +1940,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                               const slotBooked = isSlotBooked(day.key, timeSlot);
                               const slotLearnerBusy = isSlotLearnerUpcoming(day.key, timeSlot);
                               const slotSelected = isSlotSelected(day.key, timeSlot);
-                              const slot24HoursAway = isSlotAtLeast24HoursAway(day.key, timeSlot);
+                              const slot24HoursAway = isSlotAtLeastHoursAway(day.key, timeSlot);
 
                               let buttonClass = '';
                               let buttonContent = '';

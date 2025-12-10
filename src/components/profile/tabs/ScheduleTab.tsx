@@ -38,7 +38,7 @@ export function ScheduleTab() {
     goToNextWeek,
     goToCurrentWeek,
     isLoading: loadingAvailabilities,
-  } = useTutorAvailability();
+  } = useTutorAvailability(12);
   const { showError, showSuccess } = useCustomToast();
   const [pendingBySchedule, setPendingBySchedule] = useState<Record<number, boolean>>({});
   const [slotDialog, setSlotDialog] = useState<{

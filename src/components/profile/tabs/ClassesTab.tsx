@@ -34,6 +34,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
+import { useWalletContext } from '@/contexts/WalletContext';
 import { useSchedules } from '@/hooks/useSchedules';
 import { useBookings } from '@/hooks/useBookings';
 import { format } from 'date-fns';
@@ -42,6 +43,7 @@ import { useRouter } from 'next/navigation';
 
 export function ClassesTab() {
   const { user } = useAuth();
+  const { refetch: refetchWallet } = useWalletContext();
   const { showError, showSuccess, showWarning } = useCustomToast();
   const router = useRouter();
   const {
@@ -678,6 +680,16 @@ export function ClassesTab() {
                                     const success = await finishSchedule(schedule.id);
                                     if (success) {
                                       showSuccess('Đã xác nhận buổi học thành công');
+                                      // Refetch số dư ví để cập nhật ngay (tutor sẽ thấy tiền cộng ngay)
+                                      try {
+                                        await refetchWallet();
+                                      } catch (err) {
+                                        console.error('Không thể refetch ví sau khi xác nhận buổi học', err);
+                                        showWarning(
+                                          'Không thể tải lại số dư',
+                                          'Vui lòng tải lại trang để xem số dư mới.'
+                                        );
+                                      }
                                     } else {
                                       showError('Không thể xác nhận buổi học', 'Vui lòng thử lại sau.');
                                     }

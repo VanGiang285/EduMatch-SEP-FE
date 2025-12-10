@@ -58,8 +58,8 @@ export interface UseTutorAvailabilityReturn {
     dayKey: string,
     timeSlot: { startTime: string; endTime: string; id: number }
   ) => boolean;
-  /** Kiểm tra xem slot có cách thời điểm hiện tại ít nhất 24 giờ không */
-  isSlotAtLeast24HoursAway: (
+  /** Kiểm tra xem slot có cách thời điểm hiện tại ít nhất minHoursFromNow (mặc định 24h) không */
+  isSlotAtLeastHoursAway: (
     dayKey: string,
     timeSlot: { startTime: string; endTime: string; id: number }
   ) => boolean;
@@ -144,7 +144,9 @@ const buildSlotKey = (dateKey: string, hour: string): string =>
  * Hook quản lý lịch trống của gia sư
 
  */
-export function useTutorAvailability(): UseTutorAvailabilityReturn {
+export function useTutorAvailability(
+  minHoursFromNow = 24
+): UseTutorAvailabilityReturn {
   // Danh sách lịch trống của gia sư - sẽ được load từ API
   const [availabilities, setAvailabilities] = useState<TutorAvailabilityDto[]>(
     []
@@ -335,9 +337,9 @@ export function useTutorAvailability(): UseTutorAvailabilityReturn {
   // ========== CÁC HÀM KIỂM TRA ==========
 
   /**
-   * Kiểm tra xem slot có cách thời điểm hiện tại ít nhất 24 giờ không
+   * Kiểm tra xem slot có cách thời điểm hiện tại ít nhất minHoursFromNow (mặc định 24 giờ) không
    */
-  const isSlotAtLeast24HoursAway = useCallback(
+  const isSlotAtLeastHoursAway = useCallback(
     (
       dayKey: string,
       timeSlot: { startTime: string; endTime: string; id: number }
@@ -359,10 +361,10 @@ export function useTutorAvailability(): UseTutorAvailabilityReturn {
       const diffMs = date.getTime() - now.getTime();
       const diffHours = diffMs / (1000 * 60 * 60);
 
-      // Phải cách ít nhất 24 giờ (lớn hơn 24, không bằng)
-      return diffHours > 24;
+      // Phải cách ít nhất minHoursFromNow giờ (lớn hơn minHoursFromNow, không bằng)
+      return diffHours > minHoursFromNow;
     },
-    [currentWeekStart]
+    [currentWeekStart, minHoursFromNow]
   );
 
   /**
@@ -388,13 +390,13 @@ export function useTutorAvailability(): UseTutorAvailabilityReturn {
       dayKey: string,
       timeSlot: { startTime: string; endTime: string; id: number }
     ) => {
-      // Slot phải tồn tại trong availabilityMap VÀ cách ít nhất 24h
+      // Slot phải tồn tại trong availabilityMap VÀ cách ít nhất minHoursFromNow
       return (
         isSlotExistsInMap(dayKey, timeSlot) &&
-        isSlotAtLeast24HoursAway(dayKey, timeSlot)
+        isSlotAtLeastHoursAway(dayKey, timeSlot)
       );
     },
-    [isSlotExistsInMap, isSlotAtLeast24HoursAway]
+    [isSlotExistsInMap, isSlotAtLeastHoursAway]
   );
 
   /**
@@ -490,7 +492,7 @@ export function useTutorAvailability(): UseTutorAvailabilityReturn {
     isSlotAvailable,
     isSlotExistsInMap,
     isSlotSelected,
-    isSlotAtLeast24HoursAway,
+    isSlotAtLeastHoursAway,
     getAvailableTimeSlots,
     timeSlots,
     isLoading,
