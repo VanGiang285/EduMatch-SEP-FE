@@ -23,6 +23,7 @@ import { ReportService, MediaService, FeedbackService } from '@/services';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWalletContext } from '@/contexts/WalletContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
+import { useChatContext } from '@/contexts/ChatContext';
 import { ROUTES, USER_ROLES } from '@/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/form/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/feedback/dialog';
@@ -70,6 +71,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const { isAuthenticated, user } = useAuth();
   const { balance, loading: walletLoading } = useWalletContext();
   const { showWarning, showInfo, showSuccess, showError } = useCustomToast();
+  const { openChatWithTutor } = useChatContext();
   const { tutor, isLoading, error, loadTutorDetail, clearError } = useTutorDetail();
   const availabilitySectionRef = React.useRef<HTMLDivElement>(null);
   const { createBooking, error: bookingError } = useBookings();
@@ -1742,11 +1744,33 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       <Clock className="w-4 h-4 mr-2" />
                       Đặt lịch học
                     </Button>
-
                     <Button
                       variant="outline"
                       className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                       size="lg"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+
+                        if (!isAuthenticated) {
+                          showWarning(
+                            'Vui lòng đăng nhập',
+                            'Bạn cần đăng nhập để nhắn tin với gia sư.'
+                          );
+                          router.push('/login');
+                          return;
+                        }
+
+                        if (!tutor?.id || !tutor?.userEmail) {
+                          return;
+                        }
+
+                        await openChatWithTutor(
+                          tutor.id,
+                          tutor.userEmail || "",
+                          tutor.userName,
+                          tutor.avatarUrl
+                        );
+                      }}
                     >
                       <MessageCircle className="w-4 h-4 mr-2" />
                       Gửi tin nhắn

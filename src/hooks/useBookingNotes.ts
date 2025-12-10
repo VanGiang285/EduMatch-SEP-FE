@@ -1,16 +1,16 @@
 import { useState, useCallback } from 'react';
+import { BookingNoteDto } from '@/types/backend';
+import { BookingNoteService } from '@/services';
 import {
-  BookingNoteService,
-  type BookingNoteDto,
-  type BookingNoteCreateRequest,
-  type BookingNoteUpdateRequest,
-} from '@/services';
+  BookingNoteCreateRequest,
+  BookingNoteUpdateRequest,
+} from '@/types/requests';
 
 /**
  * Hook quản lý ghi chú (booking notes) cho từng booking
  * Bọc quanh BookingNoteService
  */
-export function useBookingNotes() {
+export function useBookingNotes(bookingId?: number) {
   const [notes, setNotes] = useState<BookingNoteDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,9 +18,10 @@ export function useBookingNotes() {
   /**
    * Load tất cả notes của một booking
    */
-  const loadNotesByBookingId = useCallback(
-    async (bookingId: number) => {
-      if (!bookingId || bookingId <= 0) {
+  const loadNotes = useCallback(
+    async (id?: number) => {
+      const targetId = id ?? bookingId;
+      if (!targetId || targetId <= 0) {
         setNotes([]);
         return;
       }
@@ -29,7 +30,7 @@ export function useBookingNotes() {
         setLoading(true);
         setError(null);
 
-        const response = await BookingNoteService.getByBookingId(bookingId);
+        const response = await BookingNoteService.getByBookingId(targetId);
 
         if (response.success && response.data) {
           setNotes(response.data);
@@ -49,7 +50,7 @@ export function useBookingNotes() {
         setLoading(false);
       }
     },
-    []
+    [bookingId]
   );
 
   /**
@@ -202,7 +203,7 @@ export function useBookingNotes() {
     notes,
     loading,
     error,
-    loadNotesByBookingId,
+    loadNotes,
     getNoteById,
     createNote,
     updateNote,
@@ -210,5 +211,3 @@ export function useBookingNotes() {
     clearNotes,
   };
 }
-
-

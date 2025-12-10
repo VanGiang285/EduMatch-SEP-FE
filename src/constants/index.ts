@@ -162,6 +162,8 @@ export const API_ENDPOINTS = {
     RESEND_VERIFY: '/api/user/resend-verify',
     GOOGLE_LOGIN: '/api/user/signIn-google',
     GET_CURRENT_USER: '/api/user/me',
+    CHANGE_PASSWORD: '/api/user/change-password',
+    RESET_PASSWORD: '/api/user/reset-password',
   },
 
   // ==================== USER PROFILES ====================
@@ -530,6 +532,7 @@ export const API_ENDPOINTS = {
   },
 
   // ==================== BOOKING NOTES ====================
+
   BOOKING_NOTES: {
     GET_BY_ID: '/api/BookingNotes/:id',
     GET_BY_BOOKING: '/api/BookingNotes/by-booking/:bookingId',

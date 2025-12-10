@@ -31,6 +31,7 @@ import { useBookings } from '@/hooks/useBookings';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { BookingNotesPanel } from '@/components/booking/BookingNotesPanel';
 
 export function TutorBookingsTab() {
   const { user } = useAuth();
@@ -459,7 +460,6 @@ export function TutorBookingsTab() {
           </Card>
         </div>
 
-        {/* Schedules List */}
         <div>
 
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -700,6 +700,8 @@ export function TutorBookingsTab() {
             </div>
           )}
         </div>
+
+        <BookingNotesPanel bookingId={selectedBookingId} />
       </div>
     );
   }

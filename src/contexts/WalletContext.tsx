@@ -48,6 +48,37 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         lastUserEmailRef.current = currentUserEmail;
     }, [user?.email, isAuthenticated]); // Không thêm wallet.refetch vào dependency để tránh loop
 
+    // Polling để tự động refetch wallet balance mỗi 5 giây khi user đang authenticated
+    useEffect(() => {
+        if (!isAuthenticated || !user?.email) {
+            return;
+        }
+
+        const intervalId = setInterval(() => {
+            wallet.refetch().catch((err) => {
+                console.error('Error refetching wallet:', err);
+            });
+        }, 5000);
+
+        return () => clearInterval(intervalId);
+    }, [isAuthenticated, user?.email, wallet.refetch]);
+
+    // Listen for custom event để refetch wallet ngay lập tức khi có transaction
+    useEffect(() => {
+        if (!isAuthenticated || !user?.email) {
+            return;
+        }
+
+        const handleWalletUpdate = () => {
+            wallet.refetch().catch((err) => {
+                console.error('Error refetching wallet:', err);
+            });
+        };
+
+        window.addEventListener('wallet:update', handleWalletUpdate);
+        return () => window.removeEventListener('wallet:update', handleWalletUpdate);
+    }, [isAuthenticated, user?.email, wallet.refetch]);
+
     return (
         <WalletContext.Provider value={wallet}>
             {children}

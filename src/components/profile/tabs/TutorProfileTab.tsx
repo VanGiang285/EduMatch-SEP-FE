@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
 import { Input } from '@/components/ui/form/input';
@@ -33,9 +34,11 @@ import {
   Plus,
   Trash2,
   Eye,
-  Loader2
+  Loader2,
+  MessageCircle
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useChatContext } from '@/contexts/ChatContext';
 import { TutorService, CertificateService, SubjectService } from '@/services';
 import { MasterDataService } from '@/services/masterDataService';
 import { AvailabilityService } from '@/services/availabilityService';
@@ -81,8 +84,11 @@ interface TutorSubject {
 }
 
 export function TutorProfileTab() {
-  const { user } = useAuth();
-  const { showSuccess, showError } = useCustomToast();
+  const { user, isAuthenticated } = useAuth();
+  const { showSuccess, showError, showWarning } = useCustomToast();
+  const { openChatWithTutor } = useChatContext();
+  const router = useRouter();
+
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -93,6 +99,31 @@ export function TutorProfileTab() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [tutorProfile, setTutorProfile] = useState<TutorProfileDto | null>(null);
   const [tutorId, setTutorId] = useState<number | null>(null);
+  
+  const handleOpenChat = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!isAuthenticated) {
+      showWarning(
+        'Vui lòng đăng nhập',
+        'Bạn cần đăng nhập để nhắn tin với gia sư.'
+      );
+      router.push('/login');
+      return;
+    }
+
+    if (!tutorId || !tutorProfile?.userEmail) {
+      return;
+    }
+
+    await openChatWithTutor(
+      tutorId,
+      tutorProfile.userEmail || "",
+      tutorProfile.userName,
+      tutorProfile.avatarUrl
+    );
+  };
+
   const [provinces, setProvinces] = useState<ProvinceDto[]>([]);
   const [subDistricts, setSubDistricts] = useState<SubDistrictDto[]>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
@@ -1039,10 +1070,21 @@ export function TutorProfileTab() {
         </div>
         <div>
           {!isEditing ? (
-            <Button onClick={() => setIsEditing(true)} size="lg" className="bg-[#257180] hover:bg-[#257180]/90 text-white">
-              <Edit3 className="w-4 h-4 mr-2" />
-              Chỉnh sửa
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                onClick={(e) => handleOpenChat(e)}
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Nhắn tin
+              </Button>
+              <Button onClick={() => setIsEditing(true)} size="lg" className="bg-[#257180] hover:bg-[#257180]/90 text-white">
+                <Edit3 className="w-4 h-4 mr-2" />
+                Chỉnh sửa
+              </Button>
+            </div>
           ) : (
             <div className="flex gap-2">
               <Button 

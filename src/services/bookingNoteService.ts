@@ -1,30 +1,11 @@
 import { apiClient, replaceUrlParams } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
-import type { ApiResponse } from '@/types/api';
-
-export interface BookingNoteDto {
-  id: number;
-  bookingId: number;
-  content: string;
-  imageUrl?: string | null;
-  videoUrl?: string | null;
-  createdByEmail?: string | null;
-  createdAt: string;
-}
-
-export interface BookingNoteCreateRequest {
-  bookingId: number;
-  content: string;
-  imageUrl?: string | null;
-  videoUrl?: string | null;
-}
-
-export interface BookingNoteUpdateRequest {
-  id: number;
-  content: string;
-  imageUrl?: string | null;
-  videoUrl?: string | null;
-}
+import { ApiResponse } from '@/types/api';
+import { BookingNoteDto } from '@/types/backend';
+import {
+  BookingNoteCreateRequest,
+  BookingNoteUpdateRequest,
+} from '@/types/requests';
 
 export class BookingNoteService {
   /**
@@ -45,7 +26,9 @@ export class BookingNoteService {
   ): Promise<ApiResponse<BookingNoteDto[]>> {
     const endpoint = replaceUrlParams(
       API_ENDPOINTS.BOOKING_NOTES.GET_BY_BOOKING,
-      { bookingId: bookingId.toString() }
+      {
+        bookingId: bookingId.toString(),
+      }
     );
     return apiClient.get<BookingNoteDto[]>(endpoint);
   }
@@ -71,11 +54,7 @@ export class BookingNoteService {
     const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKING_NOTES.UPDATE, {
       id: request.id.toString(),
     });
-    return apiClient.put<BookingNoteDto>(endpoint, {
-      content: request.content,
-      imageUrl: request.imageUrl,
-      videoUrl: request.videoUrl,
-    });
+    return apiClient.put<BookingNoteDto>(endpoint, request);
   }
 
   /**

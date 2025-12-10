@@ -4,6 +4,8 @@ import { Label } from "../ui/form/label";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { Mail, ArrowLeft, CheckCircle, Clock, Shield, AlertCircle } from "lucide-react";
 import { useState } from "react";
+import { AuthService } from "@/services";
+import { useCustomToast } from "@/hooks/useCustomToast";
 interface ForgotPasswordPageProps {
   onBackToLogin: () => void;
 }
@@ -11,13 +13,24 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { showError, showSuccess } = useCustomToast();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email) return;
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const response = await AuthService.resetPassword(email);
+      if (response.success) {
+        showSuccess("Thành công", response.data?.message || "Đã gửi email đặt lại mật khẩu.");
+        setIsSubmitted(true);
+      } else {
+        showError("Không thể gửi email đặt lại mật khẩu", response.error?.message);
+      }
+    } catch (error: any) {
+      showError("Lỗi khi gửi email đặt lại mật khẩu", error.message);
+    } finally {
       setIsLoading(false);
-      setIsSubmitted(true);
-    }, 2000);
+    }
   };
   if (isSubmitted) {
     return (
