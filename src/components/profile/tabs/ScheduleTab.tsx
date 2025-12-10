@@ -179,6 +179,10 @@ export function ScheduleTab() {
     const map: Record<string, TutorAvailabilityDto> = {};
     availabilities.forEach(av => {
       if (!av.startDate) return;
+      // Chỉ map slot AVAILABLE của tutor
+      if (EnumHelpers.parseTutorAvailabilityStatus(av.status) !== TutorAvailabilityStatus.Available) {
+        return;
+      }
       const dateKey = av.startDate.split('T')[0];
       const hour = av.slot?.startTime?.split(':')[0]?.padStart(2, '0') || '';
       if (dateKey && hour) {
@@ -198,6 +202,54 @@ export function ScheduleTab() {
       });
     return map;
   }, [schedules]);
+
+  const learnerBusyInfoMap = useMemo(() => {
+    const map: Record<
+      string,
+      { label: string; startTime?: string; endTime?: string }
+    > = {};
+    schedules
+      .filter(s => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Upcoming)
+      .forEach(s => {
+        const key = buildBusyKey(s.availability);
+        if (!key) return;
+        const subjectName = s.booking?.tutorSubject?.subject?.subjectName;
+        const start = s.availability?.slot?.startTime?.slice(0, 5);
+        const end = s.availability?.slot?.endTime?.slice(0, 5);
+        const label =
+          subjectName && start && end
+            ? `${subjectName} (${start}-${end})`
+            : start && end
+              ? `${start}-${end}`
+              : subjectName || 'Bạn đã có lịch';
+        map[key] = { label, startTime: start, endTime: end };
+      });
+    return map;
+  }, [schedules]);
+
+  // Hợp nhất timeSlots của gia sư với các giờ bận của learner để hiển thị trên lưới
+  const displayTimeSlots = useMemo(() => {
+    const slotMap = new Map<string, { startTime: string; endTime: string; id: number }>();
+    timeSlots.forEach(ts => slotMap.set(ts.startTime, ts));
+
+    Object.values(learnerBusyInfoMap).forEach((info, idx) => {
+      if (!info.startTime) return;
+      const start = info.startTime;
+      if (!slotMap.has(start)) {
+        slotMap.set(start, {
+          startTime: start,
+          endTime: info.endTime || '',
+          id: -10000 - idx, // id âm để phân biệt slot ảo
+        });
+      }
+    });
+
+    return Array.from(slotMap.values()).sort((a, b) => {
+      const [ha, ma] = a.startTime.split(':').map(Number);
+      const [hb, mb] = b.startTime.split(':').map(Number);
+      return ha * 60 + ma - (hb * 60 + mb);
+    });
+  }, [timeSlots, learnerBusyInfoMap]);
 
   const getWeekDateKey = useCallback(
     (dayKey: string): string => {
@@ -589,54 +641,84 @@ export function ScheduleTab() {
                               </div>
                             );
                           })}
-                          {times.map(t => {
+                          {times.map((t: string) => {
                             const hour = t.split(':')[0].padStart(2, '0');
                             return (
                               <React.Fragment key={t}>
                                 <div className="bg-gray-50 border-b border-r p-2 text-sm font-semibold text-gray-700">{t}</div>
                                 {dates.map(d => {
                                   const av = getSlot(d, hour);
+                                  const timeLabel = `${t} - ${av?.slot?.endTime?.slice(0, 5) ?? ''}`.trim();
+                                  const busy = isLearnerBusy(d, hour);
+                                  const busyInfo = learnerBusyInfoMap[`${d}-${hour}`];
+
                                   if (!av) {
+                                    if (busy) {
+                                      const startDisplay = busyInfo?.startTime || t;
+                                      const endDisplay = busyInfo?.endTime ? ` - ${busyInfo.endTime}` : '';
+                                      const busyTitle = `Bạn đã có lịch${busyInfo?.label ? ` • ${busyInfo.label}` : ''}${endDisplay ? ` • ${startDisplay}${endDisplay}` : ` • ${startDisplay}`
+                                        }`;
+                                      return (
+                                        <div
+                                          key={`${d}-${t}`}
+                                          className="border-b border-r bg-rose-300 text-center text-[11px] text-rose-900 p-2 font-semibold"
+                                          title={busyTitle}
+                                        >
+                                          <div className="text-[11px] leading-tight">
+                                            {startDisplay}
+                                            {endDisplay}
+                                          </div>
+                                        </div>
+                                      );
+                                    }
                                     return (
-                                      <div key={`${d}-${t}`} className="border-b border-r bg-gray-100 text-center text-xs text-gray-400 p-2">
-                                        -
+                                      <div
+                                        key={`${d}-${t}`}
+                                        className="border-b border-r bg-gray-100 text-center text-[11px] text-gray-500 p-2 font-semibold"
+                                        title="Slot không rảnh"
+                                      >
+                                        ✕
                                       </div>
                                     );
                                   }
 
                                   const status = EnumHelpers.parseTutorAvailabilityStatus(av.status);
                                   const tooClose = isTooClose(av.startDate);
-                                  const busy = isLearnerBusy(d, hour);
                                   const isSelected = slotDialog.selectedAvailabilityId === av.id;
 
-                                  let bg = 'bg-green-100 text-green-800 border-green-200';
-                                  let label = 'Lịch rảnh';
-                                  let disabled = false;
+                                  // Slot không rảnh (Booked/Unavailable)
+                                  if (status !== TutorAvailabilityStatus.Available) {
+                                    return (
+                                      <div
+                                        key={`${d}-${t}`}
+                                        className="border-b border-r bg-slate-100 text-center text-[11px] text-slate-500 p-2 font-semibold"
+                                        title="Slot không rảnh"
+                                      >
+                                        ✕
+                                      </div>
+                                    );
+                                  }
 
-                                  if (status === TutorAvailabilityStatus.Booked) {
-                                    bg = 'bg-red-100 text-red-800 border-red-200';
-                                    label = 'Đã booked';
+                                  // Xác định trạng thái hiển thị
+                                  let bg = 'bg-emerald-100 text-emerald-900 border-emerald-300'; // rảnh
+                                  let disabled = false;
+                                  let title = `Lịch rảnh • ${timeLabel}`;
+
+                                  if (tooClose) {
+                                    bg = 'bg-orange-100 text-orange-900 border-orange-200'; // cam nhạt
+                                    title = `Quá gần (<12h) • ${timeLabel}`;
                                     disabled = true;
-                                  } else if (status !== TutorAvailabilityStatus.Available) {
-                                    bg = 'bg-gray-100 text-gray-400 border-gray-200';
-                                    label = 'Không có lịch';
+                                  }
+                                  if (busy) {
+                                    bg = 'bg-rose-300 text-rose-900 border-rose-500'; // đỏ
+                                    title = `Bạn đã có lịch${busyInfo?.label ? ` • ${busyInfo.label}` : ''} • ${timeLabel}`;
                                     disabled = true;
-                                  } else {
-                                    if (tooClose) {
-                                      bg = 'bg-yellow-100 text-yellow-800 border-yellow-200';
-                                      label = 'Quá gần (<12h)';
-                                      disabled = true;
-                                    }
-                                    if (busy) {
-                                      bg = 'bg-orange-100 text-orange-800 border-orange-200';
-                                      label = 'Bạn đã có lịch';
-                                      disabled = true;
-                                    }
-                                    if (isSelected) {
-                                      bg = 'bg-orange-200 text-orange-900 border-orange-300';
-                                      label = 'Đã chọn';
-                                      disabled = false;
-                                    }
+                                  }
+                                  if (isSelected) {
+                                    bg = 'bg-amber-300 text-amber-900 border-amber-500'; // cam đậm
+                                    title = `Đã chọn • ${timeLabel}`;
+                                    disabled = false;
+
                                   }
 
                                   return (
@@ -650,11 +732,13 @@ export function ScheduleTab() {
                                             : { ...prev, selectedAvailabilityId: av.id }
                                         )
                                       }
-                                      className={`border-b border-r p-2 text-center text-sm font-semibold transition ${bg} ${disabled && !isSelected ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-sm'
+                                      className={`border-b border-r p-2 text-center text-xs font-semibold transition ${bg} ${disabled && !isSelected ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-sm'
                                         }`}
-                                      title={`${label} • ${av.slot?.startTime?.slice(0, 5)} - ${av.slot?.endTime?.slice(0, 5)}`}
+                                      title={title}
                                     >
-                                      {av.slot?.startTime?.slice(0, 5)} - {av.slot?.endTime?.slice(0, 5)}
+                                      <div className="text-[11px] leading-tight">
+                                        {av.slot?.startTime?.slice(0, 5)} - {av.slot?.endTime?.slice(0, 5)}
+                                      </div>
                                     </button>
                                   );
                                 })}
@@ -665,30 +749,26 @@ export function ScheduleTab() {
                       </div>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-gray-600">
+                    <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-gray-700">
                       <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-green-100 rounded border border-green-300"></div>
-                        <span>Lịch rảnh</span>
+                        <div className="w-3 h-3 bg-emerald-200 rounded border border-emerald-400"></div>
+                        <span className="font-medium text-emerald-800">Lịch rảnh </span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-orange-200 rounded border border-orange-300"></div>
-                        <span>Đã chọn</span>
+                        <div className="w-3 h-3 bg-amber-300 rounded border border-amber-500"></div>
+                        <span className="font-medium text-amber-800">Đã chọn </span>
                       </div>
                       <div className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-orange-100 rounded border border-orange-200"></div>
-                        <span>Bạn đã có lịch</span>
+                        <span className="font-medium text-orange-700">Quá gần (&lt;12h)</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-yellow-100 rounded border border-yellow-200"></div>
-                        <span>Quá gần (&lt;12h)</span>
+                        <div className="w-3 h-3 bg-rose-300 rounded border border-rose-500"></div>
+                        <span className="font-medium text-rose-900">Bạn đã có lịch</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-red-100 rounded border border-red-200"></div>
-                        <span>Đã booked</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-gray-100 rounded border border-gray-200"></div>
-                        <span>Không có lịch</span>
+                        <div className="w-3 h-3 bg-slate-200 rounded border border-slate-400"></div>
+                        <span className="font-medium text-slate-800"> Không rảnh/đã booked</span>
                       </div>
                     </div>
                     <div className="mt-4">
