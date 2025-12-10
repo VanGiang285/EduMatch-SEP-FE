@@ -44,7 +44,7 @@ import { useRouter } from 'next/navigation';
 
 export function ClassesTab() {
   const { user } = useAuth();
-  const { refetch: refetchWallet, balance, loading: walletLoading } = useWalletContext();
+  const { refetch: refetchWallet } = useWalletContext();
   const { showError, showSuccess, showWarning } = useCustomToast();
   const router = useRouter();
   const {
@@ -55,15 +55,12 @@ export function ClassesTab() {
     getBookingById,
     loadBookingDetails,
     getBooking: getBookingFromCache,
-    payBooking: payBookingApi,
   } = useBookings();
   const [allBookings, setAllBookings] = useState<BookingDto[]>([]); // Lưu tất cả bookings để tính counts
   const [filter, setFilter] = useState<string>('all');
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
   const [cancelDialogBookingId, setCancelDialogBookingId] = useState<number | null>(null);
-  const [payingBookingId, setPayingBookingId] = useState<number | null>(null);
-  const [isPaying, setIsPaying] = useState(false);
   const { loadTutorProfiles, getTutorProfile, loadTutorProfile } = useTutorProfiles();
   const {
     schedules,
@@ -335,85 +332,6 @@ export function ClassesTab() {
       showError('Lỗi khi hủy booking', error.message);
     }
   };
-
-  // Tính toán counts cho từng trạng thái dựa trên tất cả bookings
-  const handlePayBooking = useCallback(
-    async (booking: BookingDto) => {
-      if (!booking || !booking.id) return;
-      if (!booking.totalAmount) {
-        showWarning('Không tìm thấy số tiền cần thanh toán. Vui lòng thử lại sau.');
-        return;
-      }
-      if (walletLoading) {
-        showWarning('Đang kiểm tra số dư ví, vui lòng đợi...');
-        return;
-      }
-      if (balance < booking.totalAmount) {
-        showWarning(
-          'Số dư không đủ',
-          `Số dư ví của bạn hiện là ${new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-          }).format(balance)}, không đủ để thanh toán ${new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-          }).format(booking.totalAmount)}. Vui lòng nạp thêm tiền.`
-        );
-        return;
-      }
-
-      setPayingBookingId(booking.id);
-      setIsPaying(true);
-
-      try {
-        const updatedBooking = await payBookingApi(booking.id);
-        if (updatedBooking) {
-          showSuccess('Thanh toán thành công', 'Số dư ví đã được trừ tương ứng.');
-
-          // Dispatch event để cập nhật wallet balance realtime
-          window.dispatchEvent(new Event('wallet:update'));
-
-          // Reload bookings và wallet song song để cập nhật dữ liệu
-          if (user?.email) {
-            await Promise.all([
-              loadBookings(user.email),
-              refetchWallet ? refetchWallet() : Promise.resolve()
-            ]);
-          } else if (refetchWallet) {
-            await refetchWallet();
-          }
-
-          // Cập nhật allBookings từ bookings state mới (sẽ được sync qua useEffect)
-          // Đảm bảo UI cập nhật ngay lập tức với payment status mới
-          setAllBookings((prevBookings) =>
-            prevBookings.map((b) =>
-              b.id === booking.id
-                ? { ...updatedBooking }
-                : b
-            )
-          );
-        } else {
-          throw new Error('Thanh toán không thành công. Vui lòng thử lại.');
-        }
-      } catch (error: any) {
-        showError('Không thể thanh toán', error?.message || 'Vui lòng thử lại sau.');
-      } finally {
-        setIsPaying(false);
-        setPayingBookingId(null);
-      }
-    },
-    [balance, loadBookings, payBookingApi, refetchWallet, showError, showSuccess, showWarning, user?.email, walletLoading]
-  );
-
-  const handleRequestRefund = useCallback(
-    (booking: BookingDto) => {
-      showWarning(
-        'Yêu cầu hoàn tiền',
-        `Đơn #${booking.id} đang trong quá trình xử lý. Vui lòng liên hệ hỗ trợ để hoàn tất yêu cầu.`
-      );
-    },
-    [showWarning]
-  );
 
   const bookingCounts = useMemo(() => {
     return {
