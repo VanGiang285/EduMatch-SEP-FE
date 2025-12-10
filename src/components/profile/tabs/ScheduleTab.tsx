@@ -562,9 +562,6 @@ export function ScheduleTab() {
                 </div>
               );
             })()}
-            <DialogDescription>
-              Chỉ hiển thị các slot cách hiện tại ≥ 12h và không trùng lịch học của bạn.
-            </DialogDescription>
           </DialogHeader>
 
           {loadingAvailabilities ? (
@@ -606,7 +603,6 @@ export function ScheduleTab() {
                       <div className="text-sm font-semibold text-gray-800">
                         {weekRangeLabel}
                       </div>
-                      <div className="text-xs text-gray-500">Lịch trống của gia sư (≥12h, không trùng lịch học của bạn)</div>
                     </div>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={goToPreviousWeek} className="flex items-center gap-2">
@@ -692,33 +688,39 @@ export function ScheduleTab() {
                                       <div
                                         key={`${d}-${t}`}
                                         className="border-b border-r bg-slate-100 text-center text-[11px] text-slate-500 p-2 font-semibold"
-                                        title="Slot không rảnh"
                                       >
                                         ✕
                                       </div>
                                     );
                                   }
 
-                                  // Xác định trạng thái hiển thị
-                                  let bg = 'bg-emerald-100 text-emerald-900 border-emerald-300'; // rảnh
+                                  // Trạng thái hiển thị (theo kiểu TutorDetailProfilePage)
+                                  let buttonClass = '';
+                                  let buttonContent = '';
                                   let disabled = false;
-                                  let title = `Lịch rảnh • ${timeLabel}`;
 
-                                  if (tooClose) {
-                                    bg = 'bg-orange-100 text-orange-900 border-orange-200'; // cam nhạt
-                                    title = `Quá gần (<12h) • ${timeLabel}`;
-                                    disabled = true;
-                                  }
                                   if (busy) {
-                                    bg = 'bg-rose-300 text-rose-900 border-rose-500'; // đỏ
-                                    title = `Bạn đã có lịch${busyInfo?.label ? ` • ${busyInfo.label}` : ''} • ${timeLabel}`;
+                                    const startDisplay = busyInfo?.startTime || av.slot?.startTime?.slice(0, 5) || '';
+                                    const endDisplay = busyInfo?.endTime
+                                      ? ` - ${busyInfo.endTime}`
+                                      : av.slot?.endTime
+                                        ? ` - ${av.slot.endTime.slice(0, 5)}`
+                                        : '';
+                                    buttonClass = 'bg-rose-300 text-rose-900 cursor-not-allowed border border-rose-500';
+                                    buttonContent = `${startDisplay}${endDisplay}`;
                                     disabled = true;
-                                  }
-                                  if (isSelected) {
-                                    bg = 'bg-amber-300 text-amber-900 border-amber-500'; // cam đậm
-                                    title = `Đã chọn • ${timeLabel}`;
+                                  } else if (tooClose) {
+                                    buttonClass = 'bg-orange-100 text-orange-900 cursor-not-allowed border border-orange-200';
+                                    buttonContent = '⚠';
+                                    disabled = true;
+                                  } else if (isSelected) {
+                                    buttonClass = 'bg-amber-300 text-amber-900 border-amber-500';
+                                    buttonContent = '';
                                     disabled = false;
-
+                                  } else {
+                                    buttonClass = 'bg-green-100 text-green-800 hover:bg-green-200 border border-green-300';
+                                    buttonContent = '';
+                                    disabled = false;
                                   }
 
                                   return (
@@ -732,13 +734,12 @@ export function ScheduleTab() {
                                             : { ...prev, selectedAvailabilityId: av.id }
                                         )
                                       }
-                                      className={`border-b border-r p-2 text-center text-xs font-semibold transition ${bg} ${disabled && !isSelected ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-sm'
-                                        }`}
-                                      title={title}
+                                      className={`border-b border-r p-2 text-center text-xs font-semibold transition ${buttonClass} ${disabled && !isSelected ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-sm'}`}
                                     >
                                       <div className="text-[11px] leading-tight">
                                         {av.slot?.startTime?.slice(0, 5)} - {av.slot?.endTime?.slice(0, 5)}
                                       </div>
+                                      {buttonContent && <div className="text-[11px] leading-tight">{buttonContent}</div>}
                                     </button>
                                   );
                                 })}
@@ -760,7 +761,7 @@ export function ScheduleTab() {
                       </div>
                       <div className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-orange-100 rounded border border-orange-200"></div>
-                        <span className="font-medium text-orange-700">Quá gần (&lt;12h)</span>
+                        <span className="font-medium text-orange-700">Quá gần (cần cách ≥12h)</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-rose-300 rounded border border-rose-500"></div>

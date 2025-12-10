@@ -2083,7 +2083,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-3 h-3 bg-yellow-100 rounded border border-yellow-300"></div>
-                      <span>Quá gần (cần đặt trước 24h)</span>
+                      <span>Quá gần (cần cách ≥24h)</span>
                     </div>
 
                     <div className="flex items-center gap-1">
