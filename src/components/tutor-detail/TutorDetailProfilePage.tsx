@@ -246,22 +246,20 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const [criteria, setCriteria] = useState<FeedbackCriterion[]>([]);
   const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
 
-  // Hiển thị tất cả time slots từ hook (từ API) - chỉ hiển thị các slot mà gia sư đã đăng ký
-  // Mỗi slot sẽ hiển thị màu sắc tương ứng: xanh (available), đỏ (booked), xám (không có lịch)
+  // Hiển thị time slots từ hook - chỉ giữ các giờ có ít nhất một slot rảnh của gia sư
   const timeSlotsToShow = React.useMemo(() => {
     if (!timeSlotsFromHook || timeSlotsFromHook.length === 0) {
       return [];
     }
 
-    // Chỉ hiển thị những slot có ít nhất một ngày trong tuần có availability (available hoặc booked)
+    // Chỉ hiển thị những slot có ít nhất một ngày trong tuần có availability AVAILABLE
     return timeSlotsFromHook.filter(timeSlot =>
       weekDays.some(day => {
         const available = isSlotAvailable(day.key, timeSlot);
-        const booked = isSlotBooked(day.key, timeSlot);
-        return available || booked;
+        return available;
       })
     );
-  }, [timeSlotsFromHook, weekDays, isSlotAvailable, isSlotBooked]);
+  }, [timeSlotsFromHook, weekDays, isSlotAvailable]);
 
   // Sử dụng tutorSubjects từ hook (lấy từ API), fallback về tutor.tutorSubjects
   const tutorSubjectsToUse = React.useMemo(() => {
@@ -465,6 +463,23 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
         map[slotKey] = true;
       });
 
+    return map;
+  }, [learnerSchedules, getDateKeyFromAvailability, getHourKeyFromAvailability]);
+
+  // Thông tin giờ học của learner để hiển thị trên lưới (booking/trial)
+  const learnerBusyInfoMap = React.useMemo(() => {
+    const map: { [key: string]: { startTime?: string; endTime?: string } } = {};
+    learnerSchedules
+      .filter(s => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Upcoming)
+      .forEach(schedule => {
+        const availability = schedule.availability;
+        if (!availability?.startDate) return;
+        const dateKey = getDateKeyFromAvailability(availability.startDate);
+        const hourKey = getHourKeyFromAvailability(availability);
+        const start = availability.slot?.startTime?.slice(0, 5);
+        const end = availability.slot?.endTime?.slice(0, 5);
+        map[`${dateKey}-${hourKey}`] = { startTime: start, endTime: end };
+      });
     return map;
   }, [learnerSchedules, getDateKeyFromAvailability, getHourKeyFromAvailability]);
 
@@ -1592,27 +1607,33 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                                   </div>
                                   {weekDays.map((day) => {
                                     const isAvailable = isSlotAvailable(day.key, timeSlot);
-                                    const isBooked = isSlotBooked(day.key, timeSlot);
                                     const isLearnerBusy = isSlotLearnerUpcoming(day.key, timeSlot);
+                                    const busyInfo = (() => {
+                                      const date = new Date(currentWeekStart);
+                                      const dayIndex = weekDays.findIndex(d => d.key === day.key);
+                                      date.setDate(currentWeekStart.getDate() + dayIndex);
+                                      const year = date.getFullYear();
+                                      const month = String(date.getMonth() + 1).padStart(2, '0');
+                                      const dayNum = String(date.getDate()).padStart(2, '0');
+                                      const dateKey = `${year}-${month}-${dayNum}`;
+                                      const hourKey = timeSlot.startTime.split(':')[0].padStart(2, '0');
+                                      return learnerBusyInfoMap[`${dateKey}-${hourKey}`];
+                                    })();
 
                                     let buttonClass = '';
                                     let buttonContent = '';
 
-                                    if (isBooked) {
-                                      // Màu đỏ: Đã booked (không thể chọn)
-                                      buttonClass = 'bg-red-100 text-red-800 cursor-not-allowed';
-                                      buttonContent = '✗';
-                                    } else if (isLearnerBusy) {
-                                      // Màu cam: Learner đã có lịch trùng
-                                      buttonClass = 'bg-orange-100 text-orange-800 cursor-not-allowed';
-                                      buttonContent = '⚠';
+                                    if (isLearnerBusy) {
+                                      // Màu đỏ: learner đã có lịch trùng
+                                      buttonClass = 'bg-rose-300 text-rose-900 cursor-not-allowed border border-rose-400';
+                                      buttonContent = `${busyInfo?.startTime || timeSlot.startTime}${busyInfo?.endTime ? ` - ${busyInfo.endTime}` : ''}`;
                                     } else if (isAvailable) {
-                                      // Màu xanh: Lịch rảnh (chỉ để xem)
-                                      buttonClass = 'bg-green-100 text-green-800 cursor-not-allowed';
+                                      // Màu xanh: Lịch rảnh của gia sư
+                                      buttonClass = 'bg-green-100 text-green-800 cursor-not-allowed border border-green-300';
                                       buttonContent = '';
                                     } else {
-                                      // Màu xám + X: Không có lịch đăng ký
-                                      buttonClass = 'bg-gray-100 text-gray-400 cursor-not-allowed';
+                                      // Màu xám + X: Không có lịch/đã booked
+                                      buttonClass = 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300';
                                       buttonContent = '✗';
                                     }
 
@@ -1645,16 +1666,15 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                         <div className="mt-4 flex items-center gap-4 text-xs text-gray-600">
                           <div className="flex items-center gap-1">
                             <div className="w-3 h-3 bg-green-100 rounded border border-green-300"></div>
-                            <span>Lịch rảnh (có thể đặt)</span>
+                            <span>Lịch rảnh</span>
                           </div>
-
                           <div className="flex items-center gap-1">
-                            <div className="w-3 h-3 bg-red-100 rounded border border-red-300"></div>
-                            <span>Đã booked</span>
+                            <div className="w-3 h-3 bg-rose-300 rounded border border-rose-400"></div>
+                            <span>Trùng lịch học viên</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <div className="w-3 h-3 bg-gray-100 rounded border border-gray-300"></div>
-                            <span>Không có lịch</span>
+                            <span>Không rảnh/đã booked</span>
                           </div>
                         </div>
                       )}
@@ -1939,6 +1959,17 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                               const slotAvailable = isSlotAvailable(day.key, timeSlot);
                               const slotBooked = isSlotBooked(day.key, timeSlot);
                               const slotLearnerBusy = isSlotLearnerUpcoming(day.key, timeSlot);
+                              const busyInfo = (() => {
+                                const date = new Date(currentWeekStart);
+                                const dayIndex = weekDays.findIndex(d => d.key === day.key);
+                                date.setDate(currentWeekStart.getDate() + dayIndex);
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const dayNum = String(date.getDate()).padStart(2, '0');
+                                const dateKey = `${year}-${month}-${dayNum}`;
+                                const hourKey = timeSlot.startTime.split(':')[0].padStart(2, '0');
+                                return learnerBusyInfoMap[`${dateKey}-${hourKey}`];
+                              })();
                               const slotSelected = isSlotSelected(day.key, timeSlot);
                               const slot24HoursAway = isSlotAtLeastHoursAway(day.key, timeSlot);
 
@@ -1946,16 +1977,19 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                               let buttonContent = '';
                               let disabled = false;
 
-                              if (slotBooked) {
+                              if (slotLearnerBusy) {
+                                // Slot trùng với lịch học sắp tới của learner: hiển thị giờ học viên
+                                const startDisplay = busyInfo?.startTime || timeSlot.startTime;
+                                const endDisplay = busyInfo?.endTime ? ` - ${busyInfo.endTime}` : '';
                                 buttonClass =
-                                  'bg-red-100 text-red-800 cursor-not-allowed border border-red-200';
-                                buttonContent = '✗';
+                                  'bg-rose-300 text-rose-900 cursor-not-allowed border border-rose-400';
+                                buttonContent = `${startDisplay}${endDisplay}`;
                                 disabled = true;
-                              } else if (slotLearnerBusy) {
-                                // Slot trùng với lịch học sắp tới của learner
+                              } else if (slotBooked) {
+                                // Không hiển thị booked của tutor (coi như không rảnh)
                                 buttonClass =
-                                  'bg-orange-100 text-orange-800 cursor-not-allowed border border-orange-300';
-                                buttonContent = '⚠';
+                                  'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200';
+                                buttonContent = '✗';
                                 disabled = true;
                               } else if (slotExists && !slot24HoursAway) {
                                 // Slot tồn tại nhưng không đủ 24h - hiển thị màu vàng và disable
@@ -2051,13 +2085,10 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       <div className="w-3 h-3 bg-yellow-100 rounded border border-yellow-300"></div>
                       <span>Quá gần (cần đặt trước 24h)</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-red-100 rounded border border-red-300"></div>
-                      <span>Đã booked</span>
-                    </div>
+
                     <div className="flex items-center gap-1">
                       <div className="w-3 h-3 bg-gray-100 rounded border border-gray-300"></div>
-                      <span>Không có lịch</span>
+                      <span>Đã được book/Chưa đăng kí</span>
                     </div>
                   </div>
                 )}
