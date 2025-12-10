@@ -1,17 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/layout/card';
 import { Badge } from '@/components/ui/basic/badge';
 import { Button } from '@/components/ui/basic/button';
-import { Calendar, Clock, MapPin, Video, MessageCircle, Loader2, Filter, CheckCircle, XCircle, PlayCircle } from 'lucide-react';
-import { ScheduleService } from '@/services';
+import { Calendar, Clock, MapPin, Video, MessageCircle, Loader2, CheckCircle, XCircle, PlayCircle } from 'lucide-react';
 import { ScheduleDto } from '@/types/backend';
 import { ScheduleStatus } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
 import { useBookings } from '@/hooks/useBookings';
 import { useLearnerProfiles } from '@/hooks/useLearnerProfiles';
+import { useSchedules } from '@/hooks/useSchedules';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useCustomToast } from '@/hooks/useCustomToast';
@@ -28,16 +28,14 @@ export function TutorScheduleTab() {
   const { showError } = useCustomToast();
   const { getBooking, loadBookingDetails } = useBookings();
   const { getLearnerProfile, loadLearnerProfiles } = useLearnerProfiles();
-  const [schedules, setSchedules] = useState<ScheduleDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { schedules, loading, loadSchedulesByTutorEmail } = useSchedules();
   const [statusFilter, setStatusFilter] = useState<ScheduleStatus | 'all'>('all');
-  const [dateRange, setDateRange] = useState<'week' | 'month' | 'all'>('week');
 
   useEffect(() => {
     if (user?.email) {
       loadSchedules();
     }
-  }, [user?.email, statusFilter, dateRange]);
+  }, [user?.email]);
 
   // Load booking details khi schedules thay đổi
   useEffect(() => {
@@ -72,48 +70,20 @@ export function TutorScheduleTab() {
     }
   }, [schedules, getBooking, loadLearnerProfiles]);
 
-  const loadSchedules = async () => {
+  const loadSchedules = useCallback(async () => {
     if (!user?.email) return;
 
-    try {
-      setLoading(true);
-      const params: {
-        startDate?: string;
-        endDate?: string;
-        status?: ScheduleStatus;
-      } = {};
+    const params: {
+      startDate?: string;
+      endDate?: string;
+      status?: ScheduleStatus;
+    } = {};
 
-      // Set date range
-      const now = new Date();
-      if (dateRange === 'week') {
-        params.startDate = now.toISOString();
-        const weekLater = new Date(now);
-        weekLater.setDate(weekLater.getDate() + 7);
-        params.endDate = weekLater.toISOString();
-      } else if (dateRange === 'month') {
-        params.startDate = now.toISOString();
-        const monthLater = new Date(now);
-        monthLater.setMonth(monthLater.getMonth() + 1);
-        params.endDate = monthLater.toISOString();
-      }
+    // Chỉ lấy từ hiện tại trở đi
+    params.startDate = new Date().toISOString();
 
-      if (statusFilter !== 'all') {
-        params.status = statusFilter;
-      }
-
-      const response = await ScheduleService.getAllByTutorEmail(user.email, params);
-
-      if (response.success && response.data) {
-        setSchedules(response.data);
-      } else {
-        showError('Không thể tải lịch dạy', response.error?.message);
-      }
-    } catch (error: any) {
-      showError('Lỗi khi tải lịch dạy', error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    await loadSchedulesByTutorEmail(user.email, params);
+  }, [user?.email, loadSchedulesByTutorEmail]);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return '';
@@ -145,6 +115,17 @@ export function TutorScheduleTab() {
       return '';
     }
   };
+
+  const displaySchedules = useMemo(() => {
+    const allowed = [ScheduleStatus.Upcoming, ScheduleStatus.InProgress];
+    return schedules
+      .filter((s) => allowed.includes(EnumHelpers.parseScheduleStatus(s.status)))
+      .filter((s) =>
+        statusFilter === 'all'
+          ? true
+          : EnumHelpers.parseScheduleStatus(s.status) === statusFilter
+      );
+  }, [schedules, statusFilter]);
 
   const getStatusBadgeVariant = (status: ScheduleStatus) => {
     switch (status) {
@@ -219,16 +200,6 @@ export function TutorScheduleTab() {
           <p className="text-gray-600 mt-1">Quản lý các buổi dạy</p>
         </div>
         <div className="flex gap-2">
-          <Select value={dateRange} onValueChange={(value: 'week' | 'month' | 'all') => setDateRange(value)}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="week">Tuần này</SelectItem>
-              <SelectItem value="month">Tháng này</SelectItem>
-              <SelectItem value="all">Tất cả</SelectItem>
-            </SelectContent>
-          </Select>
           <Select
             value={statusFilter === 'all' ? 'all' : statusFilter.toString()}
             onValueChange={(value) =>
@@ -239,19 +210,15 @@ export function TutorScheduleTab() {
               <SelectValue placeholder="Lọc theo trạng thái" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả trạng thái</SelectItem>
+              <SelectItem value="all">Tất cả</SelectItem>
               <SelectItem value={ScheduleStatus.Upcoming.toString()}>Sắp diễn ra</SelectItem>
               <SelectItem value={ScheduleStatus.InProgress.toString()}>Đang học</SelectItem>
-              <SelectItem value={ScheduleStatus.Completed.toString()}>Hoàn thành</SelectItem>
-              <SelectItem value={ScheduleStatus.Cancelled.toString()}>Đã hủy</SelectItem>
-              <SelectItem value={ScheduleStatus.Pending.toString()}>Chờ xử lý</SelectItem>
-              <SelectItem value={ScheduleStatus.Processing.toString()}>Đang xử lý</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {schedules.length === 0 ? (
+      {displaySchedules.length === 0 ? (
         <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Calendar className="h-16 w-16 text-gray-300 mb-4" />
@@ -260,7 +227,7 @@ export function TutorScheduleTab() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {schedules.map((schedule) => {
+          {displaySchedules.map((schedule) => {
             const availability = schedule.availability;
             const slot = availability?.slot;
 
