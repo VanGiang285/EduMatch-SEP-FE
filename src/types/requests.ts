@@ -461,3 +461,13 @@ export interface UpdateTutorFeedbackRequest {
   comment?: string;
   feedbackDetails: import('./backend').TutorFeedbackDetailDto[];
 }
+
+export interface BookingNoteCreateRequest {
+  bookingId: number;
+  content: string;
+}
+
+export interface BookingNoteUpdateRequest {
+  id: number;
+  content: string;
+}
