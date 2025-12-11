@@ -1,6 +1,6 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
 import { Badge } from '../ui/basic/badge';
@@ -68,6 +68,7 @@ type SelectedSlotDetail = {
 
 export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isAuthenticated, user } = useAuth();
   const { balance, loading: walletLoading } = useWalletContext();
   const { showWarning, showInfo, showSuccess, showError } = useCustomToast();
@@ -660,6 +661,41 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     },
     [clearSelectedSlots, isAuthenticated, router, showWarning, subjectLevelOptions, user?.role]
   );
+
+  // Nếu được điều hướng với tab=availability thì tự chuyển tab và scroll
+  const hasAppliedTabFromQuery = useRef(false);
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (hasAppliedTabFromQuery.current) return;
+    if (tabParam === 'availability') {
+      hasAppliedTabFromQuery.current = true;
+      setActiveTab('availability');
+      requestAnimationFrame(() => {
+        availabilitySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, [searchParams]);
+
+  // Nếu query booking=book hoặc booking=trial thì mở dialog đặt lịch (bước chọn slot)
+  // Đợi cho đến khi dữ liệu môn học đã load xong
+  const hasOpenedBookingFromQuery = useRef(false);
+  useEffect(() => {
+    const bookingParam = searchParams.get('booking');
+    if (hasOpenedBookingFromQuery.current) return;
+    if (bookingParam === 'book' || bookingParam === 'trial') {
+      // Đợi tutor và tutorSubjects load xong trước khi mở dialog
+      if (isLoading) return; // Chưa load xong tutor
+      if (tutorSubjectsToUse.length === 0 && tutorSubjectsFromHook.length === 0 && !tutor?.tutorSubjects?.length) {
+        // Chưa có dữ liệu môn học, đợi thêm một chút
+        return;
+      }
+      hasOpenedBookingFromQuery.current = true;
+      // Delay nhỏ để đảm bảo UI đã render xong
+      setTimeout(() => {
+        handleOpenBookingSelection(bookingParam === 'trial');
+      }, 100);
+    }
+  }, [handleOpenBookingSelection, searchParams, isLoading, tutorSubjectsToUse, tutorSubjectsFromHook, tutor?.tutorSubjects]);
 
   const handleConfirmBooking = React.useCallback(async () => {
     if (!user?.email) {
