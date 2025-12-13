@@ -20,6 +20,7 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
+  X,
 } from 'lucide-react';
 import { BookingDto } from '@/types/backend';
 import {
@@ -41,6 +42,19 @@ import { BookingNotesPanel } from '@/components/booking/BookingNotesPanel';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
+import { ReportService, MediaService } from '@/services';
+import { ReportCreateRequest, BasicEvidenceRequest } from '@/types/requests';
+import { MediaType } from '@/types/enums';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/feedback/dialog';
+import { Label } from '@/components/ui/form/label';
+import { Textarea } from '@/components/ui/form/textarea';
+import { Input } from '@/components/ui/form/input';
 
 export function ClassesTab() {
   const { user } = useAuth();
@@ -61,6 +75,11 @@ export function ClassesTab() {
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
   const [cancelDialogBookingId, setCancelDialogBookingId] = useState<number | null>(null);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportingSchedule, setReportingSchedule] = useState<{ scheduleId: number; bookingId: number; tutorEmail: string } | null>(null);
+  const [reportFormData, setReportFormData] = useState({ reason: '', evidences: [] as BasicEvidenceRequest[] });
+  const [uploadingReportFiles, setUploadingReportFiles] = useState(false);
+  const [submittingReport, setSubmittingReport] = useState(false);
   const { loadTutorProfiles, getTutorProfile, loadTutorProfile } = useTutorProfiles();
   const {
     schedules,
@@ -307,6 +326,104 @@ export function ClassesTab() {
         return 'bg-blue-400';
       default:
         return 'bg-gray-300';
+    }
+  };
+
+  const handleOpenReportDialog = (schedule: any) => {
+    const booking = getBookingFromCache(schedule.bookingId, schedule.booking);
+    const tutorEmail = booking?.tutorSubject?.tutor?.email || booking?.tutorEmail;
+    if (!tutorEmail) {
+      showError('Lỗi', 'Không tìm thấy thông tin gia sư');
+      return;
+    }
+    setReportingSchedule({
+      scheduleId: schedule.id,
+      bookingId: schedule.bookingId,
+      tutorEmail: tutorEmail,
+    });
+    setReportFormData({ reason: '', evidences: [] });
+    setShowReportDialog(true);
+  };
+
+  const handleReportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    if (!user?.email) {
+      showError('Lỗi', 'Vui lòng đăng nhập');
+      return;
+    }
+
+    setUploadingReportFiles(true);
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const isVideo = file.type.startsWith('video/');
+        const mediaType: 'Image' | 'Video' = isVideo ? 'Video' : 'Image';
+        const response = await MediaService.uploadFile({
+          file,
+          ownerEmail: user.email!,
+          mediaType,
+        });
+        if (response.success && response.data?.data) {
+          const url = response.data.data.secureUrl || response.data.data.originalUrl;
+          return {
+            mediaType: isVideo ? MediaType.Video : MediaType.Image,
+            mediaUrl: url,
+            filePublicId: response.data.data.publicId,
+          } as BasicEvidenceRequest;
+        }
+        throw new Error('Upload failed');
+      });
+
+      const uploadedEvidences = await Promise.all(uploadPromises);
+      setReportFormData((prev) => ({
+        ...prev,
+        evidences: [...prev.evidences, ...uploadedEvidences],
+      }));
+      showSuccess('Tải lên thành công', `${uploadedEvidences.length} file đã được tải lên`);
+    } catch (error: any) {
+      console.error('Error uploading report files:', error);
+      showError('Lỗi', 'Không thể tải lên file. Vui lòng thử lại.');
+    } finally {
+      setUploadingReportFiles(false);
+    }
+  };
+
+  const handleRemoveReportEvidence = (index: number) => {
+    setReportFormData((prev) => ({
+      ...prev,
+      evidences: prev.evidences.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleSubmitReport = async () => {
+    if (!reportingSchedule || !reportFormData.reason.trim()) {
+      showError('Lỗi', 'Vui lòng nhập lý do báo cáo');
+      return;
+    }
+
+    setSubmittingReport(true);
+    try {
+      const request: ReportCreateRequest = {
+        reportedUserEmail: reportingSchedule.tutorEmail,
+        reason: reportFormData.reason.trim(),
+        bookingId: reportingSchedule.bookingId,
+        evidences: reportFormData.evidences.length > 0 ? reportFormData.evidences : undefined,
+      };
+
+      const response = await ReportService.createReport(request);
+      if (response.success) {
+        showSuccess('Thành công', 'Báo cáo đã được gửi thành công');
+        setShowReportDialog(false);
+        setReportingSchedule(null);
+        setReportFormData({ reason: '', evidences: [] });
+      } else {
+        showError('Lỗi', response.message || 'Không thể tạo báo cáo');
+      }
+    } catch (error: any) {
+      console.error('Error creating report:', error);
+      showError('Lỗi', 'Không thể tạo báo cáo. Vui lòng thử lại.');
+    } finally {
+      setSubmittingReport(false);
     }
   };
 
@@ -655,9 +772,7 @@ export function ClassesTab() {
                             {isPending && (
                               <div className="mt-4 flex justify-end gap-2">
                                 <Button
-                                  onClick={() => {
-                                    router.push('/profile?tab=reports');
-                                  }}
+                                  onClick={() => handleOpenReportDialog(schedule)}
                                   variant="outline"
                                   className="border-red-300 text-red-700 hover:bg-red-50"
                                 >
@@ -971,6 +1086,108 @@ export function ClassesTab() {
         }}
         onCancel={() => setCancelDialogBookingId(null)}
       />
+
+      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Tạo báo cáo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Gia sư báo cáo</Label>
+              <Input
+                value={reportingSchedule?.tutorEmail || ''}
+                disabled
+                className="mt-2 bg-gray-50"
+              />
+            </div>
+            <div>
+              <Label>Lý do báo cáo *</Label>
+              <Textarea
+                value={reportFormData.reason}
+                onChange={(e) => setReportFormData((prev) => ({ ...prev, reason: e.target.value }))}
+                placeholder="Nhập lý do báo cáo..."
+                className="mt-2"
+                rows={4}
+              />
+            </div>
+            <div>
+              <Label>Bằng chứng (tùy chọn)</Label>
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    onChange={handleReportFileChange}
+                    disabled={uploadingReportFiles}
+                    className="flex-1"
+                  />
+                  {uploadingReportFiles && <Loader2 className="h-4 w-4 animate-spin text-[#257180]" />}
+                </div>
+                {reportFormData.evidences.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {reportFormData.evidences.map((evidence, index) => {
+                      const isImage = evidence.mediaType === MediaType.Image || evidence.mediaType === 0;
+                      return (
+                        <div key={index} className="relative group">
+                          {isImage ? (
+                            <img
+                              src={evidence.mediaUrl}
+                              alt="Evidence"
+                              className="w-full h-24 object-cover rounded border"
+                            />
+                          ) : (
+                            <video
+                              src={evidence.mediaUrl}
+                              controls
+                              className="w-full h-24 object-cover rounded border"
+                            />
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveReportEvidence(index)}
+                            className="absolute top-1 right-1 h-6 w-6 p-0 bg-red-500 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowReportDialog(false);
+                setReportingSchedule(null);
+                setReportFormData({ reason: '', evidences: [] });
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleSubmitReport}
+              disabled={submittingReport || !reportFormData.reason.trim()}
+              className="bg-[#257180] hover:bg-[#257180]/90 text-white"
+            >
+              {submittingReport ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                'Tạo báo cáo'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

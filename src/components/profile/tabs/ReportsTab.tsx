@@ -922,15 +922,6 @@ export function ReportsTab() {
             {isLearner ? 'Quản lý các báo cáo của bạn' : 'Danh sách báo cáo liên quan đến bạn'}
           </p>
         </div>
-        {isLearner && (
-          <Button
-            onClick={handleCreate}
-            className="bg-[#257180] hover:bg-[#257180]/90 text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Tạo báo cáo mới
-          </Button>
-        )}
       </div>
 
       <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
