@@ -1,7 +1,7 @@
 import { apiClient, replaceUrlParams } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
 import { ApiResponse } from '@/types/api';
-import { BookingDto, ScheduleDto } from '@/types/backend';
+import { BookingDto, ScheduleDto, BookingCancelPreviewDto } from '@/types/backend';
 import { BookingStatus, PaymentStatus } from '@/types/enums';
 
 export interface PagedResult<T> {
@@ -187,5 +187,25 @@ export class BookingService {
       id: id.toString(),
     });
     return apiClient.post<BookingDto>(endpoint);
+  }
+
+  /**
+   * Hủy booking bởi học viên, hoàn lại toàn bộ số tiền còn lại và hủy lịch
+   */
+  static async cancelByLearner(id: number): Promise<ApiResponse<BookingDto>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.LEARNER_CANCEL, {
+      id: id.toString(),
+    });
+    return apiClient.post<BookingDto>(endpoint);
+  }
+
+  /**
+   * Xem trước số buổi chưa học và số tiền dự kiến hoàn lại nếu hủy booking
+   */
+  static async getCancelPreview(id: number): Promise<ApiResponse<BookingCancelPreviewDto>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKINGS.CANCEL_PREVIEW, {
+      id: id.toString(),
+    });
+    return apiClient.get<BookingCancelPreviewDto>(endpoint);
   }
 }

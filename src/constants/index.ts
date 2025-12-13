@@ -183,6 +183,7 @@ export const API_ENDPOINTS = {
     GET_BY_STATUS: '/api/Tutors/get-all-tutor-by-status',
     GET_ALL: '/api/Tutors/get-all-tutor',
     GET_BY_ID: '/api/Tutors/get-tutor-by-id/:tutorId',
+    GET_BY_EMAIL: '/api/Tutors/get-tutor-by-email',
     GET_VERIFICATIONS:
       '/api/Tutors/get-all-tutor-certificate-education/:tutorId',
 
@@ -224,6 +225,12 @@ export const API_ENDPOINTS = {
     GET_SYSTEM_WALLET: '/api/admin/wallet/system',
     GET_SYSTEM_TRANSACTIONS: '/api/admin/wallet/system-transactions',
     GET_DASHBOARD: '/api/admin/wallet/dashboard',
+  },
+
+  // ==================== ADMIN STATS ====================
+  ADMIN_STATS: {
+    SUMMARY: '/api/admin-stats/summary',
+    MONTHLY: '/api/admin-stats/monthly',
   },
 
   // ==================== SUBJECTS ====================
@@ -363,6 +370,8 @@ export const API_ENDPOINTS = {
     UPDATE_PAYMENT_STATUS: '/api/Booking/update-payment-status/:id',
     UPDATE_STATUS: '/api/Booking/update-status/:id',
     PAY: '/api/Booking/:id/pay',
+    LEARNER_CANCEL: '/api/Booking/:id/learner-cancel',
+    CANCEL_PREVIEW: '/api/Booking/:id/cancel-preview',
   },
 
   // ==================== NOTIFICATIONS ====================
@@ -392,6 +401,9 @@ export const API_ENDPOINTS = {
     CANCEL: '/api/Schedule/:id/cancel',
     REPORT: '/api/Schedule/:id/report/:reportId',
     RESOLVE_REPORT: '/api/Schedule/:id/resolve-report',
+    ATTENDANCE_SUMMARY: '/api/Schedule/:bookingId/attendance-summary',
+    ADMIN_FINISH: '/api/Schedule/:id/admin/finish',
+    ADMIN_CANCEL: '/api/Schedule/:id/admin/cancel',
   },
   // ==================== SCHEDULE CHANGE REQUESTS ====================
   SCHEDULE_CHANGE_REQUESTS: {
@@ -404,15 +416,6 @@ export const API_ENDPOINTS = {
       '/api/ScheduleChangeRequest/get-all-by-requested-to-email',
     GET_ALL_BY_SCHEDULE_ID:
       '/api/ScheduleChangeRequest/get-all-by-schedule-id/:scheduleId',
-  },
-
-  // ==================== REVIEWS ====================
-  REVIEWS: {
-    LIST: '/api/reviews',
-    DETAIL: '/api/reviews/:id',
-    CREATE: '/api/reviews',
-    UPDATE: '/api/reviews/:id',
-    DELETE: '/api/reviews/:id',
   },
 
   // ==================== WALLET & PAYMENT (MỚI) ====================
@@ -495,6 +498,7 @@ export const API_ENDPOINTS = {
     GET_DETAIL: '/api/Reports/:id',
     GET_FULL_DETAIL: '/api/Reports/:id/full',
     CAN_DEFENSE: '/api/Reports/:id/can-defense',
+    IS_RESOLVED: '/api/Reports/:id/is-resolved',
     UPDATE_BY_ADMIN: '/api/Reports/:id',
     ADD_EVIDENCE: '/api/Reports/:id/evidence',
     GET_EVIDENCE: '/api/Reports/:id/evidence',
@@ -539,6 +543,17 @@ export const API_ENDPOINTS = {
     CREATE: '/api/BookingNotes',
     UPDATE: '/api/BookingNotes/:id',
     DELETE: '/api/BookingNotes/:id',
+  },
+
+  // ==================== TUTOR PAYOUTS ====================
+  TUTOR_PAYOUTS: {
+    GET_BY_BOOKING: '/api/TutorPayouts/by-booking/:bookingId',
+  },
+
+  // ==================== MEETING SESSIONS ====================
+  MEETING_SESSIONS: {
+    GET_BY_ID: '/api/MeetingSessions/get-by-id/:id',
+    GET_BY_SCHEDULE_ID: '/api/MeetingSessions/get-by-schedule-id/:scheduleId',
   },
 } as const;
 export const PAGINATION = {
@@ -689,10 +704,6 @@ export const QUERY_KEYS = {
   BOOKINGS: {
     LIST: ['bookings', 'list'],
     DETAIL: ['bookings', 'detail'],
-  },
-  REVIEWS: {
-    LIST: ['reviews', 'list'],
-    DETAIL: ['reviews', 'detail'],
   },
   USERS: {
     PROFILE: ['users', 'profile'],
