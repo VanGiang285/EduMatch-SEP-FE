@@ -28,4 +28,6 @@ export * from './tutorVerificationRequestService';
 export * from './aiChatbotService';
 export * from './reportService';
 export * from './feedbackService';
+export * from './learnerTrialLessonService';
 export * from './bookingNoteService';
+export * from './scheduleChangeRequestService';

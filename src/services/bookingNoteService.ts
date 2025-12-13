@@ -8,6 +8,9 @@ import {
 } from '@/types/requests';
 
 export class BookingNoteService {
+  /**
+   * Lấy ghi chú theo Id
+   */
   static async getById(id: number): Promise<ApiResponse<BookingNoteDto>> {
     const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKING_NOTES.GET_BY_ID, {
       id: id.toString(),
@@ -15,6 +18,9 @@ export class BookingNoteService {
     return apiClient.get<BookingNoteDto>(endpoint);
   }
 
+  /**
+   * Lấy danh sách ghi chú theo BookingId
+   */
   static async getByBookingId(
     bookingId: number
   ): Promise<ApiResponse<BookingNoteDto[]>> {
@@ -27,6 +33,9 @@ export class BookingNoteService {
     return apiClient.get<BookingNoteDto[]>(endpoint);
   }
 
+  /**
+   * Tạo ghi chú mới cho booking
+   */
   static async create(
     request: BookingNoteCreateRequest
   ): Promise<ApiResponse<BookingNoteDto>> {
@@ -36,6 +45,9 @@ export class BookingNoteService {
     );
   }
 
+  /**
+   * Cập nhật ghi chú
+   */
   static async update(
     request: BookingNoteUpdateRequest
   ): Promise<ApiResponse<BookingNoteDto>> {
@@ -45,6 +57,9 @@ export class BookingNoteService {
     return apiClient.put<BookingNoteDto>(endpoint, request);
   }
 
+  /**
+   * Xóa ghi chú
+   */
   static async delete(id: number): Promise<ApiResponse<string>> {
     const endpoint = replaceUrlParams(API_ENDPOINTS.BOOKING_NOTES.DELETE, {
       id: id.toString(),
@@ -52,5 +67,3 @@ export class BookingNoteService {
     return apiClient.delete<string>(endpoint);
   }
 }
-
-

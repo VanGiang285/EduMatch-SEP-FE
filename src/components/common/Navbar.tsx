@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "../ui/basic/button";
-import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings, FileText, ChevronDown, Sparkles, Receipt, AlertTriangle } from "lucide-react";
+import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings, FileText, ChevronDown, Sparkles, Receipt, AlertTriangle, ClipboardList } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomToast } from "@/hooks/useCustomToast";
@@ -212,6 +212,15 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                           <Calendar className="h-4 w-4 mr-2" />
                           {isTutor ? 'Lịch dạy' : 'Lịch học'}
                         </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => router.push('/profile?tab=scheduleChange')}
+                          className="cursor-pointer"
+                        >
+                          <ClipboardList className="h-4 w-4 mr-2" />
+                          Yêu cầu chuyển lịch
+                        </DropdownMenuItem>
+
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=classes')}
                           className="cursor-pointer"
@@ -450,6 +459,16 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                     >
                       <Calendar className="w-4 h-4" />
                       <span className="text-sm">{isTutor ? 'Lịch dạy' : 'Lịch học'}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push('/profile?tab=scheduleChange');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                    >
+                      <ClipboardList className="w-4 h-4" />
+                      <span className="text-sm">Yêu cầu chuyển lịch</span>
                     </button>
                     <button
                       onClick={() => {

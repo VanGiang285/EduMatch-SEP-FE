@@ -1,15 +1,15 @@
 'use client';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
 import { Input } from '../ui/form/input';
 import { Badge } from '../ui/basic/badge';
-import { 
-  Search, 
-  Star, 
-  Heart, 
-  MapPin, 
+import {
+  Search,
+  Star,
+  Heart,
+  MapPin,
   Play,
   MessageCircle,
   Calendar,
@@ -41,6 +41,9 @@ import { useChatContext } from '@/contexts/ChatContext';
 import { LocationService, ProvinceDto } from '@/services/locationService';
 import { FeedbackService } from '@/services/feedbackService';
 import { TutorRatingSummary } from '@/types/backend';
+import { useLearnerTrialLessons } from '@/hooks/useLearnerTrialLessons';
+import { USER_ROLES } from '@/constants';
+import type { TrialLessonSubjectStatusDto } from '@/services/learnerTrialLessonService';
 
 // Helper function để convert string enum từ API sang TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
@@ -60,8 +63,9 @@ function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMod
 
 export function FindTutorPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { showWarning } = useCustomToast();
+  const { loadSubjectTrialStatuses } = useLearnerTrialLessons();
   const {
     tutors,
     subjects,
@@ -91,12 +95,13 @@ export function FindTutorPage() {
   const [provinces, setProvinces] = useState<ProvinceDto[]>([]);
   const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
   const [tutorRatings, setTutorRatings] = useState<Map<number, TutorRatingSummary>>(new Map());
+  const [tutorTrialStatuses, setTutorTrialStatuses] = useState<Map<number, TrialLessonSubjectStatusDto[]>>(new Map());
   const tutorsPerPage = 6;
   const sortedProvinces = useMemo(
     () => [...provinces].sort((a, b) => a.name.localeCompare(b.name, 'vi')),
     [provinces]
   );
-  
+
   // Note: Using client-side filtering instead of API filtering
   // because backend API doesn't support filter parameters yet
 
@@ -111,17 +116,17 @@ export function FindTutorPage() {
         const userName = (tutor.userName || '').toLowerCase();
         const bio = (tutor.bio || '').toLowerCase();
         const email = (tutor.userEmail || '').toLowerCase();
-        
-        return userName.includes(keyword) || 
-               bio.includes(keyword) || 
-               email.includes(keyword);
+
+        return userName.includes(keyword) ||
+          bio.includes(keyword) ||
+          email.includes(keyword);
       });
     }
 
     // Filter by subject
     if (selectedSubject !== 'all') {
-      filtered = filtered.filter(tutor => 
-        tutor.tutorSubjects?.some(tutorSubject => 
+      filtered = filtered.filter(tutor =>
+        tutor.tutorSubjects?.some(tutorSubject =>
           tutorSubject.subject?.id?.toString() === selectedSubject
         )
       );
@@ -129,14 +134,14 @@ export function FindTutorPage() {
 
     // Filter by certificate type
     if (selectedCertificate !== 'all') {
-      filtered = filtered.filter(tutor => 
+      filtered = filtered.filter(tutor =>
         tutor.tutorCertificates?.some(cert => cert.certificateType?.id?.toString() === selectedCertificate)
       );
     }
 
     // Filter by level
     if (selectedLevel !== 'all') {
-      filtered = filtered.filter(tutor => 
+      filtered = filtered.filter(tutor =>
         tutor.tutorSubjects?.some(ts => ts.level?.id?.toString() === selectedLevel)
       );
     }
@@ -159,11 +164,11 @@ export function FindTutorPage() {
       const [minRange, maxRange] = priceRange;
       filtered = filtered.filter(tutor => {
         if (!tutor.tutorSubjects || tutor.tutorSubjects.length === 0) return false;
-        
+
         const prices = tutor.tutorSubjects.map(ts => ts.hourlyRate || 0);
         const tutorMinPrice = Math.min(...prices);
         const tutorMaxPrice = Math.max(...prices);
-        
+
         // Filter if any price in the tutor's range overlaps with the selected range
         return tutorMinPrice <= maxRange && tutorMaxPrice >= minRange;
       });
@@ -218,23 +223,23 @@ export function FindTutorPage() {
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       const newFilters: any = {};
-      
+
       if (searchQuery.trim()) {
         newFilters.keyword = searchQuery.trim();
       }
-      
+
       if (selectedCity !== 'all') {
         newFilters.city = selectedCity;
       }
-      
-      
+
+
       if (selectedTeachingMode !== 'all') {
         newFilters.teachingMode = selectedTeachingMode;
       }
-      
+
       newFilters.page = 1;
       newFilters.pageSize = 10;
-      
+
       setFilters(newFilters);
     }, 500);
 
@@ -272,7 +277,7 @@ export function FindTutorPage() {
         setFavoriteTutors(new Set());
         return;
       }
-      
+
       const favoriteChecks = tutors.map(async (tutor) => {
         try {
           const response = await FavoriteTutorService.isFavorite(tutor.id);
@@ -336,18 +341,66 @@ export function FindTutorPage() {
     loadRatings();
   }, [tutors]);
 
+  // Load trial statuses for all tutors (only if authenticated and is learner)
+  useEffect(() => {
+    const loadTrialStatuses = async () => {
+      if (tutors.length === 0 || !isAuthenticated || user?.role !== USER_ROLES.LEARNER) {
+        setTutorTrialStatuses(new Map());
+        return;
+      }
+
+      const trialStatusPromises = tutors.map(async (tutor) => {
+        try {
+          // Sử dụng service trực tiếp để load cho từng tutor
+          const { LearnerTrialLessonService } = await import('@/services');
+          const response = await LearnerTrialLessonService.getSubjectTrialStatuses(tutor.id);
+
+          if (response.success && response.data) {
+            return { tutorId: tutor.id, statuses: response.data };
+          }
+          // Nếu không load được, trả về mảng rỗng
+          return { tutorId: tutor.id, statuses: [] };
+        } catch (error) {
+          console.error(`Error loading trial status for tutor ${tutor.id}:`, error);
+          // Nếu lỗi, trả về mảng rỗng
+          return { tutorId: tutor.id, statuses: [] };
+        }
+      });
+
+      const results = await Promise.all(trialStatusPromises);
+      const trialStatusMap = new Map<number, TrialLessonSubjectStatusDto[]>();
+      results.forEach((result) => {
+        trialStatusMap.set(result.tutorId, result.statuses);
+      });
+      setTutorTrialStatuses(trialStatusMap);
+    };
+
+    loadTrialStatuses();
+  }, [tutors, isAuthenticated, user?.role]);
+
+  // Helper function để kiểm tra tutor có còn có thể đặt học thử không
+  const hasAnyTrialLeft = useCallback((tutorId: number): boolean => {
+    const statuses = tutorTrialStatuses.get(tutorId);
+    if (!statuses || statuses.length === 0) {
+      // Chưa load được hoặc không có môn nào, coi như còn (để hiển thị nút)
+      return true;
+    }
+    // Kiểm tra xem có môn nào có hasTrialed === false không
+    return statuses.some(s => !s.hasTrialed);
+  }, [tutorTrialStatuses]);
+
   // Reset video when currentTutor changes
   useEffect(() => {
     setVideoKey(prev => prev + 1);
   }, [currentTutor?.id]);
-  
+
   const handleViewTutorProfile = (tutorId: number) => {
     router.push(`/tutor/${tutorId}`);
   };
-  
+
   const handleToggleFavorite = async (tutorId: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
-    
+
     // Check if user is authenticated
     if (!isAuthenticated) {
       showWarning(
@@ -357,7 +410,7 @@ export function FindTutorPage() {
       router.push('/login');
       return;
     }
-    
+
     // Optimistic update
     const isCurrentlyFavorite = favoriteTutors.has(tutorId);
     setFavoriteTutors(prev => {
@@ -402,7 +455,7 @@ export function FindTutorPage() {
 
   const handleOpenChat = async (tutor: typeof currentTutors[0], e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
-    
+
     // Check if user is authenticated
     if (!isAuthenticated) {
       showWarning(
@@ -442,93 +495,93 @@ export function FindTutorPage() {
 
             {/* Filters */}
             <div className="flex-1 min-w-[140px]">
-            <SelectWithSearch 
-              value={selectedSubject} 
-              onValueChange={setSelectedSubject}
-              placeholder="Môn học"
-              disabled={isLoadingMasterData}
-            >
-              <SelectWithSearchItem value="all">Tất cả môn học</SelectWithSearchItem>
-              {subjects.map((subject) => (
-                <SelectWithSearchItem key={subject.id} value={subject.id.toString()}>
-                  {subject.subjectName}
-                </SelectWithSearchItem>
-              ))}
-            </SelectWithSearch>
+              <SelectWithSearch
+                value={selectedSubject}
+                onValueChange={setSelectedSubject}
+                placeholder="Môn học"
+                disabled={isLoadingMasterData}
+              >
+                <SelectWithSearchItem value="all">Tất cả môn học</SelectWithSearchItem>
+                {subjects.map((subject) => (
+                  <SelectWithSearchItem key={subject.id} value={subject.id.toString()}>
+                    {subject.subjectName}
+                  </SelectWithSearchItem>
+                ))}
+              </SelectWithSearch>
             </div>
 
             <div className="flex-1 min-w-[140px]">
-            <SelectWithSearch 
-              value={selectedCertificate} 
-              onValueChange={setSelectedCertificate}
-              placeholder="Chứng chỉ"
-              disabled={isLoadingMasterData}
-            >
-              <SelectWithSearchItem value="all">Tất cả chứng chỉ</SelectWithSearchItem>
-              {certificateTypes.map((cert) => (
-                    <SelectWithSearchItem key={cert.id} value={cert.id.toString()}>
-                      {cert.code ? `${cert.code} - ${cert.name}` : cert.name}
-                    </SelectWithSearchItem>
-              ))}
-            </SelectWithSearch>
+              <SelectWithSearch
+                value={selectedCertificate}
+                onValueChange={setSelectedCertificate}
+                placeholder="Chứng chỉ"
+                disabled={isLoadingMasterData}
+              >
+                <SelectWithSearchItem value="all">Tất cả chứng chỉ</SelectWithSearchItem>
+                {certificateTypes.map((cert) => (
+                  <SelectWithSearchItem key={cert.id} value={cert.id.toString()}>
+                    {cert.code ? `${cert.code} - ${cert.name}` : cert.name}
+                  </SelectWithSearchItem>
+                ))}
+              </SelectWithSearch>
             </div>
 
             <div className="flex-1 min-w-[140px]">
-            <SelectWithSearch 
-              value={selectedLevel} 
-              onValueChange={setSelectedLevel}
-              placeholder="Lớp"
-              disabled={isLoadingMasterData}
-            >
-              <SelectWithSearchItem value="all">Tất cả lớp</SelectWithSearchItem>
-              {levels.map((level) => (
-                <SelectWithSearchItem key={level.id} value={level.id.toString()}>
-                  {level.name}
-                </SelectWithSearchItem>
-              ))}
-            </SelectWithSearch>
+              <SelectWithSearch
+                value={selectedLevel}
+                onValueChange={setSelectedLevel}
+                placeholder="Lớp"
+                disabled={isLoadingMasterData}
+              >
+                <SelectWithSearchItem value="all">Tất cả lớp</SelectWithSearchItem>
+                {levels.map((level) => (
+                  <SelectWithSearchItem key={level.id} value={level.id.toString()}>
+                    {level.name}
+                  </SelectWithSearchItem>
+                ))}
+              </SelectWithSearch>
             </div>
 
             <div className="flex-1 min-w-[140px]">
-            <SelectWithSearch 
-              value={selectedCity} 
-              onValueChange={setSelectedCity}
-              placeholder={isLoadingProvinces ? 'Đang tải...' : 'Thành phố'}
-              disabled={isLoadingMasterData || isLoadingProvinces}
-            >
-              <SelectWithSearchItem value="all">Tất cả thành phố</SelectWithSearchItem>
-              {sortedProvinces.map((province) => (
-                <SelectWithSearchItem key={province.id} value={province.id.toString()}>
-                  {province.name}
-                </SelectWithSearchItem>
-              ))}
-            </SelectWithSearch>
+              <SelectWithSearch
+                value={selectedCity}
+                onValueChange={setSelectedCity}
+                placeholder={isLoadingProvinces ? 'Đang tải...' : 'Thành phố'}
+                disabled={isLoadingMasterData || isLoadingProvinces}
+              >
+                <SelectWithSearchItem value="all">Tất cả thành phố</SelectWithSearchItem>
+                {sortedProvinces.map((province) => (
+                  <SelectWithSearchItem key={province.id} value={province.id.toString()}>
+                    {province.name}
+                  </SelectWithSearchItem>
+                ))}
+              </SelectWithSearch>
             </div>
 
             <div className="flex-1 min-w-[140px]">
-            <SelectWithSearch 
-              value={selectedTeachingMode}
-              onValueChange={setSelectedTeachingMode}
-              placeholder="Hình thức"
-            >
-              <SelectWithSearchItem value="all">Tất cả hình thức</SelectWithSearchItem>
-              <SelectWithSearchItem value="1">Trực tuyến</SelectWithSearchItem>
-              <SelectWithSearchItem value="0">Tại nhà</SelectWithSearchItem>
-            </SelectWithSearch>
+              <SelectWithSearch
+                value={selectedTeachingMode}
+                onValueChange={setSelectedTeachingMode}
+                placeholder="Hình thức"
+              >
+                <SelectWithSearchItem value="all">Tất cả hình thức</SelectWithSearchItem>
+                <SelectWithSearchItem value="1">Trực tuyến</SelectWithSearchItem>
+                <SelectWithSearchItem value="0">Tại nhà</SelectWithSearchItem>
+              </SelectWithSearch>
             </div>
 
             <div className="flex-1 min-w-[140px]">
-            <SelectWithSearch 
-              value={selectedSort}
-              onValueChange={setSelectedSort}
-              placeholder="Sắp xếp"
-            >
-              <SelectWithSearchItem value="recommended">Đề xuất</SelectWithSearchItem>
-              <SelectWithSearchItem value="rating">Đánh giá cao</SelectWithSearchItem>
-              <SelectWithSearchItem value="price-low">Giá thấp - cao</SelectWithSearchItem>
-              <SelectWithSearchItem value="price-high">Giá cao - thấp</SelectWithSearchItem>
-              <SelectWithSearchItem value="experience">Kinh nghiệm</SelectWithSearchItem>
-            </SelectWithSearch>
+              <SelectWithSearch
+                value={selectedSort}
+                onValueChange={setSelectedSort}
+                placeholder="Sắp xếp"
+              >
+                <SelectWithSearchItem value="recommended">Đề xuất</SelectWithSearchItem>
+                <SelectWithSearchItem value="rating">Đánh giá cao</SelectWithSearchItem>
+                <SelectWithSearchItem value="price-low">Giá thấp - cao</SelectWithSearchItem>
+                <SelectWithSearchItem value="price-high">Giá cao - thấp</SelectWithSearchItem>
+                <SelectWithSearchItem value="experience">Kinh nghiệm</SelectWithSearchItem>
+              </SelectWithSearch>
             </div>
 
           </div>
@@ -561,7 +614,7 @@ export function FindTutorPage() {
 
         </div>
       </div>
-      
+
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -571,9 +624,9 @@ export function FindTutorPage() {
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-red-600">{error}</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="mt-2"
                   onClick={clearError}
                 >
@@ -592,188 +645,202 @@ export function FindTutorPage() {
 
             {/* Tutor List */}
             {!isLoadingTutors && (
-            <div className="space-y-6">
+              <div className="space-y-6">
                 {currentTutors.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-gray-600">Không tìm thấy gia sư nào phù hợp với tiêu chí của bạn.</p>
                   </div>
                 ) : (
                   currentTutors.map((tutor) => (
-              <Card 
+                    <Card
                       key={tutor.id}
-                className={`cursor-pointer transition-all duration-200 ${
-                        hoveredTutor === tutor.id 
-                    ? 'border-[#FD8B51] shadow-lg bg-white' 
-                    : 'hover:border-[#257180]/40 hover:shadow-md bg-white'
-                }`}
+                      className={`cursor-pointer transition-all duration-200 ${hoveredTutor === tutor.id
+                        ? 'border-[#FD8B51] shadow-lg bg-white'
+                        : 'hover:border-[#257180]/40 hover:shadow-md bg-white'
+                        }`}
                       onMouseEnter={() => setHoveredTutor(tutor.id)}
                       onClick={() => handleViewTutorProfile(tutor.id)}
-              >
-                <CardContent className="p-6">
-                  {/* Row 1: Avatar + Name + Info + Subjects */}
-                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 mb-4">
-                    {/* Avatar */}
-                    <div className="relative flex-shrink-0 self-center sm:self-start">
-                      <div className="relative w-24 h-24 sm:w-36 sm:h-36 rounded-lg overflow-hidden bg-[#F2E5BF]">
-                        {tutor.avatarUrl ? (
-                          <img 
-                            src={tutor.avatarUrl} 
-                            alt={tutor.userName || tutor.userEmail || 'Gia sư'}
-                            className="w-full h-full object-cover rounded-lg"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                              if (fallback) {
-                                fallback.style.display = 'flex';
+                    >
+                      <CardContent className="p-6">
+                        {/* Row 1: Avatar + Name + Info + Subjects */}
+                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 mb-4">
+                          {/* Avatar */}
+                          <div className="relative flex-shrink-0 self-center sm:self-start">
+                            <div className="relative w-24 h-24 sm:w-36 sm:h-36 rounded-lg overflow-hidden bg-[#F2E5BF]">
+                              {tutor.avatarUrl ? (
+                                <img
+                                  src={tutor.avatarUrl}
+                                  alt={tutor.userName || tutor.userEmail || 'Gia sư'}
+                                  className="w-full h-full object-cover rounded-lg"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                    if (fallback) {
+                                      fallback.style.display = 'flex';
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <div
+                                className={`w-full h-full rounded-lg flex items-center justify-center text-2xl font-bold text-[#257180] bg-[#F2E5BF] ${tutor.avatarUrl ? 'hidden' : 'flex'}`}
+                                style={{ display: tutor.avatarUrl ? 'none' : 'flex' }}
+                              >
+                                {(tutor.userName || tutor.userEmail || 'U').slice(0, 2).toUpperCase()}
+                              </div>
+                            </div>
+                          </div>
+                          {/* Name, Info & Subjects */}
+                          <div className="flex-1 min-w-0 flex flex-col">
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-3">
+                                  <h2 className="text-black text-xl sm:text-2xl font-bold">
+                                    {tutor.userName || tutor.userEmail || 'Gia sư'}
+                                  </h2>
+                                </div>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                                  <div className="flex items-center gap-1.5">
+                                    <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
+                                    <span className="text-sm text-black font-medium">
+                                      {tutorRatings.get(tutor.id)?.averageRating.toFixed(1) || '0.0'}
+                                    </span>
+                                    <span className="text-sm text-gray-600">
+                                      ({tutorRatings.get(tutor.id)?.totalFeedbackCount || 0} đánh giá)
+                                    </span>
+                                  </div>
+                                  <Separator orientation="vertical" className="h-4" />
+                                  <span className="text-sm text-gray-600">0 buổi học</span>
+                                  <Separator orientation="vertical" className="h-4" />
+                                  <span className="text-sm text-gray-600">0 học sinh</span>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="p-2 -mt-1 hover:bg-[#FD8B51] hover:text-white"
+                                onClick={(e) => handleToggleFavorite(tutor.id, e)}
+                                disabled={loadingFavorite.has(tutor.id)}
+                              >
+                                {loadingFavorite.has(tutor.id) ? (
+                                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                                ) : (
+                                  <Heart className={`w-5 h-5 transition-colors duration-200 ${favoriteTutors.has(tutor.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                                )}
+                              </Button>
+                            </div>
+                            {/* Subjects */}
+                            <div className="flex flex-wrap gap-2">
+                              {tutor.tutorSubjects?.map((tutorSubject, idx) => (
+                                <Badge key={idx} variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-black border-[#257180]/20">
+                                  {tutorSubject.subject?.subjectName || `Subject ${tutorSubject.id}`}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Row 2: Bio */}
+                        <div className="mb-4">
+                          <p className="text-sm text-gray-600 line-clamp-2">
+                            {tutor.bio || 'Chưa có thông tin giới thiệu.'}
+                          </p>
+                        </div>
+                        {/* Row 3: Location + Teaching Mode + Education */}
+                        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 mb-4 text-sm text-gray-600">
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="w-4 h-4" />
+                            <span>
+                              {tutor.subDistrict?.name && tutor.province?.name
+                                ? `${tutor.subDistrict.name}, ${tutor.province.name}`
+                                : tutor.province?.name || 'Việt Nam'
                               }
-                            }}
-                          />
-                        ) : null}
-                        <div 
-                          className={`w-full h-full rounded-lg flex items-center justify-center text-2xl font-bold text-[#257180] bg-[#F2E5BF] ${tutor.avatarUrl ? 'hidden' : 'flex'}`}
-                          style={{ display: tutor.avatarUrl ? 'none' : 'flex' }}
-                        >
-                          {(tutor.userName || tutor.userEmail || 'U').slice(0, 2).toUpperCase()}
-                        </div>
-                      </div>
-                    </div>
-                    {/* Name, Info & Subjects */}
-                    <div className="flex-1 min-w-0 flex flex-col">
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-3">
-                            <h2 className="text-black text-xl sm:text-2xl font-bold">
-                              {tutor.userName || tutor.userEmail || 'Gia sư'}
-                            </h2>
+                            </span>
                           </div>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                            <div className="flex items-center gap-1.5">
-                              <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
-                              <span className="text-sm text-black font-medium">
-                                {tutorRatings.get(tutor.id)?.averageRating.toFixed(1) || '0.0'}
-                              </span>
-                              <span className="text-sm text-gray-600">
-                                ({tutorRatings.get(tutor.id)?.totalFeedbackCount || 0} đánh giá)
-                              </span>
-                            </div>
-                            <Separator orientation="vertical" className="h-4" />
-                            <span className="text-sm text-gray-600">0 buổi học</span>
-                            <Separator orientation="vertical" className="h-4" />
-                            <span className="text-sm text-gray-600">0 học sinh</span>
-                          </div>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="p-2 -mt-1 hover:bg-[#FD8B51] hover:text-white"
-                          onClick={(e) => handleToggleFavorite(tutor.id, e)}
-                          disabled={loadingFavorite.has(tutor.id)}
-                        >
-                          {loadingFavorite.has(tutor.id) ? (
-                            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                          ) : (
-                            <Heart className={`w-5 h-5 transition-colors duration-200 ${favoriteTutors.has(tutor.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
-                          )}
-                        </Button>
-                      </div>
-                      {/* Subjects */}
-                      <div className="flex flex-wrap gap-2">
-                        {tutor.tutorSubjects?.map((tutorSubject, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-black border-[#257180]/20">
-                            {tutorSubject.subject?.subjectName || `Subject ${tutorSubject.id}`}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  {/* Row 2: Bio */}
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-600 line-clamp-2">
-                      {tutor.bio || 'Chưa có thông tin giới thiệu.'}
-                    </p>
-                  </div>
-                  {/* Row 3: Location + Teaching Mode + Education */}
-                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 mb-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4" />
-                      <span>
-                        {tutor.subDistrict?.name && tutor.province?.name 
-                          ? `${tutor.subDistrict.name}, ${tutor.province.name}`
-                          : tutor.province?.name || 'Việt Nam'
-                        }
-                      </span>
-                    </div>
-                    <Separator orientation="vertical" className="h-4" />
-                    <span>
-                      {EnumHelpers.getTeachingModeLabel(getTeachingModeValue(tutor.teachingModes))}
-                    </span>
-                    {tutor.tutorEducations && tutor.tutorEducations.length > 0 && (
-                      <>
-                        <Separator orientation="vertical" className="h-4" />
-                        <div className="flex items-center gap-1.5">
-                          <Award className="w-4 h-4" />
-                          <span className="line-clamp-1">{tutor.tutorEducations[0].institution?.name || 'Education'}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  {/* Row 4: Price & Actions */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-[#257180]/20 gap-4">
-                    <div>
-                      {tutor.tutorSubjects && tutor.tutorSubjects.length > 0 ? (
-                        (() => {
-                          const prices = tutor.tutorSubjects.map(ts => ts.hourlyRate || 0);
-                          const minPrice = Math.min(...prices);
-                          const maxPrice = Math.max(...prices);
-                          
-                          return (
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-3xl text-black font-bold">
-                                {minPrice === maxPrice 
-                                  ? FormatService.formatVND(minPrice)
-                                  : `${FormatService.formatVND(minPrice)} - ${FormatService.formatVND(maxPrice)}`
-                                }
-                              </span>
-                              <span className="text-base text-gray-600">/giờ</span>
-                            </div>
-                          );
-                        })()
-                      ) : (
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl text-black font-bold">
-                            {FormatService.formatVND(0)}
+                          <Separator orientation="vertical" className="h-4" />
+                          <span>
+                            {EnumHelpers.getTeachingModeLabel(getTeachingModeValue(tutor.teachingModes))}
                           </span>
-                          <span className="text-base text-gray-600">/giờ</span>
+                          {tutor.tutorEducations && tutor.tutorEducations.length > 0 && (
+                            <>
+                              <Separator orientation="vertical" className="h-4" />
+                              <div className="flex items-center gap-1.5">
+                                <Award className="w-4 h-4" />
+                                <span className="line-clamp-1">{tutor.tutorEducations[0].institution?.name || 'Education'}</span>
+                              </div>
+                            </>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="lg" 
-                        className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-                        onClick={(e) => handleOpenChat(tutor, e)}
-                      >
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        Nhắn tin
-                      </Button>
-                      <Button size="lg" className="bg-[#257180] hover:bg-[#257180]/90 text-white">
-                        Đặt buổi học thử
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                        {/* Row 4: Price & Actions */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-[#257180]/20 gap-4">
+                          <div>
+                            {tutor.tutorSubjects && tutor.tutorSubjects.length > 0 ? (
+                              (() => {
+                                const prices = tutor.tutorSubjects.map(ts => ts.hourlyRate || 0);
+                                const minPrice = Math.min(...prices);
+                                const maxPrice = Math.max(...prices);
+
+                                return (
+                                  <div className="flex items-baseline gap-2">
+                                    <span className="text-3xl text-black font-bold">
+                                      {minPrice === maxPrice
+                                        ? FormatService.formatVND(minPrice)
+                                        : `${FormatService.formatVND(minPrice)} - ${FormatService.formatVND(maxPrice)}`
+                                      }
+                                    </span>
+                                    <span className="text-base text-gray-600">/giờ</span>
+                                  </div>
+                                );
+                              })()
+                            ) : (
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-3xl text-black font-bold">
+                                  {FormatService.formatVND(0)}
+                                </span>
+                                <span className="text-base text-gray-600">/giờ</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="lg"
+                              className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                              onClick={(e) => handleOpenChat(tutor, e)}
+                            >
+                              <MessageCircle className="w-4 h-4 mr-2" />
+                              Nhắn tin
+                            </Button>
+                            {(!isAuthenticated || (isAuthenticated && user?.role === USER_ROLES.LEARNER && hasAnyTrialLeft(tutor.id))) && (
+                              <Button
+                                size="lg"
+                                className="bg-[#257180] hover:bg-[#257180]/90 text-white"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!isAuthenticated) {
+                                    showWarning('Vui lòng đăng nhập', 'Bạn cần đăng nhập để đặt buổi học thử.');
+                                    router.push('/login');
+                                    return;
+                                  }
+                                  router.push(`/tutor/${tutor.id}?booking=trial`);
+                                }}
+                              >
+                                <Clock className="w-4 h-4 mr-2" />
+                                Đặt lịch học thử
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))
                 )}
-            </div>
+              </div>
             )}
             {/* Pagination */}
             <div className="mt-8">
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious 
+                    <PaginationPrevious
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                       className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
@@ -809,7 +876,7 @@ export function FindTutorPage() {
                     return null;
                   })}
                   <PaginationItem>
-                    <PaginationNext 
+                    <PaginationNext
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                       className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
@@ -829,7 +896,7 @@ export function FindTutorPage() {
                     {currentTutor ? (
                       currentTutor.videoIntroUrl ? (
                         <div className="absolute inset-0">
-                          <video 
+                          <video
                             key={`video-${currentTutor.id}-${videoKey}`}
                             className="w-full h-full object-cover"
                             controls
@@ -873,15 +940,38 @@ export function FindTutorPage() {
                   {/* Action Buttons Only - Không trùng với tutor card */}
                   <div className="p-6">
                     <div className="space-y-3">
-                      <Button variant="outline" className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
+                      <Button
+                        variant="outline"
+                        className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                        size="lg"
+                        onClick={() => {
+                          const targetId = currentTutor?.id ?? currentTutors[0]?.id;
+                          if (!targetId) return;
+                          router.push(`/tutor/${targetId}?booking=book`);
+                        }}
+                      >
                         <Calendar className="w-4 h-4 mr-2" />
                         Đặt lịch học
                       </Button>
-                      <Button variant="outline" className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
+                      <Button
+                        variant="outline"
+                        className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                        size="lg"
+                        onClick={() => {
+                          if (!currentTutor) return;
+                          handleViewTutorProfile(currentTutor.id);
+                          router.push(`/tutor/${currentTutor.id}?tab=availability`);
+                        }}
+                      >
                         <Clock className="w-4 h-4 mr-2" />
                         Xem lịch dạy của gia sư
                       </Button>
-                      <Button variant="outline" className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
+                      <Button
+                        variant="outline"
+                        className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                        size="lg"
+                        onClick={() => handleViewTutorProfile(currentTutor?.id ?? currentTutors[0]?.id)}
+                      >
                         <Send className="w-4 h-4 mr-2" />
                         Xem hồ sơ đầy đủ
                       </Button>

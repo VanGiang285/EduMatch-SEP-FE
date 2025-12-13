@@ -1,54 +1,75 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/layout/card';
 import { Badge } from '@/components/ui/basic/badge';
 import { Button } from '@/components/ui/basic/button';
-import { Calendar, Clock, MapPin, Video, MessageCircle, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight, List } from 'lucide-react';
-import { ScheduleStatus, TeachingMode } from '@/types/enums';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/feedback/dialog';
+import { Calendar, Clock, MapPin, Video, MessageCircle, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ScheduleStatus, ScheduleChangeRequestStatus, TutorAvailabilityStatus } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
-import { useCustomToast } from '@/hooks/useCustomToast';
 import { useSchedules } from '@/hooks/useSchedules';
 import { useBookings } from '@/hooks/useBookings';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from 'date-fns';
+import { useScheduleChangeRequests } from '@/hooks/useScheduleChangeRequests';
+import { useTutorAvailability } from '@/hooks/useTutorAvailability';
+import { useCustomToast } from '@/hooks/useCustomToast';
+import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { ScheduleDto } from '@/types/backend';
+import { ScheduleDto, ScheduleChangeRequestDto, TutorAvailabilityDto } from '@/types/backend';
+import { useRouter } from 'next/navigation';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/form/select';
 
 export function ScheduleTab() {
   const { user } = useAuth();
-  const { showError } = useCustomToast();
-  const { schedules, loading, loadLearnerSchedules: loadSchedules, clearSchedules } = useSchedules();
+  const router = useRouter();
+  const { schedules, loading, loadLearnerSchedules: loadSchedules } = useSchedules();
   const { loadBookingDetails, getBooking } = useBookings();
   const { getTutorProfile, loadTutorProfiles } = useTutorProfiles();
-  const [filter, setFilter] = useState<'upcoming' | 'all'>('upcoming');
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const { fetchByScheduleId, create, loading: changeRequestLoading } = useScheduleChangeRequests();
+  const {
+    availabilities,
+    timeSlots,
+    weekDays,
+    datesByDay,
+    currentWeekStart,
+    loadAvailabilities,
+    goToPreviousWeek,
+    goToNextWeek,
+    goToCurrentWeek,
+    isLoading: loadingAvailabilities,
+  } = useTutorAvailability(12);
+  const { showError, showSuccess } = useCustomToast();
+  const [pendingBySchedule, setPendingBySchedule] = useState<Record<number, boolean>>({});
+  const [statusFilter, setStatusFilter] = useState<'all' | ScheduleStatus>('all');
+  const [slotDialog, setSlotDialog] = useState<{
+    open: boolean;
+    schedule?: ScheduleDto;
+    weekStart?: Date;
+    selectedAvailabilityId?: number | null;
+    reason?: string;
+  }>({ open: false, selectedAvailabilityId: null, weekStart: undefined });
 
   useEffect(() => {
     if (user?.email) {
       const params: {
         startDate?: string;
         endDate?: string;
-        status?: ScheduleStatus;
       } = {};
 
-      if (filter === 'upcoming') {
-        params.startDate = new Date().toISOString();
-        params.status = ScheduleStatus.Upcoming;
-      } else {
-        // Load tất cả schedules cho calendar view
-        const start = startOfMonth(currentMonth);
-        const end = endOfMonth(currentMonth);
-        params.startDate = start.toISOString();
-        params.endDate = end.toISOString();
-      }
+      // Chỉ lấy lịch từ hiện tại trở đi
+      params.startDate = new Date().toISOString();
 
       loadSchedules(user.email, params);
     }
-  }, [user?.email, filter, loadSchedules, currentMonth]);
+  }, [user?.email, loadSchedules]);
 
   // Load booking details khi schedules thay đổi và booking chưa có
   useEffect(() => {
@@ -83,6 +104,35 @@ export function ScheduleTab() {
     }
   }, [schedules, getBooking, loadTutorProfiles]);
 
+  // Load map scheduleId -> có Pending request
+  useEffect(() => {
+    const loadPendingBySchedule = async () => {
+      if (!schedules || schedules.length === 0) {
+        setPendingBySchedule({});
+        return;
+      }
+      try {
+        const results = await Promise.all(
+          schedules.map(async (s) => {
+            const list = await fetchByScheduleId(
+              s.id,
+              ScheduleChangeRequestStatus.Pending
+            );
+            return { id: s.id, hasPending: !!(list && list.length > 0) };
+          })
+        );
+        const map: Record<number, boolean> = {};
+        results.forEach(r => {
+          map[r.id] = r.hasPending;
+        });
+        setPendingBySchedule(map);
+      } catch (err) {
+        // lỗi đã được hook setError, bỏ qua để không chặn UI
+      }
+    };
+    loadPendingBySchedule();
+  }, [schedules, fetchByScheduleId]);
+
   const getScheduleStatusColor = (status: ScheduleStatus | string) => {
     const parsedStatus = EnumHelpers.parseScheduleStatus(status);
     switch (parsedStatus) {
@@ -94,56 +144,165 @@ export function ScheduleTab() {
         return 'bg-green-100 text-green-800 border-green-200';
       case ScheduleStatus.Cancelled:
         return 'bg-red-100 text-red-800 border-red-200';
-      case ScheduleStatus.Absent:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+      case ScheduleStatus.Pending:
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case ScheduleStatus.Processing:
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  // Lấy schedules theo ngày
-  const getSchedulesByDate = (date: Date): ScheduleDto[] => {
-    return schedules.filter((schedule) => {
-      const scheduleDate = schedule.availability?.startDate
+  const allowedSchedules = schedules.filter(s =>
+    [ScheduleStatus.Upcoming, ScheduleStatus.InProgress].includes(
+      EnumHelpers.parseScheduleStatus(s.status)
+    )
+  );
+
+  // Danh sách lịch đang học / sắp học, có filter trạng thái
+  const filteredSchedules = allowedSchedules.filter(s =>
+    statusFilter === 'all'
+      ? true
+      : EnumHelpers.parseScheduleStatus(s.status) === statusFilter
+  );
+
+
+  const buildBusyKey = (av?: TutorAvailabilityDto | null) => {
+    if (!av?.startDate) return '';
+    const date = av.startDate.split('T')[0];
+    const hour = av.slot?.startTime?.split(':')[0]?.padStart(2, '0') || '';
+    return `${date}-${hour}`;
+  };
+
+  // Map availability theo date-hour để tra nhanh
+  const availabilityByKey = useMemo(() => {
+    const map: Record<string, TutorAvailabilityDto> = {};
+    availabilities.forEach(av => {
+      if (!av.startDate) return;
+      // Chỉ map slot AVAILABLE của tutor
+      if (EnumHelpers.parseTutorAvailabilityStatus(av.status) !== TutorAvailabilityStatus.Available) {
+        return;
+      }
+      const dateKey = av.startDate.split('T')[0];
+      const hour = av.slot?.startTime?.split(':')[0]?.padStart(2, '0') || '';
+      if (dateKey && hour) {
+        map[`${dateKey}-${hour}`] = av;
+      }
+    });
+    return map;
+  }, [availabilities]);
+
+  const learnerBusyMap = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    schedules
+      .filter(s => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Upcoming)
+      .forEach(s => {
+        const key = buildBusyKey(s.availability);
+        if (key) map[key] = true;
+      });
+    return map;
+  }, [schedules]);
+
+  const learnerBusyInfoMap = useMemo(() => {
+    const map: Record<
+      string,
+      { label: string; startTime?: string; endTime?: string }
+    > = {};
+    schedules
+      .filter(s => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Upcoming)
+      .forEach(s => {
+        const key = buildBusyKey(s.availability);
+        if (!key) return;
+        const subjectName = s.booking?.tutorSubject?.subject?.subjectName;
+        const start = s.availability?.slot?.startTime?.slice(0, 5);
+        const end = s.availability?.slot?.endTime?.slice(0, 5);
+        const label =
+          subjectName && start && end
+            ? `${subjectName} (${start}-${end})`
+            : start && end
+              ? `${start}-${end}`
+              : subjectName || 'Bạn đã có lịch';
+        map[key] = { label, startTime: start, endTime: end };
+      });
+    return map;
+  }, [schedules]);
+
+  // Hợp nhất timeSlots của gia sư với các giờ bận của learner để hiển thị trên lưới
+  const displayTimeSlots = useMemo(() => {
+    const slotMap = new Map<string, { startTime: string; endTime: string; id: number }>();
+    timeSlots.forEach(ts => slotMap.set(ts.startTime, ts));
+
+    Object.values(learnerBusyInfoMap).forEach((info, idx) => {
+      if (!info.startTime) return;
+      const start = info.startTime;
+      if (!slotMap.has(start)) {
+        slotMap.set(start, {
+          startTime: start,
+          endTime: info.endTime || '',
+          id: -10000 - idx, // id âm để phân biệt slot ảo
+        });
+      }
+    });
+
+    return Array.from(slotMap.values()).sort((a, b) => {
+      const [ha, ma] = a.startTime.split(':').map(Number);
+      const [hb, mb] = b.startTime.split(':').map(Number);
+      return ha * 60 + ma - (hb * 60 + mb);
+    });
+  }, [timeSlots, learnerBusyInfoMap]);
+
+  const getWeekDateKey = useCallback(
+    (dayKey: string): string => {
+      const idx = weekDays.findIndex(d => d.key === dayKey);
+      const date = new Date(currentWeekStart);
+      date.setDate(currentWeekStart.getDate() + (idx >= 0 ? idx : 0));
+      return date.toISOString().split('T')[0];
+    },
+    [currentWeekStart, weekDays]
+  );
+
+  // Chỉ hiển thị nút yêu cầu đổi lịch khi cách hiện tại >= 12h và chưa có request Pending cho schedule đó
+  const canRequestChange = useCallback(
+    (schedule: ScheduleDto): boolean => {
+      const avStart = schedule.availability?.startDate
         ? new Date(schedule.availability.startDate)
         : null;
-      return scheduleDate && isSameDay(scheduleDate, date);
-    });
-  };
+      if (!avStart) return false;
+      const diffMs = avStart.getTime() - Date.now();
+      if (diffMs < 12 * 60 * 60 * 1000) return false; // dưới 12h
 
-  // Tạo calendar days
-  const calendarDays = () => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 }); // Thứ 2 là ngày đầu tuần
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 }); // Thứ 2 là ngày đầu tuần
-    const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-    return days;
-  };
+      const status = EnumHelpers.parseScheduleStatus(schedule.status);
+      if (status !== ScheduleStatus.Upcoming) return false;
 
-  const handlePrevMonth = () => {
-    setCurrentMonth(subMonths(currentMonth, 1));
-  };
+      const hasPending = !!pendingBySchedule[schedule.id];
 
-  const handleNextMonth = () => {
-    setCurrentMonth(addMonths(currentMonth, 1));
-  };
+      return !hasPending;
+    },
+    [pendingBySchedule]
+  );
 
-  const handleDateClick = (date: Date) => {
-    if (isSameMonth(date, currentMonth)) {
-      if (selectedDate && isSameDay(date, selectedDate)) {
-        // Click lại vào ngày đã chọn thì bỏ chọn
-        setSelectedDate(null);
-      } else {
-        setSelectedDate(date);
+  const handleOpenSlotDialog = useCallback(
+    async (schedule: ScheduleDto) => {
+      const booking = getBooking(schedule.bookingId, schedule.booking);
+      const tutorSubject = booking?.tutorSubject;
+      const tutorId = tutorSubject?.tutor?.id || tutorSubject?.tutorId;
+      if (!tutorId) {
+        setSlotDialog({ open: true, schedule, selectedAvailabilityId: null, weekStart: undefined });
+        return;
       }
-    }
-  };
 
-  // Lọc schedules theo ngày được chọn
-  const filteredSchedules = selectedDate
-    ? getSchedulesByDate(selectedDate)
-    : schedules;
+      await loadAvailabilities(tutorId);
+      goToCurrentWeek();
+      setSlotDialog({
+        open: true,
+        schedule,
+        selectedAvailabilityId: null,
+        weekStart: currentWeekStart,
+        reason: '',
+      });
+    },
+    [getBooking, loadAvailabilities, goToCurrentWeek, currentWeekStart]
+  );
 
   if (loading) {
     return (
@@ -153,491 +312,550 @@ export function ScheduleTab() {
     );
   }
 
-  const renderCalendarView = () => {
-    const days = calendarDays();
-    const weekDays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-    const today = new Date();
-
-    return (
-      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
-        <CardContent className="p-6">
-          {/* Calendar Header */}
-          <div className="flex items-center justify-between mb-6">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrevMonth}
-              className="h-8 w-8 p-0"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <h3 className="text-xl font-semibold text-gray-900">
-              {format(currentMonth, 'MMMM yyyy', { locale: vi })}
-            </h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNextMonth}
-              className="h-8 w-8 p-0"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Week Days Header */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {weekDays.map((day) => (
-              <div
-                key={day}
-                className="text-center text-sm font-medium text-gray-600 py-2"
-              >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Days */}
-          <div className="grid grid-cols-7 gap-1">
-            {days.map((day, idx) => {
-              const daySchedules = getSchedulesByDate(day);
-              const isCurrentMonth = isSameMonth(day, currentMonth);
-              const isToday = isSameDay(day, today);
-              const isSelected = selectedDate && isSameDay(day, selectedDate);
-
-              return (
-                <button
-                  key={idx}
-                  onClick={() => handleDateClick(day)}
-                  className={`
-                    relative h-24 p-1.5 rounded-lg border transition-all text-left
-                    ${!isCurrentMonth ? 'text-gray-300 bg-gray-50' : 'text-gray-900 bg-white hover:bg-gray-50'}
-                    ${isToday ? 'border-[#257180] border-2 bg-[#257180]/5' : 'border-gray-200'}
-                    ${isSelected ? 'bg-[#257180] text-white' : ''}
-                    ${daySchedules.length > 0 ? 'font-semibold' : ''}
-                  `}
-                >
-                  <div className="text-sm mb-1 font-semibold">{format(day, 'd')}</div>
-                  {daySchedules.length > 0 && (
-                    <div className="space-y-0.5">
-                      {daySchedules.slice(0, 2).map((schedule) => {
-                        const slot = schedule.availability?.slot;
-                        const status = EnumHelpers.parseScheduleStatus(schedule.status);
-                        const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
-                        const color =
-                          status === ScheduleStatus.Completed
-                            ? 'bg-green-500'
-                            : status === ScheduleStatus.Cancelled || status === ScheduleStatus.Absent
-                              ? 'bg-red-500'
-                              : status === ScheduleStatus.InProgress
-                                ? 'bg-yellow-500'
-                                : 'bg-blue-500';
-                        return (
-                          <div
-                            key={schedule.id}
-                            className={`text-[10px] px-1 py-0.5 rounded ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'} truncate`}
-                            title={slot ? `${slot.startTime} - ${slot.endTime}${isOnline ? ' (Zoom Meeting)' : ''}` : ''}
-                          >
-                            {slot ? (
-                              <div className="flex items-center gap-0.5">
-                                <Clock className="h-2.5 w-2.5" />
-                                <span className="truncate">{slot.startTime}</span>
-                                {isOnline && <Video className="h-2.5 w-2.5 ml-0.5" />}
-                              </div>
-                            ) : (
-                              <div className={`w-1.5 h-1.5 rounded-full mx-auto ${isSelected ? 'bg-white' : color}`} />
-                            )}
-                          </div>
-                        );
-                      })}
-                      {daySchedules.length > 2 && (
-                        <div className={`text-[10px] text-center ${isSelected ? 'text-white' : 'text-gray-500'}`}>
-                          +{daySchedules.length - 2}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Selected Date Schedules Panel */}
-          {selectedDate && getSchedulesByDate(selectedDate).length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-semibold text-gray-900">
-                  Lịch học ngày {format(selectedDate, 'dd/MM/yyyy', { locale: vi })}
-                </h4>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedDate(null)}
-                >
-                  Đóng
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {getSchedulesByDate(selectedDate)
-                  .sort((a, b) => {
-                    const slotA = a.availability?.slot?.startTime || '';
-                    const slotB = b.availability?.slot?.startTime || '';
-                    return slotA.localeCompare(slotB);
-                  })
-                  .map((schedule) => {
-                    const availability = schedule.availability;
-                    const slot = availability?.slot;
-                    const tutor = availability?.tutor;
-
-                    // Lấy booking từ schedule hoặc từ hook (nếu schedule chỉ có bookingId)
-                    const booking = getBooking(schedule.bookingId, schedule.booking);
-                    // Từ booking lấy tutorSubject (tutorSubjectId)
-                    const tutorSubject = booking?.tutorSubject;
-                    // Từ tutorSubject lấy subject (môn học) và level
-                    const subject = tutorSubject?.subject;
-                    const level = tutorSubject?.level;
-                    // Lấy tutorEmail và tutor profile
-                    const tutorEmail = tutorSubject?.tutorEmail;
-                    const tutorProfile = tutorEmail ? getTutorProfile(tutorEmail) : undefined;
-                    const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
-
-                    return (
-                      <Card key={schedule.id} className="border border-[#257180]/20 border-l-4 border-l-[#257180] bg-white transition-shadow hover:shadow-md">
-                        <CardContent className="p-4">
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                <Badge className={getScheduleStatusColor(schedule.status)}>
-                                  {EnumHelpers.getScheduleStatusLabel(schedule.status)}
-                                </Badge>
-                                {isOnline ? (
-                                  <Badge className="bg-blue-500 text-white border-blue-600">
-                                    <Video className="h-3 w-3 mr-1" />
-                                    Zoom Meeting
-                                  </Badge>
-                                ) : (
-                                  <Badge className="bg-gray-500 text-white border-gray-600">
-                                    <MapPin className="h-3 w-3 mr-1" />
-                                    Offline
-                                  </Badge>
-                                )}
-                              </div>
-                              <h5 className="font-semibold text-gray-900 mb-1">
-                                {subject?.subjectName || 'Môn học'}
-                                {level && (
-                                  <span className="text-sm font-normal text-gray-500 ml-2">
-                                    - {level.name}
-                                  </span>
-                                )}
-                              </h5>
-                              <p className="text-sm text-gray-600 mb-2">
-                                Gia sư: {tutorProfile?.userName || tutorEmail || 'Chưa có thông tin'}
-                              </p>
-                              {tutorEmail && (
-                                <p className="text-xs text-gray-500 mb-2">
-                                  {tutorEmail}
-                                </p>
-                              )}
-                              {slot && (
-                                <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
-                                  <Clock className="h-4 w-4 text-[#257180]" />
-                                  <div className="text-xs text-gray-500">Bắt đầu - Kết thúc</div>
-                                  <span>
-                                    {slot.startTime} - {slot.endTime}
-                                  </span>
-                                </div>
-                              )}
-                              {schedule.meetingSession?.meetLink && (
-                                <div className="mt-2">
-                                  <div className="text-xs text-gray-500 mb-0.5">Link Zoom Meeting</div>
-                                  <a
-                                    href={schedule.meetingSession.meetLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium hover:underline"
-                                  >
-                                    <Video className="h-4 w-4" />
-                                    <span className="truncate max-w-[220px]" title={schedule.meetingSession.meetLink}>
-                                      {schedule.meetingSession.meetLink}
-                                    </span>
-                                  </a>
-                                </div>
-                              )}
-
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
+  // ( chỉ hiển thị danh sách)
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Lịch học sắp tới</h2>
-          <p className="text-gray-600 mt-1">Các buổi học của bạn</p>
+          <h2 className="text-2xl font-semibold text-gray-900">Lịch học</h2>
+          <p className="text-gray-600 mt-1">Hiển thị các buổi đang học và sắp diễn ra.</p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant={filter === 'upcoming' ? 'default' : 'outline'}
-            size="sm"
-            className={filter === 'upcoming' ? 'bg-[#257180] text-white hover:bg-[#257180]/90' : ''}
-            onClick={() => setFilter('upcoming')}
+        <div className="w-64">
+          <Select
+            value={statusFilter === 'all' ? 'all' : statusFilter.toString()}
+            onValueChange={(value) =>
+              setStatusFilter(value === 'all' ? 'all' : (Number(value) as ScheduleStatus))
+            }
           >
-            Sắp tới
-          </Button>
-          <Button
-            variant={filter === 'all' ? 'default' : 'outline'}
-            size="sm"
-            className={filter === 'all' ? 'bg-[#257180] text-white hover:bg-[#257180]/90' : ''}
-            onClick={() => setFilter('all')}
-          >
-            Tất cả
-          </Button>
+            <SelectTrigger>
+              <SelectValue placeholder="Lọc trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả</SelectItem>
+              <SelectItem value={ScheduleStatus.Upcoming.toString()}>Sắp diễn ra</SelectItem>
+              <SelectItem value={ScheduleStatus.InProgress.toString()}>Đang học</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* View Mode Toggle */}
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant={viewMode === 'calendar' ? 'default' : 'outline'}
-          size="sm"
-          className={viewMode === 'calendar' ? 'bg-[#257180] text-white hover:bg-[#257180]/90' : ''}
-          onClick={() => {
-            setViewMode('calendar');
-            setSelectedDate(null);
-          }}
-        >
-          <Calendar className="h-4 w-4 mr-2" />
-          Lịch
-        </Button>
-        <Button
-          variant={viewMode === 'list' ? 'default' : 'outline'}
-          size="sm"
-          className={viewMode === 'list' ? 'bg-[#257180] text-white hover:bg-[#257180]/90' : ''}
-          onClick={() => {
-            setViewMode('list');
-            setSelectedDate(null);
-          }}
-        >
-          <List className="h-4 w-4 mr-2" />
-          Danh sách
-        </Button>
-      </div>
+      {/* Danh sách lịch sắp học */}
+      {filteredSchedules.length === 0 ? (
+        <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Calendar className="h-16 w-16 text-gray-300 mb-4" />
+            <p className="text-gray-600">Chưa có lịch học nào sắp diễn ra</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {filteredSchedules.map((schedule) => {
+            const availability = schedule.availability;
+            const slot = availability?.slot;
 
-      {/* Calendar View */}
-      {viewMode === 'calendar' && renderCalendarView()}
+            // Lấy booking từ schedule hoặc từ hook (nếu schedule chỉ có bookingId)
+            const booking = getBooking(schedule.bookingId, schedule.booking);
+            // Từ booking lấy tutorSubject (tutorSubjectId)
+            const tutorSubject = booking?.tutorSubject;
+            // Từ tutorSubject lấy subject (môn học) và level
+            const subject = tutorSubject?.subject;
+            const level = tutorSubject?.level;
+            // Lấy tutorEmail và tutor profile
+            const tutorEmail = tutorSubject?.tutorEmail;
+            const tutorProfile = tutorEmail ? getTutorProfile(tutorEmail) : undefined;
 
-      {/* List View */}
-      {viewMode === 'list' && (
-        <>
-          {selectedDate && (
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Lịch học ngày {format(selectedDate, 'dd/MM/yyyy', { locale: vi })}
-              </h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedDate(null);
-                  setFilter('all');
-                }}
+            const scheduleDate = availability?.startDate
+              ? new Date(availability.startDate)
+              : null;
+
+            const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
+
+            // Tính endDate từ startDate + slot.endTime
+            return (
+              <Card
+                key={schedule.id}
+                className="hover:shadow-md transition-shadow border border-[#257180]/20 border-l-4 border-l-[#257180] bg-white"
               >
-                Xem tất cả
-              </Button>
-            </div>
-          )}
-
-          {filteredSchedules.length === 0 ? (
-            <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Calendar className="h-16 w-16 text-gray-300 mb-4" />
-                <p className="text-gray-600">
-                  {selectedDate
-                    ? `Chưa có lịch học nào vào ngày ${format(selectedDate, 'dd/MM/yyyy', { locale: vi })}`
-                    : 'Chưa có lịch học nào'}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {filteredSchedules.map((schedule) => {
-                const availability = schedule.availability;
-                const slot = availability?.slot;
-                const tutor = availability?.tutor;
-
-                // Lấy booking từ schedule hoặc từ hook (nếu schedule chỉ có bookingId)
-                const booking = getBooking(schedule.bookingId, schedule.booking);
-                // Từ booking lấy tutorSubject (tutorSubjectId)
-                const tutorSubject = booking?.tutorSubject;
-                // Từ tutorSubject lấy subject (môn học) và level
-                const subject = tutorSubject?.subject;
-                const level = tutorSubject?.level;
-                // Lấy tutorEmail và tutor profile
-                const tutorEmail = tutorSubject?.tutorEmail;
-                const tutorProfile = tutorEmail ? getTutorProfile(tutorEmail) : undefined;
-
-                const scheduleDate = availability?.startDate
-                  ? new Date(availability.startDate)
-                  : null;
-
-                const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
-
-                // Tính endDate từ startDate + slot.endTime
-                let endDate: Date | null = null;
-                if (availability?.endDate) {
-                  endDate = new Date(availability.endDate);
-                } else if (scheduleDate && slot) {
-                  const [endHours, endMinutes] = slot.endTime.split(':').map(Number);
-                  endDate = new Date(scheduleDate);
-                  endDate.setHours(endHours, endMinutes, 0, 0);
-                }
-
-                return (
-                  <Card key={schedule.id} className="hover:shadow-md transition-shadow border border-[#257180]/20 border-l-4 border-l-[#257180] bg-white">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col md:flex-row gap-6">
-                        {scheduleDate && (
-                          <div className="flex-shrink-0">
-                            <div className="bg-gradient-to-br from-[#257180] to-[#1a5a66] rounded-lg p-4 text-center w-28 h-28 flex flex-col items-center justify-center text-white shadow-md">
-                              <div className="text-4xl font-bold leading-none">
-                                {scheduleDate.getDate()}
-                              </div>
-                              <div className="text-sm font-medium mt-1 opacity-90">
-                                Tháng {scheduleDate.getMonth() + 1}
-                              </div>
-                              <div className="text-xs font-medium mt-1 opacity-80">
-                                {format(scheduleDate, 'EEE', { locale: vi })}
-                              </div>
-                            </div>
+                <CardContent className="p-6">
+                  <div className="flex flex-col md:flex-row gap-6">
+                    {scheduleDate && (
+                      <div className="flex-shrink-0">
+                        <div className="bg-gradient-to-br from-[#257180] to-[#1a5a66] rounded-lg p-4 text-center w-28 h-28 flex flex-col items-center justify-center text-white shadow-md">
+                          <div className="text-4xl font-bold leading-none">
+                            {scheduleDate.getDate()}
                           </div>
-                        )}
-
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-3 flex-wrap">
-                                <Badge className={getScheduleStatusColor(schedule.status)}>
-                                  {EnumHelpers.getScheduleStatusLabel(schedule.status)}
-                                </Badge>
-                                {isOnline ? (
-                                  <Badge className="bg-blue-500 text-white border-blue-600">
-                                    <Video className="h-3 w-3 mr-1" />
-                                    Zoom Meeting
-                                  </Badge>
-                                ) : (
-                                  <Badge className="bg-gray-500 text-white border-gray-600">
-                                    <MapPin className="h-3 w-3 mr-1" />
-                                    Offline
-                                  </Badge>
-                                )}
-                                {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Completed && (
-                                  <CheckCircle className="h-5 w-5 text-green-500" />
-                                )}
-                                {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Cancelled && (
-                                  <XCircle className="h-5 w-5 text-red-500" />
-                                )}
-                                {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Absent && (
-                                  <XCircle className="h-5 w-5 text-gray-500" />
-                                )}
-                              </div>
-
-                              <div className="mb-3">
-                                <h3 className="font-semibold text-lg text-gray-900">
-                                  {subject?.subjectName || 'Môn học'}
-                                  {level && (
-                                    <span className="ml-2 text-base font-normal text-gray-500">
-                                      - {level.name}
-                                    </span>
-                                  )}
-                                </h3>
-                                <p className="text-gray-600 text-sm mt-1">
-                                  Gia sư: {tutorProfile?.userName || tutorEmail || 'Chưa có thông tin'}
-                                </p>
-                                {tutorEmail && (
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Email{tutorEmail}
-                                  </p>
-                                )}
-                              </div>
-
-                              <div className="space-y-3 bg-gray-50 rounded-lg p-4">
-                                {scheduleDate && (
-                                  <div className="flex items-center gap-3">
-                                    <div className="bg-white rounded-lg p-2 shadow-sm">
-                                      <Calendar className="h-5 w-5 text-[#257180]" />
-                                    </div>
-                                    <div>
-                                      <div className="text-xs text-gray-500">Ngày học</div>
-                                      <div className="text-gray-900 font-medium">
-                                        {format(scheduleDate, "EEEE, dd/MM/yyyy", { locale: vi })}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {slot && (
-                                  <div className="flex items-center gap-3">
-                                    <div className="bg-white rounded-lg p-2 shadow-sm">
-                                      <Clock className="h-5 w-5 text-[#257180]" />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="text-xs text-gray-500">Bắt đầu - Kết thúc</div>
-                                      <div className="text-gray-900 font-medium">
-                                        {slot.startTime} - {slot.endTime}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-
-
-
-
-
-                              </div>
-
-                              <div className="mt-4 flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="lg"
-                                  className="flex-1 hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-                                >
-                                  <MessageCircle className="h-4 w-4 mr-2" />
-                                  Nhắn tin
-                                </Button>
-                                {isOnline && schedule.meetingSession && (
-                                  <Button
-                                    size="lg"
-                                    className="bg-[#257180] hover:bg-[#257180]/90 text-white"
-                                    onClick={() => {
-                                      window.open(schedule.meetingSession!.meetLink, '_blank');
-                                    }}
-                                  >
-                                    <Video className="h-4 w-4 mr-2" />
-                                    Tham gia
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
+                          <div className="text-sm font-medium mt-1 opacity-90">
+                            Tháng {scheduleDate.getMonth() + 1}
+                          </div>
+                          <div className="text-xs font-medium mt-1 opacity-80">
+                            {format(scheduleDate, 'EEE', { locale: vi })}
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </>
+                    )}
+
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-3 flex-wrap">
+                            <Badge className={getScheduleStatusColor(schedule.status)}>
+                              {EnumHelpers.getScheduleStatusLabel(schedule.status)}
+                            </Badge>
+                            {isOnline ? (
+                              <Badge className="bg-blue-500 text-white border-blue-600">
+                                <Video className="h-3 w-3 mr-1" />
+                                Zoom Meeting
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-gray-500 text-white border-gray-600">
+                                <MapPin className="h-3 w-3 mr-1" />
+                                Offline
+                              </Badge>
+                            )}
+                            {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Completed && (
+                              <CheckCircle className="h-5 w-5 text-green-500" />
+                            )}
+                            {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Cancelled && (
+                              <XCircle className="h-5 w-5 text-red-500" />
+                            )}
+                            {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Pending && (
+                              <Clock className="h-5 w-5 text-yellow-500" />
+                            )}
+                            {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Processing && (
+                              <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                            )}
+                          </div>
+
+                          <div className="mb-3">
+                            <h3 className="font-semibold text-lg text-gray-900">
+                              {subject?.subjectName || 'Môn học'}
+                              {level && (
+                                <span className="ml-2 text-base font-normal text-gray-500">
+                                  - {level.name}
+                                </span>
+                              )}
+                            </h3>
+                            <p className="text-gray-600 text-sm mt-1">
+                              Gia sư: {tutorProfile?.userName || tutorEmail || 'Chưa có thông tin'}
+                            </p>
+                            {tutorEmail && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Email: {tutorEmail}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="space-y-3 bg-gray-50 rounded-lg p-4">
+                            {scheduleDate && (
+                              <div className="flex items-center gap-3">
+                                <div className="bg-white rounded-lg p-2 shadow-sm">
+                                  <Calendar className="h-5 w-5 text-[#257180]" />
+                                </div>
+                                <div>
+                                  <div className="text-xs text-gray-500">Ngày học</div>
+                                  <div className="text-gray-900 font-medium">
+                                    {format(scheduleDate, "EEEE, dd/MM/yyyy", { locale: vi })}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {slot && (
+                              <div className="flex items-center gap-3">
+                                <div className="bg-white rounded-lg p-2 shadow-sm">
+                                  <Clock className="h-5 w-5 text-[#257180]" />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="text-xs text-gray-500">Bắt đầu - Kết thúc</div>
+                                  <div className="text-gray-900 font-medium">
+                                    {slot.startTime} - {slot.endTime}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="mt-4 flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="lg"
+                              className="flex-1 hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                            >
+                              <MessageCircle className="h-4 w-4 mr-2" />
+                              Nhắn tin
+                            </Button>
+                            {canRequestChange(schedule) && (
+                              <Button
+                                size="lg"
+                                variant="outline"
+                                className="flex-1 border-dashed border-[#257180] text-[#257180] hover:bg-[#257180] hover:text-white"
+                                onClick={() => handleOpenSlotDialog(schedule)}
+                              >
+                                Yêu cầu đổi lịch
+                              </Button>
+                            )}
+                            {isOnline && schedule.meetingSession && (
+                              <Button
+                                size="lg"
+                                className="bg-[#257180] hover:bg-[#257180]/90 text-white"
+                                onClick={() => {
+                                  window.open(schedule.meetingSession!.meetLink, '_blank');
+                                }}
+                              >
+                                <Video className="h-4 w-4 mr-2" />
+                                Tham gia
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
+
+      {/* Dialog hiển thị lịch rảnh của gia sư (lọc >=12h và không trùng lịch học của learner) */}
+      <Dialog open={slotDialog.open} onOpenChange={(open) => setSlotDialog(prev => ({ ...prev, open }))}>
+        <DialogContent className="sm:max-w-6xl w-full max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+          <DialogHeader className="space-y-2">
+            <DialogTitle>Lịch rảnh của gia sư</DialogTitle>
+            {slotDialog.schedule && (() => {
+              const booking = getBooking(slotDialog.schedule!.bookingId, slotDialog.schedule!.booking);
+              const tutorSubject = booking?.tutorSubject;
+              const subject = tutorSubject?.subject;
+              const level = tutorSubject?.level;
+              const tutorEmail = tutorSubject?.tutorEmail;
+              const tutorProfile = tutorEmail ? getTutorProfile(tutorEmail) : tutorSubject?.tutor;
+              const currentAvailability = slotDialog.schedule?.availability;
+              const currentSlot = currentAvailability?.slot;
+              const currentStart = currentAvailability?.startDate
+                ? new Date(currentAvailability.startDate)
+                : undefined;
+              return (
+                <div className="flex flex-col gap-1 text-sm">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-gray-900 text-base">
+                      {subject?.subjectName || 'Môn học'}
+                    </span>
+                    {level && (
+                      <Badge variant="outline" className="text-xs border-[#257180] text-[#257180]">
+                        {level.name}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-gray-700">
+                    Gia sư: <span className="font-medium">{tutorProfile?.userName || tutorEmail || 'Chưa có thông tin'}</span>
+                  </div>
+                  {currentStart && currentSlot && (
+                    <div className="text-gray-700 flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-gray-900">Buổi hiện tại:</span>
+                      <span>
+                        {format(currentStart, "EEEE, dd/MM/yyyy", { locale: vi })} • {currentSlot.startTime} - {currentSlot.endTime}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </DialogHeader>
+
+          {loadingAvailabilities ? (
+            <div className="flex items-center justify-center py-6 gap-2 text-gray-600">
+              <Loader2 className="h-5 w-5 animate-spin text-[#257180]" />
+              Đang tải lịch rảnh...
+            </div>
+          ) : timeSlots.length === 0 ? (
+            <div className="py-4 text-center text-gray-600">
+              Không có lịch rảnh phù hợp.
+            </div>
+          ) : (
+            (() => {
+              const dates = weekDays.map(day => getWeekDateKey(day.key));
+              const times = timeSlots.map(ts => ts.startTime.slice(0, 5)).sort();
+
+              const weekEnd = new Date(currentWeekStart);
+              weekEnd.setDate(currentWeekStart.getDate() + 6);
+              const weekRangeLabel = `${format(currentWeekStart, 'dd/MM')} - ${format(weekEnd, 'dd/MM')}`;
+
+              const isTooClose = (startDate?: string) => {
+                if (!startDate) return false;
+                const start = new Date(startDate).getTime();
+                return start - Date.now() < 12 * 60 * 60 * 1000;
+              };
+
+              const isLearnerBusy = (dateKey: string, hour: string) => {
+                const key = `${dateKey}-${hour}`;
+                return learnerBusyMap[key] === true;
+              };
+
+              const getSlot = (dateKey: string, hour: string) =>
+                availabilityByKey[`${dateKey}-${hour}`];
+
+              return (
+                <Card className="border border-[#FD8B51]/40">
+                  <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-800">
+                        {weekRangeLabel}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={goToPreviousWeek} className="flex items-center gap-2">
+                        <ChevronLeft className="w-4 h-4" />
+                        Tuần trước
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToCurrentWeek}
+                        className="bg-[#FD8B51] text-white hover:bg-[#CB6040] border-[#FD8B51]"
+                      >
+                        Về tuần hiện tại
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={goToNextWeek} className="flex items-center gap-2">
+                        Tuần sau
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <div className="min-w-[700px]">
+                        <div className="grid" style={{ gridTemplateColumns: `120px repeat(${dates.length}, 1fr)` }}>
+                          <div className="bg-white border-b border-r p-2 text-sm font-semibold text-gray-700">Giờ</div>
+                          {dates.map((d, idx) => {
+                            const dateObj = new Date(d);
+                            return (
+                              <div key={d} className="bg-white border-b border-r p-2 text-sm font-semibold text-gray-700 text-center">
+                                <div>{weekDays[idx]?.label || format(dateObj, 'EEEE', { locale: vi })}</div>
+                                <div className="text-xs text-gray-500">{format(dateObj, 'dd/MM')}</div>
+                              </div>
+                            );
+                          })}
+                          {times.map((t: string) => {
+                            const hour = t.split(':')[0].padStart(2, '0');
+                            return (
+                              <React.Fragment key={t}>
+                                <div className="bg-gray-50 border-b border-r p-2 text-sm font-semibold text-gray-700">{t}</div>
+                                {dates.map(d => {
+                                  const av = getSlot(d, hour);
+                                  const timeLabel = `${t} - ${av?.slot?.endTime?.slice(0, 5) ?? ''}`.trim();
+                                  const busy = isLearnerBusy(d, hour);
+                                  const busyInfo = learnerBusyInfoMap[`${d}-${hour}`];
+
+                                  if (!av) {
+                                    if (busy) {
+                                      const startDisplay = busyInfo?.startTime || t;
+                                      const endDisplay = busyInfo?.endTime ? ` - ${busyInfo.endTime}` : '';
+                                      const busyTitle = `Bạn đã có lịch${busyInfo?.label ? ` • ${busyInfo.label}` : ''}${endDisplay ? ` • ${startDisplay}${endDisplay}` : ` • ${startDisplay}`
+                                        }`;
+                                      return (
+                                        <div
+                                          key={`${d}-${t}`}
+                                          className="border-b border-r bg-rose-300 text-center text-[11px] text-rose-900 p-2 font-semibold"
+                                          title={busyTitle}
+                                        >
+                                          <div className="text-[11px] leading-tight">
+                                            {startDisplay}
+                                            {endDisplay}
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+                                    return (
+                                      <div
+                                        key={`${d}-${t}`}
+                                        className="border-b border-r bg-gray-100 text-center text-[11px] text-gray-500 p-2 font-semibold"
+                                        title="Slot không rảnh"
+                                      >
+                                        ✕
+                                      </div>
+                                    );
+                                  }
+
+                                  const status = EnumHelpers.parseTutorAvailabilityStatus(av.status);
+                                  const tooClose = isTooClose(av.startDate);
+                                  const isSelected = slotDialog.selectedAvailabilityId === av.id;
+
+                                  // Slot không rảnh (Booked/Unavailable)
+                                  if (status !== TutorAvailabilityStatus.Available) {
+                                    return (
+                                      <div
+                                        key={`${d}-${t}`}
+                                        className="border-b border-r bg-slate-100 text-center text-[11px] text-slate-500 p-2 font-semibold"
+                                      >
+                                        ✕
+                                      </div>
+                                    );
+                                  }
+
+                                  // Trạng thái hiển thị (theo kiểu TutorDetailProfilePage)
+                                  let buttonClass = '';
+                                  let buttonContent = '';
+                                  let disabled = false;
+
+                                  if (busy) {
+                                    const startDisplay = busyInfo?.startTime || av.slot?.startTime?.slice(0, 5) || '';
+                                    const endDisplay = busyInfo?.endTime
+                                      ? ` - ${busyInfo.endTime}`
+                                      : av.slot?.endTime
+                                        ? ` - ${av.slot.endTime.slice(0, 5)}`
+                                        : '';
+                                    buttonClass = 'bg-rose-300 text-rose-900 cursor-not-allowed border border-rose-500';
+                                    buttonContent = `${startDisplay}${endDisplay}`;
+                                    disabled = true;
+                                  } else if (tooClose) {
+                                    buttonClass = 'bg-orange-100 text-orange-900 cursor-not-allowed border border-orange-200';
+                                    buttonContent = '⚠';
+                                    disabled = true;
+                                  } else if (isSelected) {
+                                    buttonClass = 'bg-amber-300 text-amber-900 border-amber-500';
+                                    buttonContent = '';
+                                    disabled = false;
+                                  } else {
+                                    buttonClass = 'bg-green-100 text-green-800 hover:bg-green-200 border border-green-300';
+                                    buttonContent = '';
+                                    disabled = false;
+                                  }
+
+                                  return (
+                                    <button
+                                      key={`${d}-${t}-slot`}
+                                      disabled={disabled && !isSelected}
+                                      onClick={() =>
+                                        setSlotDialog(prev =>
+                                          isSelected
+                                            ? { ...prev, selectedAvailabilityId: null }
+                                            : { ...prev, selectedAvailabilityId: av.id }
+                                        )
+                                      }
+                                      className={`border-b border-r p-2 text-center text-xs font-semibold transition ${buttonClass} ${disabled && !isSelected ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-sm'}`}
+                                    >
+                                      <div className="text-[11px] leading-tight">
+                                        {av.slot?.startTime?.slice(0, 5)} - {av.slot?.endTime?.slice(0, 5)}
+                                      </div>
+                                      {buttonContent && <div className="text-[11px] leading-tight">{buttonContent}</div>}
+                                    </button>
+                                  );
+                                })}
+                              </React.Fragment>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-gray-700">
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-emerald-200 rounded border border-emerald-400"></div>
+                        <span className="font-medium text-emerald-800">Lịch rảnh </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-amber-300 rounded border border-amber-500"></div>
+                        <span className="font-medium text-amber-800">Đã chọn </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-orange-100 rounded border border-orange-200"></div>
+                        <span className="font-medium text-orange-700">Quá gần (cần cách ≥12h)</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-rose-300 rounded border border-rose-500"></div>
+                        <span className="font-medium text-rose-900">Bạn đã có lịch</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-slate-200 rounded border border-slate-400"></div>
+                        <span className="font-medium text-slate-800"> Không rảnh/đã booked</span>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <label className="text-sm font-medium text-gray-700">Lý do (tùy chọn, tối đa 200 ký tự)</label>
+                      <textarea
+                        className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#257180]"
+                        rows={3}
+                        maxLength={200}
+                        placeholder="Nhập lý do muốn đổi lịch (tối đa 200 ký tự)"
+                        value={slotDialog.reason || ''}
+                        onChange={(e) =>
+                          setSlotDialog(prev => ({ ...prev, reason: e.target.value }))
+                        }
+                      />
+                      <div className="text-xs text-gray-500 text-right">
+                        {(slotDialog.reason?.length || 0)}/200
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()
+          )}
+
+          <DialogFooter className="pt-4">
+            <Button
+              variant="outline"
+              onClick={() =>
+                setSlotDialog({ open: false, schedule: undefined, weekStart: undefined, selectedAvailabilityId: null, reason: '' })
+              }
+            >
+              Hủy
+            </Button>
+            <Button
+              className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
+              disabled={
+                !slotDialog.selectedAvailabilityId ||
+                !slotDialog.schedule?.availability?.id ||
+                !user?.email ||
+                changeRequestLoading
+              }
+              onClick={async () => {
+                const schedule = slotDialog.schedule;
+                const newAvailabilityId = slotDialog.selectedAvailabilityId;
+                if (!schedule || !newAvailabilityId) {
+                  showError('Vui lòng chọn slot mới.');
+                  return;
+                }
+
+                const booking = getBooking(schedule.bookingId, schedule.booking);
+                const tutorEmail = booking?.tutorSubject?.tutorEmail;
+                const oldAvailabilityId = schedule.availability?.id;
+
+                if (!user?.email || !tutorEmail) {
+                  showError('Thiếu thông tin người gửi hoặc gia sư.');
+                  return;
+                }
+                if (!oldAvailabilityId) {
+                  showError('Không tìm thấy lịch cũ của buổi học.');
+                  return;
+                }
+
+                const payload = {
+                  scheduleId: schedule.id,
+                  requesterEmail: user.email,
+                  requestedToEmail: tutorEmail,
+                  oldAvailabilitiId: oldAvailabilityId,
+                  newAvailabilitiId: newAvailabilityId,
+                  reason: slotDialog.reason?.trim() || undefined,
+                };
+
+                const created = await create(payload);
+                if (created) {
+                  showSuccess('Đã gửi yêu cầu đổi lịch.');
+                  setPendingBySchedule(prev => ({ ...prev, [schedule.id]: true }));
+                  setSlotDialog({ open: false, schedule: undefined, weekStart: undefined, selectedAvailabilityId: null, reason: '' });
+                } else {
+                  showError('Gửi yêu cầu đổi lịch thất bại.');
+                }
+              }}
+            >
+              Tiếp tục
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

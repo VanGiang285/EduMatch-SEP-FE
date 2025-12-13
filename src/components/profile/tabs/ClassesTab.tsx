@@ -19,43 +19,57 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  AlertTriangle,
 } from 'lucide-react';
-import { BookingService } from '@/services';
 import { BookingDto } from '@/types/backend';
-import { BookingStatus, PaymentStatus, ScheduleStatus, TeachingMode } from '@/types/enums';
+import {
+  BookingStatus,
+  PaymentStatus,
+  ScheduleCompletionStatus,
+  ScheduleStatus,
+  TeachingMode,
+} from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
+import { useWalletContext } from '@/contexts/WalletContext';
 import { useSchedules } from '@/hooks/useSchedules';
 import { useBookings } from '@/hooks/useBookings';
-import { useWalletContext } from '@/contexts/WalletContext';
 import { BookingNotesPanel } from '@/components/booking/BookingNotesPanel';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { useRouter } from 'next/navigation';
 
 export function ClassesTab() {
   const { user } = useAuth();
+  const { refetch: refetchWallet } = useWalletContext();
   const { showError, showSuccess, showWarning } = useCustomToast();
+  const router = useRouter();
   const {
     bookings,
     loading,
     loadLearnerBookings: loadBookings,
-    payBooking: payBookingApi,
+    updateStatus: updateBookingStatus,
+    getBookingById,
+    loadBookingDetails,
+    getBooking: getBookingFromCache,
   } = useBookings();
   const [allBookings, setAllBookings] = useState<BookingDto[]>([]); // Lưu tất cả bookings để tính counts
   const [filter, setFilter] = useState<string>('all');
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
   const [cancelDialogBookingId, setCancelDialogBookingId] = useState<number | null>(null);
-  const [payDialogBookingId, setPayDialogBookingId] = useState<number | null>(null);
-  const [payingBookingId, setPayingBookingId] = useState<number | null>(null);
-  const [isPaying, setIsPaying] = useState<boolean>(false);
   const { loadTutorProfiles, getTutorProfile, loadTutorProfile } = useTutorProfiles();
-  const { schedules, loading: loadingSchedules, loadSchedulesByBookingId, clearSchedules } = useSchedules();
-  const { getBooking, loadBookingDetails } = useBookings();
-  const { balance, loading: walletLoading, refetch: refetchWallet } = useWalletContext();
+  const {
+    schedules,
+    loading: loadingSchedules,
+    loadSchedulesByBookingId,
+    clearSchedules,
+    finishSchedule,
+  } = useSchedules();
+  const [scheduleStatusFilter, setScheduleStatusFilter] = useState<'all' | ScheduleStatus>('all');
 
   // Load tất cả bookings một lần khi component mount hoặc user thay đổi
   useEffect(() => {
@@ -99,19 +113,18 @@ export function ClassesTab() {
     if (!selectedBookingId) return;
 
     try {
-      // Load booking detail
-      const bookingResponse = await BookingService.getById(selectedBookingId);
-      if (bookingResponse.success && bookingResponse.data) {
-        setSelectedBooking(bookingResponse.data);
+      const bookingDetail = await getBookingById(selectedBookingId);
+      if (bookingDetail) {
+        setSelectedBooking(bookingDetail);
 
-        // Load tutor profile nếu chưa có
-        const tutorEmail = bookingResponse.data.tutorSubject?.tutorEmail;
+        const tutorEmail = bookingDetail.tutorSubject?.tutorEmail;
         if (tutorEmail) {
           await loadTutorProfile(tutorEmail);
         }
+      } else {
+        showError('Không thể tải chi tiết lớp học', 'Vui lòng thử lại sau.');
       }
 
-      // Load schedules
       await loadSchedulesByBookingId(selectedBookingId);
     } catch (error: any) {
       showError('Lỗi khi tải chi tiết lớp học', error.message);
@@ -133,13 +146,22 @@ export function ClassesTab() {
 
   const handleViewDetail = (bookingId: number) => {
     setSelectedBookingId(bookingId);
+    setScheduleStatusFilter('all');
   };
 
   const handleBackToList = () => {
     setSelectedBookingId(null);
     setSelectedBooking(null);
     clearSchedules();
+    setScheduleStatusFilter('all');
   };
+  const filteredSchedules = useMemo(() => {
+    if (scheduleStatusFilter === 'all') return schedules;
+    return schedules.filter(
+      (schedule) => EnumHelpers.parseScheduleStatus(schedule.status) === scheduleStatusFilter
+    );
+  }, [scheduleStatusFilter, schedules]);
+
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -199,8 +221,10 @@ export function ClassesTab() {
         return 'bg-green-100 text-green-800 border-green-200';
       case ScheduleStatus.Cancelled:
         return 'bg-red-100 text-red-800 border-red-200';
-      case ScheduleStatus.Absent:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+      case ScheduleStatus.Pending:
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case ScheduleStatus.Processing:
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -252,122 +276,62 @@ export function ClassesTab() {
     ).length;
   };
 
+  const getScheduleStatusSummary = (booking: BookingDto) => {
+    if (!booking.schedules || booking.schedules.length === 0) return [];
+
+    const summaryMap = new Map<ScheduleStatus, number>();
+    booking.schedules.forEach((schedule) => {
+      const status = EnumHelpers.parseScheduleStatus(schedule.status);
+      summaryMap.set(status, (summaryMap.get(status) || 0) + 1);
+    });
+
+    return Array.from(summaryMap.entries())
+      .filter(([_, count]) => count > 0)
+      .map(([status, count]) => ({ status, count }))
+      .sort((a, b) => a.status - b.status);
+  };
+
+  const getScheduleStatusBgColor = (status: ScheduleStatus) => {
+    switch (status) {
+      case ScheduleStatus.Upcoming:
+        return 'bg-blue-400';
+      case ScheduleStatus.InProgress:
+        return 'bg-yellow-400';
+      case ScheduleStatus.Completed:
+        return 'bg-green-500';
+      case ScheduleStatus.Cancelled:
+        return 'bg-red-400';
+      case ScheduleStatus.Pending:
+        return 'bg-yellow-400';
+      case ScheduleStatus.Processing:
+        return 'bg-blue-400';
+      default:
+        return 'bg-gray-300';
+    }
+  };
+
   const handleCancelBooking = async (bookingId: number) => {
     try {
-      const response = await BookingService.updateStatus(bookingId, BookingStatus.Cancelled);
-      if (response.success) {
+      const updated = await updateBookingStatus(bookingId, BookingStatus.Cancelled);
+      if (updated) {
         showSuccess('Đã hủy booking thành công');
 
         // Reload bookings và wallet song song để cập nhật dữ liệu
         if (user?.email) {
-          await Promise.all([
-            loadBookings(user.email),
-            refetchWallet ? refetchWallet() : Promise.resolve()
-          ]);
-        } else if (refetchWallet) {
-          await refetchWallet();
+          await loadBookings(user.email);
         }
-
-        // Cập nhật allBookings từ bookings state mới (sẽ được sync qua useEffect)
-        // Đảm bảo UI cập nhật ngay lập tức
-        setAllBookings((prevBookings) =>
-          prevBookings.map((booking) =>
-            booking.id === bookingId
-              ? { ...booking, status: BookingStatus.Cancelled }
-              : booking
-          )
-        );
 
         // Nếu đang ở detail của booking vừa hủy thì quay về list
         if (selectedBookingId === bookingId) {
           handleBackToList();
         }
       } else {
-        showError('Không thể hủy booking', response.error?.message);
+        showError('Không thể hủy booking', 'Vui lòng thử lại sau.');
       }
     } catch (error: any) {
       showError('Lỗi khi hủy booking', error.message);
     }
   };
-
-  // Tính toán counts cho từng trạng thái dựa trên tất cả bookings
-  const handlePayBooking = useCallback(
-    async (booking: BookingDto) => {
-      if (!booking || !booking.id) return;
-      if (!booking.totalAmount) {
-        showWarning('Không tìm thấy số tiền cần thanh toán. Vui lòng thử lại sau.');
-        return;
-      }
-      if (walletLoading) {
-        showWarning('Đang kiểm tra số dư ví, vui lòng đợi...');
-        return;
-      }
-      if (balance < booking.totalAmount) {
-        showWarning(
-          'Số dư không đủ',
-          `Số dư ví của bạn hiện là ${new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-          }).format(balance)}, không đủ để thanh toán ${new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-          }).format(booking.totalAmount)}. Vui lòng nạp thêm tiền.`
-        );
-        return;
-      }
-
-      setPayingBookingId(booking.id);
-      setIsPaying(true);
-
-      try {
-        const updatedBooking = await payBookingApi(booking.id);
-        if (updatedBooking) {
-          showSuccess('Thanh toán thành công', 'Số dư ví đã được trừ tương ứng.');
-
-          // Dispatch event để cập nhật wallet balance realtime
-          window.dispatchEvent(new Event('wallet:update'));
-
-          // Reload bookings và wallet song song để cập nhật dữ liệu
-          if (user?.email) {
-            await Promise.all([
-              loadBookings(user.email),
-              refetchWallet ? refetchWallet() : Promise.resolve()
-            ]);
-          } else if (refetchWallet) {
-            await refetchWallet();
-          }
-
-          // Cập nhật allBookings từ bookings state mới (sẽ được sync qua useEffect)
-          // Đảm bảo UI cập nhật ngay lập tức với payment status mới
-          setAllBookings((prevBookings) =>
-            prevBookings.map((b) =>
-              b.id === booking.id
-                ? { ...updatedBooking }
-                : b
-            )
-          );
-        } else {
-          throw new Error('Thanh toán không thành công. Vui lòng thử lại.');
-        }
-      } catch (error: any) {
-        showError('Không thể thanh toán', error?.message || 'Vui lòng thử lại sau.');
-      } finally {
-        setIsPaying(false);
-        setPayingBookingId(null);
-      }
-    },
-    [balance, loadBookings, payBookingApi, refetchWallet, showError, showSuccess, showWarning, user?.email, walletLoading]
-  );
-
-  const handleRequestRefund = useCallback(
-    (booking: BookingDto) => {
-      showWarning(
-        'Yêu cầu hoàn tiền',
-        `Đơn #${booking.id} đang trong quá trình xử lý. Vui lòng liên hệ hỗ trợ để hoàn tất yêu cầu.`
-      );
-    },
-    [showWarning]
-  );
 
   const bookingCounts = useMemo(() => {
     return {
@@ -412,6 +376,12 @@ export function ClassesTab() {
 
   // Render detail view: chỉ hiện danh sách buổi học của booking
   if (selectedBookingId && selectedBooking) {
+    const tutorSubject = selectedBooking.tutorSubject;
+    const subject = tutorSubject?.subject;
+    const level = tutorSubject?.level;
+    const tutorName = tutorSubject?.tutor?.userName;
+    const tutorEmail = tutorSubject?.tutorEmail;
+
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -419,23 +389,81 @@ export function ClassesTab() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Quay lại
           </Button>
+        </div>
+
+        <div className="grid gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900">
-              Lịch học của đơn #{selectedBookingId}
-            </h2>
+            <p className="text-xs uppercase text-gray-500">Môn học</p>
+            <p className="text-sm font-semibold text-gray-900">{subject?.subjectName || 'N/A'}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-gray-500">Cấp độ</p>
+            <p className="text-sm font-semibold text-gray-900">{level?.name || 'Không xác định'}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-gray-500">Email gia sư</p>
+            <p className="text-sm font-semibold text-gray-900">
+              {tutorEmail || 'Chưa có thông tin'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-gray-500">Trạng thái đơn</p>
+            <Badge className={getBookingStatusColor(selectedBooking.status)}>
+              {EnumHelpers.getBookingStatusLabel(selectedBooking.status)}
+            </Badge>
           </div>
         </div>
 
         <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            Danh sách buổi học ({schedules.length})
-          </h3>
+
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-sm font-medium text-gray-700">Trạng thái:</span>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: 'all' as const, label: 'Tất cả' },
+                { value: ScheduleStatus.Upcoming, label: 'Sắp diễn ra' },
+                { value: ScheduleStatus.InProgress, label: 'Đang học' },
+                { value: ScheduleStatus.Completed, label: 'Hoàn thành' },
+                { value: ScheduleStatus.Cancelled, label: 'Đã hủy' },
+                { value: ScheduleStatus.Pending, label: 'Chờ xử lý' },
+                { value: ScheduleStatus.Processing, label: 'Đang xử lý' },
+              ].map((option) => (
+                <Button
+                  key={`schedule-filter-${option.label}`}
+                  size="sm"
+                  variant={scheduleStatusFilter === option.value ? 'default' : 'outline'}
+                  className={
+                    scheduleStatusFilter === option.value
+                      ? 'bg-[#257180] text-white'
+                      : 'text-gray-600'
+                  }
+                  onClick={() => setScheduleStatusFilter(option.value)}
+                >
+                  {option.label}
+                  {option.value === 'all'
+                    ? schedules.length > 0 && <span className="ml-1 text-xs">({schedules.length})</span>
+                    : schedules.length > 0 && (
+                      <span className="ml-1 text-xs">
+                        (
+                        {
+                          schedules.filter(
+                            (schedule) =>
+                              EnumHelpers.parseScheduleStatus(schedule.status) === option.value
+                          ).length
+                        }
+                        )
+                      </span>
+                    )}
+                </Button>
+              ))}
+            </div>
+          </div>
 
           {loadingSchedules ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-[#257180]" />
             </div>
-          ) : schedules.length === 0 ? (
+          ) : filteredSchedules.length === 0 ? (
             <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Calendar className="h-16 w-16 text-gray-300 mb-4" />
@@ -444,7 +472,7 @@ export function ClassesTab() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {schedules
+              {filteredSchedules
                 .sort((a, b) => {
                   const dateA = a.availability?.startDate
                     ? new Date(a.availability.startDate).getTime()
@@ -459,7 +487,7 @@ export function ClassesTab() {
                   const slot = availability?.slot;
 
                   // Lấy booking từ schedule hoặc từ hook (nếu schedule chỉ có bookingId)
-                  const booking = getBooking(schedule.bookingId, schedule.booking);
+                  const booking = getBookingFromCache(schedule.bookingId, schedule.booking);
                   // Từ booking lấy tutorSubject (tutorSubjectId)
                   const tutorSubject = booking?.tutorSubject;
                   // Từ tutorSubject lấy subject (môn học) và level
@@ -491,6 +519,10 @@ export function ClassesTab() {
                     // Fallback: dùng availability.endDate nếu không có slot.endTime
                     endDate = new Date(availability.endDate);
                   }
+
+                  const parsedScheduleStatus = EnumHelpers.parseScheduleStatus(schedule.status);
+                  // Chỉ hiện nút khi buổi học ở trạng thái Pending
+                  const isPending = parsedScheduleStatus === ScheduleStatus.Pending;
 
                   return (
                     <Card key={schedule.id} className="hover:shadow-md transition-shadow border border-[#257180]/20 border-l-4 border-l-[#257180] bg-white">
@@ -550,8 +582,11 @@ export function ClassesTab() {
                                   {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Cancelled && (
                                     <XCircle className="h-5 w-5 text-red-500" />
                                   )}
-                                  {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Absent && (
-                                    <XCircle className="h-5 w-5 text-gray-500" />
+                                  {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Pending && (
+                                    <Clock className="h-5 w-5 text-yellow-500" />
+                                  )}
+                                  {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Processing && (
+                                    <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
                                   )}
                                 </div>
 
@@ -617,6 +652,44 @@ export function ClassesTab() {
                                 </div>
                               </div>
                             </div>
+                            {isPending && (
+                              <div className="mt-4 flex justify-end gap-2">
+                                <Button
+                                  onClick={() => {
+                                    router.push('/profile?tab=reports');
+                                  }}
+                                  variant="outline"
+                                  className="border-red-300 text-red-700 hover:bg-red-50"
+                                >
+                                  <AlertTriangle className="h-4 w-4 mr-2" />
+                                  Báo cáo
+                                </Button>
+                                <Button
+                                  onClick={async () => {
+                                    const success = await finishSchedule(schedule.id);
+                                    if (success) {
+                                      showSuccess('Đã xác nhận buổi học thành công');
+                                      // Refetch số dư ví để cập nhật ngay (tutor sẽ thấy tiền cộng ngay)
+                                      try {
+                                        await refetchWallet();
+                                      } catch (err) {
+                                        console.error('Không thể refetch ví sau khi xác nhận buổi học', err);
+                                        showWarning(
+                                          'Không thể tải lại số dư',
+                                          'Vui lòng tải lại trang để xem số dư mới.'
+                                        );
+                                      }
+                                    } else {
+                                      showError('Không thể xác nhận buổi học', 'Vui lòng thử lại sau.');
+                                    }
+                                  }}
+                                  disabled={loadingSchedules}
+                                  className="bg-[#257180] text-white hover:bg-[#1f616f]"
+                                >
+                                  Xác nhận đã học
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -700,6 +773,7 @@ export function ClassesTab() {
               const nextSession = getNextSession(booking);
               const finishedSessions = getFinishedSessions(booking);
               const progress = (finishedSessions / booking.totalSessions) * 100;
+              const scheduleStatusSummary = getScheduleStatusSummary(booking);
 
               return (
                 <Card
@@ -781,11 +855,37 @@ export function ClassesTab() {
                         <div>
                           <div className="flex justify-between text-sm mb-2">
                             <span className="text-gray-600">Tiến độ</span>
-                            <span className="font-medium">
-                              {finishedSessions}/{booking.totalSessions} buổi
-                            </span>
                           </div>
-                          <Progress value={progress} className="h-2" />
+                          {scheduleStatusSummary.length > 0 ? (
+                            <>
+                              <div className="flex h-2 w-full overflow-hidden rounded bg-gray-200">
+                                {scheduleStatusSummary.map(({ status, count }) => (
+                                  <div
+                                    key={`${booking.id}-${status}`}
+                                    className={`${getScheduleStatusBgColor(status)} h-full`}
+                                    style={{
+                                      width: `${(count / booking.totalSessions) * 100}%`,
+                                    }}
+                                    title={`${EnumHelpers.getScheduleStatusLabel(status)}: ${count} buổi`}
+                                  />
+                                ))}
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
+                                {scheduleStatusSummary.map(({ status, count }) => (
+                                  <div key={`legend-${booking.id}-${status}`} className="flex items-center gap-1">
+                                    <span
+                                      className={`inline-block h-2 w-2 rounded-full ${getScheduleStatusBgColor(status)}`}
+                                    />
+                                    <span>
+                                      {EnumHelpers.getScheduleStatusLabel(status)}: {count}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          ) : (
+                            <Progress value={progress} className="h-2" />
+                          )}
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-3 space-y-2">
@@ -800,24 +900,6 @@ export function ClassesTab() {
                           </div>
 
                           <div className="pt-2 border-t border-gray-200 space-y-2">
-                            {EnumHelpers.parseBookingStatus(booking.status) !== BookingStatus.Cancelled &&
-                              EnumHelpers.parsePaymentStatus(booking.paymentStatus) === PaymentStatus.Pending && (
-                                <Button
-                                  size="sm"
-                                  className="w-full bg-[#FD8B51] hover:bg-[#CB6040] text-white"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setPayDialogBookingId(booking.id);
-                                  }}
-                                  disabled={isPaying && payingBookingId === booking.id}
-                                >
-                                  {isPaying && payingBookingId === booking.id && (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  )}
-                                  Thanh toán
-                                </Button>
-                              )}
-
                             {EnumHelpers.parseBookingStatus(booking.status) === BookingStatus.Pending && (
                               <Button
                                 size="sm"
@@ -832,19 +914,6 @@ export function ClassesTab() {
                               </Button>
                             )}
 
-                            {EnumHelpers.parseBookingStatus(booking.status) === BookingStatus.Confirmed && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="w-full border-[#257180] text-[#257180] hover:bg-[#257180] hover:text-white"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRequestRefund(booking);
-                                }}
-                              >
-                                Yêu cầu hoàn tiền
-                              </Button>
-                            )}
                           </div>
                         </div>
 
@@ -881,39 +950,6 @@ export function ClassesTab() {
           )}
         </TabsContent>
       </Tabs>
-
-      {/* Confirm Dialog cho Thanh toán */}
-      <ConfirmDialog
-        open={payDialogBookingId !== null}
-        onOpenChange={(open) => {
-          if (!open) setPayDialogBookingId(null);
-        }}
-        title="Xác nhận thanh toán"
-        description={
-          payDialogBookingId
-            ? (() => {
-              const booking = allBookings.find((b) => b.id === payDialogBookingId);
-              return booking
-                ? `Bạn có chắc chắn muốn thanh toán ${formatCurrency(booking.totalAmount)} cho đơn hàng #${booking.id} không?`
-                : 'Bạn có chắc chắn muốn thanh toán đơn hàng này không?';
-            })()
-            : 'Bạn có chắc chắn muốn thanh toán đơn hàng này không?'
-        }
-        confirmText="Thanh toán"
-        cancelText="Hủy"
-        type="success"
-        onConfirm={async () => {
-          const id = payDialogBookingId;
-          setPayDialogBookingId(null);
-          if (id != null) {
-            const booking = allBookings.find((b) => b.id === id);
-            if (booking) {
-              await handlePayBooking(booking);
-            }
-          }
-        }}
-        onCancel={() => setPayDialogBookingId(null)}
-      />
 
       {/* Confirm Dialog cho Hủy đơn */}
       <ConfirmDialog

@@ -262,6 +262,39 @@ export function useSchedules() {
   );
 
   /**
+   * Cập nhật Status của Schedule (tương ứng ScheduleService.updateStatus)
+   */
+  const updateScheduleStatus = useCallback(
+    async (id: number, status: ScheduleStatus): Promise<ScheduleDto | null> => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await ScheduleService.updateStatus(id, status);
+
+        if (response.success && response.data) {
+          // Cập nhật trong danh sách
+          setSchedules(prev =>
+            prev.map(s => (s.id === id ? response.data! : s))
+          );
+          return response.data;
+        } else {
+          setError(
+            response.error?.message || 'Không thể cập nhật trạng thái buổi học'
+          );
+          return null;
+        }
+      } catch (err: any) {
+        setError(err.message || 'Lỗi khi cập nhật trạng thái buổi học');
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  /**
    * Hủy toàn bộ schedules theo bookingId (tương ứng ScheduleService.cancelAllByBooking)
    */
   const cancelAllSchedulesByBooking = useCallback(
@@ -288,6 +321,149 @@ export function useSchedules() {
       } catch (err: any) {
         setError(err.message || 'Lỗi khi hủy các buổi học');
         return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  /**
+   * Học viên xác nhận lịch học đã hoàn thành và kích hoạt thanh toán ngay lập tức
+   * (tương ứng ScheduleService.finishSchedule)
+   */
+  const finishSchedule = useCallback(async (id: number): Promise<boolean> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await ScheduleService.finishSchedule(id);
+
+      if (response.success) {
+        // Cập nhật schedule trong danh sách nếu có
+        setSchedules(prev =>
+          prev.map(s => {
+            if (s.id === id) {
+              return { ...s, status: ScheduleStatus.Completed };
+            }
+            return s;
+          })
+        );
+        return true;
+      } else {
+        setError(response.error?.message || 'Không thể hoàn thành buổi học');
+        return false;
+      }
+    } catch (err: any) {
+      setError(err.message || 'Lỗi khi hoàn thành buổi học');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Học viên hoặc gia sư hủy việc hoàn thành lịch học (không thanh toán)
+   * (tương ứng ScheduleService.cancelScheduleCompletion)
+   */
+  const cancelScheduleCompletion = useCallback(
+    async (id: number): Promise<boolean> => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await ScheduleService.cancelScheduleCompletion(id);
+
+        if (response.success) {
+          // Cập nhật schedule trong danh sách nếu có
+          setSchedules(prev =>
+            prev.map(s => {
+              if (s.id === id) {
+                return { ...s, status: ScheduleStatus.Cancelled };
+              }
+              return s;
+            })
+          );
+          return true;
+        } else {
+          setError(
+            response.error?.message || 'Không thể hủy hoàn thành buổi học'
+          );
+          return false;
+        }
+      } catch (err: any) {
+        setError(err.message || 'Lỗi khi hủy hoàn thành buổi học');
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  /**
+   * Đánh dấu lịch học là đã báo cáo/tạm giữ (liên kết với một báo cáo hiện có)
+   * (tương ứng ScheduleService.reportSchedule)
+   */
+  const reportSchedule = useCallback(
+    async (id: number, reportId: number): Promise<boolean> => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await ScheduleService.reportSchedule(id, reportId);
+
+        if (response.success) {
+          // Không cần cập nhật status vì ScheduleStatus không có Reported
+          // Status sẽ được quản lý bởi backend
+          return true;
+        } else {
+          setError(response.error?.message || 'Không thể báo cáo buổi học');
+          return false;
+        }
+      } catch (err: any) {
+        setError(err.message || 'Lỗi khi báo cáo buổi học');
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  /**
+   * Admin giải quyết: giải phóng thanh toán hoặc hủy sau khi xem xét
+   * (tương ứng ScheduleService.resolveReport)
+   */
+  const resolveReport = useCallback(
+    async (id: number, releaseToTutor: boolean = true): Promise<boolean> => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await ScheduleService.resolveReport(
+          id,
+          releaseToTutor
+        );
+
+        if (response.success) {
+          // Cập nhật schedule trong danh sách nếu có
+          setSchedules(prev =>
+            prev.map(s => {
+              if (s.id === id) {
+                return { ...s, status: ScheduleStatus.Completed };
+              }
+              return s;
+            })
+          );
+          return true;
+        } else {
+          setError(response.error?.message || 'Không thể giải quyết báo cáo');
+          return false;
+        }
+      } catch (err: any) {
+        setError(err.message || 'Lỗi khi giải quyết báo cáo');
+        return false;
       } finally {
         setLoading(false);
       }
@@ -334,7 +510,12 @@ export function useSchedules() {
     loadSchedulesByTutorEmail,
     createSchedule,
     updateSchedule,
+    updateScheduleStatus,
     cancelAllSchedulesByBooking,
+    finishSchedule,
+    cancelScheduleCompletion,
+    reportSchedule,
+    resolveReport,
     clearSchedules,
 
     // Helper methods cho learner schedules
