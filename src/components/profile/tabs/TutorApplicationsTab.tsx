@@ -423,9 +423,10 @@ export function TutorApplicationsTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-gray-900">Danh sách ứng tuyển</CardTitle>
-            <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20">
-              {filteredApplications.length} yêu cầu
-            </Badge>
+            <div className="flex items-center gap-2 text-gray-600">
+              <FileText className="h-4 w-4" />
+              <span className="font-medium">{filteredApplications.length} yêu cầu</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">

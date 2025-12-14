@@ -30,7 +30,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
 import { Label } from '@/components/ui/form/label';
-import { Search, Plus, Eye, Loader2, ArrowUpDown, Upload, X, Image as ImageIcon, Video } from 'lucide-react';
+import { Search, Plus, Eye, Loader2, ArrowUpDown, Upload, X, Image as ImageIcon, Video, Receipt } from 'lucide-react';
 import { BookingRefundRequestService, RefundPolicyService, BookingService, MediaService } from '@/services';
 import { BookingRefundRequestDto, RefundPolicyDto, BookingDto } from '@/types/backend';
 import { BookingRefundRequestStatus } from '@/types/enums';
@@ -408,7 +408,10 @@ export function RefundRequestsTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách yêu cầu hoàn tiền</CardTitle>
-            <Badge variant="outline">{filteredRequests.length} yêu cầu</Badge>
+            <div className="flex items-center gap-2 text-gray-600">
+              <Receipt className="h-4 w-4" />
+              <span className="font-medium">{filteredRequests.length} yêu cầu</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

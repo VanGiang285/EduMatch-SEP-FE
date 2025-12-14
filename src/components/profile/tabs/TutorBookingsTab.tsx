@@ -152,7 +152,7 @@ export function TutorBookingsTab() {
     const parsedStatus = EnumHelpers.parsePaymentStatus(status);
     switch (parsedStatus) {
       case PaymentStatus.Pending:
-        return 'bg-orange-100 text-orange-800 border-orange-200';
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case PaymentStatus.Paid:
         return 'bg-green-100 text-green-800 border-green-200';
       case PaymentStatus.Refunded:
@@ -188,7 +188,7 @@ export function TutorBookingsTab() {
       case TutorPayoutStatus.Pending:
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case TutorPayoutStatus.OnHold:
-        return 'bg-orange-100 text-orange-800 border-orange-200';
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case TutorPayoutStatus.ReadyForPayout:
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case TutorPayoutStatus.Paid:
@@ -445,7 +445,7 @@ export function TutorBookingsTab() {
           <Card className="bg-white border border-[#257180]/20">
             <CardContent className="p-4">
               <p className="text-xs uppercase text-gray-500">Chưa nhận</p>
-              <p className="text-xl font-semibold text-orange-700">
+              <p className="text-xl font-semibold text-yellow-700">
                 {formatCurrency(payoutSummary.notReceived)}
               </p>
             </CardContent>
@@ -814,7 +814,7 @@ export function TutorBookingsTab() {
                                   {subject?.subjectName || 'Môn học'}
                                 </h3>
                                 {level && (
-                                  <Badge variant="outline" className="text-sm">
+                                  <Badge variant="outline" className="text-sm border-gray-300">
                                     {level.name}
                                   </Badge>
                                 )}

@@ -40,7 +40,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
 import { Label } from '@/components/ui/form/label';
-import { Search, Plus, Eye, Loader2, ArrowUpDown, X, Edit, Shield } from 'lucide-react';
+import { Search, Plus, Eye, Loader2, ArrowUpDown, X, Edit, Shield, AlertTriangle } from 'lucide-react';
 import { ReportService, TutorService, MediaService } from '@/services';
 import { ReportListItemDto, ReportFullDetailDto, TutorProfileDto } from '@/types/backend';
 import { ReportStatus, MediaType, ReportEvidenceType, TutorStatus } from '@/types/enums';
@@ -969,7 +969,10 @@ export function ReportsTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách báo cáo</CardTitle>
-            <Badge variant="outline">{filteredReports.length} báo cáo</Badge>
+            <div className="flex items-center gap-2 text-gray-600">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="font-medium">{filteredReports.length} báo cáo</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

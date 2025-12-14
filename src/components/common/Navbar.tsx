@@ -86,7 +86,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
           {/* Hide menu items for admin users */}
           {!isAdmin && (
             <div className="hidden lg:flex items-center space-x-1">
-              {isLearner && (
+              {(!isAuthenticated || isLearner) && (
                 <>
                   <button
                     onClick={onNavigateToFindTutor}
@@ -331,7 +331,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
             {/* Hide mobile menu items for admin users */}
             {!isAdmin && (
               <>
-                {isLearner && (
+                {(!isAuthenticated || isLearner) && (
                   <>
                     <button
                       onClick={onNavigateToFindTutor}

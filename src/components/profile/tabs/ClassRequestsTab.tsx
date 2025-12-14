@@ -501,9 +501,10 @@ export function ClassRequestsTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-gray-900">Danh sách yêu cầu</CardTitle>
-            <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20">
-              {filteredRequests.length} yêu cầu
-            </Badge>
+            <div className="flex items-center gap-2 text-gray-600">
+              <FileText className="h-4 w-4" />
+              <span className="font-medium">{filteredRequests.length} yêu cầu</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
