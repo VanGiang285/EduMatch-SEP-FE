@@ -1940,18 +1940,18 @@ export function TutorProfileTab() {
                 </AlertDescription>
               </Alert>
 
-              {isEditing && (
+                      {isEditing && (
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-4">
-                    <Button
-                      variant="outline"
+                        <Button 
+                          variant="outline"
                       size="sm"
                       onClick={() => setAvailabilityCalendar(prev => ({ ...prev, currentWeek: prev.currentWeek - 1 }))}
                       className="border-gray-300 hover:bg-[#257180] hover:text-white"
                     >
                       <ChevronLeft className="w-4 h-4" />
                       Tuần trước
-                    </Button>
+                        </Button>
                     <div className="text-sm font-medium text-[#257180]">
                       {availabilityCalendar.currentWeek === 0 ? 'Tuần này' : 
                        availabilityCalendar.currentWeek === 1 ? 'Tuần sau' :
@@ -1967,15 +1967,15 @@ export function TutorProfileTab() {
                       Tuần sau
                       <ChevronRight className="w-4 h-4" />
                     </Button>
-                  </div>
-                  <Button
+                              </div>
+                                <Button 
                     variant="outline"
-                    size="sm"
+                                  size="sm"
                     onClick={() => setAvailabilityCalendar(prev => ({ ...prev, currentWeek: 0 }))}
                     className="border-gray-300/30 hover:bg-[#257180]/10 text-[#257180]"
-                  >
+                                >
                     Hôm nay
-                  </Button>
+                                </Button>
                 </div>
               )}
 
@@ -2013,8 +2013,8 @@ export function TutorProfileTab() {
                     >
                       Xóa tất cả
                     </button>
-                  )}
-                </div>
+                              )}
+                            </div>
                 <div className="overflow-x-auto">
                   <div className="min-w-full">
                     <div className="grid grid-cols-8 gap-2 mb-2">
@@ -2057,7 +2057,7 @@ export function TutorProfileTab() {
                               {!isInRange || isPastDate ? (
                                 <div className="w-full h-8 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
                                   <span className="text-xs text-gray-400">-</span>
-                                </div>
+                      </div>
                               ) : isBooked ? (
                                 <div className="w-full h-8 bg-yellow-100 rounded border border-yellow-300 flex items-center justify-center">
                                   <span className="text-xs text-yellow-700">Đã đặt</span>
@@ -2074,10 +2074,10 @@ export function TutorProfileTab() {
                                   onCheckedChange={() => handleToggleTimeSlot(day.key, slot.id)}
                                   disabled={!isEditing}
                                 />
-                              )}
-                            </div>
-                          );
-                        })}
+                    )}
+                  </div>
+                );
+              })}
                       </div>
                     )) : (
                       <div className="text-center text-gray-500 py-4">

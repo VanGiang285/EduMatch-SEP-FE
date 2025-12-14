@@ -157,7 +157,7 @@ export function MessageDropdown({ onMessageClick, onViewAll }: MessageDropdownPr
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 p-0 bg-white border border-[#FD8B51]">
+      <DropdownMenuContent align="end" className="w-80 p-0 bg-white border border-gray-300 shadow-lg">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h3 className="font-medium text-gray-900">Tin nhắn</h3>
           {unreadCount > 0 && (

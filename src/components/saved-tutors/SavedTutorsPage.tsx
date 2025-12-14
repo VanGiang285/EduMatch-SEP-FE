@@ -5,7 +5,6 @@ import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
 import { Input } from '../ui/form/input';
 import { Badge } from '../ui/basic/badge';
-// import { Avatar, AvatarFallback, AvatarImage } from '../ui/basic/avatar';
 import { FormatService } from '@/lib/format';
 import { 
   Search,
@@ -19,7 +18,8 @@ import {
   Video,
   Send,
   Clock,
-  Loader2
+  Loader2,
+  BookOpen
 } from 'lucide-react';
 import { SelectWithSearch, SelectWithSearchItem } from '../ui/form/select-with-search';
 import { Separator } from '../ui/layout/separator';
@@ -43,7 +43,6 @@ import { useCustomToast } from '@/hooks/useCustomToast';
 import { useChatContext } from '@/contexts/ChatContext';
 import { FeedbackService } from '@/services/feedbackService';
 
-// Helper function to convert string enum from API to TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
   if (typeof mode === 'number') {
     return mode as TeachingMode;
@@ -57,6 +56,81 @@ function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMod
     }
   }
   return mode as TeachingMode;
+}
+
+function formatLevels(levels: string[]): string {
+  if (levels.length === 0) return '';
+  
+  if (levels.some(level => level.toLowerCase().includes('tất cả') || level.toLowerCase().includes('all'))) {
+    return 'Tất cả cấp';
+  }
+  
+  const hasTHPT = levels.some(level => level.toUpperCase().includes('THPT'));
+  if (hasTHPT && levels.length === 1) {
+    return 'THPT';
+  }
+  
+  const numbers = levels
+    .map(level => {
+      const num = parseInt(level.replace(/\D/g, ''));
+      return isNaN(num) ? null : num;
+    })
+    .filter((num): num is number => num !== null)
+    .sort((a, b) => a - b);
+  
+  if (numbers.length === 0) {
+    return levels.join(', ');
+  }
+  
+  if (numbers.length > 1) {
+    let isConsecutive = true;
+    for (let i = 1; i < numbers.length; i++) {
+      if (numbers[i] !== numbers[i - 1] + 1) {
+        isConsecutive = false;
+        break;
+      }
+    }
+    
+    if (isConsecutive) {
+      return `Lớp ${numbers[0]}-${numbers[numbers.length - 1]}`;
+    }
+  }
+  
+  return `Lớp ${numbers.join(', ')}`;
+}
+
+function groupSubjectsBySubjectName(tutorSubjects: any[]): Array<{ subjectName: string; levelText: string }> {
+  if (!tutorSubjects || tutorSubjects.length === 0) return [];
+  
+  const grouped = new Map<string, Set<string>>();
+  
+  tutorSubjects.forEach((ts) => {
+    const subjectName = ts.subject?.subjectName || `Subject ${ts.id}`;
+    const levelName = ts.level?.name || '';
+    
+    if (!grouped.has(subjectName)) {
+      grouped.set(subjectName, new Set());
+    }
+    
+    if (levelName) {
+      grouped.get(subjectName)!.add(levelName);
+    }
+  });
+  
+  return Array.from(grouped.entries()).map(([subjectName, levelsSet]) => {
+    const levels = Array.from(levelsSet).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, '')) || 0;
+      const numB = parseInt(b.replace(/\D/g, '')) || 0;
+      return numA - numB;
+    });
+    
+    const levelText = formatLevels(levels);
+    
+    return {
+      subjectName,
+      levelText
+    };
+  });
 }
 export function SavedTutorsPage() {
   const router = useRouter();
@@ -153,10 +227,7 @@ export function SavedTutorsPage() {
     };
 
     loadFavoriteTutors();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
-
-  // Load rating summaries for saved tutors
   useEffect(() => {
     const loadRatings = async () => {
       if (savedTutors.length === 0) {
@@ -190,11 +261,9 @@ export function SavedTutorsPage() {
     loadRatings();
   }, [savedTutors]);
 
-  // Client-side filtering and sorting
   const filteredAndSortedTutors = React.useMemo(() => {
     let filtered = savedTutors.filter(tutor => favoriteTutors.has(tutor.id));
 
-    // Filter by keyword (search)
     if (searchQuery.trim()) {
       const keyword = searchQuery.trim().toLowerCase();
       filtered = filtered.filter(tutor => {
@@ -208,7 +277,6 @@ export function SavedTutorsPage() {
       });
     }
 
-    // Filter by subject
     if (selectedSubject !== 'all') {
       filtered = filtered.filter(tutor => 
         tutor.tutorSubjects?.some(tutorSubject => {
@@ -217,7 +285,6 @@ export function SavedTutorsPage() {
       );
     }
 
-    // Filter by certificate type
     if (selectedCertificate !== 'all') {
       filtered = filtered.filter(tutor => 
         tutor.tutorCertificates?.some(cert => {
@@ -226,7 +293,6 @@ export function SavedTutorsPage() {
       );
     }
 
-    // Filter by level
     if (selectedLevel !== 'all') {
       filtered = filtered.filter(tutor => 
         tutor.tutorSubjects?.some(tutorSubject => {
@@ -235,7 +301,6 @@ export function SavedTutorsPage() {
       );
     }
 
-    // Filter by city
     if (selectedCity !== 'all') {
       const cityMap: { [key: string]: string } = {
         'hanoi': 'Hà Nội',
@@ -250,7 +315,6 @@ export function SavedTutorsPage() {
       );
     }
 
-    // Filter by teaching mode
     if (selectedTeachingMode !== 'all') {
       const modeValue = parseInt(selectedTeachingMode);
       filtered = filtered.filter(tutor => {
@@ -264,7 +328,6 @@ export function SavedTutorsPage() {
       });
     }
 
-    // Filter by price range
     if (priceRange[0] > 0 || priceRange[1] < 1000000) {
       const [minRange, maxRange] = priceRange;
       filtered = filtered.filter(tutor => {
@@ -278,7 +341,6 @@ export function SavedTutorsPage() {
       });
     }
 
-    // Sort tutors
     if (selectedSort !== 'recommended') {
       filtered.sort((a, b) => {
         switch (selectedSort) {
@@ -297,13 +359,11 @@ export function SavedTutorsPage() {
             return bMax - aMax;
           }
           case 'experience': {
-            // Sort by teaching experience (years)
             const aExp = parseInt((a.teachingExp || '').replace(/\D/g, '') || '0');
             const bExp = parseInt((b.teachingExp || '').replace(/\D/g, '') || '0');
             return bExp - aExp;
           }
           case 'rating':
-            // Default rating for now
             return 0;
           default:
             return 0;
@@ -330,9 +390,8 @@ export function SavedTutorsPage() {
   }, [filteredAndSortedTutors, hoveredTutor]);
 
   const handleOpenChat = async (tutor: TutorProfileDto, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
+    e.stopPropagation();
     
-    // Check if user is authenticated
     if (!isAuthenticated) {
       showWarning(
         'Vui lòng đăng nhập',
@@ -342,7 +401,6 @@ export function SavedTutorsPage() {
       return;
     }
 
-    // Open floating chat with tutor
     await openChatWithTutor(
       tutor.id,
       tutor.userEmail || "",
@@ -351,7 +409,6 @@ export function SavedTutorsPage() {
     );
   };
 
-  // Update hoveredTutor when filtered results change
   useEffect(() => {
     if (filteredAndSortedTutors.length > 0) {
       const currentHoveredExists = filteredAndSortedTutors.some(t => t.id === hoveredTutor);
@@ -590,7 +647,7 @@ export function SavedTutorsPage() {
 
             {/* Tutor List */}
             {!isAuthenticated ? (
-              <Card className="border-[#FD8B51]">
+              <Card className="border border-gray-300">
                 <CardContent className="p-12 text-center">
                   <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-gray-900 mb-2">Vui lòng đăng nhập</h3>
@@ -610,7 +667,7 @@ export function SavedTutorsPage() {
             ) : (
             <>
             {filteredAndSortedTutors.length === 0 ? (
-              <Card className="border-[#FD8B51]">
+              <Card className="border border-gray-300">
                 <CardContent className="p-12 text-center">
                   <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-gray-900 mb-2">
@@ -688,7 +745,7 @@ export function SavedTutorsPage() {
                                 </div>
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                                   <div className="flex items-center gap-1.5">
-                                    <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
+                                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                                     <span className="text-sm text-black font-medium">
                                       {tutorRatings.get(tutor.id)?.averageRating.toFixed(1) || '0.0'}
                                     </span>
@@ -717,11 +774,13 @@ export function SavedTutorsPage() {
                               </Button>
                             </div>
                             {/* Subjects */}
-                            <div className="flex flex-wrap gap-2">
-                              {tutor.tutorSubjects?.map((tutorSubject, idx) => (
-                                <Badge key={idx} variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-black border-[#257180]/20">
-                                  {tutorSubject.subject?.subjectName || `Subject ${tutorSubject.id}`}
-                                </Badge>
+                            <div className="space-y-1.5">
+                              {groupSubjectsBySubjectName(tutor.tutorSubjects || []).map((grouped, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-sm">
+                                  <BookOpen className="w-4 h-4 text-[#257180] flex-shrink-0" />
+                                  <span className="font-medium text-black">{grouped.subjectName}:</span>
+                                  <span className="text-gray-600">{grouped.levelText || 'Chưa có thông tin'}</span>
+                                </div>
                               ))}
                             </div>
                           </div>
@@ -791,7 +850,7 @@ export function SavedTutorsPage() {
                             <Button 
                               variant="outline" 
                               size="lg" 
-                              className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                              className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                               onClick={(e) => handleOpenChat(tutor, e)}
                             >
                               <MessageCircle className="w-4 h-4 mr-2" />
@@ -915,15 +974,15 @@ export function SavedTutorsPage() {
                   {/* Action Buttons Only - Không trùng với tutor card */}
                   <div className="p-6">
                     <div className="space-y-3">
-                      <Button variant="outline" className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
+                      <Button variant="outline" className="w-full border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
                         <Calendar className="w-4 h-4 mr-2" />
                         Đặt lịch học
                       </Button>
-                      <Button variant="outline" className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
+                      <Button variant="outline" className="w-full border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
                         <Clock className="w-4 h-4 mr-2" />
                         Xem lịch dạy của gia sư
                       </Button>
-                      <Button variant="outline" className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
+                      <Button variant="outline" className="w-full border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]" size="lg">
                         <Send className="w-4 h-4 mr-2" />
                         Xem hồ sơ đầy đủ
                       </Button>
