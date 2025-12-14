@@ -35,7 +35,9 @@ import {
   Trash2,
   Eye,
   Loader2,
-  MessageCircle
+  MessageCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChatContext } from '@/contexts/ChatContext';
@@ -262,6 +264,22 @@ export function TutorProfileTab() {
   });
 
   const [showTimeSlotModal, setShowTimeSlotModal] = useState(false);
+  
+  // Calendar view state for availability
+  const [availabilityCalendar, setAvailabilityCalendar] = useState({
+    currentWeek: 0,
+    startDate: (() => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return tomorrow.toISOString().split('T')[0];
+    })(),
+    endDate: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 31);
+      return date.toISOString().split('T')[0];
+    })(),
+    schedule: {} as Record<string, Record<string, number[]>>, // {date: {dayOfWeek: [slotIds]}}
+  });
 
   // Load master data
   useEffect(() => {
@@ -498,6 +516,27 @@ export function TutorProfileTab() {
             subjects,
             availabilities,
           }));
+
+          // Convert availabilities to schedule format for calendar view
+          const schedule: Record<string, Record<string, number[]>> = {};
+          availabilities.forEach((av) => {
+            if (av.slot?.id && av.startDate) {
+              const dateKey = av.startDate.split('T')[0];
+              const dayOfWeek = av.slot.dayOfWeek;
+              const dayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek] || 'monday';
+              
+              if (!schedule[dateKey]) {
+                schedule[dateKey] = {};
+              }
+              if (!schedule[dateKey][dayKey]) {
+                schedule[dateKey][dayKey] = [];
+              }
+              if (!schedule[dateKey][dayKey].includes(av.slot.id)) {
+                schedule[dateKey][dayKey].push(av.slot.id);
+              }
+            }
+          });
+          setAvailabilityCalendar(prev => ({ ...prev, schedule }));
         } else {
           // Không có tutor profile - có thể chưa đăng ký làm gia sư
           showError('Thông báo', 'Bạn chưa có hồ sơ gia sư. Vui lòng đăng ký làm gia sư trước.');
@@ -1006,6 +1045,138 @@ export function TutorProfileTab() {
     } catch (error: any) {
       console.error('Error adding time slot:', error);
       showError('Lỗi', 'Không thể thêm khung giờ. Vui lòng thử lại.');
+    }
+  };
+
+  // Helper functions for calendar view
+  const weekDays = [
+    { key: 'monday', label: 'Thứ 2' },
+    { key: 'tuesday', label: 'Thứ 3' },
+    { key: 'wednesday', label: 'Thứ 4' },
+    { key: 'thursday', label: 'Thứ 5' },
+    { key: 'friday', label: 'Thứ 6' },
+    { key: 'saturday', label: 'Thứ 7' },
+    { key: 'sunday', label: 'Chủ nhật' }
+  ];
+
+  const generateCurrentWeekDates = () => {
+    const startDate = new Date(availabilityCalendar.startDate);
+    const endDate = new Date(availabilityCalendar.endDate);
+    const currentWeek = availabilityCalendar.currentWeek;
+    
+    const startOfWeek = new Date(startDate);
+    const dayOfWeek = startDate.getDay();
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startOfWeek.setDate(startDate.getDate() - daysToMonday + (currentWeek * 7));
+    
+    const datesByDay: Record<string, string> = {};
+    
+    weekDays.forEach((day, index) => {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + index);
+      
+      if (date >= startDate && date <= endDate) {
+        const dayNum = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        datesByDay[day.key] = `${dayNum}/${month}`;
+      } else {
+        datesByDay[day.key] = '';
+      }
+    });
+
+    return datesByDay;
+  };
+
+  const datesByDay = generateCurrentWeekDates();
+
+  const getDateKey = (dayKey: string) => {
+    const startDate = new Date(availabilityCalendar.startDate);
+    const currentWeek = availabilityCalendar.currentWeek;
+    
+    const startOfWeek = new Date(startDate);
+    const dayOfWeek = startDate.getDay();
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startOfWeek.setDate(startDate.getDate() - daysToMonday + (currentWeek * 7));
+    
+    const dayIndex = weekDays.findIndex(d => d.key === dayKey);
+    const date = new Date(startOfWeek);
+    date.setDate(startOfWeek.getDate() + dayIndex);
+    
+    return date.toISOString().split('T')[0];
+  };
+
+  const handleToggleTimeSlot = async (dayKey: string, slotId: number) => {
+    if (!tutorId || !isEditing) return;
+
+    const dateKey = getDateKey(dayKey);
+    const currentSlots = availabilityCalendar.schedule[dateKey]?.[dayKey] || [];
+    const isSelected = currentSlots.includes(slotId);
+
+    try {
+      if (isSelected) {
+        // Remove availability
+        const availability = profileData.availabilities.find(
+          av => av.slot?.id === slotId && av.startDate?.startsWith(dateKey)
+        );
+        if (availability) {
+          const response = await AvailabilityService.deleteAvailabilities([availability.id]);
+          if (response.success) {
+            // Update schedule state
+            const newSchedule = { ...availabilityCalendar.schedule };
+            if (newSchedule[dateKey]?.[dayKey]) {
+              newSchedule[dateKey][dayKey] = newSchedule[dateKey][dayKey].filter(id => id !== slotId);
+              if (newSchedule[dateKey][dayKey].length === 0) {
+                delete newSchedule[dateKey][dayKey];
+              }
+              if (Object.keys(newSchedule[dateKey]).length === 0) {
+                delete newSchedule[dateKey];
+              }
+            }
+            setAvailabilityCalendar(prev => ({ ...prev, schedule: newSchedule }));
+            await reloadTutorProfile();
+            showSuccess('Thành công', 'Đã xóa khung giờ');
+          } else {
+            showError('Lỗi', response.message || 'Không thể xóa khung giờ');
+          }
+        }
+      } else {
+        // Add availability
+        const slot = masterData.timeSlots.find(s => s.id === slotId);
+        if (!slot) {
+          showError('Lỗi', 'Không tìm thấy khung giờ');
+          return;
+        }
+
+        const startDateTime = `${dateKey}T${slot.startTime}:00`;
+        const request: TutorAvailabilityCreateRequest = {
+          tutorId: tutorId,
+          slotId: slotId,
+          startDate: startDateTime,
+        };
+
+        const response = await AvailabilityService.createAvailabilities([request]);
+        if (response.success && response.data) {
+          // Update schedule state
+          const newSchedule = { ...availabilityCalendar.schedule };
+          if (!newSchedule[dateKey]) {
+            newSchedule[dateKey] = {};
+          }
+          if (!newSchedule[dateKey][dayKey]) {
+            newSchedule[dateKey][dayKey] = [];
+          }
+          if (!newSchedule[dateKey][dayKey].includes(slotId)) {
+            newSchedule[dateKey][dayKey].push(slotId);
+          }
+          setAvailabilityCalendar(prev => ({ ...prev, schedule: newSchedule }));
+          await reloadTutorProfile();
+          showSuccess('Thành công', 'Đã thêm khung giờ');
+        } else {
+          showError('Lỗi', response.message || 'Không thể thêm khung giờ');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error toggling time slot:', error);
+      showError('Lỗi', 'Không thể cập nhật khung giờ. Vui lòng thử lại.');
     }
   };
 
@@ -1765,102 +1936,157 @@ export function TutorProfileTab() {
               <Alert className="bg-blue-50 border-blue-200">
                 <Info className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-800 text-sm">
-                  Quản lý lịch rảnh của bạn. Học viên sẽ dựa vào lịch này để đặt buổi học.
+                  Quản lý lịch rảnh của bạn. Học viên sẽ dựa vào lịch này để đặt buổi học. {isEditing && 'Chọn các khung giờ bạn có thể dạy.'}
                 </AlertDescription>
               </Alert>
 
-              {[
-                { dayOfWeek: DayOfWeekEnum.Sunday, label: 'Chủ Nhật' },
-                { dayOfWeek: DayOfWeekEnum.Monday, label: 'Thứ Hai' },
-                { dayOfWeek: DayOfWeekEnum.Tuesday, label: 'Thứ Ba' },
-                { dayOfWeek: DayOfWeekEnum.Wednesday, label: 'Thứ Tư' },
-                { dayOfWeek: DayOfWeekEnum.Thursday, label: 'Thứ Năm' },
-                { dayOfWeek: DayOfWeekEnum.Friday, label: 'Thứ Sáu' },
-                { dayOfWeek: DayOfWeekEnum.Saturday, label: 'Thứ Bảy' },
-              ].map((day) => {
-                // Filter availabilities by dayOfWeek from slot
-                const dayAvailabilities = profileData.availabilities.filter(av => {
-                  const slotDayOfWeek = av.slot?.dayOfWeek;
-                  return slotDayOfWeek !== undefined && slotDayOfWeek === day.dayOfWeek;
-                });
-                
-                return (
-                  <div key={day.dayOfWeek} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-gray-900">{day.label}</h4>
-                      {isEditing && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="text-[#257180] border-[#257180] hover:bg-[#257180] hover:text-white"
-                          onClick={() => {
-                            setNewTimeSlot({ dayOfWeek: day.dayOfWeek.toString(), slotId: 0, startDate: '' });
-                            setShowTimeSlotModal(true);
-                          }}
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Thêm khung giờ
-                        </Button>
-                      )}
+              {isEditing && (
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAvailabilityCalendar(prev => ({ ...prev, currentWeek: prev.currentWeek - 1 }))}
+                      className="border-gray-300 hover:bg-[#257180] hover:text-white"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Tuần trước
+                    </Button>
+                    <div className="text-sm font-medium text-[#257180]">
+                      {availabilityCalendar.currentWeek === 0 ? 'Tuần này' : 
+                       availabilityCalendar.currentWeek === 1 ? 'Tuần sau' :
+                       availabilityCalendar.currentWeek === -1 ? 'Tuần trước' :
+                       `Tuần ${availabilityCalendar.currentWeek > 0 ? '+' : ''}${availabilityCalendar.currentWeek}`}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAvailabilityCalendar(prev => ({ ...prev, currentWeek: prev.currentWeek + 1 }))}
+                      className="border-gray-300 hover:bg-[#257180] hover:text-white"
+                    >
+                      Tuần sau
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAvailabilityCalendar(prev => ({ ...prev, currentWeek: 0 }))}
+                    className="border-gray-300/30 hover:bg-[#257180]/10 text-[#257180]"
+                  >
+                    Hôm nay
+                  </Button>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-black text-sm sm:text-base">Chọn thời gian bạn có thể dạy</Label>
+                  {isEditing && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!confirm('Bạn có chắc chắn muốn xóa tất cả khung giờ trong tuần này?')) return;
+                        const dateKeys = Object.keys(availabilityCalendar.schedule).filter(key => {
+                          const date = new Date(key);
+                          const startOfWeek = new Date(availabilityCalendar.startDate);
+                          const dayOfWeek = startOfWeek.getDay();
+                          const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                          startOfWeek.setDate(startOfWeek.getDate() - daysToMonday + (availabilityCalendar.currentWeek * 7));
+                          const endOfWeek = new Date(startOfWeek);
+                          endOfWeek.setDate(startOfWeek.getDate() + 6);
+                          return date >= startOfWeek && date <= endOfWeek;
+                        });
+                        const availabilitiesToDelete = profileData.availabilities.filter(av => 
+                          av.startDate && dateKeys.some(key => av.startDate?.startsWith(key))
+                        );
+                        if (availabilitiesToDelete.length > 0) {
+                          const ids = availabilitiesToDelete.map(av => av.id);
+                          const response = await AvailabilityService.deleteAvailabilities(ids);
+                          if (response.success) {
+                            await reloadTutorProfile();
+                            showSuccess('Thành công', 'Đã xóa tất cả khung giờ trong tuần');
+                          }
+                        }
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100"
+                    >
+                      Xóa tất cả
+                    </button>
+                  )}
+                </div>
+                <div className="overflow-x-auto">
+                  <div className="min-w-full">
+                    <div className="grid grid-cols-8 gap-2 mb-2">
+                      <div className="p-2"></div>
+                      {weekDays.map((day) => (
+                        <div key={day.key} className="p-2 text-center font-medium text-black bg-[#F2E5BF] rounded border border-gray-300">
+                          <div>{day.label}</div>
+                          <div className="text-xs text-gray-600 mt-1">{datesByDay[day.key]}</div>
+                        </div>
+                      ))}
                     </div>
                     
-                    {dayAvailabilities.length === 0 ? (
-                      <p className="text-sm text-gray-600 italic">Chưa có khung giờ nào</p>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {dayAvailabilities.map((availability) => {
-                          const status = EnumHelpers.parseTutorAvailabilityStatus(availability.status);
-                          const slot = availability.slot;
-                          const startTime = slot?.startTime ? slot.startTime.substring(0, 5) : '';
-                          const endTime = slot?.endTime ? slot.endTime.substring(0, 5) : '';
+                    {masterData.timeSlots.length > 0 ? masterData.timeSlots.map((slot) => (
+                      <div key={slot.id} className="grid grid-cols-8 gap-2 mb-1">
+                        <div className="p-2 text-sm font-medium text-gray-600 flex items-center">
+                          {slot.startTime.split(':').slice(0, 2).join(':')}
+                        </div>
+                        {weekDays.map((day) => {
+                          const dateKey = getDateKey(day.key);
+                          const today = new Date();
+                          const todayString = today.toISOString().split('T')[0];
+                          const isPastDate = dateKey <= todayString;
+                          const isInRange = datesByDay[day.key] !== '';
                           
-                          let statusColor = 'bg-green-50 border-green-200 text-green-800';
-                          let statusText = 'Trống';
-                          if (status === TutorAvailabilityStatus.Booked) {
-                            statusColor = 'bg-yellow-50 border-yellow-200 text-yellow-800';
-                            statusText = 'Đã đặt';
-                          } else if (status === TutorAvailabilityStatus.InProgress) {
-                            statusColor = 'bg-blue-50 border-blue-200 text-blue-800';
-                            statusText = 'Đang học';
-                          } else if (status === TutorAvailabilityStatus.Cancelled) {
-                            statusColor = 'bg-red-50 border-red-200 text-red-800';
-                            statusText = 'Đã hủy';
-                          }
+                          const currentSlots = availabilityCalendar.schedule[dateKey]?.[day.key] || [];
+                          const isSelected = currentSlots.includes(slot.id);
+                          
+                          // Check if this slot is booked/in progress/cancelled
+                          const existingAvailability = profileData.availabilities.find(
+                            av => av.slot?.id === slot.id && av.startDate?.startsWith(dateKey)
+                          );
+                          const status = existingAvailability 
+                            ? EnumHelpers.parseTutorAvailabilityStatus(existingAvailability.status)
+                            : null;
+                          const isBooked = status === TutorAvailabilityStatus.Booked || status === TutorAvailabilityStatus.InProgress;
+                          const isCancelled = status === TutorAvailabilityStatus.Cancelled;
                           
                           return (
-                            <div 
-                              key={availability.id} 
-                              className={`flex items-center justify-between p-3 rounded-lg border border-gray-200 ${statusColor}`}
-                            >
-                              <div className="flex-1">
-                                <p className="font-medium text-sm">
-                                  {startTime && endTime ? `${startTime} - ${endTime}` : 'N/A'}
-                                </p>
-                                <p className="text-xs mt-0.5">{statusText}</p>
-                                {availability.startDate && (
-                                  <p className="text-xs mt-0.5 text-gray-600">
-                                    {new Date(availability.startDate).toLocaleDateString('vi-VN')}
-                                  </p>
-                                )}
-                              </div>
-                              {isEditing && status === TutorAvailabilityStatus.Available && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-red-100"
-                                  onClick={() => handleDeleteTimeSlot(availability.id)}
-                                >
-                                  <Trash2 className="w-3 h-3 text-red-600" />
-                                </Button>
+                            <div key={`${day.key}-${slot.id}`} className="p-1">
+                              {!isInRange || isPastDate ? (
+                                <div className="w-full h-8 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                                  <span className="text-xs text-gray-400">-</span>
+                                </div>
+                              ) : isBooked ? (
+                                <div className="w-full h-8 bg-yellow-100 rounded border border-yellow-300 flex items-center justify-center">
+                                  <span className="text-xs text-yellow-700">Đã đặt</span>
+                                </div>
+                              ) : isCancelled ? (
+                                <div className="w-full h-8 bg-red-100 rounded border border-red-300 flex items-center justify-center">
+                                  <span className="text-xs text-red-700">Đã hủy</span>
+                                </div>
+                              ) : (
+                                <Checkbox 
+                                  id={`${day.key}-${slot.id}`} 
+                                  className="w-full h-8 data-[state=checked]:bg-[#257180]"
+                                  checked={isSelected}
+                                  onCheckedChange={() => handleToggleTimeSlot(day.key, slot.id)}
+                                  disabled={!isEditing}
+                                />
                               )}
                             </div>
                           );
                         })}
                       </div>
+                    )) : (
+                      <div className="text-center text-gray-500 py-4">
+                        Đang tải danh sách khung giờ...
+                      </div>
                     )}
                   </div>
-                );
-              })}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

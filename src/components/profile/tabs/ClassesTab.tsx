@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/layout/card';
 import { Badge } from '@/components/ui/basic/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
@@ -26,7 +26,6 @@ import { BookingDto } from '@/types/backend';
 import {
   BookingStatus,
   PaymentStatus,
-  ScheduleCompletionStatus,
   ScheduleStatus,
   TeachingMode,
 } from '@/types/enums';
@@ -41,10 +40,12 @@ import { useBookings } from '@/hooks/useBookings';
 import { BookingNotesPanel } from '@/components/booking/BookingNotesPanel';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { useRouter } from 'next/navigation';
-import { ReportService, MediaService } from '@/services';
+import { ReportService, MediaService, FeedbackService } from '@/services';
 import { ReportCreateRequest, BasicEvidenceRequest } from '@/types/requests';
 import { MediaType } from '@/types/enums';
+import { TutorFeedbackDto } from '@/types/backend';
+import { CreateFeedbackDialog } from '@/components/feedback/CreateFeedbackDialog';
+import { Star } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -60,7 +61,6 @@ export function ClassesTab() {
   const { user } = useAuth();
   const { refetch: refetchWallet } = useWalletContext();
   const { showError, showSuccess, showWarning } = useCustomToast();
-  const router = useRouter();
   const {
     bookings,
     loading,
@@ -80,6 +80,9 @@ export function ClassesTab() {
   const [reportFormData, setReportFormData] = useState({ reason: '', evidences: [] as BasicEvidenceRequest[] });
   const [uploadingReportFiles, setUploadingReportFiles] = useState(false);
   const [submittingReport, setSubmittingReport] = useState(false);
+  const [bookingFeedback, setBookingFeedback] = useState<TutorFeedbackDto | null>(null);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const { loadTutorProfiles, getTutorProfile, loadTutorProfile } = useTutorProfiles();
   const {
     schedules,
@@ -124,8 +127,28 @@ export function ClassesTab() {
   useEffect(() => {
     if (selectedBookingId) {
       loadBookingDetail();
+      loadBookingFeedback();
+    } else {
+      setBookingFeedback(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBookingId]);
+
+  const loadBookingFeedback = async () => {
+    if (!selectedBookingId || !user?.email) return;
+    setLoadingFeedback(true);
+    try {
+      const response = await FeedbackService.getFeedbackByLearner(user.email);
+      if (response.success && response.data) {
+        const feedback = response.data.find((f) => f.bookingId === selectedBookingId);
+        setBookingFeedback(feedback || null);
+      }
+    } catch (error) {
+      console.error('Error loading feedback:', error);
+    } finally {
+      setLoadingFeedback(false);
+    }
+  };
 
 
   const loadBookingDetail = async () => {
@@ -189,15 +212,6 @@ export function ClassesTab() {
     }).format(amount);
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      return format(date, "dd/MM/yyyy 'lúc' HH:mm", { locale: vi });
-    } catch {
-      return dateString;
-    }
-  };
 
   const getBookingStatusColor = (status: BookingStatus | string) => {
     const parsedStatus = EnumHelpers.parseBookingStatus(status);
@@ -268,12 +282,6 @@ export function ClassesTab() {
     return upcomingSchedules.length > 0 ? upcomingSchedules[0].availability?.startDate : null;
   };
 
-  const getCompletedSessions = (booking: BookingDto) => {
-    if (!booking.schedules) return 0;
-    return booking.schedules.filter(
-      (s) => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Completed
-    ).length;
-  };
 
   const getActiveSessions = (booking: BookingDto) => {
     if (!booking.schedules) return 0;
@@ -305,7 +313,7 @@ export function ClassesTab() {
     });
 
     return Array.from(summaryMap.entries())
-      .filter(([_, count]) => count > 0)
+      .filter(([, count]) => count > 0)
       .map(([status, count]) => ({ status, count }))
       .sort((a, b) => a.status - b.status);
   };
@@ -331,7 +339,7 @@ export function ClassesTab() {
 
   const handleOpenReportDialog = (schedule: any) => {
     const booking = getBookingFromCache(schedule.bookingId, schedule.booking);
-    const tutorEmail = booking?.tutorSubject?.tutor?.email || booking?.tutorEmail;
+    const tutorEmail = booking?.tutorSubject?.tutorEmail || booking?.tutorSubject?.tutor?.userName;
     if (!tutorEmail) {
       showError('Lỗi', 'Không tìm thấy thông tin gia sư');
       return;
@@ -367,7 +375,7 @@ export function ClassesTab() {
           const url = response.data.data.secureUrl || response.data.data.originalUrl;
           return {
             mediaType: isVideo ? MediaType.Video : MediaType.Image,
-            mediaUrl: url,
+            fileUrl: url,
             filePublicId: response.data.data.publicId,
           } as BasicEvidenceRequest;
         }
@@ -496,8 +504,11 @@ export function ClassesTab() {
     const tutorSubject = selectedBooking.tutorSubject;
     const subject = tutorSubject?.subject;
     const level = tutorSubject?.level;
-    const tutorName = tutorSubject?.tutor?.userName;
     const tutorEmail = tutorSubject?.tutorEmail;
+    const tutorId = tutorSubject?.tutorId;
+    const finishedSessions = getFinishedSessions(selectedBooking);
+    const progress = (finishedSessions / selectedBooking.totalSessions) * 100;
+    const canShowFeedback = progress > 80 && tutorId;
 
     return (
       <div className="space-y-6">
@@ -815,7 +826,107 @@ export function ClassesTab() {
           )}
         </div>
 
+        {canShowFeedback && (
+          <Card className="bg-white border border-[#257180]/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Đánh giá gia sư</h3>
+                {!bookingFeedback && (
+                  <Button
+                    onClick={() => setShowFeedbackDialog(true)}
+                    className="bg-[#257180] hover:bg-[#257180]/90 text-white"
+                  >
+                    <Star className="h-4 w-4 mr-2" />
+                    Tạo đánh giá
+                  </Button>
+                )}
+              </div>
+              {loadingFeedback ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#257180]" />
+                </div>
+              ) : bookingFeedback ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`h-5 w-5 ${
+                            star <= Math.round(bookingFeedback.overallRating)
+                              ? 'fill-yellow-400 text-yellow-400'
+                              : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-lg font-semibold text-gray-900">
+                      {bookingFeedback.overallRating.toFixed(1)}
+                    </span>
+                  </div>
+                  {bookingFeedback.comment && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-sm text-gray-700">{bookingFeedback.comment}</p>
+                    </div>
+                  )}
+                  {bookingFeedback.feedbackDetails && bookingFeedback.feedbackDetails.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-700">Chi tiết đánh giá:</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {bookingFeedback.feedbackDetails.map((detail, index) => (
+                          <div key={index} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                            <span className="text-sm text-gray-700">
+                              {detail.criteriaName || `Tiêu chí ${detail.criterionId}`}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  className={`h-4 w-4 ${
+                                    star <= detail.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    Đánh giá vào: {format(new Date(bookingFeedback.createdAt), "dd/MM/yyyy 'lúc' HH:mm", { locale: vi })}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-600 mb-4">Bạn chưa đánh giá gia sư cho lớp học này</p>
+                  <Button
+                    onClick={() => setShowFeedbackDialog(true)}
+                    className="bg-[#257180] hover:bg-[#257180]/90 text-white"
+                  >
+                    <Star className="h-4 w-4 mr-2" />
+                    Tạo đánh giá
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <BookingNotesPanel bookingId={selectedBookingId} />
+
+        {canShowFeedback && tutorId && (
+          <CreateFeedbackDialog
+            open={showFeedbackDialog}
+            onOpenChange={setShowFeedbackDialog}
+            tutorId={tutorId}
+            bookingId={selectedBookingId}
+            onSuccess={() => {
+              loadBookingFeedback();
+              setShowFeedbackDialog(false);
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -1133,13 +1244,13 @@ export function ClassesTab() {
                         <div key={index} className="relative group">
                           {isImage ? (
                             <img
-                              src={evidence.mediaUrl}
+                              src={evidence.fileUrl}
                               alt="Evidence"
                               className="w-full h-24 object-cover rounded border"
                             />
                           ) : (
                             <video
-                              src={evidence.mediaUrl}
+                              src={evidence.fileUrl}
                               controls
                               className="w-full h-24 object-cover rounded border"
                             />
