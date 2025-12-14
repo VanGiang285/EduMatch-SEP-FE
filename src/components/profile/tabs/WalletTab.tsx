@@ -616,7 +616,7 @@ export function WalletTab() {
 
       {/* Add Bank Account Dialog */}
       <Dialog open={showAddBankDialog} onOpenChange={setShowAddBankDialog}>
-        <DialogContent className="sm:max-w-md border-[#FD8B51]">
+        <DialogContent className="sm:max-w-md border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-gray-900">Thêm tài khoản ngân hàng</DialogTitle>
             <DialogDescription className="text-gray-600">
@@ -726,7 +726,7 @@ export function WalletTab() {
                 setNewBankAccount({ bankId: 0, accountNumber: '', accountHolderName: '' });
                 setIsCapsLockOn(false);
               }}
-              className="border-[#257180] text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+              className="border-gray-300 bg-white text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
             >
               Hủy
             </Button>
@@ -743,7 +743,7 @@ export function WalletTab() {
 
       {/* Top Up Dialog */}
       <Dialog open={showTopUpDialog} onOpenChange={setShowTopUpDialog}>
-        <DialogContent className="sm:max-w-md border-[#FD8B51]">
+        <DialogContent className="sm:max-w-md border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-gray-900">Nạp tiền vào ví</DialogTitle>
             <DialogDescription className="text-gray-600">
@@ -792,7 +792,7 @@ export function WalletTab() {
                 setTopUpAmount('');
               }}
               disabled={isProcessingTopUp}
-              className="border-[#257180] text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+              className="border-gray-300 bg-white text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
             >
               Hủy
             </Button>
@@ -817,7 +817,7 @@ export function WalletTab() {
 
       {/* Withdraw Dialog */}
       <Dialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
-        <DialogContent className="sm:max-w-md border-[#FD8B51]">
+        <DialogContent className="sm:max-w-md border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-gray-900 text-xl font-semibold">Rút tiền từ ví</DialogTitle>
             <DialogDescription className="text-gray-600 text-sm mt-1">
@@ -964,7 +964,7 @@ export function WalletTab() {
                 setSelectedBankAccountId(null);
               }}
               disabled={isProcessingWithdraw}
-              className="border-[#257180] text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+              className="border-gray-300 bg-white text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
             >
               Hủy
             </Button>

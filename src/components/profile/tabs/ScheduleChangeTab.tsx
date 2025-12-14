@@ -427,7 +427,7 @@ export function ScheduleChangeTab() {
                 open={confirmDialog.open}
                 onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
             >
-                <DialogContent>
+                <DialogContent className="border-gray-300 shadow-lg">
                     <DialogHeader>
                         <DialogTitle>Xác nhận xử lý</DialogTitle>
                         <DialogDescription>

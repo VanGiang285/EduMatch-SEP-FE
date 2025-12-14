@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
 import { Input } from '../ui/form/input';
-import { Badge } from '../ui/basic/badge';
 import {
   Search,
   Star,
@@ -34,7 +33,7 @@ import {
   PaginationPrevious,
 } from '../ui/navigation/pagination';
 import { useFindTutor } from '@/hooks/useFindTutor';
-import { EnumHelpers, TeachingMode } from '@/types/enums';
+import { TeachingMode } from '@/types/enums';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
@@ -42,7 +41,6 @@ import { useChatContext } from '@/contexts/ChatContext';
 import { LocationService, ProvinceDto } from '@/services/locationService';
 import { FeedbackService } from '@/services/feedbackService';
 import { TutorRatingSummary } from '@/types/backend';
-import { useLearnerTrialLessons } from '@/hooks/useLearnerTrialLessons';
 import { USER_ROLES } from '@/constants';
 import type { TrialLessonSubjectStatusDto } from '@/services/learnerTrialLessonService';
 
@@ -59,6 +57,20 @@ function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMod
     }
   }
   return mode as TeachingMode;
+}
+
+function getTeachingModeDisplayLabel(mode: string | number | TeachingMode): string {
+  const modeValue = getTeachingModeValue(mode);
+  switch (modeValue) {
+    case TeachingMode.Offline:
+      return 'Dạy trực tiếp';
+    case TeachingMode.Online:
+      return 'Dạy online';
+    case TeachingMode.Hybrid:
+      return 'Online và Offline';
+    default:
+      return 'Không xác định';
+  }
 }
 
 function formatLevels(levels: string[]): string {
@@ -140,7 +152,6 @@ export function FindTutorPage() {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
   const { showWarning } = useCustomToast();
-  const { loadSubjectTrialStatuses } = useLearnerTrialLessons();
   const {
     tutors,
     subjects,
@@ -219,6 +230,12 @@ export function FindTutorPage() {
     if (selectedTeachingMode !== 'all') {
       filtered = filtered.filter(tutor => {
         const modeValue = getTeachingModeValue(tutor.teachingModes);
+        const selectedMode = parseInt(selectedTeachingMode);
+        if (selectedMode === TeachingMode.Online) {
+          return modeValue === TeachingMode.Online || modeValue === TeachingMode.Hybrid;
+        } else if (selectedMode === TeachingMode.Offline) {
+          return modeValue === TeachingMode.Offline || modeValue === TeachingMode.Hybrid;
+        }
         return modeValue.toString() === selectedTeachingMode;
       });
     }
@@ -603,8 +620,8 @@ export function FindTutorPage() {
                 placeholder="Hình thức"
               >
                 <SelectWithSearchItem value="all">Tất cả hình thức</SelectWithSearchItem>
-                <SelectWithSearchItem value="1">Trực tuyến</SelectWithSearchItem>
-                <SelectWithSearchItem value="0">Tại nhà</SelectWithSearchItem>
+                <SelectWithSearchItem value="1">Dạy Online</SelectWithSearchItem>
+                <SelectWithSearchItem value="0">Dạy Offline</SelectWithSearchItem>
               </SelectWithSearch>
             </div>
 
@@ -797,7 +814,7 @@ export function FindTutorPage() {
                           </div>
                           <Separator orientation="vertical" className="h-4" />
                           <span>
-                            {EnumHelpers.getTeachingModeLabel(getTeachingModeValue(tutor.teachingModes))}
+                            {getTeachingModeDisplayLabel(tutor.teachingModes)}
                           </span>
                           {tutor.tutorEducations && tutor.tutorEducations.length > 0 && (
                             <>

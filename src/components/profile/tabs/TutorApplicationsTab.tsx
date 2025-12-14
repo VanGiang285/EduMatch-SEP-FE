@@ -612,7 +612,7 @@ export function TutorApplicationsTab() {
           }
         }}
       >
-        <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white">
+        <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-2xl sm:text-3xl font-bold text-gray-900">
               {detailRequest ? (detailRequest.title || `${detailRequest.subjectName || ''} ${detailRequest.level || ''}`.trim()) : 'Chi tiết yêu cầu mở lớp'}
@@ -823,7 +823,7 @@ export function TutorApplicationsTab() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle>Cập nhật tin nhắn ứng tuyển</DialogTitle>
           </DialogHeader>

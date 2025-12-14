@@ -1147,7 +1147,7 @@ export function ClassesTab() {
                           <Button
                             variant="outline"
                             size="lg"
-                            className="flex-1 hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                            className="flex-1 border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                             onClick={(e) => {
                               e.stopPropagation();
                               // TODO: Navigate to chat
@@ -1199,7 +1199,7 @@ export function ClassesTab() {
       />
 
       <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle>Tạo báo cáo</DialogTitle>
           </DialogHeader>

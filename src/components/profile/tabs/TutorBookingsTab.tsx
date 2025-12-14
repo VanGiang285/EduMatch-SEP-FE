@@ -953,7 +953,7 @@ export function TutorBookingsTab() {
                           <Button
                             variant="outline"
                             size="lg"
-                            className="flex-1 hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                            className="flex-1 border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                             onClick={(e) => {
                               e.stopPropagation();
                               // TODO: mở chat

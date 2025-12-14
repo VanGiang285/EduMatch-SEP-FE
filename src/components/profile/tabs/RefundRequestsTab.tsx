@@ -536,7 +536,7 @@ export function RefundRequestsTab() {
       </Card>
 
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Chi tiết yêu cầu hoàn tiền</DialogTitle>
           </DialogHeader>
@@ -630,7 +630,7 @@ export function RefundRequestsTab() {
       </Dialog>
 
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl" aria-describedby={undefined}>
+        <DialogContent className="max-w-2xl border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Tạo yêu cầu hoàn tiền mới</DialogTitle>
           </DialogHeader>
@@ -764,7 +764,7 @@ export function RefundRequestsTab() {
               setFormData({ bookingId: 0, refundPolicyId: 0, reason: '', fileUrls: [] });
               setUploadingFiles([]);
               setUploadedUrls([]);
-            }} className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
+            }} className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
               Hủy
             </Button>
             <Button onClick={handleSubmitCreate} disabled={isProcessing || uploading} className="bg-[#257180] hover:bg-[#257180]/90 text-white">

@@ -1152,7 +1152,7 @@ export function ReportsTab() {
 
       {showDetailDialog && selectedReport && (
         <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col" aria-describedby={undefined}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col border-gray-300 shadow-lg" aria-describedby={undefined}>
             <DialogHeader className="flex-shrink-0 pb-2">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <DialogTitle className="text-xl font-semibold text-gray-900">Chi tiết báo cáo</DialogTitle>
@@ -1387,7 +1387,7 @@ export function ReportsTab() {
                       }
                     }}
                     disabled={isProcessing}
-                    className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                    className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Thay đổi
@@ -1436,7 +1436,7 @@ export function ReportsTab() {
 
       {previewImage && (
         <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] p-0" aria-describedby={undefined}>
+          <DialogContent className="max-w-4xl max-h-[90vh] p-0 border-gray-300 shadow-lg" aria-describedby={undefined}>
             <div className="relative w-full h-full flex items-center justify-center bg-black/90">
               <img
                 src={previewImage}
@@ -1458,7 +1458,7 @@ export function ReportsTab() {
 
       {showCreateDialog && (
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg">
             <DialogHeader>
               <DialogTitle>Tạo báo cáo mới</DialogTitle>
             </DialogHeader>
@@ -1569,7 +1569,7 @@ export function ReportsTab() {
 
       {showUpdateDialog && selectedReport && (
         <Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg">
             <DialogHeader>
               <DialogTitle>Cập nhật báo cáo</DialogTitle>
             </DialogHeader>
@@ -1700,7 +1700,7 @@ export function ReportsTab() {
 
       {showDefenseDialog && selectedReport && (
         <Dialog open={showDefenseDialog} onOpenChange={setShowDefenseDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg">
             <DialogHeader>
               <DialogTitle>Gửi kháng cáo</DialogTitle>
             </DialogHeader>

@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
 import { Input } from '../ui/form/input';
-import { Badge } from '../ui/basic/badge';
 import { FormatService } from '@/lib/format';
 import { 
   Search,
@@ -37,7 +36,7 @@ import { useFindTutor } from '@/hooks/useFindTutor';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { TutorService } from '@/services/tutorService';
 import { TutorProfileDto, TutorRatingSummary } from '@/types/backend';
-import { EnumHelpers, TeachingMode } from '@/types/enums';
+import { TeachingMode } from '@/types/enums';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { useChatContext } from '@/contexts/ChatContext';
@@ -56,6 +55,20 @@ function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMod
     }
   }
   return mode as TeachingMode;
+}
+
+function getTeachingModeDisplayLabel(mode: string | number | TeachingMode): string {
+  const modeValue = getTeachingModeValue(mode);
+  switch (modeValue) {
+    case TeachingMode.Offline:
+      return 'Dạy trực tiếp';
+    case TeachingMode.Online:
+      return 'Dạy online';
+    case TeachingMode.Hybrid:
+      return 'Online và Offline';
+    default:
+      return 'Không xác định';
+  }
 }
 
 function formatLevels(levels: string[]): string {
@@ -280,7 +293,7 @@ export function SavedTutorsPage() {
     if (selectedSubject !== 'all') {
       filtered = filtered.filter(tutor => 
         tutor.tutorSubjects?.some(tutorSubject => {
-          return tutorSubject.subjectId.toString() === selectedSubject;
+          return tutorSubject.subjectId?.toString() === selectedSubject;
         })
       );
     }
@@ -583,8 +596,8 @@ export function SavedTutorsPage() {
               placeholder="Hình thức"
             >
               <SelectWithSearchItem value="all">Tất cả hình thức</SelectWithSearchItem>
-              <SelectWithSearchItem value="1">Trực tuyến</SelectWithSearchItem>
-              <SelectWithSearchItem value="0">Tại nhà</SelectWithSearchItem>
+              <SelectWithSearchItem value="1">Dạy Online</SelectWithSearchItem>
+              <SelectWithSearchItem value="0">Dạy Offline</SelectWithSearchItem>
             </SelectWithSearch>
             </div>
 
@@ -804,7 +817,7 @@ export function SavedTutorsPage() {
                           </div>
                           <Separator orientation="vertical" className="h-4" />
                           <span>
-                            {EnumHelpers.getTeachingModeLabel(getTeachingModeValue(tutor.teachingModes))}
+                            {getTeachingModeDisplayLabel(tutor.teachingModes)}
                           </span>
                           {tutor.tutorEducations && tutor.tutorEducations.length > 0 && (
                             <>

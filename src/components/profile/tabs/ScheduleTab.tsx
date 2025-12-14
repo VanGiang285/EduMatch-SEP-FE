@@ -480,7 +480,7 @@ export function ScheduleTab() {
                             <Button
                               variant="outline"
                               size="lg"
-                              className="flex-1 hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                              className="flex-1 border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                             >
                               <MessageCircle className="h-4 w-4 mr-2" />
                               Nhắn tin
@@ -521,7 +521,7 @@ export function ScheduleTab() {
 
       {/* Dialog hiển thị lịch rảnh của gia sư (lọc >=12h và không trùng lịch học của learner) */}
       <Dialog open={slotDialog.open} onOpenChange={(open) => setSlotDialog(prev => ({ ...prev, open }))}>
-        <DialogContent className="sm:max-w-6xl w-full max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="sm:max-w-6xl w-full max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader className="space-y-2">
             <DialogTitle>Lịch rảnh của gia sư</DialogTitle>
             {slotDialog.schedule && (() => {
@@ -597,7 +597,7 @@ export function ScheduleTab() {
                 availabilityByKey[`${dateKey}-${hour}`];
 
               return (
-                <Card className="border border-[#FD8B51]/40">
+                <Card className="border border-gray-300">
                   <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
                     <div>
                       <div className="text-sm font-semibold text-gray-800">

@@ -641,7 +641,7 @@ export function ClassRequestsTab() {
       </Card>
 
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white border border-[#257180]/20">
+        <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white border border-gray-300 shadow-lg">
           <DialogHeader className="pb-4 border-b border-gray-200">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
@@ -912,7 +912,7 @@ export function ClassRequestsTab() {
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                className="flex-1 hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51] text-xs"
+                                className="flex-1 border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51] text-xs"
                                 onClick={() => handleViewTutorProfile(applicant.tutorId)}
                               >
                                 Xem hồ sơ
@@ -1042,7 +1042,7 @@ export function ClassRequestsTab() {
       />
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-md border border-[#257180]/20">
+        <DialogContent className="sm:max-w-md border-gray-300 shadow-lg">
           <DialogHeader className="pb-4 border-b border-gray-200">
             <DialogTitle className="text-xl font-semibold text-gray-900">Xác nhận xóa yêu cầu</DialogTitle>
           </DialogHeader>

@@ -1245,7 +1245,7 @@ export function TutorProfileTab() {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                 onClick={(e) => handleOpenChat(e)}
               >
                 <MessageCircle className="w-4 h-4 mr-2" />
@@ -2093,7 +2093,7 @@ export function TutorProfileTab() {
       </Tabs>
 
       <Dialog open={showEducationModal} onOpenChange={setShowEducationModal}>
-        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+        <DialogContent className="sm:max-w-md border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Thêm học vấn</DialogTitle>
           </DialogHeader>
@@ -2166,7 +2166,7 @@ export function TutorProfileTab() {
       </Dialog>
 
       <Dialog open={showCertificateModal} onOpenChange={setShowCertificateModal}>
-        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+        <DialogContent className="sm:max-w-md border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Thêm chứng chỉ</DialogTitle>
           </DialogHeader>
@@ -2254,7 +2254,7 @@ export function TutorProfileTab() {
       </Dialog>
 
       <Dialog open={showSubjectModal} onOpenChange={setShowSubjectModal}>
-        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+        <DialogContent className="sm:max-w-md border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Thêm môn học</DialogTitle>
           </DialogHeader>
@@ -2354,7 +2354,7 @@ export function TutorProfileTab() {
       </Dialog>
 
       <Dialog open={showTimeSlotModal} onOpenChange={setShowTimeSlotModal}>
-        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+        <DialogContent className="sm:max-w-md border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Thêm khung giờ</DialogTitle>
           </DialogHeader>

@@ -119,8 +119,8 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar */}
           <aside className="lg:w-64 flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-sm border border-[#257180]/20 overflow-hidden sticky top-24">
-              <div className="p-4 border-b bg-gray-50">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-300 overflow-hidden sticky top-24">
+              <div className="p-4 border-b border-[#257180]/20 bg-gray-50">
                 <h3 className="font-semibold">Tài khoản của tôi</h3>
               </div>
               <nav className="p-2">
@@ -131,9 +131,9 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
                     <Button
                       key={item.id}
                       variant="ghost"
-                      className={`w-full justify-start mb-1 ${isActive
-                        ? 'bg-[#257180]/10 text-[#257180] hover:bg-[#257180]/20 hover:text-[#257180]'
-                        : 'hover:bg-gray-100'
+                      className={`w-full justify-start mb-1 focus-visible:ring-gray-300 ${isActive
+                        ? 'bg-[#257180]/10 text-[#257180] hover:bg-[#257180]/20 hover:text-[#257180] border-l-4 border-[#257180]'
+                        : 'hover:bg-gray-100 border-l-4 border-transparent'
                         }`}
                       onClick={() => setActiveTab(item.id)}
                     >
@@ -153,7 +153,7 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
 
           {/* Main Content */}
           <main className="flex-1 min-w-0">
-            <div className="bg-white rounded-2xl border border-[#257180]/20 p-6 transition-shadow hover:shadow-md">
+            <div className="bg-white rounded-2xl border border-gray-300 shadow-lg p-6 transition-shadow hover:shadow-md">
               {renderTabContent()}
             </div>
           </main>

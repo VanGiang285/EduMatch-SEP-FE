@@ -443,7 +443,7 @@ export function ProfileTab() {
                     variant="outline"
                     onClick={() => document.getElementById('avatar-upload')?.click()}
                     disabled={isUploadingAvatar}
-                    className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                    className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                   >
                     {isUploadingAvatar ? (
                       <>

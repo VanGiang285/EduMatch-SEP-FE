@@ -159,16 +159,16 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/10 transition-all">
                       {user.avatar ? (
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.avatar} alt={user.name} />
-                          <AvatarFallback className="bg-[#FD8B51] text-white">
-                            {user.name?.[0] || 'U'}
+                        <Avatar className="h-8 w-8 rounded-lg">
+                          <AvatarImage src={user.avatar} alt={user.name} className="rounded-lg" />
+                          <AvatarFallback className="bg-[#F2E5BF] text-[#257180] rounded-lg font-semibold">
+                            {(user.name || 'U').slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       ) : (
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-[#FD8B51] text-white">
-                            {user.name?.[0] || 'U'}
+                        <Avatar className="h-8 w-8 rounded-lg">
+                          <AvatarFallback className="bg-[#F2E5BF] text-[#257180] rounded-lg font-semibold">
+                            {(user.name || 'U').slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       )}
@@ -410,11 +410,13 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                         alt={user.name}
                         width={40}
                         height={40}
-                        className="rounded-full object-cover"
+                        className="rounded-lg object-cover"
                       />
                     ) : (
-                      <div className="w-10 h-10 bg-[#FD8B51] rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-white" />
+                      <div className="w-10 h-10 bg-[#F2E5BF] rounded-lg flex items-center justify-center">
+                        <span className="text-[#257180] font-bold text-sm">
+                          {(user.name || 'U').slice(0, 2).toUpperCase()}
+                        </span>
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
