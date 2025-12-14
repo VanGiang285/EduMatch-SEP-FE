@@ -100,7 +100,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     isSlotExistsInMap,
     isSlotSelected,
     isSlotAtLeastHoursAway,
-    getAvailableTimeSlots,
     timeSlots: timeSlotsFromHook,
     isLoading: isLoadingAvailability,
   } = useTutorAvailability();
@@ -179,8 +178,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const [isBookingSelectionDialogOpen, setIsBookingSelectionDialogOpen] =
     useState(false);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
-  const [isBookingWizardOpen, setIsBookingWizardOpen] = useState(false);
-  const [bookingStep, setBookingStep] = useState(1);
   const [isTrialBooking, setIsTrialBooking] = useState(false);
   const [isCreatingBooking, setIsCreatingBooking] = useState(false);
   const bookingStepsMeta = React.useMemo(
@@ -371,14 +368,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     return selectedSubjectInfo.levels.find(level => level.key === selectedLevelKey) || null;
   }, [selectedSubjectInfo, selectedLevelKey]);
 
-  // Trạng thái học thử của môn hiện đang chọn (nếu đã load từ /api/TrialLessons/subjects)
-  const selectedSubjectTrialStatus = React.useMemo(() => {
-    if (!selectedLevelInfo?.subjectId || !subjectStatuses || subjectStatuses.length === 0) {
-      return null;
-    }
-    return subjectStatuses.find(s => s.subjectId === selectedLevelInfo.subjectId) || null;
-  }, [selectedLevelInfo?.subjectId, subjectStatuses]);
-
   const getDateKeyFromAvailability = React.useCallback((startDate: string) => {
     if (startDate.includes('T')) {
       return startDate.split('T')[0];
@@ -501,7 +490,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     return !!learnerUpcomingMap[slotKey];
   }, [currentWeekStart, weekDays, learnerUpcomingMap]);
 
-  const canSelectSlots = !!selectedSubjectInfo && !!selectedLevelInfo;
   const selectedLevelPrice = selectedLevelInfo?.hourlyRate ?? 0;
   const estimatedTotal = selectedSlotDetails.length > 0 ? selectedLevelPrice * selectedSlotDetails.length : 0;
 
@@ -623,13 +611,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     checkFavoriteStatus();
   }, [tutorId, isAuthenticated]);
 
-  const handleGoToAvailability = React.useCallback(() => {
-    setActiveTab('availability');
-    requestAnimationFrame(() => {
-      availabilitySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, [availabilitySectionRef, setActiveTab]);
-
   const handleOpenBookingSelection = React.useCallback(
     async (isTrial: boolean) => {
       if (!isAuthenticated) {
@@ -655,7 +636,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
 
       // Mở modal chọn lịch
       setIsTrialBooking(isTrial);
-      setBookingStep(1);
       clearSelectedSlots();
       setIsBookingSelectionDialogOpen(true);
     },
@@ -785,8 +765,6 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
           ? 'Buổi học thử đã được ghi nhận.'
           : 'Bạn có thể xem chi tiết trong tab Lớp học.'
       );
-      setIsBookingWizardOpen(false);
-      setBookingStep(1);
       clearSelectedSlots();
       router.push('/profile?tab=classes');
     } catch (error: any) {
