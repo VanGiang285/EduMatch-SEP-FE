@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/form/label';
 import { Textarea } from '@/components/ui/form/textarea';
 import { Badge } from '@/components/ui/basic/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/form/radio-group';
 import { Checkbox } from '@/components/ui/form/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Separator } from '@/components/ui/layout/separator';
@@ -525,7 +524,9 @@ export function TutorProfileTab() {
               bio: profile.bio || '',
               teachingExp: profile.teachingExp || '',
               videoIntroUrl: profile.videoIntroUrl || '',
-              teachingModes: profile.teachingModes ?? TeachingMode.Offline, // Default to Offline if undefined
+              teachingModes: profile.teachingModes !== undefined && profile.teachingModes !== null 
+                ? EnumHelpers.parseTeachingMode(profile.teachingModes)
+                : TeachingMode.Offline,
               status: profile.status,
             },
             educations,
@@ -877,7 +878,9 @@ export function TutorProfileTab() {
             bio: profile.bio || '',
             teachingExp: profile.teachingExp || '',
             videoIntroUrl: profile.videoIntroUrl || '',
-            teachingModes: profile.teachingModes ?? TeachingMode.Offline, // Default to Offline if undefined
+            teachingModes: profile.teachingModes !== undefined && profile.teachingModes !== null 
+              ? EnumHelpers.parseTeachingMode(profile.teachingModes)
+              : TeachingMode.Offline,
             status: profile.status,
           },
           educations,
@@ -1482,7 +1485,9 @@ export function TutorProfileTab() {
                         bio: tutorProfile.bio || '',
                         teachingExp: tutorProfile.teachingExp || '',
                         videoIntroUrl: tutorProfile.videoIntroUrl || '',
-                        teachingModes: tutorProfile.teachingModes,
+                        teachingModes: tutorProfile.teachingModes !== undefined && tutorProfile.teachingModes !== null 
+                          ? EnumHelpers.parseTeachingMode(tutorProfile.teachingModes)
+                          : TeachingMode.Offline,
                         status: tutorProfile.status,
                       },
                     }));
@@ -1531,12 +1536,12 @@ export function TutorProfileTab() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="basic">Thông tin cơ bản</TabsTrigger>
-          <TabsTrigger value="description">Mô tả</TabsTrigger>
-          <TabsTrigger value="education">Học vấn</TabsTrigger>
-          <TabsTrigger value="certificates">Chứng chỉ</TabsTrigger>
-          <TabsTrigger value="subjects">Môn học & Giá</TabsTrigger>
-          <TabsTrigger value="availability">Lịch khả dụng</TabsTrigger>
+          <TabsTrigger value="basic" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Thông tin cơ bản</TabsTrigger>
+          <TabsTrigger value="description" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Mô tả</TabsTrigger>
+          <TabsTrigger value="education" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Học vấn</TabsTrigger>
+          <TabsTrigger value="certificates" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Chứng chỉ</TabsTrigger>
+          <TabsTrigger value="subjects" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Môn học & Giá</TabsTrigger>
+          <TabsTrigger value="availability" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Lịch khả dụng</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic" className="space-y-6">
@@ -1742,6 +1747,32 @@ export function TutorProfileTab() {
                 </div>
               </div>
 
+              <div className="space-y-2 w-1/2">
+                <Label htmlFor="teachingModes">Hình thức dạy học</Label>
+                <Select 
+                  value={profileData.tutorProfile.teachingModes?.toString() ?? TeachingMode.Offline.toString()}
+                  onValueChange={(value) => {
+                    updateProfileData('tutorProfile', { teachingModes: parseInt(value) as TeachingMode });
+                  }}
+                  disabled={!isEditing}
+                >
+                  <SelectTrigger className={!isEditing ? "disabled:text-black disabled:opacity-100" : ""}>
+                    <SelectValue placeholder="Chọn hình thức dạy học" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TeachingMode.Offline.toString()}>
+                      Dạy Offline
+                    </SelectItem>
+                    <SelectItem value={TeachingMode.Online.toString()}>
+                      Dạy Online
+                    </SelectItem>
+                    <SelectItem value={TeachingMode.Hybrid.toString()}>
+                      Online và Offline
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Separator />
 
               <div className="space-y-4">
@@ -1819,31 +1850,6 @@ export function TutorProfileTab() {
               </div>
 
               <Separator />
-
-              <div className="space-y-3">
-                <Label>Hình thức dạy học</Label>
-                <RadioGroup 
-                  value={profileData.tutorProfile.teachingModes?.toString() ?? TeachingMode.Offline.toString()}
-                  onValueChange={(value) => {
-                    updateProfileData('tutorProfile', { teachingModes: parseInt(value) as TeachingMode });
-                      }}
-                      disabled={!isEditing}
-                      className={!isEditing ? "[&_label]:text-black [&_label]:opacity-100" : ""}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value={TeachingMode.Offline.toString()} id="offline" />
-                    <Label htmlFor="offline" className={`cursor-pointer ${!isEditing ? "text-black opacity-100" : ""}`}>{EnumHelpers.getTeachingModeLabel(TeachingMode.Offline)}</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value={TeachingMode.Online.toString()} id="online" />
-                    <Label htmlFor="online" className={`cursor-pointer ${!isEditing ? "text-black opacity-100" : ""}`}>{EnumHelpers.getTeachingModeLabel(TeachingMode.Online)}</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value={TeachingMode.Hybrid.toString()} id="hybrid" />
-                    <Label htmlFor="hybrid" className={`cursor-pointer ${!isEditing ? "text-black opacity-100" : ""}`}>{EnumHelpers.getTeachingModeLabel(TeachingMode.Hybrid)}</Label>
-                </div>
-                </RadioGroup>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
