@@ -490,6 +490,14 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     return !!learnerUpcomingMap[slotKey];
   }, [currentWeekStart, weekDays, learnerUpcomingMap]);
 
+  // Helper function để kiểm tra slot có cách ít nhất 24 giờ không (từ Date object)
+  const isSlotAtLeast24HoursAway = React.useCallback((slotDate: Date) => {
+    const now = new Date();
+    const diffMs = slotDate.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    return diffHours > 24; // Phải lớn hơn 24 giờ (không bằng)
+  }, []);
+
   const selectedLevelPrice = selectedLevelInfo?.hourlyRate ?? 0;
   const estimatedTotal = selectedSlotDetails.length > 0 ? selectedLevelPrice * selectedSlotDetails.length : 0;
 
@@ -721,13 +729,9 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     }
 
     // Kiểm tra tất cả các slot đã chọn phải cách thời điểm hiện tại ít nhất 24 giờ
-    const now = new Date();
-    const slotsNot24HoursAway = selectedSlotDetails.filter(detail => {
-      const slotDateTime = new Date(detail.date);
-      const diffMs = slotDateTime.getTime() - now.getTime();
-      const diffHours = diffMs / (1000 * 60 * 60);
-      return diffHours <= 24;
-    });
+    const slotsNot24HoursAway = selectedSlotDetails.filter(detail =>
+      !isSlotAtLeast24HoursAway(detail.date)
+    );
 
     if (slotsNot24HoursAway.length > 0) {
       const firstInvalidSlot = slotsNot24HoursAway[0];
@@ -777,6 +781,8 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     bookingError,
     clearSelectedSlots,
     createBooking,
+    isSlotAtLeast24HoursAway,
+    isTrialBooking,
     router,
     selectedLevelInfo,
     selectedSlotDetails,
@@ -815,13 +821,9 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     }
 
     // Kiểm tra tất cả các slot đã chọn phải cách thời điểm hiện tại ít nhất 24 giờ
-    const now = new Date();
-    const slotsNot24HoursAway = selectedSlotDetails.filter(detail => {
-      const slotDateTime = new Date(detail.date);
-      const diffMs = slotDateTime.getTime() - now.getTime();
-      const diffHours = diffMs / (1000 * 60 * 60);
-      return diffHours <= 24;
-    });
+    const slotsNot24HoursAway = selectedSlotDetails.filter(detail =>
+      !isSlotAtLeast24HoursAway(detail.date)
+    );
 
     if (slotsNot24HoursAway.length > 0) {
       const firstInvalidSlot = slotsNot24HoursAway[0];
@@ -869,6 +871,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
     return true;
   }, [
     checkHasTrialLesson,
+    isSlotAtLeast24HoursAway,
     isTrialBooking,
     selectedLevelInfo,
     selectedSlotDetails,
