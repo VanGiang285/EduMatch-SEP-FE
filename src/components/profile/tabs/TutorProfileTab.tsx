@@ -1979,9 +1979,14 @@ export function TutorProfileTab() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="font-medium">{edu.institutionName}</h4>
-                          <Badge className={verifyStatusColors(edu.verified)}>
-                            {verifyStatusText(edu.verified)}
-                          </Badge>
+                          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${verifyStatusColors(edu.verified)}`}>
+                            {verifyStatusText(edu.verified) === 'Chờ duyệt' && <AlertCircle className="h-3 w-3" />}
+                            {verifyStatusText(edu.verified) === 'Đã xác minh' && <CheckCircle className="h-3 w-3" />}
+                            {verifyStatusText(edu.verified) === 'Bị từ chối' && <X className="h-3 w-3" />}
+                            {verifyStatusText(edu.verified) === 'Hết hạn' && <AlertCircle className="h-3 w-3" />}
+                            {verifyStatusText(edu.verified) === 'Đã xóa/thu hồi' && <Trash2 className="h-3 w-3" />}
+                            <span>{verifyStatusText(edu.verified)}</span>
+                          </div>
                         </div>
                         <p className="text-sm text-gray-600">
                           {institutionTypes.find(t => t.value === edu.institutionType)?.label}
@@ -2046,9 +2051,14 @@ export function TutorProfileTab() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="font-medium">{cert.certificateName}</h4>
-                          <Badge className={verifyStatusColors(cert.verified)}>
-                            {verifyStatusText(cert.verified)}
-                          </Badge>
+                          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${verifyStatusColors(cert.verified)}`}>
+                            {verifyStatusText(cert.verified) === 'Chờ duyệt' && <AlertCircle className="h-3 w-3" />}
+                            {verifyStatusText(cert.verified) === 'Đã xác minh' && <CheckCircle className="h-3 w-3" />}
+                            {verifyStatusText(cert.verified) === 'Bị từ chối' && <X className="h-3 w-3" />}
+                            {verifyStatusText(cert.verified) === 'Hết hạn' && <AlertCircle className="h-3 w-3" />}
+                            {verifyStatusText(cert.verified) === 'Đã xóa/thu hồi' && <Trash2 className="h-3 w-3" />}
+                            <span>{verifyStatusText(cert.verified)}</span>
+                          </div>
                         </div>
                         {cert.subjectName && (
                           <p className="text-sm text-gray-600">Môn: {cert.subjectName}</p>
@@ -2115,7 +2125,9 @@ export function TutorProfileTab() {
                       <div className="flex items-center gap-2">
                         <h4 className="font-medium">{subject.subjectName}</h4>
                         {subject.levelName && (
-                          <Badge variant="secondary">{subject.levelName}</Badge>
+                          <div className="flex items-center gap-1.5 text-gray-600">
+                            <span className="text-xs font-medium">{subject.levelName}</span>
+                          </div>
                         )}
                       </div>
                       <p className="text-[#257180] font-semibold mt-1">
@@ -2218,7 +2230,7 @@ export function TutorProfileTab() {
                           }
                         }
                       }}
-                      className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100"
+                      className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-gray-300 rounded-md hover:bg-red-100"
                     >
                       Xóa tất cả
                     </button>
@@ -2264,26 +2276,26 @@ export function TutorProfileTab() {
                           return (
                             <div key={`${day.key}-${slot.id}`} className="p-1">
                               {!isInRange || isPastDate ? (
-                                <div className="w-full h-8 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                                <div className="w-full h-8 bg-gray-100 rounded border border-gray-300 flex items-center justify-center">
                                   <span className="text-xs text-gray-400">-</span>
-                      </div>
+                                </div>
                               ) : isBooked ? (
-                                <div className="w-full h-8 bg-yellow-100 rounded border border-yellow-300 flex items-center justify-center">
+                                <div className="w-full h-8 bg-yellow-100 rounded border border-gray-300 flex items-center justify-center">
                                   <span className="text-xs text-yellow-700">Đã đặt</span>
                                 </div>
                               ) : isCancelled ? (
-                                <div className="w-full h-8 bg-red-100 rounded border border-red-300 flex items-center justify-center">
+                                <div className="w-full h-8 bg-red-100 rounded border border-gray-300 flex items-center justify-center">
                                   <span className="text-xs text-red-700">Đã hủy</span>
                                 </div>
                               ) : (
                                 <Checkbox 
                                   id={`${day.key}-${slot.id}`} 
-                                  className="w-full h-8 data-[state=checked]:bg-[#257180]"
+                                  className="w-full h-8 border border-gray-300 rounded data-[state=checked]:bg-[#257180] data-[state=checked]:border-[#257180] data-[state=checked]:text-white"
                                   checked={isSelected}
                                   onCheckedChange={() => handleToggleTimeSlot(day.key, slot.id)}
                                   disabled={!isEditing}
                                 />
-                    )}
+                              )}
                   </div>
                 );
               })}
@@ -2352,7 +2364,11 @@ export function TutorProfileTab() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEducationModal(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowEducationModal(false)}
+              className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+            >
               Hủy
             </Button>
             <Button 
@@ -2440,7 +2456,11 @@ export function TutorProfileTab() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCertificateModal(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCertificateModal(false)}
+              className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+            >
               Hủy
             </Button>
             <Button 
@@ -2547,7 +2567,11 @@ export function TutorProfileTab() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSubjectModal(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowSubjectModal(false)}
+              className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+            >
               Hủy
             </Button>
             <Button 
@@ -2660,7 +2684,11 @@ export function TutorProfileTab() {
             </Alert>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTimeSlotModal(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowTimeSlotModal(false)}
+              className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+            >
               Hủy
             </Button>
             <Button 
