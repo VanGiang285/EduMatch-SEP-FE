@@ -220,15 +220,17 @@ export function NotificationsTab() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="bg-[#257180] text-white border-[#257180]">
-            {unreadCount} chưa đọc
-          </Badge>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-[#257180] text-white border border-gray-300">
+            <Bell className="h-3 w-3" />
+            <span>{unreadCount} chưa đọc</span>
+          </div>
           {unreadCount > 0 && (
             <Button
               variant="outline"
               size="sm"
               onClick={handleMarkAllAsRead}
               disabled={loading}
+              className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
             >
               <CheckCheck className="h-4 w-4 mr-2" />
               Đánh dấu tất cả đã đọc
@@ -240,18 +242,15 @@ export function NotificationsTab() {
       {/* Filters */}
       <Tabs value={filter} onValueChange={setFilter} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="all">
-            Tất cả
-            <Badge variant="secondary" className="ml-2 h-5 px-2">
-              {notifications.length}
-            </Badge>
+          <TabsTrigger value="all" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">
+            Tất cả ({notifications.length})
           </TabsTrigger>
-          <TabsTrigger value="unread">
+          <TabsTrigger value="unread" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">
             Chưa đọc
             {unreadCount > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 px-2 bg-[#257180] text-white">
-                {unreadCount}
-              </Badge>
+              <div className="ml-2 flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-[#257180] text-white border border-gray-300">
+                <span>{unreadCount}</span>
+              </div>
             )}
           </TabsTrigger>
         </TabsList>
@@ -283,7 +282,7 @@ export function NotificationsTab() {
                   <Card 
                     key={notification.id} 
                     className={`transition-all hover:shadow-md relative bg-white border border-gray-300 ${
-                      !notification.isRead ? 'border-l-4 border-l-gray-300 bg-blue-50/30' : ''
+                      !notification.isRead ? 'border-l-4 border-l-[#257180] bg-blue-50/30' : ''
                     }`}
                     onMouseEnter={() => handleMouseEnter(notification)}
                     onMouseDown={(e) => handleMouseDown(e, notification.id)}
@@ -331,9 +330,9 @@ export function NotificationsTab() {
                                 {notification.message}
                               </p>
                               <div className="flex items-center gap-3">
-                                <Badge variant="outline" className="text-xs">
-                                  {getNotificationTypeName(type)}
-                                </Badge>
+                                <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border border-gray-300 text-gray-700">
+                                  <span>{getNotificationTypeName(type)}</span>
+                                </div>
                                 <span className="text-xs text-gray-500">
                                   {formatTimeAgo(notification.createdAt)}
                                 </span>

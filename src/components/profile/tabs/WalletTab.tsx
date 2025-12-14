@@ -416,9 +416,9 @@ export function WalletTab() {
       {/* Transaction History */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-          <TabsTrigger value="history">Lịch sử giao dịch</TabsTrigger>
-          <TabsTrigger value="bank-accounts">Tài khoản ngân hàng</TabsTrigger>
+          <TabsTrigger value="overview" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Tổng quan</TabsTrigger>
+          <TabsTrigger value="history" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Lịch sử giao dịch</TabsTrigger>
+          <TabsTrigger value="bank-accounts" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Tài khoản ngân hàng</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
