@@ -441,11 +441,11 @@ export function TutorApplicationsTab() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50 border-b border-gray-200">
-                  <TableHead className="w-[50px] text-left px-2">ID</TableHead>
-                  <TableHead className="min-w-[180px] max-w-[250px] px-3 text-left">Yêu cầu</TableHead>
-                  <TableHead className="w-[90px] px-2 text-left">Hình thức</TableHead>
-                  <TableHead className="w-[120px] px-2 text-left">
+                <TableRow className="bg-gray-50 text-gray-700">
+                  <TableHead className="py-2 px-3 text-left font-semibold">ID</TableHead>
+                  <TableHead className="py-2 px-3 text-left font-semibold">Yêu cầu</TableHead>
+                  <TableHead className="py-2 px-3 text-left font-semibold">Hình thức</TableHead>
+                  <TableHead className="py-2 px-3 text-left font-semibold">
                     <button
                       type="button"
                       onClick={() => {
@@ -463,8 +463,8 @@ export function TutorApplicationsTab() {
                       />
                     </button>
                   </TableHead>
-                  <TableHead className="w-[100px] px-2 text-left">Trạng thái</TableHead>
-                  <TableHead className="w-[110px] px-2 text-left">
+                  <TableHead className="py-2 px-3 text-left font-semibold">Trạng thái</TableHead>
+                  <TableHead className="py-2 px-3 text-left font-semibold">
                     <button
                       type="button"
                       onClick={() => {
@@ -479,7 +479,7 @@ export function TutorApplicationsTab() {
                       />
                     </button>
                   </TableHead>
-                  <TableHead className="w-[90px] text-left px-2">Thao tác</TableHead>
+                  <TableHead className="py-2 px-3 text-left font-semibold">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
