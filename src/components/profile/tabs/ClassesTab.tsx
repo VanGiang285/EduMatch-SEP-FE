@@ -513,7 +513,7 @@ export function ClassesTab() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={handleBackToList}>
+          <Button variant="outline" onClick={handleBackToList} className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Quay lại
           </Button>
@@ -592,7 +592,7 @@ export function ClassesTab() {
               <Loader2 className="h-8 w-8 animate-spin text-[#257180]" />
             </div>
           ) : filteredSchedules.length === 0 ? (
-            <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+            <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Calendar className="h-16 w-16 text-gray-300 mb-4" />
                 <p className="text-gray-600">Chưa có buổi học nào</p>
@@ -653,7 +653,7 @@ export function ClassesTab() {
                   const isPending = parsedScheduleStatus === ScheduleStatus.Pending;
 
                   return (
-                    <Card key={schedule.id} className="hover:shadow-md transition-shadow border border-[#257180]/20 border-l-4 border-l-[#257180] bg-white">
+                    <Card key={schedule.id} className="hover:shadow-md transition-shadow border border-gray-300 border-l-4 border-l-gray-300 bg-white">
                       <CardContent className="p-6">
                         <div className="flex flex-col md:flex-row gap-6">
                           {scheduleDate && (
@@ -827,7 +827,7 @@ export function ClassesTab() {
         </div>
 
         {canShowFeedback && (
-          <Card className="bg-white border border-[#257180]/20">
+          <Card className="bg-white border border-gray-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Đánh giá gia sư</h3>
@@ -983,7 +983,7 @@ export function ClassesTab() {
 
         <TabsContent value={filter} className="mt-6 space-y-4">
           {filteredBookings.length === 0 ? (
-            <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+            <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <BookOpen className="h-16 w-16 text-gray-300 mb-4" />
                 <p className="text-gray-600">Không có lớp học nào</p>
@@ -1004,7 +1004,7 @@ export function ClassesTab() {
               return (
                 <Card
                   key={booking.id}
-                  className="hover:shadow-md transition-shadow cursor-pointer bg-white border border-[#257180]/20"
+                  className="hover:shadow-md transition-shadow cursor-pointer bg-white border border-gray-300"
                   onClick={() => handleViewDetail(booking.id)}
                 >
                   <CardContent className="p-6">

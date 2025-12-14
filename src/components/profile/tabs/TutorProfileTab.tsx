@@ -49,7 +49,7 @@ import { UserProfileService } from '@/services/userProfileService';
 import { LocationService, ProvinceDto, SubDistrictDto } from '@/services/locationService';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { TutorProfileDto, TutorEducationDto, TutorCertificateDto, TutorSubjectDto, TutorAvailabilityDto } from '@/types/backend';
-import { TutorProfileUpdateRequest, TutorEducationCreateRequest, TutorCertificateCreateRequest, TutorSubjectCreateRequest, TutorEducationUpdateRequest, TutorCertificateUpdateRequest, TutorSubjectUpdateRequest } from '@/types/requests';
+import { TutorProfileUpdateRequest, TutorEducationCreateRequest, TutorCertificateCreateRequest, TutorSubjectCreateRequest, TutorEducationUpdateRequest, TutorCertificateUpdateRequest, TutorSubjectUpdateRequest, TutorAvailabilityCreateRequest } from '@/types/requests';
 import { TeachingMode, VerifyStatus, EnumHelpers, TutorAvailabilityStatus, DayOfWeekEnum, MediaType } from '@/types/enums';
 
 // Types dựa trên database schema
@@ -265,6 +265,22 @@ export function TutorProfileTab() {
 
   const [showTimeSlotModal, setShowTimeSlotModal] = useState(false);
   
+  // Pending changes (certificates, educations, subjects to be created/deleted when saving)
+  const [pendingCertificates, setPendingCertificates] = useState<{
+    toCreate: Array<{ certificateTypeId: number; issueDate?: string; expiryDate?: string; certificateUrl: string; certificateFile: File }>;
+    toDelete: number[];
+  }>({ toCreate: [], toDelete: [] });
+  
+  const [pendingEducations, setPendingEducations] = useState<{
+    toCreate: Array<{ institutionId: number; issueDate?: string; certificateEducationUrl: string; certificateFile: File }>;
+    toDelete: number[];
+  }>({ toCreate: [], toDelete: [] });
+  
+  const [pendingSubjects, setPendingSubjects] = useState<{
+    toCreate: Array<{ subjectId: number; levelId: number; hourlyRate: number }>;
+    toDelete: number[];
+  }>({ toCreate: [], toDelete: [] });
+  
   // Calendar view state for availability
   const [availabilityCalendar, setAvailabilityCalendar] = useState({
     currentWeek: 0,
@@ -278,7 +294,8 @@ export function TutorProfileTab() {
       date.setDate(date.getDate() + 31);
       return date.toISOString().split('T')[0];
     })(),
-    schedule: {} as Record<string, Record<string, number[]>>, // {date: {dayOfWeek: [slotIds]}}
+    schedule: {} as Record<string, Record<string, number[]>>,
+    originalSchedule: {} as Record<string, Record<string, number[]>>,
   });
 
   // Load master data
@@ -536,7 +553,8 @@ export function TutorProfileTab() {
               }
             }
           });
-          setAvailabilityCalendar(prev => ({ ...prev, schedule }));
+          const originalSchedule = JSON.parse(JSON.stringify(schedule));
+          setAvailabilityCalendar(prev => ({ ...prev, schedule, originalSchedule }));
         } else {
           // Không có tutor profile - có thể chưa đăng ký làm gia sư
           showError('Thông báo', 'Bạn chưa có hồ sơ gia sư. Vui lòng đăng ký làm gia sư trước.');
@@ -612,12 +630,182 @@ export function TutorProfileTab() {
 
       const response = await TutorService.updateTutorProfile(updateRequest);
       if (response.success) {
-    setIsEditing(false);
-    setSaveSuccess(true);
-        showSuccess('Thành công', 'Cập nhật hồ sơ gia sư thành công.');
-    setTimeout(() => setSaveSuccess(false), 3000);
+        const originalSchedule = availabilityCalendar.originalSchedule;
+        const currentSchedule = availabilityCalendar.schedule;
         
-        // Reload data
+        const availabilitiesToDelete: number[] = [];
+        const availabilitiesToCreate: TutorAvailabilityCreateRequest[] = [];
+        
+        const existingAvailabilityMap = new Map<string, TutorAvailabilityDto>();
+        profileData.availabilities.forEach(av => {
+          if (av.slot?.id && av.startDate) {
+            const dateKey = av.startDate.split('T')[0];
+            const key = `${dateKey}-${av.slot.id}`;
+            existingAvailabilityMap.set(key, av);
+          }
+        });
+        
+        const allDateKeys = new Set([
+          ...Object.keys(originalSchedule),
+          ...Object.keys(currentSchedule)
+        ]);
+        
+        allDateKeys.forEach(dateKey => {
+          const originalDays = originalSchedule[dateKey] || {};
+          const currentDays = currentSchedule[dateKey] || {};
+          const allDays = new Set([
+            ...Object.keys(originalDays),
+            ...Object.keys(currentDays)
+          ]);
+          
+          allDays.forEach(dayKey => {
+            const originalSlots = originalDays[dayKey] || [];
+            const currentSlots = currentDays[dayKey] || [];
+            
+            const slotsToDelete = originalSlots.filter(id => !currentSlots.includes(id));
+            const slotsToAdd = currentSlots.filter(id => !originalSlots.includes(id));
+            
+            slotsToDelete.forEach(slotId => {
+              const key = `${dateKey}-${slotId}`;
+              const availability = existingAvailabilityMap.get(key);
+              if (availability && (availability.status === TutorAvailabilityStatus.Available || availability.status === TutorAvailabilityStatus.Booked)) {
+                availabilitiesToDelete.push(availability.id);
+              }
+            });
+            
+            slotsToAdd.forEach(slotId => {
+              const slot = masterData.timeSlots.find(s => s.id === slotId);
+              if (slot) {
+                const key = `${dateKey}-${slotId}`;
+                const existingAvailability = existingAvailabilityMap.get(key);
+                if (!existingAvailability) {
+                  const timeParts = slot.startTime.split(':');
+                  let startTimeFormatted: string;
+                  if (timeParts.length >= 3) {
+                    startTimeFormatted = `${timeParts[0]}:${timeParts[1]}:${timeParts[2]}`;
+                  } else if (timeParts.length === 2) {
+                    startTimeFormatted = `${timeParts[0]}:${timeParts[1]}:00`;
+                  } else {
+                    startTimeFormatted = slot.startTime + ':00';
+                  }
+                  const startDateTime = `${dateKey}T${startTimeFormatted}`;
+                  availabilitiesToCreate.push({
+                    tutorId: tutorId,
+                    slotId: slotId,
+                    startDate: startDateTime,
+                  });
+                }
+              }
+            });
+          });
+        });
+        
+        if (availabilitiesToDelete.length > 0) {
+          await AvailabilityService.deleteAvailabilities(availabilitiesToDelete);
+        }
+        
+        if (availabilitiesToCreate.length > 0) {
+          await AvailabilityService.createAvailabilities(availabilitiesToCreate);
+        }
+        
+        if (pendingCertificates.toDelete.length > 0) {
+          await Promise.all(
+            pendingCertificates.toDelete.map(id => 
+              CertificateService.deleteTutorCertificate(tutorId, id)
+            )
+          );
+        }
+        
+        if (pendingCertificates.toCreate.length > 0 && user?.email) {
+          for (const cert of pendingCertificates.toCreate) {
+            try {
+              const uploadResponse = await MediaService.uploadFile({
+                file: cert.certificateFile,
+                ownerEmail: user.email,
+                mediaType: 'Image' as MediaType,
+              });
+              
+              if (uploadResponse.success && uploadResponse.data) {
+                const uploadData = uploadResponse.data as any;
+                const certificateUrl = uploadData?.data?.secureUrl || uploadData?.data?.originalUrl || uploadData?.secureUrl || uploadData?.originalUrl;
+                
+                if (certificateUrl) {
+                  const request: Omit<TutorCertificateCreateRequest, 'tutorId'> = {
+                    certificateTypeId: cert.certificateTypeId,
+                    issueDate: cert.issueDate || undefined,
+                    expiryDate: cert.expiryDate || undefined,
+                    certificateUrl: certificateUrl,
+                  };
+                  await CertificateService.createTutorCertificate(tutorId, request);
+                }
+              }
+            } catch (error) {
+              console.error('Error creating certificate:', error);
+            }
+          }
+        }
+        
+        if (pendingEducations.toDelete.length > 0) {
+          await Promise.all(
+            pendingEducations.toDelete.map(id => 
+              CertificateService.deleteTutorEducation(tutorId, id)
+            )
+          );
+        }
+        
+        if (pendingEducations.toCreate.length > 0 && user?.email) {
+          for (const edu of pendingEducations.toCreate) {
+            try {
+              const uploadResponse = await MediaService.uploadFile({
+                file: edu.certificateFile,
+                ownerEmail: user.email,
+                mediaType: 'Image' as MediaType,
+              });
+              
+              if (uploadResponse.success && uploadResponse.data) {
+                const uploadData = uploadResponse.data as any;
+                const certificateUrl = uploadData?.data?.secureUrl || uploadData?.data?.originalUrl || uploadData?.secureUrl || uploadData?.originalUrl;
+                
+                if (certificateUrl) {
+                  const request: Omit<TutorEducationCreateRequest, 'tutorId'> = {
+                    institutionId: edu.institutionId,
+                    issueDate: edu.issueDate || undefined,
+                    certificateEducationUrl: certificateUrl,
+                  };
+                  await CertificateService.createTutorEducation(tutorId, request);
+                }
+              }
+            } catch (error) {
+              console.error('Error creating education:', error);
+            }
+          }
+        }
+        
+        if (pendingSubjects.toDelete.length > 0) {
+          await Promise.all(
+            pendingSubjects.toDelete.map(id => 
+              SubjectService.deleteTutorSubject(tutorId, id)
+            )
+          );
+        }
+        
+        if (pendingSubjects.toCreate.length > 0) {
+          await Promise.all(
+            pendingSubjects.toCreate.map(request => 
+              SubjectService.createTutorSubject(tutorId, request)
+            )
+          );
+        }
+        
+        setPendingCertificates({ toCreate: [], toDelete: [] });
+        setPendingEducations({ toCreate: [], toDelete: [] });
+        setPendingSubjects({ toCreate: [], toDelete: [] });
+        
+        setIsEditing(false);
+        setSaveSuccess(true);
+        showSuccess('Thành công', 'Cập nhật hồ sơ gia sư thành công.');
+        setTimeout(() => setSaveSuccess(false), 3000);
+        
         await reloadTutorProfile();
       } else {
         showError('Lỗi', response.message || 'Không thể cập nhật hồ sơ gia sư.');
@@ -725,9 +913,29 @@ export function TutorProfileTab() {
       return;
     }
 
+    if (isEditing) {
+      setPendingEducations(prev => ({
+        ...prev,
+        toCreate: [...prev.toCreate, {
+          institutionId: newEducation.institutionId,
+          issueDate: newEducation.issueDate || undefined,
+          certificateEducationUrl: '',
+          certificateFile: newEducation.certificateFile!,
+        }]
+      }));
+      showSuccess('Thành công', 'Học vấn đã được thêm vào danh sách. Nhấn "Lưu thay đổi" để lưu.');
+      setShowEducationModal(false);
+      setNewEducation({
+        institutionId: 0,
+        issueDate: '',
+        certificateUrl: '',
+        certificateFile: null,
+      });
+      return;
+    }
+
     setIsUploadingEducation(true);
     try {
-      // Upload file to Cloudinary first
       const uploadResponse = await MediaService.uploadFile({
         file: newEducation.certificateFile,
         ownerEmail: user.email,
@@ -740,14 +948,8 @@ export function TutorProfileTab() {
         return;
       }
 
-      // Get URL from upload response
-      // ApiResponse unwraps data.data to data, so uploadResponse.data is the UploadToCloudResponse
-      // But the actual response structure has data: { ok, secureUrl, ... }
       const uploadData = uploadResponse.data as any;
       const certificateUrl = uploadData?.data?.secureUrl || uploadData?.data?.originalUrl || uploadData?.secureUrl || uploadData?.originalUrl;
-      
-      console.log('Upload response data:', uploadResponse.data);
-      console.log('Extracted certificateUrl:', certificateUrl);
       
       if (!certificateUrl) {
         console.error('Cannot extract URL from upload response:', uploadResponse);
@@ -756,7 +958,6 @@ export function TutorProfileTab() {
         return;
       }
 
-      // Create education with uploaded URL
       const request: Omit<TutorEducationCreateRequest, 'tutorId'> = {
         institutionId: newEducation.institutionId,
         issueDate: newEducation.issueDate || undefined,
@@ -766,15 +967,13 @@ export function TutorProfileTab() {
       const response = await CertificateService.createTutorEducation(tutorId, request);
       if (response.success && response.data) {
         showSuccess('Thành công', 'Thêm học vấn thành công.');
-    setShowEducationModal(false);
-    setNewEducation({
+        setShowEducationModal(false);
+        setNewEducation({
           institutionId: 0,
-      issueDate: '',
+          issueDate: '',
           certificateUrl: '',
-      certificateFile: null,
-    });
-        
-        // Reload tutor profile
+          certificateFile: null,
+        });
         await reloadTutorProfile();
       } else {
         showError('Lỗi', response.message || 'Không thể thêm học vấn.');
@@ -797,12 +996,23 @@ export function TutorProfileTab() {
       return;
     }
 
+    if (isEditing) {
+      setPendingEducations(prev => ({
+        ...prev,
+        toDelete: [...prev.toDelete, id]
+      }));
+      setProfileData(prev => ({
+        ...prev,
+        educations: prev.educations.filter(e => e.id !== id)
+      }));
+      showSuccess('Thành công', 'Học vấn đã được đánh dấu xóa. Nhấn "Lưu thay đổi" để xác nhận.');
+      return;
+    }
+
     try {
       const response = await CertificateService.deleteTutorEducation(tutorId, id);
       if (response.success) {
         showSuccess('Thành công', 'Xóa học vấn thành công.');
-        
-        // Reload tutor profile
         await reloadTutorProfile();
       } else {
         showError('Lỗi', response.message || 'Không thể xóa học vấn.');
@@ -835,9 +1045,32 @@ export function TutorProfileTab() {
       return;
     }
 
+    if (isEditing) {
+      setPendingCertificates(prev => ({
+        ...prev,
+        toCreate: [...prev.toCreate, {
+          certificateTypeId: newCertificate.certificateTypeId,
+          issueDate: newCertificate.issueDate || undefined,
+          expiryDate: newCertificate.expiryDate || undefined,
+          certificateUrl: '',
+          certificateFile: newCertificate.certificateFile!,
+        }]
+      }));
+      showSuccess('Thành công', 'Chứng chỉ đã được thêm vào danh sách. Nhấn "Lưu thay đổi" để lưu.');
+      setShowCertificateModal(false);
+      setNewCertificate({
+        certificateTypeId: 0,
+        certificateName: '',
+        issueDate: '',
+        expiryDate: '',
+        certificateUrl: '',
+        certificateFile: null,
+      });
+      return;
+    }
+
     setIsUploadingCertificate(true);
     try {
-      // Upload file to Cloudinary first
       const uploadResponse = await MediaService.uploadFile({
         file: newCertificate.certificateFile,
         ownerEmail: user.email,
@@ -850,14 +1083,8 @@ export function TutorProfileTab() {
         return;
       }
 
-      // Get URL from upload response
-      // ApiResponse unwraps data.data to data, so uploadResponse.data is the UploadToCloudResponse
-      // But the actual response structure has data: { ok, secureUrl, ... }
       const uploadData = uploadResponse.data as any;
       const certificateUrl = uploadData?.data?.secureUrl || uploadData?.data?.originalUrl || uploadData?.secureUrl || uploadData?.originalUrl;
-      
-      console.log('Upload response data:', uploadResponse.data);
-      console.log('Extracted certificateUrl:', certificateUrl);
       
       if (!certificateUrl) {
         console.error('Cannot extract URL from upload response:', uploadResponse);
@@ -866,28 +1093,25 @@ export function TutorProfileTab() {
         return;
       }
 
-      // Create certificate with uploaded URL
       const request: Omit<TutorCertificateCreateRequest, 'tutorId'> = {
         certificateTypeId: newCertificate.certificateTypeId,
         issueDate: newCertificate.issueDate || undefined,
-      expiryDate: newCertificate.expiryDate || undefined,
+        expiryDate: newCertificate.expiryDate || undefined,
         certificateUrl: certificateUrl,
       };
 
       const response = await CertificateService.createTutorCertificate(tutorId, request);
       if (response.success && response.data) {
         showSuccess('Thành công', 'Thêm chứng chỉ thành công.');
-    setShowCertificateModal(false);
-    setNewCertificate({
+        setShowCertificateModal(false);
+        setNewCertificate({
           certificateTypeId: 0,
-      certificateName: '',
-      issueDate: '',
-      expiryDate: '',
+          certificateName: '',
+          issueDate: '',
+          expiryDate: '',
           certificateUrl: '',
-      certificateFile: null,
-    });
-        
-        // Reload tutor profile
+          certificateFile: null,
+        });
         await reloadTutorProfile();
       } else {
         showError('Lỗi', response.message || 'Không thể thêm chứng chỉ.');
@@ -910,12 +1134,23 @@ export function TutorProfileTab() {
       return;
     }
 
+    if (isEditing) {
+      setPendingCertificates(prev => ({
+        ...prev,
+        toDelete: [...prev.toDelete, id]
+      }));
+      setProfileData(prev => ({
+        ...prev,
+        certificates: prev.certificates.filter(c => c.id !== id)
+      }));
+      showSuccess('Thành công', 'Chứng chỉ đã được đánh dấu xóa. Nhấn "Lưu thay đổi" để xác nhận.');
+      return;
+    }
+
     try {
       const response = await CertificateService.deleteTutorCertificate(tutorId, id);
       if (response.success) {
         showSuccess('Thành công', 'Xóa chứng chỉ thành công.');
-        
-        // Reload tutor profile
         await reloadTutorProfile();
       } else {
         showError('Lỗi', response.message || 'Không thể xóa chứng chỉ.');
@@ -950,6 +1185,22 @@ export function TutorProfileTab() {
         hourlyRate: hourlyRate,
       }));
 
+      if (isEditing) {
+        setPendingSubjects(prev => ({
+          ...prev,
+          toCreate: [...prev.toCreate, ...requests]
+        }));
+        showSuccess('Thành công', `Đã thêm ${requests.length} môn học vào danh sách. Nhấn "Lưu thay đổi" để lưu.`);
+        setShowSubjectModal(false);
+        setNewSubject({
+          subjectId: 0,
+          subjectName: '',
+          selectedLevels: [],
+          hourlyRate: '',
+        });
+        return;
+      }
+
       const results = await Promise.all(
         requests.map(request => SubjectService.createTutorSubject(tutorId, request))
       );
@@ -968,7 +1219,6 @@ export function TutorProfileTab() {
         selectedLevels: [],
         hourlyRate: '',
       });
-        
       await reloadTutorProfile();
     } catch (error: any) {
       console.error('Error adding subject:', error);
@@ -986,12 +1236,23 @@ export function TutorProfileTab() {
       return;
     }
 
+    if (isEditing) {
+      setPendingSubjects(prev => ({
+        ...prev,
+        toDelete: [...prev.toDelete, id]
+      }));
+      setProfileData(prev => ({
+        ...prev,
+        subjects: prev.subjects.filter(s => s.id !== id)
+      }));
+      showSuccess('Thành công', 'Môn học đã được đánh dấu xóa. Nhấn "Lưu thay đổi" để xác nhận.');
+      return;
+    }
+
     try {
       const response = await SubjectService.deleteTutorSubject(tutorId, id);
       if (response.success) {
         showSuccess('Thành công', 'Xóa môn học thành công.');
-        
-        // Reload tutor profile
         await reloadTutorProfile();
       } else {
         showError('Lỗi', response.message || 'Không thể xóa môn học.');
@@ -1105,79 +1366,38 @@ export function TutorProfileTab() {
     return date.toISOString().split('T')[0];
   };
 
-  const handleToggleTimeSlot = async (dayKey: string, slotId: number) => {
-    if (!tutorId || !isEditing) return;
+  const handleToggleTimeSlot = (dayKey: string, slotId: number) => {
+    if (!isEditing) return;
 
     const dateKey = getDateKey(dayKey);
     const currentSlots = availabilityCalendar.schedule[dateKey]?.[dayKey] || [];
     const isSelected = currentSlots.includes(slotId);
 
-    try {
-      if (isSelected) {
-        // Remove availability
-        const availability = profileData.availabilities.find(
-          av => av.slot?.id === slotId && av.startDate?.startsWith(dateKey)
-        );
-        if (availability) {
-          const response = await AvailabilityService.deleteAvailabilities([availability.id]);
-          if (response.success) {
-            // Update schedule state
-            const newSchedule = { ...availabilityCalendar.schedule };
-            if (newSchedule[dateKey]?.[dayKey]) {
-              newSchedule[dateKey][dayKey] = newSchedule[dateKey][dayKey].filter(id => id !== slotId);
-              if (newSchedule[dateKey][dayKey].length === 0) {
-                delete newSchedule[dateKey][dayKey];
-              }
-              if (Object.keys(newSchedule[dateKey]).length === 0) {
-                delete newSchedule[dateKey];
-              }
-            }
-            setAvailabilityCalendar(prev => ({ ...prev, schedule: newSchedule }));
-            await reloadTutorProfile();
-            showSuccess('Thành công', 'Đã xóa khung giờ');
-          } else {
-            showError('Lỗi', response.message || 'Không thể xóa khung giờ');
-          }
+    const newSchedule = { ...availabilityCalendar.schedule };
+    
+    if (isSelected) {
+      if (newSchedule[dateKey]?.[dayKey]) {
+        newSchedule[dateKey][dayKey] = newSchedule[dateKey][dayKey].filter(id => id !== slotId);
+        if (newSchedule[dateKey][dayKey].length === 0) {
+          delete newSchedule[dateKey][dayKey];
         }
-      } else {
-        // Add availability
-        const slot = masterData.timeSlots.find(s => s.id === slotId);
-        if (!slot) {
-          showError('Lỗi', 'Không tìm thấy khung giờ');
-          return;
-        }
-
-        const startDateTime = `${dateKey}T${slot.startTime}:00`;
-        const request: TutorAvailabilityCreateRequest = {
-          tutorId: tutorId,
-          slotId: slotId,
-          startDate: startDateTime,
-        };
-
-        const response = await AvailabilityService.createAvailabilities([request]);
-        if (response.success && response.data) {
-          // Update schedule state
-          const newSchedule = { ...availabilityCalendar.schedule };
-          if (!newSchedule[dateKey]) {
-            newSchedule[dateKey] = {};
-          }
-          if (!newSchedule[dateKey][dayKey]) {
-            newSchedule[dateKey][dayKey] = [];
-          }
-          if (!newSchedule[dateKey][dayKey].includes(slotId)) {
-            newSchedule[dateKey][dayKey].push(slotId);
-          }
-          setAvailabilityCalendar(prev => ({ ...prev, schedule: newSchedule }));
-          await reloadTutorProfile();
-          showSuccess('Thành công', 'Đã thêm khung giờ');
-        } else {
-          showError('Lỗi', response.message || 'Không thể thêm khung giờ');
+        if (Object.keys(newSchedule[dateKey]).length === 0) {
+          delete newSchedule[dateKey];
         }
       }
-    } catch (error: any) {
-      console.error('Error toggling time slot:', error);
-      showError('Lỗi', 'Không thể cập nhật khung giờ. Vui lòng thử lại.');
+    } else {
+      if (!newSchedule[dateKey]) {
+        newSchedule[dateKey] = {};
+      }
+      if (!newSchedule[dateKey][dayKey]) {
+        newSchedule[dateKey][dayKey] = [];
+      }
+      if (!newSchedule[dateKey][dayKey].includes(slotId)) {
+        newSchedule[dateKey][dayKey].push(slotId);
+      }
     }
+    
+    setAvailabilityCalendar(prev => ({ ...prev, schedule: newSchedule }));
   };
 
   const handleDeleteTimeSlot = async (availabilityId: number) => {
@@ -1241,28 +1461,20 @@ export function TutorProfileTab() {
         </div>
         <div>
           {!isEditing ? (
-            <div className="flex gap-3">
-              <Button 
-                variant="outline" 
-                size="lg" 
-                className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-                onClick={(e) => handleOpenChat(e)}
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Nhắn tin
-              </Button>
-              <Button onClick={() => setIsEditing(true)} size="lg" className="bg-[#257180] hover:bg-[#257180]/90 text-white">
-                <Edit3 className="w-4 h-4 mr-2" />
-                Chỉnh sửa
-              </Button>
-            </div>
+            <Button onClick={() => setIsEditing(true)} size="lg" className="bg-[#257180] hover:bg-[#257180]/90 text-white">
+              <Edit3 className="w-4 h-4 mr-2" />
+              Chỉnh sửa
+            </Button>
           ) : (
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
+                className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                 onClick={() => {
+                  setPendingCertificates({ toCreate: [], toDelete: [] });
+                  setPendingEducations({ toCreate: [], toDelete: [] });
+                  setPendingSubjects({ toCreate: [], toDelete: [] });
                   setIsEditing(false);
-                  // Reset to original data
                   if (tutorProfile) {
                     setProfileData(prev => ({
                       ...prev,
@@ -1275,6 +1487,10 @@ export function TutorProfileTab() {
                       },
                     }));
                   }
+                  setAvailabilityCalendar(prev => ({
+                    ...prev,
+                    schedule: JSON.parse(JSON.stringify(prev.originalSchedule))
+                  }));
                 }}
                 disabled={isSaving}
               >
@@ -1324,7 +1540,7 @@ export function TutorProfileTab() {
         </TabsList>
 
         <TabsContent value="basic" className="space-y-6">
-          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-900">
                 <User className="h-5 w-5" />
@@ -1633,7 +1849,7 @@ export function TutorProfileTab() {
         </TabsContent>
 
         <TabsContent value="description" className="space-y-6">
-          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-900">
                 <FileText className="h-5 w-5" />
@@ -1669,7 +1885,7 @@ export function TutorProfileTab() {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-900">
                 <Video className="h-5 w-5" />
@@ -1734,7 +1950,7 @@ export function TutorProfileTab() {
         </TabsContent>
 
         <TabsContent value="education" className="space-y-6">
-          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -1801,7 +2017,7 @@ export function TutorProfileTab() {
         </TabsContent>
 
         <TabsContent value="certificates" className="space-y-6">
-          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -1871,7 +2087,7 @@ export function TutorProfileTab() {
         </TabsContent>
 
         <TabsContent value="subjects" className="space-y-6">
-          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -1925,7 +2141,7 @@ export function TutorProfileTab() {
         </TabsContent>
 
         <TabsContent value="availability" className="space-y-6">
-          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-900">
                 <Calendar className="h-5 w-5" />
@@ -1933,51 +2149,44 @@ export function TutorProfileTab() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <Alert className="bg-blue-50 border-blue-200">
-                <Info className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-800 text-sm">
-                  Quản lý lịch rảnh của bạn. Học viên sẽ dựa vào lịch này để đặt buổi học. {isEditing && 'Chọn các khung giờ bạn có thể dạy.'}
-                </AlertDescription>
-              </Alert>
-
-                      {isEditing && (
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                        <Button 
-                          variant="outline"
-                      size="sm"
-                      onClick={() => setAvailabilityCalendar(prev => ({ ...prev, currentWeek: prev.currentWeek - 1 }))}
-                      className="border-gray-300 hover:bg-[#257180] hover:text-white"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                      Tuần trước
-                        </Button>
-                    <div className="text-sm font-medium text-[#257180]">
-                      {availabilityCalendar.currentWeek === 0 ? 'Tuần này' : 
-                       availabilityCalendar.currentWeek === 1 ? 'Tuần sau' :
-                       availabilityCalendar.currentWeek === -1 ? 'Tuần trước' :
-                       `Tuần ${availabilityCalendar.currentWeek > 0 ? '+' : ''}${availabilityCalendar.currentWeek}`}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAvailabilityCalendar(prev => ({ ...prev, currentWeek: prev.currentWeek + 1 }))}
-                      className="border-gray-300 hover:bg-[#257180] hover:text-white"
-                    >
-                      Tuần sau
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                              </div>
-                                <Button 
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <Button 
                     variant="outline"
-                                  size="sm"
-                    onClick={() => setAvailabilityCalendar(prev => ({ ...prev, currentWeek: 0 }))}
-                    className="border-gray-300/30 hover:bg-[#257180]/10 text-[#257180]"
-                                >
-                    Hôm nay
-                                </Button>
+                    size="sm"
+                    onClick={() => setAvailabilityCalendar(prev => ({ ...prev, currentWeek: prev.currentWeek - 1 }))}
+                    className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Tuần trước
+                  </Button>
+                  <div className="text-sm font-medium text-[#257180]">
+                    {availabilityCalendar.currentWeek === 0 ? 'Tuần này' : 
+                     availabilityCalendar.currentWeek === 1 ? 'Tuần sau' :
+                     availabilityCalendar.currentWeek === -1 ? 'Tuần trước' :
+                     `Tuần ${availabilityCalendar.currentWeek > 0 ? '+' : ''}${availabilityCalendar.currentWeek}`}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAvailabilityCalendar(prev => ({ ...prev, currentWeek: prev.currentWeek + 1 }))}
+                    className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                  >
+                    Tuần sau
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
                 </div>
-              )}
+                {isEditing && (
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAvailabilityCalendar(prev => ({ ...prev, currentWeek: 0 }))}
+                    className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                  >
+                    Hôm nay
+                  </Button>
+                )}
+              </div>
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">

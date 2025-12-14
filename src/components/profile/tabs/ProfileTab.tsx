@@ -373,7 +373,7 @@ export function ProfileTab() {
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+            <Button variant="outline" onClick={handleCancel} disabled={isSaving} className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
               Hủy
             </Button>
             <Button
@@ -398,7 +398,7 @@ export function ProfileTab() {
         )}
       </div>
 
-      <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+      <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
         <CardHeader>
           <CardTitle className="text-gray-900">Ảnh đại diện</CardTitle>
         </CardHeader>
@@ -476,7 +476,7 @@ export function ProfileTab() {
         </CardContent>
       </Card>
 
-      <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+      <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
         <CardHeader>
           <CardTitle className="text-gray-900">Thông tin cơ bản</CardTitle>
         </CardHeader>
@@ -547,7 +547,7 @@ export function ProfileTab() {
         </CardContent>
       </Card>
 
-      <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+      <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
         <CardHeader>
           <CardTitle className="text-gray-900">Địa chỉ</CardTitle>
         </CardHeader>

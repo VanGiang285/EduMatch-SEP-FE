@@ -94,7 +94,7 @@ export function SettingsTab() {
       </div>
 
       {/* Change Password */}
-      <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+      <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-900">
             <Lock className="h-5 w-5" />

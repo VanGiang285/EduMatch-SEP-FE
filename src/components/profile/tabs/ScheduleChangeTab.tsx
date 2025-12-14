@@ -392,7 +392,7 @@ export function ScheduleChangeTab() {
             </div>
 
             {/* Danh sách yêu cầu theo lựa chọn */}
-            <Card className="border border-[#257180]/20 bg-white">
+            <Card className="border border-gray-300 bg-white">
                 <CardContent className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
                         <div className="font-semibold text-gray-900">

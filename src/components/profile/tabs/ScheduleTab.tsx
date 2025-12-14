@@ -342,7 +342,7 @@ export function ScheduleTab() {
 
       {/* Danh sách lịch sắp học */}
       {filteredSchedules.length === 0 ? (
-        <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+        <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Calendar className="h-16 w-16 text-gray-300 mb-4" />
             <p className="text-gray-600">Chưa có lịch học nào sắp diễn ra</p>
@@ -375,7 +375,7 @@ export function ScheduleTab() {
             return (
               <Card
                 key={schedule.id}
-                className="hover:shadow-md transition-shadow border border-[#257180]/20 border-l-4 border-l-[#257180] bg-white"
+                className="hover:shadow-md transition-shadow border border-gray-300 border-l-4 border-l-gray-300 bg-white"
               >
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row gap-6">
@@ -543,7 +543,7 @@ export function ScheduleTab() {
                       {subject?.subjectName || 'Môn học'}
                     </span>
                     {level && (
-                      <Badge variant="outline" className="text-xs border-[#257180] text-[#257180]">
+                      <Badge variant="outline" className="text-xs border-gray-300 text-[#257180]">
                         {level.name}
                       </Badge>
                     )}
@@ -605,7 +605,7 @@ export function ScheduleTab() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={goToPreviousWeek} className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={goToPreviousWeek} className="flex items-center gap-2 border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
                         <ChevronLeft className="w-4 h-4" />
                         Tuần trước
                       </Button>
@@ -617,7 +617,7 @@ export function ScheduleTab() {
                       >
                         Về tuần hiện tại
                       </Button>
-                      <Button variant="outline" size="sm" onClick={goToNextWeek} className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={goToNextWeek} className="flex items-center gap-2 border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
                         Tuần sau
                         <ChevronRight className="w-4 h-4" />
                       </Button>

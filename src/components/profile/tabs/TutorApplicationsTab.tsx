@@ -148,13 +148,13 @@ const getModeLabel = (mode: string | number | null | undefined) => {
 const renderSlots = (slots?: ClassRequestDetailDto['slots']) => {
   if (!slots || slots.length === 0) return null;
   return (
-    <Card className="border border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
+    <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
       <CardHeader>
         <CardTitle className="text-base text-gray-900">Lịch học dự kiến</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {slots.map((slot) => (
-          <div key={slot.id} className="p-3 border border-[#257180]/20 rounded-lg flex items-center justify-between">
+          <div key={slot.id} className="p-3 border border-gray-300 rounded-lg flex items-center justify-between">
             <span className="font-medium text-gray-900">
               {EnumHelpers.getDayOfWeekLabel(slot.dayOfWeek as DayOfWeekEnum)}
             </span>
@@ -380,7 +380,7 @@ export function TutorApplicationsTab() {
         </Button>
       </div>
 
-      <Card className="border border-[#257180]/20 bg-white hover:shadow-md transition-shadow">
+      <Card className="border border-gray-300 bg-white hover:shadow-md transition-shadow">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-1">
@@ -419,7 +419,7 @@ export function TutorApplicationsTab() {
         </CardContent>
       </Card>
 
-      <Card className="border border-[#257180]/20 bg-white hover:shadow-md transition-shadow">
+      <Card className="border border-gray-300 bg-white hover:shadow-md transition-shadow">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-gray-900">Danh sách ứng tuyển</CardTitle>
@@ -785,7 +785,7 @@ export function TutorApplicationsTab() {
                 </h4>
 
                 {selectedApplication?.message ? (
-                  <Card className="border border-[#257180]/20 bg-white hover:border-[#257180]/50 hover:shadow-md transition-all">
+                  <Card className="border border-gray-300 bg-white hover:border-[#257180]/50 hover:shadow-md transition-all">
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         <div className="flex items-center gap-2 text-sm text-gray-600">

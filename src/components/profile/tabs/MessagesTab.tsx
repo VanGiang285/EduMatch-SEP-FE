@@ -360,7 +360,7 @@ export function MessagesTab() {
         <h2 className="text-2xl font-semibold text-gray-900">Tin nhắn</h2>
         <p className="text-gray-600 mt-1">Trò chuyện với gia sư</p>
       </div>
-      <Card className="h-[600px] border border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
+      <Card className="h-[600px] border border-gray-300 bg-white transition-shadow hover:shadow-md">
         <CardContent className="p-0 h-full flex">
                 {}
                 <div className="w-80 border-r border-gray-200 flex flex-col">

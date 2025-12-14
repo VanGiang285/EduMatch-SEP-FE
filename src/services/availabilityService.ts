@@ -8,7 +8,7 @@ import { TutorAvailabilityStatus } from '@/types/enums';
 export class AvailabilityService {
   // Tạo nhiều lịch rảnh cùng lúc
   static async createAvailabilities(requests: TutorAvailabilityCreateRequest[]): Promise<ApiResponse<TutorAvailabilityDto[]>> {
-    return apiClient.post<TutorAvailabilityDto[]>(API_ENDPOINTS.AVAILABILITY.CREATE_LIST, requests);
+    return apiClient.post<TutorAvailabilityDto[]>(API_ENDPOINTS.AVAILABILITY.CREATE_LIST, { requests });
   }
 
   // Cập nhật nhiều lịch rảnh cùng lúc

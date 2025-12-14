@@ -458,7 +458,7 @@ export function ClassRequestsTab() {
         </Button>
       </div>
 
-      <Card className="border border-[#257180]/20 bg-white hover:shadow-md transition-shadow">
+      <Card className="border border-gray-300 bg-white hover:shadow-md transition-shadow">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
@@ -497,7 +497,7 @@ export function ClassRequestsTab() {
         </CardContent>
       </Card>
 
-      <Card className="border border-[#257180]/20 bg-white hover:shadow-md transition-shadow">
+      <Card className="border border-gray-300 bg-white hover:shadow-md transition-shadow">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-gray-900">Danh sách yêu cầu</CardTitle>
@@ -861,7 +861,7 @@ export function ClassRequestsTab() {
                         : 'Chưa cập nhật';
                       const ratingValue = tutorProfile ? 5.0 : 5.0;
                       return (
-                        <Card key={applicant.applicationId} className="border border-[#257180]/20 bg-white hover:border-[#257180]/50 hover:shadow-md transition-all">
+                        <Card key={applicant.applicationId} className="border border-gray-300 bg-white hover:border-[#257180]/50 hover:shadow-md transition-all">
                           <CardContent className="p-4">
                             <div className="flex gap-3 mb-3">
                               <div className="relative flex-shrink-0">
