@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/layout/card';
 import { Badge } from '@/components/ui/basic/badge';
 import { Button } from '@/components/ui/basic/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/feedback/dialog';
-import { Calendar, Clock, MapPin, Video, MessageCircle, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, MapPin, Video, MessageCircle, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight, PlayCircle } from 'lucide-react';
 import { ScheduleStatus, ScheduleChangeRequestStatus, TutorAvailabilityStatus } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
@@ -137,19 +137,39 @@ export function ScheduleTab() {
     const parsedStatus = EnumHelpers.parseScheduleStatus(status);
     switch (parsedStatus) {
       case ScheduleStatus.Upcoming:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-100 text-blue-800 border-gray-300';
       case ScheduleStatus.InProgress:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-yellow-100 text-yellow-800 border-gray-300';
       case ScheduleStatus.Completed:
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-green-100 text-green-800 border-gray-300';
       case ScheduleStatus.Cancelled:
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-100 text-red-800 border-gray-300';
       case ScheduleStatus.Pending:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-yellow-100 text-yellow-800 border-gray-300';
       case ScheduleStatus.Processing:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-100 text-blue-800 border-gray-300';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  const getScheduleStatusIcon = (status: ScheduleStatus | string) => {
+    const parsedStatus = EnumHelpers.parseScheduleStatus(status);
+    switch (parsedStatus) {
+      case ScheduleStatus.Upcoming:
+        return <Calendar className="h-4 w-4" />;
+      case ScheduleStatus.InProgress:
+        return <PlayCircle className="h-4 w-4" />;
+      case ScheduleStatus.Completed:
+        return <CheckCircle className="h-4 w-4" />;
+      case ScheduleStatus.Cancelled:
+        return <XCircle className="h-4 w-4" />;
+      case ScheduleStatus.Pending:
+        return <Clock className="h-4 w-4" />;
+      case ScheduleStatus.Processing:
+        return <Loader2 className="h-4 w-4 animate-spin" />;
+      default:
+        return null;
     }
   };
 
@@ -399,31 +419,20 @@ export function ScheduleTab() {
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-3 flex-wrap">
-                            <Badge className={getScheduleStatusColor(schedule.status)}>
-                              {EnumHelpers.getScheduleStatusLabel(schedule.status)}
-                            </Badge>
+                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getScheduleStatusColor(schedule.status)}`}>
+                              {getScheduleStatusIcon(schedule.status)}
+                              <span>{EnumHelpers.getScheduleStatusLabel(schedule.status)}</span>
+                            </div>
                             {isOnline ? (
-                              <Badge className="bg-blue-500 text-white border-blue-600">
-                                <Video className="h-3 w-3 mr-1" />
-                                Zoom Meeting
-                              </Badge>
+                              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-blue-500 text-white border border-gray-300">
+                                <Video className="h-3 w-3" />
+                                <span>Zoom Meeting</span>
+                              </div>
                             ) : (
-                              <Badge className="bg-gray-500 text-white border-gray-600">
-                                <MapPin className="h-3 w-3 mr-1" />
-                                Offline
-                              </Badge>
-                            )}
-                            {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Completed && (
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            )}
-                            {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Cancelled && (
-                              <XCircle className="h-5 w-5 text-red-500" />
-                            )}
-                            {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Pending && (
-                              <Clock className="h-5 w-5 text-yellow-500" />
-                            )}
-                            {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Processing && (
-                              <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-gray-500 text-white border border-gray-300">
+                                <MapPin className="h-3 w-3" />
+                                <span>Offline</span>
+                              </div>
                             )}
                           </div>
 
@@ -489,7 +498,7 @@ export function ScheduleTab() {
                               <Button
                                 size="lg"
                                 variant="outline"
-                                className="flex-1 border-dashed border-[#257180] text-[#257180] hover:bg-[#257180] hover:text-white"
+                                className="flex-1 border-gray-300 bg-white text-[#257180] hover:bg-[#257180] hover:text-white hover:border-[#257180]"
                                 onClick={() => handleOpenSlotDialog(schedule)}
                               >
                                 Yêu cầu đổi lịch
@@ -543,9 +552,9 @@ export function ScheduleTab() {
                       {subject?.subjectName || 'Môn học'}
                     </span>
                     {level && (
-                      <Badge variant="outline" className="text-xs border-gray-300 text-[#257180]">
-                        {level.name}
-                      </Badge>
+                      <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                        <span className="font-medium">{level.name}</span>
+                      </div>
                     )}
                   </div>
                   <div className="text-gray-700">
@@ -800,6 +809,7 @@ export function ScheduleTab() {
               onClick={() =>
                 setSlotDialog({ open: false, schedule: undefined, weekStart: undefined, selectedAvailabilityId: null, reason: '' })
               }
+              className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
             >
               Hủy
             </Button>

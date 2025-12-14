@@ -53,6 +53,7 @@ import {
   Clock,
   ArrowUpDown,
   FileText,
+  CheckCircle,
 } from 'lucide-react';
 import { TutorApplicationService } from '@/services/tutorApplicationService';
 import { ClassRequestService, ClassRequestDetailDto } from '@/services/classRequestService';
@@ -88,9 +89,16 @@ const parseApplicationStatus = (status: number | string): TutorApplicationStatus
 
 const getApplicationStatusBadge = (status: TutorApplicationStatus) => {
   if (status === TutorApplicationStatus.Applied) {
-    return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    return 'bg-emerald-50 text-emerald-700 border-gray-300';
   }
-  return 'bg-gray-100 text-gray-600 border-gray-200';
+  return 'bg-gray-100 text-gray-600 border-gray-300';
+};
+
+const getApplicationStatusIcon = (status: TutorApplicationStatus) => {
+  if (status === TutorApplicationStatus.Applied) {
+    return <CheckCircle className="h-3 w-3" />;
+  }
+  return <XCircle className="h-3 w-3" />;
 };
 
 const getApplicationStatusText = (status: TutorApplicationStatus) => {
@@ -362,7 +370,7 @@ export function TutorApplicationsTab() {
         </div>
         <Button
           variant="outline"
-          className="border-[#257180] text-[#257180] hover:bg-[#257180] hover:text-white"
+          className="border-gray-300 bg-white text-[#257180] hover:bg-[#257180] hover:text-white hover:border-[#257180]"
           onClick={loadApplications}
           disabled={loading}
         >
@@ -509,9 +517,9 @@ export function TutorApplicationsTab() {
                           </div>
                         </TableCell>
                         <TableCell className="px-2 text-left">
-                          <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20 text-xs whitespace-nowrap">
-                            {getModeLabel(application.mode)}
-                          </Badge>
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-[#F2E5BF] text-[#257180] border border-gray-300 whitespace-nowrap">
+                            <span>{getModeLabel(application.mode)}</span>
+                          </div>
                         </TableCell>
                         <TableCell className="px-2 text-left">
                           <div className="text-xs text-gray-900">
@@ -519,9 +527,10 @@ export function TutorApplicationsTab() {
                           </div>
                         </TableCell>
                         <TableCell className="px-2 text-left">
-                          <Badge className={`${getApplicationStatusBadge(applicationStatus)} text-xs`}>
-                            {getApplicationStatusText(applicationStatus)}
-                          </Badge>
+                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getApplicationStatusBadge(applicationStatus)}`}>
+                            {getApplicationStatusIcon(applicationStatus)}
+                            <span>{getApplicationStatusText(applicationStatus)}</span>
+                          </div>
                         </TableCell>
                         <TableCell className="text-xs text-gray-600 whitespace-nowrap px-2 text-left">
                           {FormatService.formatDate(application.appliedAt)}
@@ -638,13 +647,14 @@ export function TutorApplicationsTab() {
                       const statusNum = parseClassRequestStatus(detailRequest.status);
                       return (
                         <>
-                          <Badge className={getClassRequestStatusColor(statusNum)}>
-                            {getClassRequestStatusText(statusNum)}
-                          </Badge>
+                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getClassRequestStatusColor(statusNum)}`}>
+                            <span>{getClassRequestStatusText(statusNum)}</span>
+                          </div>
                           {selectedApplication && (
-                            <Badge className={getApplicationStatusBadge(parseApplicationStatus(selectedApplication.tutorApplicationStatus))}>
-                              {getApplicationStatusText(parseApplicationStatus(selectedApplication.tutorApplicationStatus))}
-                            </Badge>
+                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getApplicationStatusBadge(parseApplicationStatus(selectedApplication.tutorApplicationStatus))}`}>
+                              {getApplicationStatusIcon(parseApplicationStatus(selectedApplication.tutorApplicationStatus))}
+                              <span>{getApplicationStatusText(parseApplicationStatus(selectedApplication.tutorApplicationStatus))}</span>
+                            </div>
                           )}
                         </>
                       );
@@ -695,9 +705,9 @@ export function TutorApplicationsTab() {
                   )}
                   <div className="min-w-0">
                     <p className="text-sm text-gray-600">Hình thức</p>
-                    <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20 mt-1">
-                      {getModeLabel(detailRequest.mode)}
-                    </Badge>
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-[#F2E5BF] text-[#257180] border border-gray-300 mt-1">
+                      <span>{getModeLabel(detailRequest.mode)}</span>
+                    </div>
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm text-gray-600">Số buổi học</p>
@@ -785,7 +795,7 @@ export function TutorApplicationsTab() {
                 </h4>
 
                 {selectedApplication?.message ? (
-                  <Card className="border border-gray-300 bg-white hover:border-[#257180]/50 hover:shadow-md transition-all">
+                  <Card className="border border-gray-300 bg-white hover:shadow-md transition-all">
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -840,6 +850,7 @@ export function TutorApplicationsTab() {
                 variant="outline"
                 onClick={() => setEditDialogOpen(false)}
                 disabled={editLoading}
+                className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
               >
                 Hủy
               </Button>

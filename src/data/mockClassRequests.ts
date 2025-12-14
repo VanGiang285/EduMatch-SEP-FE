@@ -307,13 +307,13 @@ export function getClassRequestStatusColor(status: number): string {
   // Map theo ClassRequestStatus enum:
   // Open = 0, Reviewing = 1, Selected = 2, Closed = 3, Cancelled = 4, Expired = 5
   switch (status) {
-    case 0: return 'bg-yellow-100 text-yellow-800';  // Open - Đang mở
-    case 1: return 'bg-orange-100 text-orange-800'; // Reviewing - Chờ duyệt
-    case 2: return 'bg-blue-100 text-blue-800';     // Selected - Đã chọn gia sư
-    case 3: return 'bg-gray-100 text-gray-800';      // Closed - Đã đóng
-    case 4: return 'bg-red-100 text-red-800';       // Cancelled - Đã hủy
-    case 5: return 'bg-gray-100 text-gray-800';      // Expired - Hết hạn
-    default: return 'bg-gray-100 text-gray-800';
+    case 0: return 'bg-yellow-100 text-yellow-800 border-gray-300';  // Open - Đang mở
+    case 1: return 'bg-orange-100 text-orange-800 border-gray-300'; // Reviewing - Chờ duyệt
+    case 2: return 'bg-blue-100 text-blue-800 border-gray-300';     // Selected - Đã chọn gia sư
+    case 3: return 'bg-gray-100 text-gray-800 border-gray-300';      // Closed - Đã đóng
+    case 4: return 'bg-red-100 text-red-800 border-gray-300';       // Cancelled - Đã hủy
+    case 5: return 'bg-gray-100 text-gray-800 border-gray-300';      // Expired - Hết hạn
+    default: return 'bg-gray-100 text-gray-800 border-gray-300';
   }
 }
 

@@ -253,19 +253,19 @@ export function TutorScheduleTab() {
   const getStatusColor = (status: ScheduleStatus) => {
     switch (status) {
       case ScheduleStatus.Upcoming:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-100 text-blue-800 border-gray-300';
       case ScheduleStatus.InProgress:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-yellow-100 text-yellow-800 border-gray-300';
       case ScheduleStatus.Completed:
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-green-100 text-green-800 border-gray-300';
       case ScheduleStatus.Cancelled:
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-100 text-red-800 border-gray-300';
       case ScheduleStatus.Pending:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-yellow-100 text-yellow-800 border-gray-300';
       case ScheduleStatus.Processing:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-100 text-blue-800 border-gray-300';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
@@ -427,7 +427,7 @@ export function TutorScheduleTab() {
                     {/* Date Box */}
                     {scheduleDate && availability && (
                       <div className="flex-shrink-0">
-                        <div className="bg-[#257180]/10 rounded-lg p-6 text-center w-28 h-28 flex flex-col items-center justify-center border-2 border-[#257180]/20">
+                        <div className="bg-[#257180]/10 rounded-lg p-6 text-center w-28 h-28 flex flex-col items-center justify-center border-2 border-gray-300">
                           <div className="text-4xl font-bold text-[#257180] leading-none">
                             {scheduleDate.getDate()}
                           </div>
@@ -484,20 +484,15 @@ export function TutorScheduleTab() {
                           </div>
                         </div>
                         <div className="flex gap-2 flex-wrap">
-                          <Badge className={getStatusColor(EnumHelpers.parseScheduleStatus(schedule.status))}>
-                            <span className="flex items-center gap-1">
-                              {getStatusIcon(EnumHelpers.parseScheduleStatus(schedule.status))}
-                              {EnumHelpers.getScheduleStatusLabel(schedule.status)}
-                            </span>
-                          </Badge>
+                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getStatusColor(EnumHelpers.parseScheduleStatus(schedule.status))}`}>
+                            {getStatusIcon(EnumHelpers.parseScheduleStatus(schedule.status))}
+                            <span>{EnumHelpers.getScheduleStatusLabel(schedule.status)}</span>
+                          </div>
                           {isOnline && (
-                            <Badge
-                              variant="secondary"
-                              className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20"
-                            >
-                              <Video className="h-3 w-3 mr-1" />
-                              Online
-                            </Badge>
+                            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-[#F2E5BF] text-[#257180] border border-gray-300">
+                              <Video className="h-3 w-3" />
+                              <span>Online</span>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -551,7 +546,7 @@ export function TutorScheduleTab() {
                           <Button
                             size="lg"
                             variant="outline"
-                            className="flex-1 border-[#257180] text-[#257180] hover:bg-[#257180] hover:text-white"
+                            className="flex-1 border-gray-300 bg-white text-[#257180] hover:bg-[#257180] hover:text-white hover:border-[#257180]"
                             onClick={async () => {
                               const booking = getBooking(schedule.bookingId, schedule.booking);
                               const learnerEmail = booking?.learnerEmail;
@@ -616,9 +611,9 @@ export function TutorScheduleTab() {
                       {subject?.subjectName || 'Môn học'}
                     </span>
                     {level && (
-                      <Badge variant="outline" className="text-xs border-gray-300 text-[#257180]">
-                        {level.name}
-                      </Badge>
+                      <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                        <span className="font-medium">{level.name}</span>
+                      </div>
                     )}
                   </div>
                   {learnerEmail && (
@@ -842,6 +837,7 @@ export function TutorScheduleTab() {
               onClick={() =>
                 setSlotDialog({ open: false, schedule: undefined, selectedAvailabilityId: null, reason: '' })
               }
+              className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
             >
               Hủy
             </Button>

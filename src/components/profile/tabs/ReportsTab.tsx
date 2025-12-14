@@ -40,7 +40,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
 import { Label } from '@/components/ui/form/label';
-import { Search, Plus, Eye, Loader2, ArrowUpDown, X, Edit, Shield, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Eye, Loader2, ArrowUpDown, X, Edit, Shield, AlertTriangle, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { ReportService, TutorService, MediaService } from '@/services';
 import { ReportListItemDto, ReportFullDetailDto, TutorProfileDto } from '@/types/backend';
 import { ReportStatus, MediaType, ReportEvidenceType, TutorStatus } from '@/types/enums';
@@ -141,11 +141,11 @@ const getStatusColor = (status: ReportStatus | number | string): string => {
   if (typeof status === 'string') {
     statusNum = parseInt(status, 10);
     if (isNaN(statusNum)) {
-      if (status === 'Pending') return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      if (status === 'UnderReview') return 'bg-blue-100 text-blue-800 border-blue-200';
-      if (status === 'Resolved') return 'bg-green-100 text-green-800 border-green-200';
-      if (status === 'Dismissed') return 'bg-red-100 text-red-800 border-red-200';
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      if (status === 'Pending') return 'bg-yellow-100 text-yellow-800 border-gray-300';
+      if (status === 'UnderReview') return 'bg-blue-100 text-blue-800 border-gray-300';
+      if (status === 'Resolved') return 'bg-green-100 text-green-800 border-gray-300';
+      if (status === 'Dismissed') return 'bg-red-100 text-red-800 border-gray-300';
+      return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   } else if (typeof status === 'number') {
     statusNum = status;
@@ -156,18 +156,18 @@ const getStatusColor = (status: ReportStatus | number | string): string => {
   switch (statusNum) {
     case ReportStatus.Pending:
     case 0:
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      return 'bg-yellow-100 text-yellow-800 border-gray-300';
     case ReportStatus.UnderReview:
     case 1:
-      return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'bg-blue-100 text-blue-800 border-gray-300';
     case ReportStatus.Resolved:
     case 2:
-      return 'bg-green-100 text-green-800 border-green-200';
+      return 'bg-green-100 text-green-800 border-gray-300';
     case ReportStatus.Dismissed:
     case 3:
-      return 'bg-red-100 text-red-800 border-red-200';
+      return 'bg-red-100 text-red-800 border-gray-300';
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return 'bg-gray-100 text-gray-800 border-gray-300';
   }
 };
 
@@ -924,7 +924,7 @@ export function ReportsTab() {
         </div>
       </div>
 
-      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+      <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -965,7 +965,7 @@ export function ReportsTab() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+      <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách báo cáo</CardTitle>
@@ -1093,9 +1093,10 @@ export function ReportsTab() {
                           <p className="text-sm line-clamp-2">{report.reason}</p>
                         </TableCell>
                         <TableCell className="text-left">
-                          <Badge className={getStatusColor(report.status)}>
-                            {getStatusLabel(report.status)}
-                          </Badge>
+                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getStatusColor(report.status)}`}>
+                            {getStatusIcon(report.status)}
+                            <span>{getStatusLabel(report.status)}</span>
+                          </div>
                         </TableCell>
                           <TableCell className="text-sm text-gray-600 text-left">
                             {formatDate(report.createdAt)}
@@ -1170,7 +1171,7 @@ export function ReportsTab() {
               <div className="flex-1 overflow-y-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2 space-y-4">
-                <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+                <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold text-gray-900">Thông tin cơ bản</CardTitle>
                   </CardHeader>
@@ -1212,9 +1213,10 @@ export function ReportsTab() {
                         <div>
                           <Label className="text-sm text-gray-600">Trạng thái</Label>
                           <div className="mt-2">
-                            <Badge className={getStatusColor(selectedReport.status)}>
-                              {getStatusLabel(selectedReport.status)}
-                            </Badge>
+                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getStatusColor(selectedReport.status)}`}>
+                              {getStatusIcon(selectedReport.status)}
+                              <span>{getStatusLabel(selectedReport.status)}</span>
+                            </div>
                           </div>
                         </div>
                         <div>
@@ -1225,7 +1227,7 @@ export function ReportsTab() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+                <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold text-gray-900">Lý do báo cáo</CardTitle>
                   </CardHeader>
@@ -1237,7 +1239,7 @@ export function ReportsTab() {
                 </Card>
 
                 {selectedReport.handledByAdminEmail && (
-                  <Card className="border border-red-300 bg-red-50">
+                  <Card className="border border-gray-300 bg-red-50">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base font-semibold text-red-900">
                         Xử lý bởi {selectedReport.handledByAdminEmail}
@@ -1254,7 +1256,7 @@ export function ReportsTab() {
                 )}
 
                 {selectedReport.reporterEvidences && selectedReport.reporterEvidences.length > 0 && (
-                  <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+                  <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base font-semibold text-gray-900">
                         Bằng chứng từ người báo cáo ({selectedReport.reporterEvidences.length})
@@ -1365,7 +1367,7 @@ export function ReportsTab() {
                         </CardContent>
                       </Card>
                     ) : (
-                      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+                      <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
                         <CardHeader className="pb-3">
                           <CardTitle className="text-base font-semibold text-gray-900">Kháng cáo</CardTitle>
                         </CardHeader>

@@ -37,6 +37,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 export function WalletTab() {
   const { balance, wallet, loading: walletLoading, refetch: refetchBalance } = useWalletContext();
   const { showSuccess, showError } = useCustomToast();
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState<boolean>(false);
   const [transactionsError, setTransactionsError] = useState<any | null>(null);
@@ -115,6 +116,12 @@ export function WalletTab() {
   useEffect(() => {
     fetchTransactions();
   }, []);
+
+  useEffect(() => {
+    if (!walletLoading && isInitialLoad) {
+      setIsInitialLoad(false);
+    }
+  }, [walletLoading, isInitialLoad]);
 
   // Fetch bank accounts and banks
   const fetchBankAccounts = async () => {
@@ -370,12 +377,13 @@ export function WalletTab() {
         <CardContent className="p-8">
           <div className="flex items-center justify-between mb-3">
             <Wallet className="h-6 w-6 opacity-80" />
-            <Badge variant="secondary" className="bg-white/20 text-white">
-              Khả dụng
-            </Badge>
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-white/20 text-white border border-white/30">
+              <CheckCircle className="h-3 w-3" />
+              <span>Khả dụng</span>
+            </div>
           </div>
           <p className="text-sm opacity-90 mb-2">Số dư khả dụng</p>
-          {walletLoading ? (
+          {walletLoading && isInitialLoad ? (
             <div className="flex items-center gap-2 mb-6">
               <Loader2 className="h-8 w-8 animate-spin" />
               <p className="text-2xl font-bold">Đang tải...</p>
@@ -387,7 +395,7 @@ export function WalletTab() {
           <div className="flex gap-3">
             <Button
               variant="secondary"
-              className="flex-1 bg-white/90 hover:bg-white text-[#257180]"
+              className="flex-1 bg-white/90 hover:bg-[#257180] hover:text-white text-[#257180]"
               onClick={() => setShowTopUpDialog(true)}
             >
               <ArrowDownCircle className="h-4 w-4 mr-2" />
@@ -395,7 +403,7 @@ export function WalletTab() {
             </Button>
             <Button
               variant="outline"
-              className="flex-1 border-white/30 text-white hover:bg-white/10"
+              className="flex-1 border-gray-300 bg-white text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
               onClick={() => setShowWithdrawDialog(true)}
             >
               <ArrowUpCircle className="h-4 w-4 mr-2" />
@@ -502,9 +510,9 @@ export function WalletTab() {
                             <p className="font-medium">
                               {WalletService.getTransactionReasonLabel(transaction.reason)}
                             </p>
-                            <Badge variant="outline" className="text-xs">
-                              {WalletService.getTransactionTypeLabel(transaction.transactionType)}
-                            </Badge>
+                            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border border-gray-300 text-gray-700">
+                              <span>{WalletService.getTransactionTypeLabel(transaction.transactionType)}</span>
+                            </div>
                           </div>
                           <div className="flex items-center gap-3 mt-1">
                             <p className="text-sm text-gray-500">
@@ -577,9 +585,10 @@ export function WalletTab() {
                           <div className="flex items-center gap-2">
                             <p className="font-semibold text-gray-900">{account.bank.name}</p>
                             {account.isDefault && (
-                              <Badge variant="secondary" className="bg-[#257180] text-white">
-                                Mặc định
-                              </Badge>
+                              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-[#257180] text-white border border-gray-300">
+                                <CheckCircle className="h-3 w-3" />
+                                <span>Mặc định</span>
+                              </div>
                             )}
                           </div>
                           <p className="text-sm text-gray-600 mt-1">
@@ -596,7 +605,7 @@ export function WalletTab() {
                           size="sm"
                           onClick={() => handleDeleteClick(account)}
                           disabled={deletingAccountId === account.id}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="border-gray-300 bg-white text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300"
                         >
                           {deletingAccountId === account.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -770,7 +779,7 @@ export function WalletTab() {
                     key={amount}
                     variant="outline"
                     onClick={() => setTopUpAmount(amount.toString())}
-                    className="text-sm"
+                    className="text-sm border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                   >
                     {formatCurrency(amount)}
                   </Button>
@@ -909,9 +918,10 @@ export function WalletTab() {
                                 </span>
                               )}
                               {account.isDefault && (
-                                <Badge variant="secondary" className="bg-[#257180] text-white text-xs px-1.5 py-0.5 rounded">
-                                  Mặc định
-                                </Badge>
+                                <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded text-xs font-medium bg-[#257180] text-white border border-gray-300">
+                                  <CheckCircle className="h-3 w-3" />
+                                  <span>Mặc định</span>
+                                </div>
                               )}
                             </div>
                             <div className="space-y-1">
