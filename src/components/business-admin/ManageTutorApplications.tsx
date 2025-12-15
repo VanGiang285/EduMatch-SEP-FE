@@ -1027,9 +1027,9 @@ export function ManageTutorApplications() {
                                 const teachingModeText = getTeachingModeText(detailTutor.teachingModes);
                                 if (!teachingModeText || teachingModeText === 'Chưa cập nhật') return null;
                                 return (
-                                  <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
                                     {teachingModeText}
-                                  </Badge>
+                              </Badge>
                                 );
                               })()}
                             </div>
@@ -1110,7 +1110,7 @@ export function ManageTutorApplications() {
                                   <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                     <div className="flex items-center gap-2">
                                       <BookOpen className="w-4 h-4 text-[#257180] flex-shrink-0" />
-                                      <div>
+                                    <div>
                                         <p className="font-medium text-gray-900">{grouped.subjectName}</p>
                                         <p className="text-sm text-gray-600">{grouped.levelText || 'Chưa có thông tin'}</p>
                                       </div>
@@ -1385,36 +1385,36 @@ export function ManageTutorApplications() {
 
                   {EnumHelpers.parseTutorVerificationRequestStatus(selectedRequest.status) === TutorVerificationRequestStatus.Pending && (
                     <Card className="border-gray-300 shadow-lg">
-                      <CardContent className="p-6">
-                        <div className="space-y-3">
-                          <Button
-                            variant="outline"
+                    <CardContent className="p-6">
+                      <div className="space-y-3">
+                        <Button
+                          variant="outline"
                             className="w-full border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-                            onClick={() => setShowRejectDialog(true)}
+                          onClick={() => setShowRejectDialog(true)}
                             disabled={isProcessing}
-                          >
-                            {isProcessing ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <XCircle className="h-4 w-4 mr-2" />
-                            )}
-                            Từ chối yêu cầu
-                          </Button>
-                          <Button
-                            className="w-full bg-[#257180] hover:bg-[#257180]/90 text-white"
-                            onClick={handleApproveApplication}
+                        >
+                          {isProcessing ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <XCircle className="h-4 w-4 mr-2" />
+                          )}
+                          Từ chối yêu cầu
+                        </Button>
+                        <Button
+                          className="w-full bg-[#257180] hover:bg-[#257180]/90 text-white"
+                          onClick={handleApproveApplication}
                             disabled={isProcessing}
-                          >
-                            {isProcessing ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                            )}
+                        >
+                          {isProcessing ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                          )}
                             Phê duyệt yêu cầu
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                   )}
                 </div>
               </div>

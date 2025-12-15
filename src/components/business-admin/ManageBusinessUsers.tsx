@@ -1197,9 +1197,9 @@ export function ManageBusinessUsers() {
                                 const teachingModeText = getTeachingModeText(detailTutor.teachingModes);
                                 if (!teachingModeText || teachingModeText === 'Chưa cập nhật') return null;
                                 return (
-                                  <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
                                     {teachingModeText}
-                                  </Badge>
+                              </Badge>
                                 );
                               })()}
                             </div>
@@ -1214,12 +1214,12 @@ export function ManageBusinessUsers() {
                               {(() => {
                                 const teachingModeText = getTeachingModeText(detailTutor.teachingModes);
                                 return (
-                                  <div className="flex items-center gap-2 text-gray-600 min-w-0">
-                                    <Globe className="w-4 h-4 flex-shrink-0" />
+                              <div className="flex items-center gap-2 text-gray-600 min-w-0">
+                                <Globe className="w-4 h-4 flex-shrink-0" />
                                     <span className="truncate">
                                       {teachingModeText || 'Chưa cập nhật'}
                                     </span>
-                                  </div>
+                              </div>
                                 );
                               })()}
                               <div className="flex items-center gap-2 text-gray-600 min-w-0">
@@ -1287,7 +1287,7 @@ export function ManageBusinessUsers() {
                                   <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                     <div className="flex items-center gap-2">
                                       <BookOpen className="w-4 h-4 text-[#257180] flex-shrink-0" />
-                                      <div>
+                                    <div>
                                         <p className="font-medium text-gray-900">{grouped.subjectName}</p>
                                         <p className="text-sm text-gray-600">{grouped.levelText || 'Chưa có thông tin'}</p>
                                       </div>

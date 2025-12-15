@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/layout/card';
@@ -270,6 +271,93 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       ? tutorSubjectsFromHook
       : (tutor?.tutorSubjects || []);
   }, [tutorSubjectsFromHook, tutor?.tutorSubjects]);
+
+const formatLevels = (levels: string[]): string => {
+  if (!levels || levels.length === 0) return '';
+
+  if (levels.some((l) => l.toLowerCase().includes('tất cả') || l.toLowerCase().includes('all'))) {
+    return 'Tất cả cấp';
+  }
+
+  const numbers = levels
+    .map((level) => {
+      const num = parseInt(level.replace(/\D/g, ''), 10);
+      return Number.isNaN(num) ? null : num;
+    })
+    .filter((n): n is number => n !== null)
+    .sort((a, b) => a - b);
+
+  if (numbers.length === 0) {
+    return levels.join(', ');
+  }
+
+  if (numbers.length > 1) {
+    const isConsecutive = numbers.every((num, idx) => idx === 0 || num === numbers[idx - 1] + 1);
+    if (isConsecutive) {
+      return `Lớp ${numbers[0]}-${numbers[numbers.length - 1]}`;
+    }
+  }
+
+  return `Lớp ${numbers.join(', ')}`;
+};
+
+const groupSubjectsBySubjectName = React.useMemo(() => {
+  if (!tutorSubjectsToUse || tutorSubjectsToUse.length === 0) return [];
+
+  const grouped = new Map<
+    string,
+    { levels: Set<string>; rates: number[] }
+  >();
+
+  tutorSubjectsToUse.forEach((ts) => {
+    const subjectName = ts.subject?.subjectName || `Subject ${ts.id}`;
+    const levelName = ts.level?.name || '';
+    const hourlyRate = ts.hourlyRate;
+
+    if (!grouped.has(subjectName)) {
+      grouped.set(subjectName, { levels: new Set(), rates: [] });
+    }
+
+    if (levelName) grouped.get(subjectName)!.levels.add(levelName);
+    if (hourlyRate !== undefined && hourlyRate !== null) grouped.get(subjectName)!.rates.push(hourlyRate);
+  });
+
+  return Array.from(grouped.entries()).map(([subjectName, data]) => {
+    const levelsArray = Array.from(data.levels).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+      return numA - numB;
+    });
+
+    const hourlyRates = data.rates.sort((a, b) => a - b);
+    const levelText = formatLevels(levelsArray);
+    const minRate = hourlyRates.length > 0 ? hourlyRates[0] : undefined;
+    const maxRate = hourlyRates.length > 0 ? hourlyRates[hourlyRates.length - 1] : undefined;
+    const hourlyRate = minRate !== undefined && maxRate !== undefined && minRate === maxRate ? minRate : undefined;
+
+    return {
+      subjectName,
+      levelText,
+      hourlyRate,
+      minRate,
+      maxRate,
+    };
+  });
+}, [tutorSubjectsToUse]);
+
+const subjectNameList = React.useMemo(() => {
+  const names = groupSubjectsBySubjectName
+    .map((s) => s.subjectName)
+    .filter(Boolean);
+  return Array.from(new Set(names));
+}, [groupSubjectsBySubjectName]);
+
+const certificateNameList = React.useMemo(() => {
+  if (!tutor?.tutorCertificates) return [];
+  return tutor.tutorCertificates
+    .map((c) => c.certificateType?.name || c.typeName)
+    .filter(Boolean);
+}, [tutor?.tutorCertificates]);
 
   // Trạng thái còn slot học thử hay không (theo tutor + list môn từ BE)
   const hasAnyTrialLeft = React.useMemo(() => {
@@ -1083,18 +1171,21 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
+            <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
               <CardContent className="p-6">
                 <div className="flex items-start gap-6">
                   <div className="relative flex-shrink-0">
-                    <Avatar className="w-32 h-32">
+                    <Avatar className="w-32 h-32 rounded-2xl border border-gray-300 bg-[#F2E5BF] text-[#257180]">
                       <AvatarImage src={tutor.avatarUrl || undefined} className="object-cover" />
                       <AvatarFallback className="text-3xl bg-[#F2E5BF] text-[#257180]">
                         {tutor.userName?.split(' ').slice(-2).map(n => n[0]).join('') || 'GS'}
                       </AvatarFallback>
                     </Avatar>
+                    <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-[#257180] flex items-center justify-center shadow-md">
+                      <Shield className="w-5 h-5 text-white" />
+                    </div>
                     {(tutor.status === 1 || tutor.status === 3 || tutor.status === 4) && (
-                      <div className={`absolute -bottom-2 -right-2 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white ${tutor.status === 1 ? 'bg-blue-600' :
+                      <div className={`absolute -bottom-2 -left-2 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white ${tutor.status === 1 ? 'bg-blue-600' :
                         tutor.status === 3 ? 'bg-orange-600' :
                           'bg-red-600'
                         }`}>
@@ -1125,30 +1216,28 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                         </div>
                         <div className="flex flex-wrap gap-2 mb-3">
                           {tutor.status === 1 && (
-                            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                              <CheckCircle2 className="w-3 h-3 mr-1" />
-                              Đã xác thực
-                            </Badge>
+                            <div className="flex items-center gap-1 text-sm text-gray-800">
+                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                            <span className="font-medium">Đã xác thực</span>
+                          </div>
                           )}
                           {tutor.status === 3 && (
-                            <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
-                              <Shield className="w-3 h-3 mr-1" />
-                              Tạm khóa
-                            </Badge>
+                            <div className="flex items-center gap-1 text-sm text-gray-800">
+                              <Shield className="w-4 h-4 text-orange-600" />
+                              <span className="font-medium">Tạm khóa</span>
+                            </div>
                           )}
                           {tutor.status === 4 && (
-                            <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">
-                              <Shield className="w-3 h-3 mr-1" />
-                              Ngừng hoạt động
-                            </Badge>
+                            <div className="flex items-center gap-1 text-sm text-gray-800">
+                              <Shield className="w-4 h-4 text-red-600" />
+                              <span className="font-medium">Ngừng hoạt động</span>
+                            </div>
                           )}
-                          <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20">
-                            Chuyên nghiệp
-                          </Badge>
                           {tutor.status === 1 && (
-                            <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20">
-                              Gia sư được phê duyệt
-                            </Badge>
+                            <div className="flex items-center gap-1 text-sm text-gray-800">
+                              <CheckCircle2 className="w-4 h-4 text-[#257180]" />
+                              <span className="font-medium">Gia sư được phê duyệt</span>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1204,7 +1293,11 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <GraduationCap className="w-4 h-4" />
-                        <span>{tutor.tutorCertificates?.length || 0} chứng chỉ</span>
+                        <span>
+                          {tutor.tutorEducations?.[0]?.institution?.name ||
+                            tutor.tutorEducations?.[0]?.major ||
+                            'Chưa cập nhật học vấn'}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <Globe className="w-4 h-4" />
@@ -1212,7 +1305,25 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <Users className="w-4 h-4" />
-                        <span>Tham gia từ {new Date(tutor.createdAt).toLocaleDateString('vi-VN')}</span>
+                        <span>
+                          {groupSubjectsBySubjectName.length > 0
+                            ? groupSubjectsBySubjectName
+                                .map((s) =>
+                                  s.levelText ? `${s.subjectName} ${s.levelText}` : s.subjectName
+                                )
+                                .join(', ')
+                            : 'Chưa cập nhật môn dạy'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Medal className="w-4 h-4" />
+                        <span>
+                          {tutor.tutorCertificates && tutor.tutorCertificates.length > 0
+                            ? tutor.tutorCertificates
+                                .map((c) => c.certificateType?.name || c.typeName || 'Chứng chỉ')
+                                .join(', ')
+                            : 'Chưa có chứng chỉ'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1220,7 +1331,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
               </CardContent>
             </Card>
             {tutor.videoIntroUrl && (
-              <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
+              <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
                 <CardContent className="p-6">
                   <div className="relative bg-gradient-to-br from-[#257180] to-[#1e5a66] rounded-lg overflow-hidden aspect-video">
                     <video
@@ -1252,12 +1363,12 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
             )}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
               <TabsList className="grid w-full grid-cols-3 bg-[#F2E5BF]">
-                <TabsTrigger value="about" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">Giới thiệu</TabsTrigger>
-                <TabsTrigger value="reviews" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">Đánh giá ({ratingSummary?.totalFeedbackCount || 0})</TabsTrigger>
-                <TabsTrigger value="availability" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">Lịch trống</TabsTrigger>
+                <TabsTrigger value="about" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Giới thiệu</TabsTrigger>
+                <TabsTrigger value="reviews" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Đánh giá ({ratingSummary?.totalFeedbackCount || 0})</TabsTrigger>
+                <TabsTrigger value="availability" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Lịch trống</TabsTrigger>
               </TabsList>
               <TabsContent value="about" className="space-y-6">
-                <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
+                <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
                   <CardHeader>
                     <CardTitle className="font-bold">Về tôi</CardTitle>
                   </CardHeader>
@@ -1268,60 +1379,50 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                       </p>
                     </div>
 
-                    <Separator className="bg-gray-900" />
+                    <Separator className="border-[#257180]/20" />
 
                     <div>
                       <h3 className="text-gray-900 mb-3 font-bold">Kinh nghiệm giảng dạy</h3>
                       <p className="text-gray-700 leading-relaxed">
                         {tutor.teachingExp || 'Chưa có thông tin kinh nghiệm giảng dạy.'}
                       </p>
-                      {tutorSubjectsToUse.length > 0 && (
-                        <>
-                          <p className="text-gray-700 mt-3">
-                            Tôi chuyên dạy các môn học sau:
-                          </p>
-                          <ul className="mt-3 space-y-2 text-gray-700">
-                            {tutorSubjectsToUse.map((tutorSubject, idx) => (
-                              <li key={idx} className="flex items-start gap-2">
-                                <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                                <span>{tutorSubject.subject?.subjectName} - {tutorSubject.level?.name}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </>
-                      )}
+                          {groupSubjectsBySubjectName.length > 0 && (
+                            <p className="text-gray-700 mt-3">
+                              Tôi chuyên dạy các môn học sau:{' '}
+                              {groupSubjectsBySubjectName
+                                .map((s) =>
+                                  s.levelText ? `${s.subjectName} ${s.levelText}` : s.subjectName
+                                )
+                                .join(', ')}
+                            </p>
+                          )}
                     </div>
 
-                    <Separator className="bg-gray-900" />
+                    <Separator className="border-[#257180]/20" />
 
-                    <div>
-                      <h3 className="text-gray-900 mb-3 font-bold">Hình thức dạy học</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {tutor.teachingModes !== undefined && (() => {
-                          const modeValue = getTeachingModeValue(tutor.teachingModes);
-                          if (modeValue === TeachingMode.Hybrid) {
-                            return (
-                              <>
-                                <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
-                                  Dạy Online
-                                </Badge>
-                                <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
-                                  Dạy trực tiếp
-                                </Badge>
-                              </>
-                            );
-                          }
-                          return (
-                            <Badge variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
-                              {EnumHelpers.getTeachingModeLabel(modeValue)}
-                            </Badge>
-                          );
-                        })()}
+                      <div>
+                        <h3 className="text-gray-900 mb-3 font-bold">Hình thức dạy học</h3>
+                        <div className="flex flex-wrap gap-3 text-sm">
+                          {tutor.teachingModes !== undefined && (() => {
+                            const modeValue = getTeachingModeValue(tutor.teachingModes);
+                            const chips: string[] = [];
+                            if (modeValue === TeachingMode.Hybrid) {
+                              chips.push('Dạy Online', 'Dạy trực tiếp');
+                            } else {
+                              chips.push(EnumHelpers.getTeachingModeLabel(modeValue));
+                            }
+                            return chips.map((text, idx) => (
+                              <div key={idx} className="flex items-center gap-1 text-gray-800">
+                                <Globe className="w-4 h-4 text-[#257180]" />
+                                <span className="font-medium">{text}</span>
+                              </div>
+                            ));
+                          })()}
+                        </div>
                       </div>
-                    </div>
                   </CardContent>
                 </Card>
-                <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
+                <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
                   <CardHeader>
                     <CardTitle className="font-bold">Học vấn & Chứng chỉ</CardTitle>
                   </CardHeader>
@@ -1350,7 +1451,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                             ))}
                           </div>
                         </div>
-                        <Separator className="bg-gray-900" />
+                        <Separator className="border-[#257180]/20" />
                       </>
                     )}
                     {tutor.tutorCertificates && tutor.tutorCertificates.length > 0 && (
@@ -1392,24 +1493,41 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                   </CardContent>
                 </Card>
 
-                <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
+                <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
                   <CardHeader>
                     <CardTitle className="font-bold">Môn học giảng dạy</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {tutorSubjectsToUse.map((subject, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-[#257180] hover:bg-[#F2E5BF]/80">
-                          {subject.subject?.subjectName || `Subject ${subject.subjectId}`}
-                        </Badge>
-                      ))}
-                    </div>
+                  <CardContent className="space-y-2">
+                    {groupSubjectsBySubjectName.length > 0 ? (
+                      groupSubjectsBySubjectName.map((grouped, idx) => (
+                        <div key={idx} className="flex items-start gap-2 text-gray-900">
+                          <Users className="w-4 h-4 text-[#257180] flex-shrink-0 mt-1" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start gap-2">
+                              <div className="flex-1 min-w-0 space-y-0.5">
+                                <p className="font-medium truncate">{grouped.subjectName}</p>
+                                <p className="text-sm text-gray-600 truncate">{grouped.levelText || 'Chưa có thông tin'}</p>
+                              </div>
+                              <p className="text-sm text-[#257180] whitespace-nowrap">
+                                {grouped.hourlyRate !== undefined
+                                  ? `${FormatService.formatCurrency(grouped.hourlyRate)}/giờ`
+                                  : grouped.minRate !== undefined && grouped.maxRate !== undefined
+                                  ? `${FormatService.formatCurrency(grouped.minRate)} - ${FormatService.formatCurrency(grouped.maxRate)}/giờ`
+                                  : 'Chưa cập nhật'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500">Chưa có môn học nào.</p>
+                    )}
                   </CardContent>
                 </Card>
 
               </TabsContent>
               <TabsContent value="reviews" className="space-y-6">
-                <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
+                <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="font-bold">Đánh giá từ học viên</CardTitle>
@@ -1570,7 +1688,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
               </TabsContent>
               <TabsContent value="availability" className="space-y-6">
                 <div ref={availabilitySectionRef} className="space-y-6">
-                  <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
+                <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
                     <CardHeader>
                       <div className="space-y-4">
                         <div>
@@ -1724,7 +1842,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
           </div>
           <div className="lg:col-span-1">
             <div className="sticky top-20 space-y-6">
-              <Card className="border-[#257180]/20 bg-white shadow-lg transition-shadow hover:shadow-md">
+                <Card className="border border-gray-300 bg-white shadow-lg transition-shadow hover:shadow-md">
                 <CardContent className="p-6">
                   <div className="text-center mb-6">
                     <div>
@@ -1762,8 +1880,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                   <div className="space-y-3">
                     {hasAnyTrialLeft && (
                       <Button
-                        variant="outline"
-                        className="w-full bg-[#257180] text-white border-[#257180] hover:bg-[#1e5a66] hover:border-[#1e5a66]"
+                        className="w-full bg-[#257180] text-white hover:bg-[#1e5a66] border border-[#257180]"
                         size="lg"
                         onClick={() => handleOpenBookingSelection(true)}
                       >
@@ -1773,7 +1890,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     )}
                     <Button
                       variant="outline"
-                      className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                      className="w-full border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                       size="lg"
                       onClick={() => handleOpenBookingSelection(false)}
                     >
@@ -1782,7 +1899,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                      className="w-full border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                       size="lg"
                       onClick={async (e) => {
                         e.stopPropagation();
@@ -1814,19 +1931,23 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
                   </div>
                 </CardContent>
               </Card>
-              <Card className="border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
+                <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
                 <CardHeader>
                   <CardTitle className="text-base font-bold">Thông tin nhanh</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Môn học:</span>
-                      <span className="font-medium">{tutorSubjectsToUse.length}</span>
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-gray-600">Môn dạy:</span>
+                      <span className="font-medium text-right flex-1">
+                        {subjectNameList.length > 0 ? subjectNameList.join(', ') : 'Chưa có môn dạy'}
+                      </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex items-start justify-between gap-3">
                       <span className="text-gray-600">Chứng chỉ:</span>
-                      <span className="font-medium">{tutor.tutorCertificates?.length || 0}</span>
+                      <span className="font-medium text-right flex-1">
+                        {certificateNameList.length > 0 ? certificateNameList.join(', ') : 'Không có chứng chỉ'}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Hình thức:</span>
@@ -1869,7 +1990,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
           }
         }}
       >
-        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>
               {isTrialBooking ? 'Chọn lịch học thử' : 'Chọn lịch học với gia sư'}
@@ -2192,7 +2313,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
           }
         }}
       >
-        <DialogContent className="sm:max-w-2xl" aria-describedby={undefined}>
+        <DialogContent className="sm:max-w-2xl border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Xác nhận đặt lịch học</DialogTitle>
             <DialogDescription>
@@ -2289,7 +2410,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
       {/* Report Dialog */}
       {showReportDialog && (
         <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg">
             <DialogHeader>
               <DialogTitle>Báo cáo gia sư</DialogTitle>
             </DialogHeader>

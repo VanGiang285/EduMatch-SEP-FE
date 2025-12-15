@@ -411,14 +411,15 @@ export function ManageUsers() {
       </Card>
 
       {/* Users Table */}
-      <Card className="bg-white">
-        <CardHeader className="border-b border-gray-200 bg-gray-50">
+      <Card className="bg-white border border-gray-300">
+        <CardHeader className="border-b border-[#257180]/20 bg-gray-50">
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-[#257180]" />
             Danh sách người dùng
-            <Badge variant="secondary" className="ml-2 bg-[#257180] text-white">
-              {filteredUsers.length} người dùng
-            </Badge>
+            <div className="flex items-center gap-2 ml-2 text-gray-700">
+              <Users className="h-4 w-4" />
+              <span className="font-medium text-gray-900">{filteredUsers.length} người dùng</span>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -432,7 +433,7 @@ export function ManageUsers() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50 border-b border-gray-200">
+                    <TableRow className="bg-gray-50 border-b border-[#257180]/20">
                       <TableHead className="w-[80px] text-left">
                         <Button variant="ghost" size="sm" onClick={() => handleSort('id')} className="h-8 px-2">
                           ID <ArrowUpDown className="ml-1 h-3 w-3" />
@@ -468,7 +469,7 @@ export function ManageUsers() {
                       </TableRow>
                     ) : (
                       paginatedUsers.map((record, index) => (
-                        <TableRow key={record.email} className="hover:bg-gray-50 border-b border-gray-200">
+                        <TableRow key={record.email} className="hover:bg-gray-50 border-b border-[#257180]/20">
                           <TableCell className="text-left">
                             <span className="font-mono text-sm text-gray-600">{startIndex + index + 1}</span>
                           </TableCell>

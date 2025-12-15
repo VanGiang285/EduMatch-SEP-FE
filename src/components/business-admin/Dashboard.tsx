@@ -363,7 +363,7 @@ export function Dashboard() {
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-gray-600" />
                           <span className="font-medium text-gray-900 text-xs">
-                            {WalletService.getTransactionReasonLabel(transaction.reason)}
+                          {WalletService.getTransactionReasonLabel(transaction.reason)}
                           </span>
                         </div>
                       </TableCell>
