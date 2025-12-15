@@ -53,6 +53,10 @@ import {
   Maximize2,
   FileText,
   ExternalLink,
+  GraduationCap,
+  ChevronDown,
+  ChevronUp,
+  Clock,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
 import { AdminService } from '@/services/adminService';
@@ -72,8 +76,259 @@ import {
   TabsTrigger,
 } from '@/components/ui/navigation/tabs';
 import { formatCurrency } from '@/data/mockBusinessAdminData';
+import { FeedbackService } from '@/services/feedbackService';
+import { TutorRatingSummary } from '@/types/backend';
+import { BookOpen } from 'lucide-react';
 
 type SortField = 'id' | 'name' | 'email' | 'createdAt';
+
+function formatLevels(levels: string[]): string {
+  if (levels.length === 0) return '';
+  
+  if (levels.some(level => level.toLowerCase().includes('tất cả') || level.toLowerCase().includes('all'))) {
+    return 'Tất cả cấp';
+  }
+  
+  const hasTHPT = levels.some(level => level.toUpperCase().includes('THPT'));
+  if (hasTHPT && levels.length === 1) {
+    return 'THPT';
+  }
+  
+  const numbers = levels
+    .map(level => {
+      const num = parseInt(level.replace(/\D/g, ''));
+      return isNaN(num) ? null : num;
+    })
+    .filter((num): num is number => num !== null)
+    .sort((a, b) => a - b);
+  
+  if (numbers.length === 0) {
+    return levels.join(', ');
+  }
+  
+  if (numbers.length > 1) {
+    let isConsecutive = true;
+    for (let i = 1; i < numbers.length; i++) {
+      if (numbers[i] !== numbers[i - 1] + 1) {
+        isConsecutive = false;
+        break;
+      }
+    }
+    
+    if (isConsecutive) {
+      return `Lớp ${numbers[0]}-${numbers[numbers.length - 1]}`;
+    }
+  }
+  
+  return `Lớp ${numbers.join(', ')}`;
+}
+
+function groupSubjectsBySubjectName(tutorSubjects: any[]): Array<{ subjectName: string; levelText: string; hourlyRate?: number; minRate?: number; maxRate?: number }> {
+  if (!tutorSubjects || tutorSubjects.length === 0) return [];
+  
+  const grouped = new Map<string, { levels: Set<string>; hourlyRates: number[] }>();
+  
+  tutorSubjects.forEach((ts) => {
+    const subjectName = ts.subject?.subjectName || `Subject ${ts.id}`;
+    const levelName = ts.level?.name || '';
+    const hourlyRate = ts.hourlyRate || 0;
+    
+    if (!grouped.has(subjectName)) {
+      grouped.set(subjectName, { levels: new Set(), hourlyRates: [] });
+    }
+    
+    const group = grouped.get(subjectName)!;
+    if (levelName) {
+      group.levels.add(levelName);
+    }
+    if (hourlyRate > 0) {
+      group.hourlyRates.push(hourlyRate);
+    }
+  });
+  
+  return Array.from(grouped.entries()).map(([subjectName, { levels, hourlyRates }]) => {
+    const levelsArray = Array.from(levels).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, '')) || 0;
+      const numB = parseInt(b.replace(/\D/g, '')) || 0;
+      return numA - numB;
+    });
+    
+    const levelText = formatLevels(levelsArray);
+    const minRate = hourlyRates.length > 0 ? Math.min(...hourlyRates) : undefined;
+    const maxRate = hourlyRates.length > 0 ? Math.max(...hourlyRates) : undefined;
+    const hourlyRate = minRate && maxRate && minRate === maxRate ? minRate : undefined;
+    
+    return {
+      subjectName,
+      levelText,
+      hourlyRate,
+      minRate,
+      maxRate
+    };
+  });
+}
+
+function groupConsecutiveSlots(slots: string[]): string[] {
+  if (!slots || slots.length === 0) return [];
+  
+  // Parse slots to time ranges
+  const parseSlot = (slot: string): { start: number; end: number; original: string } | null => {
+    // Format: "08:00 - 09:00" or "8h - 9h"
+    const match = slot.match(/(\d{1,2})[h:](\d{0,2})\s*-\s*(\d{1,2})[h:](\d{0,2})/);
+    if (!match) return null;
+    
+    const startHour = parseInt(match[1]);
+    const startMin = match[2] ? parseInt(match[2]) : 0;
+    const endHour = parseInt(match[3]);
+    const endMin = match[4] ? parseInt(match[4]) : 0;
+    
+    const startTime = startHour * 60 + startMin; // Convert to minutes
+    const endTime = endHour * 60 + endMin;
+    
+    return { start: startTime, end: endTime, original: slot };
+  };
+  
+  // Format time back to string
+  const formatTime = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}:${mins.toString().padStart(2, '0')}` : `${hours}h`;
+  };
+  
+  const parsedSlots = slots
+    .map(parseSlot)
+    .filter((slot): slot is { start: number; end: number; original: string } => slot !== null)
+    .sort((a, b) => a.start - b.start);
+  
+  if (parsedSlots.length === 0) return slots;
+  
+  // Group consecutive slots
+  const ranges: Array<{ start: number; end: number }> = [];
+  let currentRange: { start: number; end: number } | null = null;
+  
+  for (const slot of parsedSlots) {
+    if (!currentRange) {
+      currentRange = { start: slot.start, end: slot.end };
+    } else if (currentRange.end === slot.start) {
+      // Consecutive slot, extend range
+      currentRange.end = slot.end;
+    } else {
+      // Not consecutive, save current range and start new one
+      ranges.push(currentRange);
+      currentRange = { start: slot.start, end: slot.end };
+    }
+  }
+  
+  if (currentRange) {
+    ranges.push(currentRange);
+  }
+  
+  // Format ranges back to strings
+  return ranges.map(range => {
+    const startStr = formatTime(range.start);
+    const endStr = formatTime(range.end);
+    return `${startStr} - ${endStr}`;
+  });
+}
+
+function groupAvailabilitiesByWeek(availabilities: any[], weeksToShow: number = 4): Array<{
+  weekOffset: number;
+  weekStart: Date;
+  weekEnd: Date;
+  weekDays: Array<{
+    day: string;
+    dayOfWeek: number;
+    date: Date;
+    slots: string[];
+  }>;
+  totalSlots: number;
+}> {
+  if (!availabilities || availabilities.length === 0) return [];
+  
+  const formatTime = (timeStr?: string) => {
+    if (!timeStr) return '';
+    const parts = timeStr.split(':');
+    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
+  };
+  
+  const dayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+  
+  const weeks: Array<{
+    weekOffset: number;
+    weekStart: Date;
+    weekEnd: Date;
+    weekDays: Map<number, { day: string; dayOfWeek: number; date: Date; slots: Set<string> }>;
+    totalSlots: number;
+  }> = [];
+  
+  // Initialize weeks
+  for (let weekOffset = 0; weekOffset < weeksToShow; weekOffset++) {
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() + (weekOffset * 7) - today.getDay() + 1); // Monday
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6); // Sunday
+    
+    weeks.push({
+      weekOffset,
+      weekStart,
+      weekEnd,
+      weekDays: new Map(),
+      totalSlots: 0
+    });
+  }
+  
+  // Group availabilities by week
+  availabilities.forEach((avail) => {
+    if (!avail.startDate) return;
+    const availDate = new Date(avail.startDate);
+    if (isNaN(availDate.getTime())) return;
+    
+    const dayOfWeek = avail.slot?.dayOfWeek !== undefined
+      ? avail.slot.dayOfWeek
+      : availDate.getDay();
+    
+    const timeSlot = avail.slot?.startTime && avail.slot?.endTime
+      ? `${formatTime(avail.slot.startTime)} - ${formatTime(avail.slot.endTime)}`
+      : '';
+    
+    if (!timeSlot) return;
+    
+    // Find which week this availability belongs to
+    for (const week of weeks) {
+      if (availDate >= week.weekStart && availDate <= week.weekEnd) {
+        if (!week.weekDays.has(dayOfWeek)) {
+          week.weekDays.set(dayOfWeek, {
+            day: dayNames[dayOfWeek] || '',
+            dayOfWeek,
+            date: availDate,
+            slots: new Set()
+          });
+        }
+        week.weekDays.get(dayOfWeek)!.slots.add(timeSlot);
+        week.totalSlots++;
+        break;
+      }
+    }
+  });
+  
+  return weeks
+    .filter(week => week.weekDays.size > 0)
+    .map(week => ({
+      weekOffset: week.weekOffset,
+      weekStart: week.weekStart,
+      weekEnd: week.weekEnd,
+      weekDays: Array.from(week.weekDays.values())
+        .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+        .map(dayInfo => ({
+          day: dayInfo.day,
+          dayOfWeek: dayInfo.dayOfWeek,
+          date: dayInfo.date,
+          slots: groupConsecutiveSlots(Array.from(dayInfo.slots).sort())
+        })),
+      totalSlots: week.totalSlots
+    }));
+}
 
 const ROLE = {
   LEARNER: 1,
@@ -221,6 +476,9 @@ export function ManageBusinessUsers() {
   const [detailLoadingEmail, setDetailLoadingEmail] = useState<string | null>(null);
   const [avatarCache, setAvatarCache] = useState<Record<string, string>>({});
   const avatarCacheRef = useRef<Record<string, string>>({});
+  const [tutorRating, setTutorRating] = useState<TutorRatingSummary | null>(null);
+  const [loadingRating, setLoadingRating] = useState(false);
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([0]));
 
   useEffect(() => {
     avatarCacheRef.current = avatarCache;
@@ -368,9 +626,19 @@ export function ManageBusinessUsers() {
 
   const getStatusBadge = (isActive: boolean | undefined) => {
     if (isActive) {
-      return <Badge className="bg-green-100 text-green-800 border-green-200">Hoạt động</Badge>;
+      return (
+        <div className="flex items-center gap-2">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <span className="font-medium text-gray-900">Hoạt động</span>
+        </div>
+      );
     }
-    return <Badge className="bg-gray-100 text-gray-700 border-gray-200">Chưa kích hoạt</Badge>;
+    return (
+      <div className="flex items-center gap-2">
+        <XCircle className="h-4 w-4 text-gray-600" />
+        <span className="font-medium text-gray-900">Chưa kích hoạt</span>
+      </div>
+    );
   };
 
   const getRoleName = (roleId: number | null | undefined) => {
@@ -485,6 +753,21 @@ export function ManageBusinessUsers() {
           const detail = mapTutorProfileToDetail(response.data);
           setDetailTutor(detail);
           setDetailType('tutor');
+          
+          // Load rating
+          if (detail.id) {
+            setLoadingRating(true);
+            try {
+              const ratingResponse = await FeedbackService.getTutorRatingSummary(detail.id);
+              if (ratingResponse.success && ratingResponse.data) {
+                setTutorRating(ratingResponse.data);
+              }
+            } catch (error) {
+              console.error('Error loading rating:', error);
+            } finally {
+              setLoadingRating(false);
+            }
+          }
         } else {
           showError('Lỗi', response.message || 'Không thể tải thông tin gia sư');
         }
@@ -498,6 +781,12 @@ export function ManageBusinessUsers() {
     }
   };
 
+  useEffect(() => {
+    if (detailType !== 'tutor') {
+      setTutorRating(null);
+    }
+  }, [detailType]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -507,7 +796,7 @@ export function ManageBusinessUsers() {
         </div>
       </div>
 
-      <Card className="bg-white">
+      <Card className="bg-white border-gray-300">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
@@ -550,15 +839,15 @@ export function ManageBusinessUsers() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white">
-        <CardHeader className="border-b border-gray-200 bg-gray-50">
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-[#257180]" />
-            Danh sách người dùng
-            <Badge variant="secondary" className="ml-2 bg-[#257180] text-white">
-              {filteredUsers.length} người dùng
-            </Badge>
-          </CardTitle>
+      <Card className="bg-white border-gray-300">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Danh sách người dùng</CardTitle>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-gray-600" />
+              <span className="font-medium text-gray-900">{filteredUsers.length} người dùng</span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-6">
           {isLoading ? (
@@ -571,7 +860,7 @@ export function ManageBusinessUsers() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50 border-b border-gray-200">
+                    <TableRow className="bg-gray-50">
                       <TableHead className="w-[80px] text-left">
                         <Button variant="ghost" size="sm" onClick={() => handleSort('id')} className="h-8 px-2">
                           ID <ArrowUpDown className="ml-1 h-3 w-3" />
@@ -607,7 +896,7 @@ export function ManageBusinessUsers() {
                       </TableRow>
                     ) : (
                       paginatedUsers.map((record, index) => (
-                        <TableRow key={record.email} className="hover:bg-gray-50 border-b border-gray-200">
+                        <TableRow key={record.email} className="hover:bg-gray-50">
                           <TableCell className="text-left">
                             <span className="font-mono text-sm text-gray-600">{startIndex + index + 1}</span>
                           </TableCell>
@@ -635,13 +924,20 @@ export function ManageBusinessUsers() {
                           <TableCell className="text-left">
                             {(() => {
                               const roleId = resolveRoleId(record);
-                              const badgeClass =
-                                (roleId && ROLE_BADGES[roleId]?.className) ||
-                                'bg-gray-100 text-gray-700 border-2 border-gray-300 font-semibold px-3 py-1';
+                              const roleLabel = roleId ? ROLE_BADGES[roleId]?.label || getRoleName(roleId) : record.roleName || 'Không xác định';
+                              let IconComponent = Users;
+                              if (roleId === ROLE.LEARNER) {
+                                IconComponent = Users;
+                              } else if (roleId === ROLE.TUTOR) {
+                                IconComponent = GraduationCap;
+                              } else if (roleId === ROLE.BUSINESS_ADMIN) {
+                                IconComponent = Shield;
+                              }
                               return (
-                                <Badge className={badgeClass}>
-                                  {roleId ? ROLE_BADGES[roleId]?.label || getRoleName(roleId) : record.roleName || 'Không xác định'}
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                  <IconComponent className="h-4 w-4 text-gray-600" />
+                                  <span className="font-medium text-gray-900">{roleLabel}</span>
+                                </div>
                               );
                             })()}
                           </TableCell>
@@ -705,7 +1001,7 @@ export function ManageBusinessUsers() {
               </div>
 
               {totalPages > 1 && (
-                <div className="flex items-center justify-end px-6 py-4 border-t border-gray-200">
+                <div className="flex items-center justify-end px-6 py-4 border-t border-[#257180]/20">
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
@@ -755,7 +1051,7 @@ export function ManageBusinessUsers() {
       </Card>
 
       <Dialog open={detailType === 'learner'} onOpenChange={(open) => !open && setDetailType(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Chi tiết học viên</DialogTitle>
           </DialogHeader>
@@ -765,7 +1061,7 @@ export function ManageBusinessUsers() {
             </div>
           ) : detailLearner && detailUser ? (
             <div className="space-y-6">
-              <Card className="border border-gray-200">
+              <Card className="border border-gray-300">
                 <CardContent className="p-6 flex flex-col sm:flex-row gap-6">
                   <Avatar className="h-24 w-24 rounded-xl border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] text-2xl font-semibold">
                     <AvatarImage src={detailLearner.avatarUrl} alt={detailUser.userName || detailUser.email} className="object-cover" />
@@ -786,7 +1082,7 @@ export function ManageBusinessUsers() {
               </Card>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="border border-gray-200">
+                <Card className="border border-gray-300">
                   <CardHeader>
                     <CardTitle>Thông tin cá nhân</CardTitle>
                   </CardHeader>
@@ -816,7 +1112,7 @@ export function ManageBusinessUsers() {
                   </CardContent>
                 </Card>
 
-                <Card className="border border-gray-200">
+                <Card className="border border-gray-300">
                   <CardHeader>
                     <CardTitle>Địa chỉ</CardTitle>
                   </CardHeader>
@@ -844,8 +1140,8 @@ export function ManageBusinessUsers() {
       </Dialog>
 
       <Dialog open={detailType === 'tutor'} onOpenChange={(open) => !open && setDetailType(null)}>
-        <DialogContent className="!max-w-7xl sm:!max-w-7xl max-h-[95vh] overflow-y-auto" aria-describedby={undefined}>
-          <DialogHeader className="border-b pb-4">
+        <DialogContent className="!max-w-7xl sm:!max-w-7xl max-h-[95vh] overflow-y-auto border-gray-300 shadow-lg" aria-describedby={undefined}>
+          <DialogHeader className="border-b border-[#257180]/20 pb-4">
             <DialogTitle className="text-2xl font-bold text-gray-900">Hồ sơ gia sư</DialogTitle>
           </DialogHeader>
           {isDetailLoading ? (
@@ -856,7 +1152,7 @@ export function ManageBusinessUsers() {
             <div className="pt-4">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
-                  <Card className="border border-gray-200">
+                  <Card className="border border-gray-300">
                     <CardContent className="p-6">
                       <div className="flex items-start gap-6 flex-col sm:flex-row">
                         <div className="relative flex-shrink-0">
@@ -883,8 +1179,14 @@ export function ManageBusinessUsers() {
                               <div className="flex items-center gap-3 flex-wrap text-sm text-gray-600">
                                 <div className="flex items-center gap-1.5">
                                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                  <span className="text-gray-900">{detailTutor.rating.toFixed(1)}</span>
-                                  <span className="text-gray-500">({detailTutor.totalReviews} đánh giá)</span>
+                                  {loadingRating ? (
+                                    <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                                  ) : (
+                                    <>
+                                      <span className="text-gray-900">{tutorRating?.averageRating.toFixed(1) || '0.0'}</span>
+                                      <span className="text-gray-500">({tutorRating?.totalFeedbackCount || 0} đánh giá)</span>
+                                    </>
+                                  )}
                                 </div>
                                 <span className="text-gray-400">•</span>
                                 <span>{detailTutor.totalStudents} học viên</span>
@@ -925,20 +1227,26 @@ export function ManageBusinessUsers() {
                   </Card>
 
                   <Tabs defaultValue="about" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-2 bg-[#F2E5BF]">
-                      <TabsTrigger value="about" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">
+                    <TabsList className="grid w-full grid-cols-3 bg-[#F2E5BF]">
+                      <TabsTrigger value="about" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">
                         Giới thiệu
                       </TabsTrigger>
                       <TabsTrigger
                         value="education"
-                        className="data-[state=active]:bg-white data-[state=active]:text-[#257180]"
+                        className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
                       >
                         Học vấn & Chứng chỉ
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="availability"
+                        className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+                      >
+                        Lịch khả dụng
                       </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="about" className="space-y-6">
-                      <Card className="border border-gray-200">
+                      <Card className="border border-gray-300">
                         <CardHeader>
                           <CardTitle className="font-bold">Về tôi</CardTitle>
                         </CardHeader>
@@ -948,19 +1256,35 @@ export function ManageBusinessUsers() {
                               {detailTutor.bio || 'Chưa có thông tin giới thiệu.'}
                             </p>
                           </div>
-                          <Separator className="bg-gray-200" />
+                          <Separator className="border-[#257180]/20" />
+                          <div>
+                            <h3 className="text-gray-900 mb-3 font-bold">Kinh nghiệm giảng dạy</h3>
+                            <p className="text-gray-700 leading-relaxed whitespace-pre-line break-words">
+                              {detailTutor.teachingExp && detailTutor.teachingExp.trim()
+                                ? detailTutor.teachingExp
+                                : 'Chưa cập nhật.'}
+                            </p>
+                          </div>
+                          <Separator className="border-[#257180]/20" />
                           <div>
                             <h3 className="text-gray-900 mb-3 font-bold">Môn học đăng ký</h3>
                             {detailTutor.subjects.length > 0 ? (
-                              <div className="space-y-3">
-                                {detailTutor.subjects.map((subject) => (
-                                  <div key={subject.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <div>
-                              <p className="font-medium text-gray-900">{subject.subject?.subjectName || 'Chưa có tên'}</p>
-                                      {subject.level && <p className="text-sm text-gray-600">{subject.level.name}</p>}
+                              <div className="space-y-2">
+                                {groupSubjectsBySubjectName(detailTutor.subjects).map((grouped, idx) => (
+                                  <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                      <BookOpen className="w-4 h-4 text-[#257180] flex-shrink-0" />
+                                      <div>
+                                        <p className="font-medium text-gray-900">{grouped.subjectName}</p>
+                                        <p className="text-sm text-gray-600">{grouped.levelText || 'Chưa có thông tin'}</p>
+                                      </div>
                                     </div>
                                     <p className="font-semibold text-[#257180]">
-                                      {subject.hourlyRate ? formatCurrency(subject.hourlyRate) : 'Chưa cập nhật'}/giờ
+                                      {grouped.hourlyRate 
+                                        ? `${formatCurrency(grouped.hourlyRate)}/giờ`
+                                        : grouped.minRate && grouped.maxRate
+                                        ? `${formatCurrency(grouped.minRate)} - ${formatCurrency(grouped.maxRate)}/giờ`
+                                        : 'Chưa cập nhật'}
                                     </p>
                                   </div>
                                 ))}
@@ -969,61 +1293,13 @@ export function ManageBusinessUsers() {
                               <p className="text-gray-500">Chưa có môn học nào.</p>
                             )}
                           </div>
-                          <Separator className="bg-gray-200" />
-                          {detailTutor.availabilities.length > 0 ? (
-                            <div>
-                              <h3 className="text-gray-900 mb-3 font-bold">Lịch khả dụng</h3>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {detailTutor.availabilities.map((avail) => {
-                                  const startDate = avail.startDate ? new Date(avail.startDate) : null;
-                                  const dayOfWeek = avail.slot?.dayOfWeek !== undefined
-                                    ? avail.slot.dayOfWeek
-                                    : startDate
-                                    ? startDate.getDay()
-                                    : null;
-                                  const dayOfWeekText = dayOfWeek !== null
-                                    ? ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][dayOfWeek]
-                                    : '';
-                                  const formatTime = (timeStr?: string) => {
-                                    if (!timeStr) return '';
-                                    const parts = timeStr.split(':');
-                                    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
-                                  };
-                                  const dateText = startDate
-                                    ? startDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                                    : '';
-                                  return (
-                                    <div key={avail.id} className="p-3 bg-gray-50 rounded-lg space-y-1">
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-sm font-medium text-gray-900">
-                                          {dayOfWeekText}
-                                        </span>
-                                        {avail.slot?.startTime && avail.slot?.endTime && (
-                                          <span className="text-sm text-gray-600">
-                                            {formatTime(avail.slot.startTime)} - {formatTime(avail.slot.endTime)}
-                                          </span>
-                                        )}
-                                      </div>
-                                      {dateText && (
-                                        <p className="text-xs text-gray-500">{dateText}</p>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ) : (
-                            <div>
-                              <h3 className="text-gray-900 mb-3 font-bold">Lịch khả dụng</h3>
-                              <p className="text-gray-500">Chưa cập nhật lịch khả dụng.</p>
-                            </div>
-                          )}
+                          <Separator className="border-[#257180]/20" />
                         </CardContent>
                       </Card>
                     </TabsContent>
 
                     <TabsContent value="education" className="space-y-6">
-                      <Card className="border border-gray-200">
+                      <Card className="border border-gray-300">
                         <CardHeader>
                           <CardTitle className="font-bold">Học vấn</CardTitle>
                         </CardHeader>
@@ -1085,7 +1361,7 @@ export function ManageBusinessUsers() {
                         </CardContent>
                       </Card>
 
-                      <Card className="border border-gray-200">
+                      <Card className="border border-gray-300">
                         <CardHeader>
                           <CardTitle className="font-bold">Chứng chỉ</CardTitle>
                         </CardHeader>
@@ -1149,11 +1425,95 @@ export function ManageBusinessUsers() {
                         </CardContent>
                       </Card>
                     </TabsContent>
+
+                    <TabsContent value="availability" className="space-y-6">
+                      {detailTutor.availabilities.length > 0 ? (
+                        <Card className="border border-gray-300">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 font-bold">
+                              <Calendar className="h-5 w-5 text-[#257180]" />
+                              Lịch khả dụng 4 tuần tới
+                            </CardTitle>
+                            <p className="text-xs text-gray-500 mt-1">Click để xem chi tiết từng tuần</p>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            {groupAvailabilitiesByWeek(detailTutor.availabilities, 4).map((week) => {
+                              const isExpanded = expandedWeeks.has(week.weekOffset);
+                              
+                              return (
+                                <div key={week.weekOffset} className="border border-gray-300 rounded-lg overflow-hidden">
+                                  <button
+                                    onClick={() => {
+                                      const newExpanded = new Set(expandedWeeks);
+                                      if (isExpanded) {
+                                        newExpanded.delete(week.weekOffset);
+                                      } else {
+                                        newExpanded.add(week.weekOffset);
+                                      }
+                                      setExpandedWeeks(newExpanded);
+                                    }}
+                                    className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      {isExpanded ? (
+                                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                                      ) : (
+                                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                                      )}
+                                      <div className="text-left">
+                                        <p className="text-sm font-medium text-gray-900">
+                                          {week.weekStart.getDate()}/{week.weekStart.getMonth() + 1} - {week.weekEnd.getDate()}/{week.weekEnd.getMonth() + 1}/{week.weekEnd.getFullYear()}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                          {week.weekDays.length} ngày
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </button>
+                                  
+                                  {isExpanded && (
+                                    <div className="p-3 space-y-2 border-t border-[#257180]/20 bg-white">
+                                      {week.weekDays.map((dayInfo, idx) => (
+                                        <div key={idx} className="space-y-1.5">
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-sm font-medium text-gray-700">
+                                              {dayInfo.day}, {dayInfo.date.getDate()}/{dayInfo.date.getMonth() + 1}
+                                            </span>
+                                          </div>
+                                          <div className="flex flex-wrap gap-1.5">
+                                            {dayInfo.slots.map((slot, slotIdx) => (
+                                              <div
+                                                key={slotIdx}
+                                                className="text-xs bg-gray-50 text-gray-700 border border-gray-300 rounded px-2 py-1 flex items-center gap-1"
+                                              >
+                                                <Clock className="h-3 w-3 text-[#257180]" />
+                                                {slot}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        <Card className="border border-gray-300">
+                          <CardContent className="p-6">
+                            <p className="text-gray-500 text-center">Chưa cập nhật lịch khả dụng.</p>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </TabsContent>
                   </Tabs>
                 </div>
 
                 <div className="lg:col-span-1 space-y-6">
-                  <Card className="border border-gray-200">
+
+                  <Card className="border border-gray-300">
                     <CardHeader>
                       <CardTitle className="text-base font-bold">Thông tin nhanh</CardTitle>
                     </CardHeader>
@@ -1192,7 +1552,7 @@ export function ManageBusinessUsers() {
       </Dialog>
 
       <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
-        <DialogContent className="max-w-3xl bg-transparent border-none shadow-none p-0" aria-describedby={undefined}>
+        <DialogContent className="max-w-3xl bg-transparent border-gray-300 shadow-lg p-0" aria-describedby={undefined}>
           {previewImage && (
             <div className="relative">
               <img src={previewImage} alt="Preview" className="w-full max-h-[80vh] object-contain rounded-lg bg-white" />

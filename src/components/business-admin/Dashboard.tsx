@@ -11,7 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/layout/table';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { DollarSign, TrendingUp, Users, GraduationCap } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, GraduationCap, FileText } from 'lucide-react';
 import { mockDashboardStats, formatCurrency } from '@/data/mockBusinessAdminData';
 import { AdminService } from '@/services/adminService';
 import { AdminSummaryStatsDto, MonthlyAdminStatsDto } from '@/types/backend';
@@ -222,7 +222,7 @@ export function Dashboard() {
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <Card key={index} className="hover:shadow-md transition-shadow bg-white">
+            <Card key={index} className="hover:shadow-md transition-shadow bg-white border-gray-300">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className={`p-2.5 rounded-lg ${stat.bgColor}`}>
@@ -242,7 +242,7 @@ export function Dashboard() {
       {/* Charts Row */}
       <div className="space-y-6">
         {/* Revenue Chart - Full Width */}
-        <Card className="bg-white">
+        <Card className="bg-white border-gray-300">
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
               <CardTitle className="text-gray-900">Doanh thu theo tháng</CardTitle>
@@ -281,7 +281,7 @@ export function Dashboard() {
         </Card>
 
         {/* Users Chart - Full Width */}
-        <Card className="bg-white">
+        <Card className="bg-white border-gray-300">
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
               <CardTitle className="text-gray-900">Người dùng theo tháng</CardTitle>
@@ -321,11 +321,14 @@ export function Dashboard() {
       </div>
 
       {/* Recent Transactions */}
-      <Card className="bg-white">
+      <Card className="bg-white border-gray-300">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-gray-900">Giao dịch gần đây</CardTitle>
-            <Badge variant="outline">{recentTransactions.length} giao dịch</Badge>
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-gray-600" />
+              <span className="font-medium text-gray-900">{recentTransactions.length} giao dịch</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -357,9 +360,12 @@ export function Dashboard() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {WalletService.getTransactionReasonLabel(transaction.reason)}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-gray-600" />
+                          <span className="font-medium text-gray-900 text-xs">
+                            {WalletService.getTransactionReasonLabel(transaction.reason)}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">
                         {transaction.booking?.learnerEmail || 'Hệ thống'}
