@@ -41,9 +41,6 @@ export function useNotifications(
       
       if (response.success && response.data) {
         setNotifications(response.data);
-        // Calculate unread count from fetched notifications
-        const unread = response.data.filter(n => !n.isRead).length;
-        // Note: This is local unread count, should also fetch from API
       } else {
         throw new Error(response.error?.message || 'Failed to fetch notifications');
       }
@@ -77,7 +74,7 @@ export function useNotifications(
       setNotifications(prev => 
         prev.map(n => n.id === id ? { ...n, isRead: true } : n)
       );
-      // Update unread count
+      // Update unread count locally
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (err) {
       const appError = ErrorHandler.handleApiError(err);
