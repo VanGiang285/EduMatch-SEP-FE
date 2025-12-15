@@ -2128,25 +2128,29 @@ export function TutorProfileTab() {
                 profileData.subjects.map((subject) => (
                   <div key={subject.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium">{subject.subjectName}</h4>
-                        {subject.levelName && (
-                          <div className="flex items-center gap-1.5 text-gray-600">
-                            <span className="text-xs font-medium">{subject.levelName}</span>
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium truncate">{subject.subjectName}</h4>
+                            {subject.levelName && (
+                              <div className="flex items-center gap-1.5 text-gray-600">
+                                <span className="text-xs font-medium truncate">{subject.levelName}</span>
+                              </div>
+                            )}
                           </div>
-                        )}
+                          <p className="text-xs text-gray-600 mt-0.5">1 slot = 1 giờ</p>
+                        </div>
+                        <p className="text-sm text-[#257180] font-semibold whitespace-nowrap">
+                          {formatCurrency(subject.hourlyRate)}/slot
+                        </p>
                       </div>
-                      <p className="text-[#257180] font-semibold mt-1">
-                        {formatCurrency(subject.hourlyRate)}/slot
-                      </p>
-                      <p className="text-xs text-gray-600 mt-0.5">1 slot = 1 giờ</p>
                     </div>
                     {isEditing && (
                       <Button 
                         variant="ghost" 
                         size="sm"
                         onClick={() => handleDeleteSubject(subject.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-4 flex-shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>

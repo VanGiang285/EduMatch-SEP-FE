@@ -2680,7 +2680,7 @@ export function BecomeTutorPage() {
                       <div className="text-sm text-black space-y-1">
                         <div>• Giá hợp lý sẽ thu hút nhiều học viên hơn</div>
                         <div>• Bạn có thể điều chỉnh giá sau khi có đánh giá tốt</div>
-                        <div>• EduMatch sẽ trích 15% phí dịch vụ từ mỗi buổi học</div>
+                        <div>• EduMatch sẽ trích 10% phí dịch vụ từ mỗi buổi học</div>
                         <div>• Học viên có thể đặt buổi học thử với giá ưu đãi</div>
                       </div>
                     </div>

@@ -1363,17 +1363,36 @@ export function ManageTutorApplications() {
                           <span className="text-gray-600">Số điện thoại:</span>
                           <span className="font-medium">{detailTutor.phone || 'Chưa cập nhật'}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Môn học:</span>
-                          <span className="font-medium">{detailTutor.subjects.length}</span>
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="text-gray-600">Môn dạy:</span>
+                          <span className="font-medium text-right flex-1">
+                            {detailTutor.subjects && detailTutor.subjects.length > 0
+                              ? Array.from(
+                                  new Set(
+                                    detailTutor.subjects
+                                      .map((s) => s.subject?.subjectName)
+                                      .filter(Boolean) as string[]
+                                  )
+                                ).join(', ')
+                              : 'Chưa có môn dạy'}
+                          </span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex items-start justify-between gap-3">
                           <span className="text-gray-600">Chứng chỉ:</span>
-                          <span className="font-medium">{detailTutor.certificates.length}</span>
+                          <span className="font-medium text-right flex-1">
+                            {detailTutor.certificates && detailTutor.certificates.length > 0
+                              ? detailTutor.certificates
+                                  .map((c) => c.certificateType?.name || c.typeName)
+                                  .filter(Boolean)
+                                  .join(', ')
+                              : 'Không có chứng chỉ'}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Hình thức:</span>
-                          <span className="font-medium truncate">{getTeachingModeText(detailTutor.teachingModes)}</span>
+                          <span className="font-medium truncate">
+                            {getTeachingModeText(detailTutor.teachingModes)}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Đơn đăng ký:</span>

@@ -1175,23 +1175,15 @@ const certificateNameList = React.useMemo(() => {
               <CardContent className="p-6">
                 <div className="flex items-start gap-6">
                   <div className="relative flex-shrink-0">
-                    <Avatar className="w-32 h-32 rounded-2xl border border-gray-300 bg-[#F2E5BF] text-[#257180]">
-                      <AvatarImage src={tutor.avatarUrl || undefined} className="object-cover" />
-                      <AvatarFallback className="text-3xl bg-[#F2E5BF] text-[#257180]">
-                        {tutor.userName?.split(' ').slice(-2).map(n => n[0]).join('') || 'GS'}
+                    <Avatar className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] text-3xl font-semibold">
+                      <AvatarImage src={tutor.avatarUrl || undefined} alt={tutor.userName} className="object-cover" />
+                      <AvatarFallback>
+                        {tutor.userName?.split(' ').slice(-2).map((n) => n[0]).join('') || 'GS'}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-[#257180] flex items-center justify-center shadow-md">
+                    <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white bg-blue-600">
                       <Shield className="w-5 h-5 text-white" />
                     </div>
-                    {(tutor.status === 1 || tutor.status === 3 || tutor.status === 4) && (
-                      <div className={`absolute -bottom-2 -left-2 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white ${tutor.status === 1 ? 'bg-blue-600' :
-                        tutor.status === 3 ? 'bg-orange-600' :
-                          'bg-red-600'
-                        }`}>
-                        <Shield className="w-5 h-5 text-white" />
-                      </div>
-                    )}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-3">
@@ -1504,17 +1496,17 @@ const certificateNameList = React.useMemo(() => {
                           <Users className="w-4 h-4 text-[#257180] flex-shrink-0 mt-1" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start gap-2">
-                              <div className="flex-1 min-w-0 space-y-0.5">
-                                <p className="font-medium truncate">{grouped.subjectName}</p>
-                                <p className="text-sm text-gray-600 truncate">{grouped.levelText || 'Chưa có thông tin'}</p>
+                          <div className="flex-1 min-w-0 space-y-0.5">
+                            <p className="font-medium truncate">{grouped.subjectName}</p>
+                            <p className="text-sm text-gray-600 truncate">{grouped.levelText || 'Chưa có thông tin'}</p>
                               </div>
                               <p className="text-sm text-[#257180] whitespace-nowrap">
-                                {grouped.hourlyRate !== undefined
-                                  ? `${FormatService.formatCurrency(grouped.hourlyRate)}/giờ`
-                                  : grouped.minRate !== undefined && grouped.maxRate !== undefined
-                                  ? `${FormatService.formatCurrency(grouped.minRate)} - ${FormatService.formatCurrency(grouped.maxRate)}/giờ`
-                                  : 'Chưa cập nhật'}
-                              </p>
+                              {grouped.hourlyRate !== undefined
+                                ? `${FormatService.formatCurrency(grouped.hourlyRate)}/giờ`
+                                : grouped.minRate !== undefined && grouped.maxRate !== undefined
+                                ? `${FormatService.formatCurrency(grouped.minRate)} - ${FormatService.formatCurrency(grouped.maxRate)}/giờ`
+                                : 'Chưa cập nhật'}
+                            </p>
                             </div>
                           </div>
                         </div>

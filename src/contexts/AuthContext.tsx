@@ -76,43 +76,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const storedUser = AuthService.getStoredUser();
         const isAuthenticated = AuthService.isAuthenticated();
-        if (isAuthenticated && storedUser) {
+
+        if (!isAuthenticated) {
+          AuthService.clearStoredData();
+          setUser(null);
+          return;
+        }
+
+        if (storedUser) {
           setUser(storedUser);
+        }
 
-          const currentToken = TokenManager.getCurrentToken();
-          if (currentToken) {
-            TokenManager.saveTokenAndUpdateTimer(
-              currentToken,
-              handleTokenRefresh,
-              handleTokenRefreshFailed
-            );
+        const currentToken = TokenManager.getCurrentToken();
+        if (!currentToken) {
+          AuthService.clearStoredData();
+          setUser(null);
+          return;
+        }
+
+        TokenManager.saveTokenAndUpdateTimer(
+          currentToken,
+          handleTokenRefresh,
+          handleTokenRefreshFailed
+        );
+
+        try {
+          const response = await AuthService.getCurrentUser();
+          if (response.success && response.data) {
+            const role = determineRoleFromResponse(response.data);
+
+            const userData: User = {
+              id: response.data.email,
+              email: response.data.email,
+              name: response.data.name || response.data.email,
+              fullName: response.data.name,
+              role: role,
+              avatar: response.data.avatarUrl || undefined,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+            setUser(userData);
+            AuthService.storeUserData(userData, currentToken);
+
+            document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}`;
           }
-
-          try {
-            const response = await AuthService.getCurrentUser();
-            if (response.success && response.data) {
-              const role = determineRoleFromResponse(response.data);
-
-              const userData: User = {
-                id: response.data.email,
-                email: response.data.email,
-                name: response.data.name || response.data.email,
-                fullName: response.data.name,
-                role: role,
-                avatar: response.data.avatarUrl || undefined,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              };
-              setUser(userData);
-              AuthService.storeUserData(userData, localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) || '');
-
-              document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}`;
-            }
-          } catch (error) {
-            AuthService.clearStoredData();
-            setUser(null);
-            TokenManager.stopTokenRefreshTimer();
-          }
+        } catch (error) {
+          AuthService.clearStoredData();
+          setUser(null);
+          TokenManager.stopTokenRefreshTimer();
         }
       } catch (error) {
         ErrorHandler.logError(error, 'AuthProvider.initializeAuth');

@@ -877,23 +877,45 @@ export function ManageTutors() {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Môn học:</span>
-                            <span className="font-medium">{selectedTutor.subjects.length}</span>
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="text-gray-600">Môn dạy:</span>
+                            <span className="font-medium text-right flex-1">
+                              {selectedTutor.subjects && selectedTutor.subjects.length > 0
+                                ? Array.from(
+                                    new Set(
+                                      selectedTutor.subjects
+                                        .map((s) => s.subject?.subjectName)
+                                        .filter(Boolean) as string[]
+                                    )
+                                  ).join(', ')
+                                : 'Chưa có môn dạy'}
+                            </span>
                           </div>
-                          <div className="flex justify-between">
+                          <div className="flex items-start justify-between gap-3">
                             <span className="text-gray-600">Chứng chỉ:</span>
-                            <span className="font-medium">{selectedTutor.certificates.length}</span>
+                            <span className="font-medium text-right flex-1">
+                              {selectedTutor.certificates && selectedTutor.certificates.length > 0
+                                ? selectedTutor.certificates
+                                    .map((c) => c.certificateType?.name || c.typeName)
+                                    .filter(Boolean)
+                                    .join(', ')
+                                : 'Không có chứng chỉ'}
+                            </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Hình thức:</span>
-                            <span className="font-medium truncate" title={getTeachingModeText(selectedTutor.tutorProfile.teachingModes)}>
+                            <span
+                              className="font-medium truncate"
+                              title={getTeachingModeText(selectedTutor.tutorProfile.teachingModes)}
+                            >
                               {getTeachingModeText(selectedTutor.tutorProfile.teachingModes)}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Tham gia:</span>
-                            <span className="font-medium">{new Date(selectedTutor.createdAt).toLocaleDateString('vi-VN')}</span>
+                            <span className="font-medium">
+                              {new Date(selectedTutor.createdAt).toLocaleDateString('vi-VN')}
+                            </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Đánh giá:</span>
