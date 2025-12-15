@@ -60,6 +60,7 @@ import {
   Loader2,
   XCircle,
   Shield,
+  FileText,
 } from 'lucide-react';
 
 const PAGE_SIZE = 10;
@@ -614,7 +615,7 @@ export function ManageReports() {
         </p>
       </div>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardContent className="p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
             <div className="relative flex-1">
@@ -673,12 +674,13 @@ export function ManageReports() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Danh sách báo cáo</CardTitle>
-          <Badge variant="outline" className="text-sm">
-            Tổng: {reports.length}
-          </Badge>
+          <div className="flex items-center gap-2 text-gray-700">
+            <FileText className="h-4 w-4" />
+            <span className="font-medium">Số báo cáo: {reports.length}</span>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -839,7 +841,7 @@ export function ManageReports() {
 
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
         <DialogContent
-          className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col"
+          className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col border-gray-300 shadow-lg"
           aria-describedby={undefined}
         >
           <DialogHeader className="flex-shrink-0 pb-2">
@@ -1172,7 +1174,7 @@ export function ManageReports() {
       </Dialog>
 
       <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-        <DialogContent className="max-w-3xl" aria-describedby={undefined}>
+        <DialogContent className="max-w-3xl border-gray-300 shadow-lg" aria-describedby={undefined}>
           {previewImage && (
             <img
               src={previewImage}
@@ -1184,7 +1186,7 @@ export function ManageReports() {
       </Dialog>
 
       <AlertDialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border-gray-300 shadow-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>
               {actionType === 'resolve' ? 'Xác nhận đã giải quyết' : 'Bác bỏ báo cáo'}
@@ -1234,7 +1236,7 @@ export function ManageReports() {
       </AlertDialog>
 
       <Dialog open={cancelBookingDialogOpen} onOpenChange={setCancelBookingDialogOpen}>
-        <DialogContent className="max-w-md" aria-describedby={undefined}>
+        <DialogContent className="max-w-md border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Xác nhận hủy lớp học</DialogTitle>
           </DialogHeader>

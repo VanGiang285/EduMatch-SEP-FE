@@ -1193,9 +1193,15 @@ export function ManageBusinessUsers() {
                               </div>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                                {getTeachingModeText(detailTutor.teachingModes)}
-                              </Badge>
+                              {(() => {
+                                const teachingModeText = getTeachingModeText(detailTutor.teachingModes);
+                                if (!teachingModeText || teachingModeText === 'Chưa cập nhật') return null;
+                                return (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                                    {teachingModeText}
+                                  </Badge>
+                                );
+                              })()}
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                               <div className="flex items-center gap-2 text-gray-600 min-w-0">
@@ -1205,10 +1211,17 @@ export function ManageBusinessUsers() {
                                   {detailTutor.provinceName ? `, ${detailTutor.provinceName}` : ''}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 text-gray-600 min-w-0">
-                                <Globe className="w-4 h-4 flex-shrink-0" />
-                                <span className="truncate">{getTeachingModeText(detailTutor.teachingModes)}</span>
-                              </div>
+                              {(() => {
+                                const teachingModeText = getTeachingModeText(detailTutor.teachingModes);
+                                return (
+                                  <div className="flex items-center gap-2 text-gray-600 min-w-0">
+                                    <Globe className="w-4 h-4 flex-shrink-0" />
+                                    <span className="truncate">
+                                      {teachingModeText || 'Chưa cập nhật'}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
                               <div className="flex items-center gap-2 text-gray-600 min-w-0">
                                 <Users className="w-4 h-4 flex-shrink-0" />
                                 <span className="truncate">{detailTutor.email}</span>

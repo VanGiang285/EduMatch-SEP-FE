@@ -1023,9 +1023,15 @@ export function ManageTutorApplications() {
                                   </div>
                                 );
                               })()}
-                              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                                {getTeachingModeText(detailTutor.teachingModes)}
-                              </Badge>
+                              {(() => {
+                                const teachingModeText = getTeachingModeText(detailTutor.teachingModes);
+                                if (!teachingModeText || teachingModeText === 'Chưa cập nhật') return null;
+                                return (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                                    {teachingModeText}
+                                  </Badge>
+                                );
+                              })()}
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                               <div className="flex items-center gap-2 text-gray-600 min-w-0">

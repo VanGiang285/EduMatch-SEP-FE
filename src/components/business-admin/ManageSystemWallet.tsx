@@ -363,11 +363,11 @@ export function ManageSystemWallet() {
       {/* Tabs */}
       <Tabs defaultValue="wallet" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2 bg-[#F2E5BF]">
-          <TabsTrigger value="wallet" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">
+          <TabsTrigger value="wallet" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">
             <Wallet className="h-4 w-4 mr-2" />
             Ví hệ thống
           </TabsTrigger>
-          <TabsTrigger value="system-fee" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">
+          <TabsTrigger value="system-fee" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">
             <Settings className="h-4 w-4 mr-2" />
             Phí hệ thống
           </TabsTrigger>
@@ -378,7 +378,7 @@ export function ManageSystemWallet() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-white">
+            <Card className="bg-white border border-gray-300">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 rounded-lg bg-blue-50">
@@ -408,7 +408,7 @@ export function ManageSystemWallet() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white">
+            <Card className="bg-white border border-gray-300">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 rounded-lg bg-green-50">
@@ -436,7 +436,7 @@ export function ManageSystemWallet() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white">
+            <Card className="bg-white border border-gray-300">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 rounded-lg bg-red-50">
@@ -468,7 +468,7 @@ export function ManageSystemWallet() {
           {/* Dashboard Info */}
           {dashboard && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-white">
+              <Card className="bg-white border border-gray-300">
                 <CardHeader>
                   <CardTitle className="text-lg">Thông tin ví hệ thống</CardTitle>
                 </CardHeader>
@@ -489,7 +489,7 @@ export function ManageSystemWallet() {
           )}
 
       {/* Filters */}
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
@@ -527,7 +527,7 @@ export function ManageSystemWallet() {
       </Card>
 
       {/* Transactions Table */}
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Lịch sử giao dịch</CardTitle>
@@ -682,7 +682,7 @@ export function ManageSystemWallet() {
           </div>
 
           {/* System Fees Table */}
-          <Card className="bg-white">
+          <Card className="bg-white border border-gray-300">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Danh sách phí hệ thống</CardTitle>
@@ -814,7 +814,7 @@ export function ManageSystemWallet() {
 
       {/* System Fee Dialog */}
       <Dialog open={showSystemFeeDialog} onOpenChange={setShowSystemFeeDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle>{editingSystemFee ? 'Chỉnh sửa Phí hệ thống' : 'Thêm Phí hệ thống'}</DialogTitle>
           </DialogHeader>

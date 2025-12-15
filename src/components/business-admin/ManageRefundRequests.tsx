@@ -27,7 +27,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
 import { Label } from '@/components/ui/form/label';
-import { Search, Eye, Loader2, ArrowUpDown, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Eye, Loader2, ArrowUpDown, CheckCircle, XCircle, FileText } from 'lucide-react';
 import { BookingRefundRequestService } from '@/services';
 import { BookingRefundRequestDto } from '@/types/backend';
 import { BookingRefundRequestStatus, EnumHelpers } from '@/types/enums';
@@ -221,7 +221,7 @@ export function ManageRefundRequests() {
         <p className="text-gray-600 mt-1">Duyệt và quản lý các yêu cầu hoàn tiền từ học viên</p>
       </div>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -267,11 +267,14 @@ export function ManageRefundRequests() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách yêu cầu hoàn tiền</CardTitle>
-            <Badge variant="outline">{filteredRequests.length} yêu cầu</Badge>
+            <div className="flex items-center gap-2 text-gray-700">
+              <FileText className="h-4 w-4" />
+              <span className="font-medium">{filteredRequests.length} yêu cầu</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -376,7 +379,7 @@ export function ManageRefundRequests() {
                               )}
                             </TableCell>
                             <TableCell className="text-left">
-                              <Badge className={getStatusColor(req.status)}>
+                              <Badge className={`${getStatusColor(req.status)} border`}>
                                 {getStatusLabel(req.status)}
                               </Badge>
                             </TableCell>
@@ -440,7 +443,7 @@ export function ManageRefundRequests() {
       </Card>
 
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Chi tiết yêu cầu hoàn tiền</DialogTitle>
           </DialogHeader>

@@ -528,7 +528,7 @@ export function ManageClassRequests() {
       </div>
 
       {/* Filters */}
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
@@ -569,11 +569,14 @@ export function ManageClassRequests() {
       </Card>
 
       {/* Requests Table */}
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách yêu cầu</CardTitle>
-            <Badge variant="outline">{filteredRequests.length} yêu cầu</Badge>
+            <div className="flex items-center gap-2 text-gray-700">
+              <Calendar className="h-4 w-4" />
+              <span className="font-medium">{filteredRequests.length} yêu cầu</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -648,7 +651,7 @@ export function ManageClassRequests() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">
+                              <Badge variant="outline" className="border-gray-300 bg-white">
                                 {getModeText(request.mode)}
                               </Badge>
                             </TableCell>
@@ -658,7 +661,7 @@ export function ManageClassRequests() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">{request.expectedSessions} buổi</Badge>
+                              <Badge variant="outline" className="border-gray-300 bg-white">{request.expectedSessions} buổi</Badge>
                             </TableCell>
                             <TableCell className="text-sm">
                               <div>
@@ -746,7 +749,7 @@ export function ManageClassRequests() {
 
       {/* Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle>Chi tiết yêu cầu mở lớp</DialogTitle>
           </DialogHeader>
@@ -883,7 +886,7 @@ export function ManageClassRequests() {
                 <div className="space-y-6">
                   {/* Schedule */}
                   {selectedRequest.slots && selectedRequest.slots.length > 0 && (
-                    <Card>
+                    <Card className="border border-gray-300">
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-base">
                           <Calendar className="h-5 w-5" />
@@ -894,7 +897,9 @@ export function ManageClassRequests() {
                         <div className="grid grid-cols-1 gap-2">
                           {selectedRequest.slots.map((slot: any, index: number) => (
                             <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                              <Badge variant="outline">{getDayOfWeekText(slot.dayOfWeek)}</Badge>
+                              <Badge variant="outline" className="border-gray-300 bg-white">
+                                {getDayOfWeekText(slot.dayOfWeek)}
+                              </Badge>
                               <span className="text-gray-900">
                                 {slot.slot?.startTime || slot.startTime || ''} - {slot.slot?.endTime || slot.endTime || ''}
                               </span>
@@ -907,7 +912,7 @@ export function ManageClassRequests() {
 
                   {/* Applicants (nếu đã duyệt) */}
                   {getStatusNumber(selectedRequest.status) === ClassRequestStatus.Open && applicants.length > 0 && (
-                    <Card>
+                    <Card className="border border-gray-300">
                       <CardHeader>
                         <CardTitle className="text-base">Gia sư ứng tuyển ({applicants.length})</CardTitle>
                       </CardHeader>
@@ -959,12 +964,12 @@ export function ManageClassRequests() {
                 const statusNum = getStatusNumber(selectedRequest.status);
                 return statusNum === ClassRequestStatus.Reviewing;
               })() && (
-                <div className="flex justify-end gap-3 pt-4 border-t">
+                <div className="flex justify-end gap-3 pt-4 border-t border-[#257180]/20">
                   <Button 
                     variant="outline" 
                     onClick={() => setShowDetailDialog(false)}
                     disabled={isApproving || isRejecting}
-                    className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                    className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                   >
                     Đóng
                   </Button>
@@ -975,7 +980,7 @@ export function ManageClassRequests() {
                       setShowRejectDialog(true);
                     }}
                     disabled={isApproving || isRejecting}
-                    className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                    className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                   >
                     <XCircle className="h-4 w-4 mr-2" />
                     Từ chối
@@ -1010,7 +1015,7 @@ export function ManageClassRequests() {
 
       {/* Reject Dialog */}
       <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border-gray-300 shadow-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Từ chối yêu cầu mở lớp</AlertDialogTitle>
             <AlertDialogDescription>
