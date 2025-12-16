@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/layout/card";
 import { Badge } from "@/components/ui/basic/badge";
 import { Button } from "@/components/ui/basic/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/feedback/dialog";
-import { Loader2 } from "lucide-react";
+import { Loader2, Clock, CheckCircle, XCircle, X } from "lucide-react";
 import { ScheduleChangeRequestStatus } from "@/types/enums";
 import { EnumHelpers } from "@/types/enums";
 import { useAuth } from "@/hooks/useAuth";

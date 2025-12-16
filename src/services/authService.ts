@@ -113,6 +113,15 @@ export class AuthService {
     );
   }
 
+  static async checkEmailAvailable(
+    email: string
+  ): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.get<{ message: string }>(
+      API_ENDPOINTS.AUTH.CHECK_EMAIL_AVAILABLE,
+      { email }
+    );
+  }
+
   // Kiểm tra user đã đăng nhập chưa
   static isAuthenticated(): boolean {
     if (typeof window === 'undefined') return false;

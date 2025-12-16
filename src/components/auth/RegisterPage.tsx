@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useCustomToast } from "@/hooks/useCustomToast";
 import { RadioGroup, RadioGroupItem } from "../ui/form/radio-group";
+import { AuthService } from "@/services";
 interface RegisterPageProps {
   onSwitchToLogin: () => void;
 }
@@ -24,6 +25,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [passwordMatchError, setPasswordMatchError] = useState("");
   const [role, setRole] = useState<"learner" | "tutor">("learner");
   const { register } = useAuth();
@@ -42,6 +44,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setEmailError("");
     setPasswordMatchError("");
     
     // Check null, undefined và empty string
@@ -101,16 +104,37 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
         return;
       }
 
-      if (typeof window !== "undefined") {
-        const pendingData = {
-          fullName: trimmedFullName,
-          email: trimmedEmail,
-          password: trimmedPassword,
-        };
-        sessionStorage.setItem("PENDING_TUTOR_REGISTER", JSON.stringify(pendingData));
-      }
+      if (role === "tutor") {
+        try {
+          const emailCheckResult = await AuthService.checkEmailAvailable(trimmedEmail);
+          if (!emailCheckResult.success || emailCheckResult.error) {
+            setEmailError("Email này đã được sử dụng. Vui lòng chọn email khác hoặc đăng nhập");
+            setPassword("");
+            setConfirmPassword("");
+            return;
+          }
 
-      router.push("/become-tutor?from-register=1");
+          if (typeof window !== "undefined") {
+            const pendingData = {
+              fullName: trimmedFullName,
+              email: trimmedEmail,
+              password: trimmedPassword,
+            };
+            sessionStorage.setItem("PENDING_TUTOR_REGISTER", JSON.stringify(pendingData));
+          }
+
+          router.push("/become-tutor?from-register=1");
+          return;
+        } catch (emailError: any) {
+          if (emailError.status === 400 || emailError.message?.includes("already exists")) {
+            setEmailError("Email này đã được sử dụng. Vui lòng chọn email khác hoặc đăng nhập");
+            setPassword("");
+            setConfirmPassword("");
+            return;
+          }
+          throw emailError;
+        }
+      }
     } catch (error: any) {
       // Xử lý các loại lỗi từ backend
       let errorMessage = "Đăng ký thất bại";
@@ -233,10 +257,20 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailError("");
+                  }}
                   placeholder="Nhập email của bạn"
-                  className="h-10 sm:h-11 lg:h-12 border border-gray-300 rounded-lg bg-white text-sm sm:text-base focus:border-[#257180] focus:ring-1 focus:ring-[#257180]"
+                  className={`h-10 sm:h-11 lg:h-12 border rounded-lg bg-white text-sm sm:text-base focus:ring-1 ${
+                    emailError 
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500" 
+                      : "border-gray-300 focus:border-[#257180] focus:ring-[#257180]"
+                  }`}
                 />
+                {emailError && (
+                  <p className="text-sm text-red-600">{emailError}</p>
+                )}
               </div>
               <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="password" className="text-black text-sm sm:text-base">Mật khẩu</Label>

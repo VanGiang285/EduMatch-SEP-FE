@@ -164,6 +164,7 @@ export const API_ENDPOINTS = {
     GET_CURRENT_USER: '/api/user/me',
     CHANGE_PASSWORD: '/api/user/change-password',
     RESET_PASSWORD: '/api/user/reset-password',
+    CHECK_EMAIL_AVAILABLE: '/api/User/check-email-available',
   },
 
   // ==================== USER PROFILES ====================
@@ -397,6 +398,7 @@ export const API_ENDPOINTS = {
     CANCEL_ALL_BY_BOOKING: '/api/Schedule/cancel-all-by-booking/:bookingId',
     GET_ALL_BY_LEARNER_EMAIL: '/api/Schedule/get-all-by-learner-email',
     GET_ALL_BY_TUTOR_EMAIL: '/api/Schedule/get-all-by-tutor-email',
+    GET_BY_TUTOR_EMAIL_AND_STATUS: '/api/Schedule/get-by-tutor-email-and-status',
     FINISH: '/api/Schedule/:id/finish',
     CANCEL: '/api/Schedule/:id/cancel',
     REPORT: '/api/Schedule/:id/report/:reportId',

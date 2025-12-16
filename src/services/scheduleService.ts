@@ -269,4 +269,23 @@ export class ScheduleService {
     });
     return apiClient.post<object>(endpoint);
   }
+
+  static async getByTutorEmailAndStatus(
+    tutorEmail: string,
+    bookingId: number,
+    params?: {
+      status?: ScheduleStatus;
+      take?: number;
+    }
+  ): Promise<ApiResponse<ScheduleDto[]>> {
+    return apiClient.get<ScheduleDto[]>(
+      API_ENDPOINTS.SCHEDULES.GET_BY_TUTOR_EMAIL_AND_STATUS,
+      {
+        tutorEmail,
+        bookingId,
+        status: params?.status,
+        take: params?.take || 1,
+      }
+    );
+  }
 }

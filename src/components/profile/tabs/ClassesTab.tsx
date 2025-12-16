@@ -41,9 +41,9 @@ import { useChatContext } from "@/contexts/ChatContext";
 import { useAuth as useAuthContext } from "@/contexts/AuthContext";
 
 import { BookingDto, TutorProfileDto, TutorFeedbackDto, TutorRatingSummary } from "@/types/backend";
-import { BookingStatus, PaymentStatus, TeachingMode } from "@/types/enums";
+import { BookingStatus, PaymentStatus, TeachingMode, ScheduleStatus } from "@/types/enums";
 import { EnumHelpers } from "@/types/enums";
-import { FeedbackService } from "@/services";
+import { FeedbackService, ScheduleService } from "@/services";
 
 type FilterValue = "all" | "active" | "pending" | "completed" | "cancelled";
 
@@ -83,25 +83,78 @@ const getPaymentStatusBadge = (status: PaymentStatus | string) => {
   }
 };
 
-const getNextSession = (booking: BookingDto) => {
-  if (!booking.schedules || booking.schedules.length === 0) return null;
+const NextSessionDisplay = ({ booking }: { booking: BookingDto }) => {
+  const [nextSessionDate, setNextSessionDate] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const upcoming = booking.schedules
-    .filter((s) => {
-      const st = EnumHelpers.parseScheduleStatus(s.status);
-      if (st !== 0) return false; // ScheduleStatus.Upcoming
-      const start = s.availability?.startDate
-        ? new Date(s.availability.startDate)
-        : null;
-      return !!start && start > new Date();
-    })
-    .sort(
-      (a, b) =>
-        new Date(a.availability?.startDate || 0).getTime() -
-        new Date(b.availability?.startDate || 0).getTime()
+  useEffect(() => {
+    const fetchNextSession = async () => {
+      const tutorEmail = booking.tutorSubject?.tutorEmail;
+      const bookingId = booking.id;
+
+      if (!tutorEmail || !bookingId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const result = await ScheduleService.getByTutorEmailAndStatus(
+          tutorEmail,
+          bookingId,
+          {
+            status: ScheduleStatus.Upcoming,
+            take: 1,
+          }
+        );
+
+        if (result.success && result.data && result.data.length > 0) {
+          const schedule = result.data[0];
+          const startDate = schedule.availability?.startDate;
+          if (startDate) {
+            setNextSessionDate(startDate);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching next session:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNextSession();
+  }, [booking.id, booking.tutorSubject?.tutorEmail]);
+
+  if (loading) {
+    return (
+      <p className="text-sm text-gray-600">Đang tải...</p>
     );
+  }
 
-  return upcoming[0]?.availability?.startDate ?? null;
+  if (!nextSessionDate) {
+    return (
+      <p className="text-sm text-gray-600">
+        Chưa có buổi học sắp tới.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <p className="font-semibold text-gray-900 mb-1">
+        {new Date(nextSessionDate).toLocaleDateString("vi-VN", {
+          weekday: "short",
+          day: "2-digit",
+          month: "2-digit",
+        })}
+      </p>
+      <p className="text-2xl font-bold text-green-600">
+        {new Date(nextSessionDate).toLocaleTimeString("vi-VN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </p>
+    </>
+  );
 };
 
 export function ClassesTab() {
@@ -763,7 +816,6 @@ export function ClassesTab() {
                 : tutorSubject?.tutor;
               const subject = tutorSubject?.subject;
               const level = tutorSubject?.level;
-              const nextSession = getNextSession(booking);
               const tutorId = tutorSubject?.tutorId;
               const ratingSummary = tutorId ? tutorRatings.get(tutorId) : undefined;
               const schedules = booking.schedules || [];
@@ -1060,27 +1112,7 @@ export function ClassesTab() {
                                 Buổi học tiếp theo
                               </span>
                             </div>
-                            {nextSession ? (
-                              <>
-                                <p className="font-semibold text-gray-900 mb-1">
-                                  {new Date(nextSession).toLocaleDateString("vi-VN", {
-                                    weekday: "short",
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                  })}
-                                </p>
-                                <p className="text-2xl font-bold text-green-600">
-                                  {new Date(nextSession).toLocaleTimeString("vi-VN", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </p>
-                              </>
-                            ) : (
-                              <p className="text-sm text-gray-600">
-                                Chưa có buổi học sắp tới.
-                              </p>
-                            )}
+                            <NextSessionDisplay booking={booking} />
                           </div>
                         </div>
                       </div>
