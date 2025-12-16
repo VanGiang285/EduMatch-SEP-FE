@@ -2,6 +2,7 @@ import { apiClient } from '@/lib/api';
 import { API_ENDPOINTS, STORAGE_KEYS } from '@/constants';
 import { ApiResponse } from '@/types/api';
 import { User } from '@/types';
+import { TokenManager } from '@/lib/tokenManager';
 import {
   LoginRequest,
   RegisterRequest,
@@ -115,7 +116,9 @@ export class AuthService {
   // Kiểm tra user đã đăng nhập chưa
   static isAuthenticated(): boolean {
     if (typeof window === 'undefined') return false;
-    return !!localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    if (!token) return false;
+    return !TokenManager.isTokenExpired(token);
   }
 
   // Lấy thông tin user từ localStorage

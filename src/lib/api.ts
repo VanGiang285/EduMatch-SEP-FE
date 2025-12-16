@@ -100,34 +100,28 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
-    // Check if token is expired or about to expire before making request
+    const isRefreshEndpoint = endpoint.includes('/refresh') || endpoint.includes('/refresh-token');
+    
     const token = this.getAuthToken();
-    if (token) {
+    if (token && !isRefreshEndpoint) {
       const isExpired = TokenManager.isTokenExpired(token);
       const shouldRefresh = TokenManager.shouldRefreshSoon(token);
       
       if (isExpired || shouldRefresh) {
-        // Token expired or about to expire, refresh it first
         if (this.isRefreshing && this.refreshPromise) {
-          // Wait for ongoing refresh
           try {
             await this.refreshPromise;
           } catch (error) {
-            // Refresh failed, will be handled below
             console.warn('Token refresh in progress failed:', error);
           }
         } else if (!this.isRefreshing && this.onTokenRefresh) {
-          // Start refresh
           this.isRefreshing = true;
           this.refreshPromise = this.performTokenRefresh();
           try {
             await this.refreshPromise;
             console.log('✅ Token refreshed successfully before request');
           } catch (error) {
-            // Refresh failed
             console.error('❌ Token refresh failed before request:', error);
-            // If token is completely expired, we should not proceed
-            // The request will likely fail with 401, which will be handled below
             if (isExpired) {
               console.warn('Token is expired and refresh failed, request may fail');
             }
@@ -142,8 +136,8 @@ class ApiClient {
     try {
       return await this.makeRequest<T>(endpoint, options);
     } catch (error) {
-      // Handle 401 Unauthorized with auto-refresh
-      if (error instanceof ApiError && error.status === 401) {
+      const isRefreshEndpoint = endpoint.includes('/refresh') || endpoint.includes('/refresh-token');
+      if (error instanceof ApiError && error.status === 401 && !isRefreshEndpoint) {
         console.log('🔄 Received 401, attempting token refresh...');
         return await this.handleTokenRefresh<T>(endpoint, options);
       }
