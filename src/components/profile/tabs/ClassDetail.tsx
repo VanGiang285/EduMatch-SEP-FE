@@ -156,12 +156,20 @@ export function ClassDetail({ booking, userRole, onBack }: ClassDetailProps) {
   }, [booking.id, booking.schedules]);
 
   const totalSessions = booking.totalSessions;
+  const totalSessionsForDisplay = schedules.length;
+  const doneSessions = useMemo(() => {
+    // Theo yêu cầu: số buổi đã học/đã dạy = tổng schedule khác Upcoming & InProgress
+    return schedules.filter((s) => {
+      const st = EnumHelpers.parseScheduleStatus(s.status);
+      return st !== ScheduleStatus.Upcoming && st !== ScheduleStatus.InProgress;
+    }).length;
+  }, [schedules]);
   const completedSessions = useMemo(() => {
     return schedules.filter(
       (s) => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Completed
     ).length;
   }, [schedules]);
-  const progress = totalSessions ? (completedSessions / totalSessions) * 100 : 0;
+  const progress = totalSessionsForDisplay ? (doneSessions / totalSessionsForDisplay) * 100 : 0;
 
   const getProgressPercentage = () => {
     return Math.round(progress);
@@ -426,7 +434,7 @@ export function ClassDetail({ booking, userRole, onBack }: ClassDetailProps) {
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
                   <p className="text-white/70 text-xs mb-1">Tổng buổi</p>
-                  <p className="font-medium">{totalSessions} buổi</p>
+                  <p className="font-medium">{totalSessionsForDisplay} buổi</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
                   <p className="text-white/70 text-xs mb-1">Bắt đầu</p>
@@ -506,7 +514,7 @@ export function ClassDetail({ booking, userRole, onBack }: ClassDetailProps) {
               <p className="text-3xl font-bold text-gray-900 mb-1">{getProgressPercentage()}%</p>
               <p className="text-gray-600">Tiến độ</p>
               <p className="text-xs text-gray-500 mt-1">
-                {completedSessions}/{totalSessions} buổi
+                {doneSessions}/{totalSessionsForDisplay} buổi
               </p>
             </div>
 
@@ -516,9 +524,9 @@ export function ClassDetail({ booking, userRole, onBack }: ClassDetailProps) {
                   <CheckCircle2 className="w-5 h-5 text-green-600" />
                 </div>
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1">{completedSessions}</p>
+              <p className="text-3xl font-bold text-gray-900 mb-1">{doneSessions}</p>
               <p className="text-gray-600">{userRole === 'learner' ? 'Đã học' : 'Đã dạy'}</p>
-              <p className="text-xs text-gray-500 mt-1">{completedSessions} buổi</p>
+              <p className="text-xs text-gray-500 mt-1">{doneSessions} buổi</p>
             </div>
 
             <div className="text-center">
@@ -528,10 +536,10 @@ export function ClassDetail({ booking, userRole, onBack }: ClassDetailProps) {
                 </div>
               </div>
               <p className="text-3xl font-bold text-gray-900 mb-1">
-                {totalSessions - completedSessions}
+                {Math.max(totalSessionsForDisplay - doneSessions, 0)}
               </p>
               <p className="text-gray-600">Còn lại</p>
-              <p className="text-xs text-gray-500 mt-1">{totalSessions - completedSessions} buổi</p>
+              <p className="text-xs text-gray-500 mt-1">{Math.max(totalSessionsForDisplay - doneSessions, 0)} buổi</p>
             </div>
 
             <div className="text-center">
@@ -660,8 +668,8 @@ export function ClassDetail({ booking, userRole, onBack }: ClassDetailProps) {
                         <BookOpen className="w-5 h-5 text-[#257180] mt-0.5" />
                         <div>
                           <p className="text-xs text-gray-500 mb-1">Tổng số buổi học</p>
-                          <p className="font-medium text-gray-900">{totalSessions} buổi</p>
-                          <p className="text-xs text-gray-600 mt-1">Tổng cộng {totalSessions} buổi</p>
+                          <p className="font-medium text-gray-900">{totalSessionsForDisplay} buổi</p>
+                          <p className="text-xs text-gray-600 mt-1">Tổng cộng {totalSessionsForDisplay} buổi</p>
                         </div>
                       </div>
                     </div>
@@ -812,7 +820,7 @@ export function ClassDetail({ booking, userRole, onBack }: ClassDetailProps) {
                     <p className="text-gray-600">
                       {loadingSchedules
                         ? 'Đang tải danh sách buổi học...'
-                        : `Tổng ${schedules.length} buổi (${completedSessions} đã học, ${
+                        : `Tổng ${schedules.length} buổi (${doneSessions} ${userRole === 'learner' ? 'đã học' : 'đã dạy'}, ${
                             schedules.filter(s => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Upcoming).length
                           } sắp tới)`}
                     </p>

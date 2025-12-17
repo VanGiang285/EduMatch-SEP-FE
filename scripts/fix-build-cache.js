@@ -29,3 +29,4 @@ if (fs.existsSync(NEXT_DIR)) {
 console.log('Build cache cleaned successfully!');
 console.log('Run "npm run dev" or "npm run build" to rebuild.');
 
+

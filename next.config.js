@@ -117,13 +117,16 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
           },
+          // Không cache HTML pages để đảm bảo code mới được load
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: 'no-cache, no-store, must-revalidate',
           },
         ],
       },
       {
+        // Static assets có thể cache lâu hơn nhưng vẫn có thể invalidate
+        // Next.js tự động thêm hash vào tên file nên có thể cache lâu
         source: '/_next/static/(.*)',
         headers: [
           {

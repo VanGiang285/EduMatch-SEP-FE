@@ -236,42 +236,33 @@ export function ClassesTab() {
 
   const bookingCounts = useMemo(() => {
     const parse = (b: BookingDto) => EnumHelpers.parseBookingStatus(b.status);
-    const completedSessions = (b: BookingDto) =>
-      (b.schedules || []).filter(
-        (s) => EnumHelpers.parseScheduleStatus(s.status) === 2 // Completed
-      ).length;
+    // NOTE: Trạng thái lớp học = booking.status (source of truth).
+    // Số buổi đã học/dự kiến sẽ lấy theo schedules (khác Upcoming & InProgress),
+    // nhưng phần thống kê tổng ở đầu tab hiện vẫn dựa trên booking.schedules (fallback)
+    // để tránh bắt buộc load schedules cho tất cả bookings.
+    const doneSessionsFallback = (b: BookingDto) =>
+      (b.schedules || []).filter((s) => {
+        const st = EnumHelpers.parseScheduleStatus(s.status);
+        return st !== ScheduleStatus.Upcoming && st !== ScheduleStatus.InProgress;
+      }).length;
 
-    const totalCompletedSessions = allBookings.reduce(
-      (sum, b) => sum + completedSessions(b),
-      0
-    );
+    const totalDoneSessions = allBookings.reduce((sum, b) => sum + doneSessionsFallback(b), 0);
 
     const upcomingSessions = allBookings.reduce((sum, b) => {
-      const upcoming = (b.schedules || []).filter(
-        (s) => EnumHelpers.parseScheduleStatus(s.status) === 0 // Upcoming
-      ).length;
+      const upcoming = (b.schedules || []).filter((s) => {
+        const st = EnumHelpers.parseScheduleStatus(s.status);
+        return st === ScheduleStatus.Upcoming;
+      }).length;
       return sum + upcoming;
     }, 0);
 
     return {
       all: allBookings.length,
-      active: allBookings.filter(
-        (b) =>
-          parse(b) === BookingStatus.Confirmed &&
-          completedSessions(b) < b.totalSessions
-      ).length,
-      pending: allBookings.filter(
-        (b) => parse(b) === BookingStatus.Pending
-      ).length,
-      completed: allBookings.filter(
-        (b) =>
-          parse(b) === BookingStatus.Confirmed &&
-          completedSessions(b) === b.totalSessions
-      ).length,
-      cancelled: allBookings.filter(
-        (b) => parse(b) === BookingStatus.Cancelled
-      ).length,
-      totalCompletedSessions,
+      active: allBookings.filter((b) => parse(b) === BookingStatus.Confirmed).length,
+      pending: allBookings.filter((b) => parse(b) === BookingStatus.Pending).length,
+      completed: allBookings.filter((b) => parse(b) === BookingStatus.Completed).length,
+      cancelled: allBookings.filter((b) => parse(b) === BookingStatus.Cancelled).length,
+      totalCompletedSessions: totalDoneSessions,
       upcomingSessions,
     };
   }, [allBookings]);
@@ -279,6 +270,7 @@ export function ClassesTab() {
   const filteredBookings = useMemo(() => {
     return allBookings.filter((b) => {
       const status = EnumHelpers.parseBookingStatus(b.status);
+      
       if (filter === "all") return true;
       if (filter === "active") return status === BookingStatus.Confirmed;
       if (filter === "pending") return status === BookingStatus.Pending;
@@ -554,6 +546,7 @@ export function ClassesTab() {
             </Card>
           ) : (
             filteredBookings.map((booking) => {
+              const bookingStatus = EnumHelpers.parseBookingStatus(booking.status);
               const tutorSubject = booking.tutorSubject;
               const tutorEmail = tutorSubject?.tutorEmail;
               const tutor = tutorEmail
@@ -564,9 +557,16 @@ export function ClassesTab() {
               const tutorId = tutorSubject?.tutorId;
               const ratingSummary = tutorId ? tutorRatings.get(tutorId) : undefined;
               const schedules = schedulesByBookingId.get(booking.id) || booking.schedules || [];
-              const completedSessionsForHeader = schedules.filter(
-                (s) => EnumHelpers.parseScheduleStatus(s.status) === 4 // ScheduleStatus.Completed
-              ).length;
+              const totalSessionsForDisplay = schedules.length;
+              const doneSessionsForDisplay = schedules.filter((s) => {
+                const st = EnumHelpers.parseScheduleStatus(s.status);
+                return st !== ScheduleStatus.Upcoming && st !== ScheduleStatus.InProgress;
+              }).length;
+              const remainingSessionsForDisplay = Math.max(totalSessionsForDisplay - doneSessionsForDisplay, 0);
+              const percentForDisplay =
+                totalSessionsForDisplay > 0
+                  ? Math.round((doneSessionsForDisplay / totalSessionsForDisplay) * 100)
+                  : 0;
 
               return (
                 <Card
@@ -591,7 +591,7 @@ export function ClassesTab() {
                             variant="outline"
                             className="bg-white/10 text-white border-white/20"
                           >
-                            {completedSessionsForHeader}/{booking.totalSessions} buổi học
+                            {doneSessionsForDisplay}/{totalSessionsForDisplay} buổi học
                           </Badge>
                         </div>
                       </div>
@@ -806,59 +806,46 @@ export function ClassesTab() {
                           </div>
 
                           {/* Tiến độ */}
-                          <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-                            <div className="flex items-center gap-2 mb-2">
-                              <TrendingUp className="w-5 h-5 text-blue-600" />
-                              <span className="text-xs text-blue-700 font-medium">
-                                Tiến độ học tập
-                              </span>
-                            </div>
-                            {(() => {
-                              const schedules = booking.schedules || [];
-                              const completed = schedules.filter(
-                                (s) =>
-                                  EnumHelpers.parseScheduleStatus(s.status) ===
-                                  2 // Completed
-                              ).length;
-                              const total = booking.totalSessions;
-                              const remaining = Math.max(total - completed, 0);
-                              const percent =
-                                total > 0
-                                  ? Math.round((completed / total) * 100)
-                                  : 0;
-
-                              return (
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-semibold text-gray-900">
-                                      {completed}/{total}
-                                    </span>
-                                    <span className="text-sm font-medium text-blue-700">
-                                      {percent}%
-                                    </span>
-                                  </div>
-                                  <Progress
-                                    value={percent}
-                                    className="h-2.5 bg-white"
-                                  />
-                                  <p className="text-xs text-gray-600">
-                                    Còn {remaining} buổi học
-                                  </p>
+                          {bookingStatus !== BookingStatus.Completed && (
+                            <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                              <div className="flex items-center gap-2 mb-2">
+                                <TrendingUp className="w-5 h-5 text-blue-600" />
+                                <span className="text-xs text-blue-700 font-medium">
+                                  Tiến độ học tập
+                                </span>
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold text-gray-900">
+                                    {doneSessionsForDisplay}/{totalSessionsForDisplay}
+                                  </span>
+                                  <span className="text-sm font-medium text-blue-700">
+                                    {percentForDisplay}%
+                                  </span>
                                 </div>
-                              );
-                            })()}
-                          </div>
+                                <Progress
+                                  value={percentForDisplay}
+                                  className="h-2.5 bg-white"
+                                />
+                                <p className="text-xs text-gray-600">
+                                  Còn {remainingSessionsForDisplay} buổi học
+                                </p>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Buổi học tiếp theo */}
-                          <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Calendar className="w-5 h-5 text-green-600" />
-                              <span className="text-xs text-green-700 font-medium">
-                                Buổi học tiếp theo
-                              </span>
+                          {bookingStatus !== BookingStatus.Completed && (
+                            <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Calendar className="w-5 h-5 text-green-600" />
+                                <span className="text-xs text-green-700 font-medium">
+                                  Buổi học tiếp theo
+                                </span>
+                              </div>
+                              <NextSessionDisplay booking={booking} />
                             </div>
-                            <NextSessionDisplay booking={booking} />
-                          </div>
+                          )}
                         </div>
                       </div>
 
