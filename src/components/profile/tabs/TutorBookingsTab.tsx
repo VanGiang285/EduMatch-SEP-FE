@@ -786,9 +786,10 @@ export function TutorBookingsTab() {
                         </div>
                       </div>
 
-                      <div className="flex gap-3 pt-2 border-t border-[#257180]/20">
+                      <div className="flex flex-wrap gap-3 pt-2 border-t border-[#257180]/20">
                         <Button
-                          className="flex-1 bg-[#257180] hover:bg-[#1f5a66] text-white"
+                          variant="outline"
+                          className="flex-1 min-w-[140px] border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleViewDetail(booking.id);
@@ -799,7 +800,7 @@ export function TutorBookingsTab() {
                         </Button>
                         <Button
                           variant="outline"
-                          className="flex-1 border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                          className="flex-1 min-w-[140px] border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                           onClick={(e) => {
                             e.stopPropagation();
                           }}
@@ -807,6 +808,35 @@ export function TutorBookingsTab() {
                           <MessageCircle className="w-4 h-4 mr-2" />
                           Nhắn tin với học viên
                         </Button>
+                        {bookingStatus === BookingStatus.Pending && (
+                          <>
+                            <Button
+                              variant="outline"
+                              className="flex-1 min-w-[140px] border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmDialog({
+                                  bookingId: booking.id,
+                                  status: BookingStatus.Cancelled,
+                                });
+                              }}
+                            >
+                              Huỷ đơn
+                            </Button>
+                            <Button
+                              className="flex-1 min-w-[140px] bg-[#257180] hover:bg-[#1f5a66] text-white"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmDialog({
+                                  bookingId: booking.id,
+                                  status: BookingStatus.Confirmed,
+                                });
+                              }}
+                            >
+                              Xác nhận
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </CardContent>

@@ -15,7 +15,6 @@ import { TutorProfileTab } from './tabs/TutorProfileTab';
 import { ClassRequestsTab } from './tabs/ClassRequestsTab';
 import { NotificationsTab } from './tabs/NotificationsTab';
 import { TutorApplicationsTab } from './tabs/TutorApplicationsTab';
-import { RefundRequestsTab } from './tabs/RefundRequestsTab';
 import { ReportsTab } from './tabs/ReportsTab';
 import { ScheduleChangeTab } from './tabs/ScheduleChangeTab';
 import { DashboardTab } from './tabs/DashboardTab';
@@ -74,7 +73,6 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
     ...(!isTutor ? [{ id: 'classRequests', label: 'Yêu cầu mở lớp', icon: FileText }] : []),
     ...(isTutor ? [{ id: 'tutorApplications', label: 'Ứng tuyển lớp dạy', icon: ClipboardList }] : []),
     { id: 'wallet', label: 'Ví', icon: Wallet },
-    ...(!isTutor ? [{ id: 'refundRequests', label: 'Yêu cầu hoàn tiền', icon: Receipt }] : []),
     { id: 'reports', label: 'Báo cáo', icon: AlertTriangle },
     { id: 'notifications', label: 'Thông báo', icon: Bell, badge: unreadNotifications },
     { id: 'messages', label: 'Tin nhắn', icon: MessageCircle },
@@ -102,8 +100,6 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
         return isTutor ? <TutorApplicationsTab /> : <ClassRequestsTab />;
       case 'wallet':
         return <WalletTab />;
-      case 'refundRequests':
-        return <RefundRequestsTab />;
       case 'reports':
         return <ReportsTab />;
       case 'notifications':

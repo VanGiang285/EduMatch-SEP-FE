@@ -42,15 +42,15 @@ export function ConfirmDialog({
   const getIcon = () => {
     switch (type) {
       case 'info':
-        return <Info className="h-6 w-6 text-blue-500" />;
+        return <Info className="h-6 w-6 text-[#257180]" />;
       case 'warning':
-        return <AlertTriangle className="h-6 w-6 text-yellow-500" />;
+        return <AlertTriangle className="h-6 w-6 text-[#FD8B51]" />;
       case 'success':
-        return <CheckCircle className="h-6 w-6 text-green-500" />;
+        return <CheckCircle className="h-6 w-6 text-[#257180]" />;
       case 'error':
         return <XCircle className="h-6 w-6 text-red-500" />;
       default:
-        return <AlertTriangle className="h-6 w-6 text-yellow-500" />;
+        return <AlertTriangle className="h-6 w-6 text-[#FD8B51]" />;
     }
   };
   const getConfirmButtonVariant = () => {
@@ -89,6 +89,7 @@ export function ConfirmDialog({
             variant="outline"
             onClick={handleCancel}
             disabled={loading}
+            className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
           >
             {cancelText}
           </Button>
@@ -99,9 +100,7 @@ export function ConfirmDialog({
             className={
               type === 'error'
                 ? 'bg-red-600 hover:bg-red-700 text-white'
-                : type === 'success'
-                  ? 'bg-green-600 hover:bg-green-700 text-white'
-                  : undefined
+                : 'bg-[#257180] hover:bg-[#1f5a66] text-white'
             }
           >
             {loading ? (

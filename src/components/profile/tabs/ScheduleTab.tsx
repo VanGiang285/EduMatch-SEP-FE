@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/basic/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/feedback/dialog';
 import { Input } from '@/components/ui/form/input';
 import { Separator } from '@/components/ui/layout/separator';
+import { Textarea } from '@/components/ui/form/textarea';
+import { Label } from '@/components/ui/form/label';
 import { Calendar, Clock, MapPin, Video, MessageCircle, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight, PlayCircle } from 'lucide-react';
 import { ScheduleStatus, ScheduleChangeRequestStatus, TutorAvailabilityStatus } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
@@ -28,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/form/select';
-import { useRouter } from 'next/navigation';
+import { ReportService } from '@/services';
 
 export function ScheduleTab() {
   const { user } = useAuth();
@@ -38,6 +40,7 @@ export function ScheduleTab() {
     loadLearnerSchedules: loadSchedules,
     cancelScheduleCompletion,
     finishSchedule,
+    reportSchedule,
   } = useSchedules();
   const { loadBookingDetails, getBooking } = useBookings();
   const { getTutorProfile, loadTutorProfiles } = useTutorProfiles();
@@ -54,7 +57,6 @@ export function ScheduleTab() {
     isLoading: loadingAvailabilities,
   } = useTutorAvailability(12);
   const { showError, showSuccess } = useCustomToast();
-  const router = useRouter();
   const [pendingBySchedule, setPendingBySchedule] = useState<Record<number, boolean>>({});
   const [statusFilter, setStatusFilter] = useState<'all' | ScheduleStatus>('all');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -73,6 +75,17 @@ export function ScheduleTab() {
     scheduleId: null,
   });
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+  const [reportDialog, setReportDialog] = useState<{
+    open: boolean;
+    schedule?: ScheduleDto;
+    reason: string;
+    submitting: boolean;
+  }>({
+    open: false,
+    schedule: undefined,
+    reason: '',
+    submitting: false,
+  });
 
   useEffect(() => {
     if (user?.email) {
@@ -461,14 +474,59 @@ export function ScheduleTab() {
   }, [finishSchedule, showError, showSuccess]);
 
   const handleCreateReport = useCallback((schedule: ScheduleDto) => {
+    setReportDialog({
+      open: true,
+      schedule,
+      reason: '',
+      submitting: false,
+    });
+  }, []);
+
+  const handleSubmitReport = useCallback(async () => {
+    if (!reportDialog.schedule) {
+      return;
+    }
+    const schedule = reportDialog.schedule;
     const booking = getBooking(schedule.bookingId, schedule.booking);
     const tutorEmail = booking?.tutorSubject?.tutorEmail;
     if (!tutorEmail) {
       showError('Lỗi', 'Không tìm thấy email gia sư để báo cáo.');
       return;
     }
-    router.push(`/profile?tab=reports&createReport=1&reportedEmail=${encodeURIComponent(tutorEmail)}&scheduleId=${schedule.id}`);
-  }, [getBooking, router, showError]);
+    if (!reportDialog.reason.trim()) {
+      showError('Lỗi', 'Vui lòng nhập lý do báo cáo.');
+      return;
+    }
+    try {
+      setReportDialog(prev => ({ ...prev, submitting: true }));
+      const bookingId = booking?.id;
+      const request = {
+        reportedUserEmail: tutorEmail,
+        reason: reportDialog.reason.trim(),
+        bookingId,
+      };
+      const response = await ReportService.createReport(request);
+      if (!response.success || !response.data?.id) {
+        showError('Lỗi', response.message || 'Không thể tạo báo cáo');
+        setReportDialog(prev => ({ ...prev, submitting: false }));
+        return;
+      }
+      const ok = await reportSchedule(schedule.id, response.data.id);
+      if (!ok) {
+        showError('Lỗi', 'Không thể liên kết báo cáo với buổi học');
+      }
+      showSuccess('Thành công', 'Đã tạo báo cáo');
+      setReportDialog({
+        open: false,
+        schedule: undefined,
+        reason: '',
+        submitting: false,
+      });
+    } catch {
+      showError('Lỗi', 'Không thể tạo báo cáo');
+      setReportDialog(prev => ({ ...prev, submitting: false }));
+    }
+  }, [getBooking, reportDialog, reportSchedule, showError, showSuccess]);
 
   if (loading) {
     return (
@@ -645,18 +703,6 @@ export function ScheduleTab() {
                               <MessageCircle className="h-4 w-4 mr-2" />
                               Nhắn tin
                             </Button>
-                            {status === ScheduleStatus.Upcoming && (
-                              <Button
-                                size="lg"
-                                variant="outline"
-                                className="min-w-[140px] border-gray-300 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
-                                onClick={() => setCancelDialog({ open: true, scheduleId: schedule.id })}
-                                disabled={actionLoadingId === schedule.id}
-                              >
-                                <XCircle className="h-4 w-4 mr-2" />
-                                Hủy lịch
-                              </Button>
-                            )}
                             {status === ScheduleStatus.Pending && (
                               <>
                                 <Button
@@ -909,22 +955,109 @@ export function ScheduleTab() {
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog
-        open={cancelDialog.open}
-        onOpenChange={(open) => setCancelDialog(prev => ({ ...prev, open }))}
-        title="Xác nhận hủy lịch học"
-        description="Bạn có chắc chắn muốn hủy buổi học này không?"
-        type="error"
-        confirmText="Hủy lịch"
-        cancelText="Đóng"
-        loading={cancelDialog.scheduleId !== null && actionLoadingId === cancelDialog.scheduleId}
-        onConfirm={() => {
-          if (cancelDialog.scheduleId) {
-            void handleCancelSchedule(cancelDialog.scheduleId);
-          }
-        }}
-        onCancel={() => setCancelDialog({ open: false, scheduleId: null })}
-      />
+      <Dialog
+        open={reportDialog.open}
+        onOpenChange={(open) =>
+          setReportDialog(prev => ({ ...prev, open }))
+        }
+      >
+        <DialogContent className="sm:max-w-lg border border-gray-300 shadow-lg">
+          <DialogHeader>
+            <DialogTitle>Tạo báo cáo buổi học</DialogTitle>
+          </DialogHeader>
+          {reportDialog.schedule && (() => {
+            const schedule = reportDialog.schedule!;
+            const booking = getBooking(schedule.bookingId, schedule.booking);
+            const tutorSubject = booking?.tutorSubject;
+            const subject = tutorSubject?.subject;
+            const level = tutorSubject?.level;
+            const tutorEmail = tutorSubject?.tutorEmail;
+            const tutorProfile = tutorEmail ? getTutorProfile(tutorEmail) : undefined;
+            const availability = schedule.availability;
+            const slot = availability?.slot;
+            const start = availability?.startDate ? new Date(availability.startDate) : null;
+
+            return (
+              <div className="space-y-4 mb-4">
+                <div>
+                  <p className="text-sm text-gray-500">Môn học</p>
+                  <p className="font-semibold text-gray-900">
+                    {subject?.subjectName || 'Môn học'}
+                    {level && <span className="ml-1 text-sm font-normal text-gray-600">- {level.name}</span>}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Gia sư</p>
+                  <p className="font-semibold text-gray-900">
+                    {tutorProfile?.userName || tutorEmail || 'Chưa có thông tin'}
+                  </p>
+                  {tutorEmail && (
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {tutorEmail}
+                    </p>
+                  )}
+                </div>
+                {start && (
+                  <div className="flex items-center gap-3">
+                    <div className="bg-gray-100 rounded-lg p-2">
+                      <Calendar className="h-4 w-4 text-[#257180]" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Thời gian buổi học</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {format(start, "EEEE, dd/MM/yyyy", { locale: vi })}{' '}
+                        {slot && (
+                          <span>
+                            • {slot.startTime?.slice(0, 5) || '--:--'} - {slot.endTime?.slice(0, 5) || '--:--'}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          <div className="space-y-2">
+            <Label htmlFor="report-reason">Lý do báo cáo</Label>
+            <Textarea
+              id="report-reason"
+              rows={4}
+              value={reportDialog.reason}
+              onChange={(e) =>
+                setReportDialog(prev => ({ ...prev, reason: e.target.value }))
+              }
+              placeholder="Mô tả chi tiết vấn đề bạn gặp phải..."
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setReportDialog({
+                  open: false,
+                  schedule: undefined,
+                  reason: '',
+                  submitting: false,
+                })
+              }
+              disabled={reportDialog.submitting}
+              className="border-gray-300 bg-white hover:bg-gray-100"
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleSubmitReport}
+              disabled={reportDialog.submitting}
+              className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
+            >
+              {reportDialog.submitting ? 'Đang gửi...' : 'Tạo báo cáo'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog hủy lịch đã được tắt theo yêu cầu – giữ lại state/handler để tránh lỗi nhưng không hiển thị UI */}
 
       {/* Dialog hiển thị lịch rảnh của gia sư (lọc >=12h và không trùng lịch học của learner) */}
       <Dialog open={slotDialog.open} onOpenChange={(open) => setSlotDialog(prev => ({ ...prev, open }))}>

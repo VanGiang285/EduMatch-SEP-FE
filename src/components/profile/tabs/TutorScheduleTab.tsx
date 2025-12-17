@@ -20,7 +20,6 @@ import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { useScheduleChangeRequests } from '@/hooks/useScheduleChangeRequests';
-import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import {
   Select,
   SelectContent,
@@ -31,10 +30,10 @@ import {
 
 export function TutorScheduleTab() {
   const { user } = useAuth();
-  const { showError, showSuccess } = useCustomToast();
+  const { showError } = useCustomToast();
   const { getBooking, loadBookingDetails } = useBookings();
   const { getLearnerProfile, loadLearnerProfiles } = useLearnerProfiles();
-  const { schedules, loading, loadSchedulesByTutorEmail, cancelScheduleCompletion } = useSchedules();
+  const { schedules, loading, loadSchedulesByTutorEmail } = useSchedules();
   const {
     schedules: learnerSchedules,
     loadSchedulesByLearnerEmail,
@@ -63,11 +62,7 @@ export function TutorScheduleTab() {
     selectedAvailabilityId?: number | null;
     reason?: string;
   }>({ open: false, selectedAvailabilityId: null });
-  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; scheduleId: number | null }>({
-    open: false,
-    scheduleId: null,
-  });
-  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+  // State/hàm hủy lịch dạy đã được tắt theo yêu cầu – giữ logic liên quan khác, bỏ state dư thừa
 
   const loadSchedules = useCallback(async () => {
     if (!user?.email) return;
@@ -410,25 +405,7 @@ export function TutorScheduleTab() {
     ? getSessionsForDate(selectedDate.day, selectedDate.month, selectedDate.year)
     : [];
 
-  const handleCancelSchedule = useCallback(
-    async (scheduleId: number) => {
-      try {
-        setActionLoadingId(scheduleId);
-        const ok = await cancelScheduleCompletion(scheduleId);
-        if (ok) {
-          showSuccess('Đã hủy lịch dạy');
-        } else {
-          showError('Không thể hủy lịch dạy');
-        }
-      } catch {
-        showError('Không thể hủy lịch dạy');
-      } finally {
-        setActionLoadingId(null);
-        setCancelDialog({ open: false, scheduleId: null });
-      }
-    },
-    [cancelScheduleCompletion, showError, showSuccess]
-  );
+  // Hàm hủy lịch dạy không còn được sử dụng vì đã tắt chức năng hủy lịch theo yêu cầu
 
   if (loading) {
     return (
@@ -621,19 +598,6 @@ export function TutorScheduleTab() {
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Nhắn tin
                         </Button>
-
-                        {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Upcoming && (
-                          <Button
-                            size="lg"
-                            variant="outline"
-                            className="min-w-[140px] border-gray-300 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
-                            onClick={() => setCancelDialog({ open: true, scheduleId: schedule.id })}
-                            disabled={actionLoadingId === schedule.id}
-                          >
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Hủy lịch
-                          </Button>
-                        )}
 
                         {canRequestChange(schedule) && (
                           <Button
@@ -1187,22 +1151,7 @@ export function TutorScheduleTab() {
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog
-        open={cancelDialog.open}
-        onOpenChange={(open) => setCancelDialog(prev => ({ ...prev, open }))}
-        title="Xác nhận hủy lịch dạy"
-        description="Bạn có chắc chắn muốn hủy buổi dạy này không?"
-        type="error"
-        confirmText="Hủy lịch"
-        cancelText="Đóng"
-        loading={cancelDialog.scheduleId !== null && actionLoadingId === cancelDialog.scheduleId}
-        onConfirm={() => {
-          if (cancelDialog.scheduleId) {
-            void handleCancelSchedule(cancelDialog.scheduleId);
-          }
-        }}
-        onCancel={() => setCancelDialog({ open: false, scheduleId: null })}
-      />
+      {/* Dialog hủy lịch dạy đã được tắt theo yêu cầu – giữ lại state/handler để tránh lỗi nhưng không hiển thị UI */}
     </div>
   );
 }
