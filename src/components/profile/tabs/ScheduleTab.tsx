@@ -661,20 +661,20 @@ export function ScheduleTab() {
                               <>
                                 <Button
                                   size="lg"
+                                  variant="outline"
+                                  className="min-w-[140px] border-gray-300 bg-white text-amber-700 hover:bg-amber-50"
+                                  onClick={() => handleCreateReport(schedule)}
+                                >
+                                  Báo cáo
+                                </Button>
+                                <Button
+                                  size="lg"
                                   className="min-w-[160px] bg-[#257180] hover:bg-[#257180]/90 text-white"
                                   onClick={() => handleFinish(schedule.id)}
                                   disabled={actionLoadingId === schedule.id}
                                 >
                                   <CheckCircle className="h-4 w-4 mr-2" />
                                   Xác nhận học xong
-                                </Button>
-                                <Button
-                                  size="lg"
-                                  variant="outline"
-                                  className="min-w-[140px] border-gray-300 bg-white text-amber-700 hover:bg-amber-50"
-                                  onClick={() => handleCreateReport(schedule)}
-                                >
-                                  Báo cáo
                                 </Button>
                               </>
                             )}

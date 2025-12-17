@@ -486,7 +486,7 @@ export function FindTutorPage() {
     setLoadingFavorite(prev => new Set(prev).add(tutorId));
 
     try {
-      if (isCurrentlyFavorite) {
+      if (isCurrentlyFavorite) {            
         await FavoriteTutorService.removeFromFavorite(tutorId);
       } else {
         await FavoriteTutorService.addToFavorite(tutorId);
