@@ -7,6 +7,7 @@ import { useCustomToast } from "@/hooks/useCustomToast";
 
 interface ChatContextType {
   openChatWithTutor: (tutorId: number, tutorEmail: string, tutorName?: string, tutorAvatar?: string) => Promise<void>;
+  openChatWithLearner: (tutorId: number, learnerEmail: string) => Promise<void>;
   isFloatingChatOpen: boolean;
   setIsFloatingChatOpen: (open: boolean) => void;
   selectedRoomId: number | null;
@@ -63,10 +64,37 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user?.email, showError]);
 
+  const openChatWithLearner = useCallback(async (tutorId: number, learnerEmail: string) => {
+    if (!user?.email) {
+      showError("Lỗi", "Vui lòng đăng nhập để nhắn tin.");
+      return;
+    }
+
+    if (!tutorId || !learnerEmail) {
+      showError("Lỗi", "Không tìm thấy thông tin học viên để nhắn tin.");
+      return;
+    }
+
+    try {
+      const roomResponse = await ChatService.getOrCreateChatRoom(tutorId, learnerEmail);
+
+      if (roomResponse.success && roomResponse.data) {
+        setSelectedRoomId(roomResponse.data.id);
+        setIsFloatingChatOpen(true);
+      } else {
+        showError("Lỗi", "Không thể tạo phòng chat. Vui lòng thử lại.");
+      }
+    } catch (error) {
+      console.error("Failed to open chat with learner:", error);
+      showError("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại.");
+    }
+  }, [user?.email, showError]);
+
   return (
     <ChatContext.Provider
       value={{
         openChatWithTutor,
+        openChatWithLearner,
         isFloatingChatOpen,
         setIsFloatingChatOpen,
         selectedRoomId,

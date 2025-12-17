@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardContent } from '@/components/ui/layout/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Badge } from '@/components/ui/basic/badge';
 import { Button } from '@/components/ui/basic/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/feedback/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/feedback/dialog';
+import { Input } from '@/components/ui/form/input';
+import { Separator } from '@/components/ui/layout/separator';
 import { Calendar, Clock, MapPin, Video, MessageCircle, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight, PlayCircle } from 'lucide-react';
 import { ScheduleStatus, ScheduleChangeRequestStatus, TutorAvailabilityStatus } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
@@ -17,8 +19,7 @@ import { useTutorAvailability } from '@/hooks/useTutorAvailability';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { ScheduleDto, ScheduleChangeRequestDto, TutorAvailabilityDto } from '@/types/backend';
-import { useRouter } from 'next/navigation';
+import { ScheduleDto, TutorAvailabilityDto } from '@/types/backend';
 import {
   Select,
   SelectContent,
@@ -29,7 +30,6 @@ import {
 
 export function ScheduleTab() {
   const { user } = useAuth();
-  const router = useRouter();
   const { schedules, loading, loadLearnerSchedules: loadSchedules } = useSchedules();
   const { loadBookingDetails, getBooking } = useBookings();
   const { getTutorProfile, loadTutorProfiles } = useTutorProfiles();
@@ -38,7 +38,6 @@ export function ScheduleTab() {
     availabilities,
     timeSlots,
     weekDays,
-    datesByDay,
     currentWeekStart,
     loadAvailabilities,
     goToPreviousWeek,
@@ -49,6 +48,10 @@ export function ScheduleTab() {
   const { showError, showSuccess } = useCustomToast();
   const [pendingBySchedule, setPendingBySchedule] = useState<Record<number, boolean>>({});
   const [statusFilter, setStatusFilter] = useState<'all' | ScheduleStatus>('all');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedDate, setSelectedDate] = useState<{ day: number; month: number; year: number } | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [slotDialog, setSlotDialog] = useState<{
     open: boolean;
     schedule?: ScheduleDto;
@@ -139,17 +142,57 @@ export function ScheduleTab() {
       case ScheduleStatus.Upcoming:
         return 'bg-blue-100 text-blue-800 border-gray-300';
       case ScheduleStatus.InProgress:
-        return 'bg-yellow-100 text-yellow-800 border-gray-300';
+        return 'bg-amber-100 text-amber-800 border-gray-300';
+      case ScheduleStatus.Processing:
+        return 'bg-indigo-100 text-indigo-800 border-gray-300';
+      case ScheduleStatus.Pending:
+        return 'bg-gray-100 text-gray-800 border-gray-300';
       case ScheduleStatus.Completed:
         return 'bg-green-100 text-green-800 border-gray-300';
       case ScheduleStatus.Cancelled:
         return 'bg-red-100 text-red-800 border-gray-300';
-      case ScheduleStatus.Pending:
-        return 'bg-yellow-100 text-yellow-800 border-gray-300';
-      case ScheduleStatus.Processing:
-        return 'bg-blue-100 text-blue-800 border-gray-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  const getCalendarStatusColor = (status: ScheduleStatus | string) => {
+    const parsed = EnumHelpers.parseScheduleStatus(status);
+    switch (parsed) {
+      case ScheduleStatus.Completed:
+        return 'bg-green-500 text-white';
+      case ScheduleStatus.InProgress:
+        return 'bg-amber-500 text-white';
+      case ScheduleStatus.Processing:
+        return 'bg-indigo-500 text-white';
+      case ScheduleStatus.Pending:
+        return 'bg-gray-400 text-white';
+      case ScheduleStatus.Upcoming:
+        return 'bg-blue-500 text-white';
+      case ScheduleStatus.Cancelled:
+        return 'bg-red-500 text-white';
+      default:
+        return 'bg-gray-400 text-white';
+    }
+  };
+
+  const getSessionStatusBadge = (status: ScheduleStatus | string) => {
+    const parsed = EnumHelpers.parseScheduleStatus(status);
+    switch (parsed) {
+      case ScheduleStatus.Completed:
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-gray-300">Đã học</Badge>;
+      case ScheduleStatus.InProgress:
+        return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-gray-300">Đang diễn ra</Badge>;
+      case ScheduleStatus.Processing:
+        return <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100 border-gray-300">Đang xử lý</Badge>;
+      case ScheduleStatus.Pending:
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100 border-gray-300">Chờ xác nhận</Badge>;
+      case ScheduleStatus.Upcoming:
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-gray-300">Sắp tới</Badge>;
+      case ScheduleStatus.Cancelled:
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-gray-300">Đã hủy</Badge>;
+      default:
+        return null;
     }
   };
 
@@ -247,29 +290,6 @@ export function ScheduleTab() {
     return map;
   }, [schedules]);
 
-  // Hợp nhất timeSlots của gia sư với các giờ bận của learner để hiển thị trên lưới
-  const displayTimeSlots = useMemo(() => {
-    const slotMap = new Map<string, { startTime: string; endTime: string; id: number }>();
-    timeSlots.forEach(ts => slotMap.set(ts.startTime, ts));
-
-    Object.values(learnerBusyInfoMap).forEach((info, idx) => {
-      if (!info.startTime) return;
-      const start = info.startTime;
-      if (!slotMap.has(start)) {
-        slotMap.set(start, {
-          startTime: start,
-          endTime: info.endTime || '',
-          id: -10000 - idx, // id âm để phân biệt slot ảo
-        });
-      }
-    });
-
-    return Array.from(slotMap.values()).sort((a, b) => {
-      const [ha, ma] = a.startTime.split(':').map(Number);
-      const [hb, mb] = b.startTime.split(':').map(Number);
-      return ha * 60 + ma - (hb * 60 + mb);
-    });
-  }, [timeSlots, learnerBusyInfoMap]);
 
   const getWeekDateKey = useCallback(
     (dayKey: string): string => {
@@ -323,6 +343,84 @@ export function ScheduleTab() {
     },
     [getBooking, loadAvailabilities, goToCurrentWeek, currentWeekStart]
   );
+
+  const getScheduleTimeRange = (schedule: ScheduleDto) => {
+    const startDateStr = schedule.availability?.startDate;
+    if (!startDateStr) {
+      return { start: null as Date | null, end: null as Date | null, durationMinutes: null as number | null };
+    }
+
+    const start = new Date(startDateStr);
+    const slot = schedule.availability?.slot;
+
+    const parseHm = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return { h: Number.isFinite(h) ? h : 0, m: Number.isFinite(m) ? m : 0 };
+    };
+
+    if (slot?.startTime) {
+      const { h, m } = parseHm(slot.startTime);
+      start.setHours(h, m, 0, 0);
+    }
+
+    let end: Date | null = null;
+    if (slot?.endTime) {
+      const { h, m } = parseHm(slot.endTime);
+      end = new Date(start);
+      end.setHours(h, m, 0, 0);
+    } else if (schedule.availability?.endDate) {
+      end = new Date(schedule.availability.endDate);
+    }
+
+    const durationMinutes = end ? Math.max(Math.round((end.getTime() - start.getTime()) / 60000), 0) : null;
+    return { start, end, durationMinutes };
+  };
+
+  const sortedSchedules = useMemo(() => {
+    return [...filteredSchedules].sort((a, b) => {
+      const dateA = a.availability?.startDate ? new Date(a.availability.startDate).getTime() : 0;
+      const dateB = b.availability?.startDate ? new Date(b.availability.startDate).getTime() : 0;
+      return dateA - dateB;
+    });
+  }, [filteredSchedules]);
+
+  const getDaysInMonth = (month: number, year: number) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (month: number, year: number) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  const getSessionsForDate = (day: number, month: number, year: number) => {
+    return filteredSchedules.filter(schedule => {
+      const startDate = schedule.availability?.startDate;
+      if (!startDate) return false;
+      const scheduleDate = new Date(startDate);
+      return (
+        scheduleDate.getFullYear() === year &&
+        scheduleDate.getMonth() === month &&
+        scheduleDate.getDate() === day
+      );
+    });
+  };
+
+  const isToday = (day: number, month: number, year: number) => {
+    const today = new Date();
+    return day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+  };
+
+  const handleDayClick = (day: number, month: number, year: number) => {
+    const daySessions = getSessionsForDate(day, month, year);
+    if (daySessions.length > 0) {
+      setSelectedDate({ day, month, year });
+      setIsDialogOpen(true);
+    }
+  };
+
+  const selectedDaySessions = selectedDate
+    ? getSessionsForDate(selectedDate.day, selectedDate.month, selectedDate.year)
+    : [];
 
   if (loading) {
     return (
@@ -478,7 +576,7 @@ export function ScheduleTab() {
                                 <div className="flex-1">
                                   <div className="text-xs text-gray-500">Bắt đầu - Kết thúc</div>
                                   <div className="text-gray-900 font-medium">
-                                    {slot.startTime} - {slot.endTime}
+                                    {slot.startTime?.slice(0, 5) || '--:--'} - {slot.endTime?.slice(0, 5) || '--:--'}
                                   </div>
                                 </div>
                               </div>
@@ -489,7 +587,7 @@ export function ScheduleTab() {
                             <Button
                               variant="outline"
                               size="lg"
-                              className="flex-1 border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                              className="min-w-[140px] border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                             >
                               <MessageCircle className="h-4 w-4 mr-2" />
                               Nhắn tin
@@ -498,7 +596,7 @@ export function ScheduleTab() {
                               <Button
                                 size="lg"
                                 variant="outline"
-                                className="flex-1 border-gray-300 bg-white text-[#257180] hover:bg-[#257180] hover:text-white hover:border-[#257180]"
+                                className="min-w-[140px] border-gray-300 bg-white text-[#257180] hover:bg-[#257180] hover:text-white hover:border-[#257180]"
                                 onClick={() => handleOpenSlotDialog(schedule)}
                               >
                                 Yêu cầu đổi lịch
@@ -507,7 +605,7 @@ export function ScheduleTab() {
                             {isOnline && schedule.meetingSession && (
                               <Button
                                 size="lg"
-                                className="bg-[#257180] hover:bg-[#257180]/90 text-white"
+                                className="min-w-[140px] bg-[#257180] hover:bg-[#257180]/90 text-white"
                                 onClick={() => {
                                   window.open(schedule.meetingSession!.meetLink, '_blank');
                                 }}
@@ -527,6 +625,200 @@ export function ScheduleTab() {
           })}
         </div>
       )}
+
+      {/* Lịch học theo tháng */}
+      {sortedSchedules.length > 0 && (
+        <Card className="border border-gray-300">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-5 h-5 text-[#257180]" />
+                  Lịch học tháng {selectedMonth + 1}/{selectedYear}
+                </CardTitle>
+                <p className="text-gray-600">
+                  Tổng {sortedSchedules.length} buổi ({sortedSchedules.filter(s => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Completed).length} đã học, {
+                    sortedSchedules.filter(s => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Upcoming).length
+                  } sắp tới)
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Select
+                  value={selectedMonth.toString()}
+                  onValueChange={(value) => setSelectedMonth(parseInt(value))}
+                >
+                  <SelectTrigger className="w-[140px] border-gray-300">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="border-gray-300 shadow-lg">
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <SelectItem key={i} value={i.toString()}>
+                        Tháng {i + 1}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  value={selectedYear}
+                  onChange={(e) => {
+                    const year = parseInt(e.target.value);
+                    if (!isNaN(year) && year >= 2020 && year <= 2100) {
+                      setSelectedYear(year);
+                    }
+                  }}
+                  className="w-[120px] border-gray-300"
+                  min="2020"
+                  max="2100"
+                />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-6">
+              <div className="grid grid-cols-7 gap-2 mb-2">
+                {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((day) => (
+                  <div key={day} className="text-center font-semibold text-gray-700 py-2">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {Array.from({ length: getFirstDayOfMonth(selectedMonth, selectedYear) }, (_, i) => (
+                  <div key={`empty-${i}`} className="aspect-square" />
+                ))}
+
+                {Array.from({ length: getDaysInMonth(selectedMonth, selectedYear) }, (_, i) => {
+                  const day = i + 1;
+                  const daySessions = getSessionsForDate(day, selectedMonth, selectedYear);
+                  const isTodayDate = isToday(day, selectedMonth, selectedYear);
+
+                  return (
+                    <div
+                      key={day}
+                      className={`aspect-square p-2 rounded-lg border-2 ${
+                        isTodayDate
+                          ? 'border-[#257180] bg-[#257180]/5'
+                          : 'border-[#257180]/20 bg-white'
+                      } ${daySessions.length > 0 ? 'cursor-pointer hover:border-[#257180]' : ''} transition-colors`}
+                      onClick={() => handleDayClick(day, selectedMonth, selectedYear)}
+                    >
+                      <p className={`text-center font-medium mb-1 ${
+                        isTodayDate ? 'text-[#257180]' : 'text-gray-900'
+                      }`}>
+                        {day}
+                      </p>
+                      <div className="space-y-1">
+                        {daySessions.map((session) => {
+                          const { start } = getScheduleTimeRange(session);
+                          const statusColor = getCalendarStatusColor(session.status);
+                          return (
+                            <div
+                              key={session.id}
+                              className={`text-[10px] px-1 py-0.5 rounded text-center ${statusColor}`}
+                            >
+                              {start ? format(start, 'HH:mm', { locale: vi }) : ''}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Separator className="my-6 border-[#257180]/20" />
+
+            <div className="flex items-center gap-4 flex-wrap mb-6">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-green-500 rounded" />
+                <span className="text-xs text-gray-600">Đã học</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-amber-500 rounded" />
+                <span className="text-xs text-gray-600">Đang diễn ra</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-indigo-500 rounded" />
+                <span className="text-xs text-gray-600">Đang xử lý</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-gray-400 rounded" />
+                <span className="text-xs text-gray-600">Chờ xác nhận</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-blue-500 rounded" />
+                <span className="text-xs text-gray-600">Sắp tới</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-500 rounded" />
+                <span className="text-xs text-gray-600">Đã hủy</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-[#257180] rounded" />
+                <span className="text-xs text-gray-600">Hôm nay</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Dialog hiển thị buổi học trong ngày */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="border-gray-300 shadow-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedDate
+                ? format(new Date(selectedDate.year, selectedDate.month, selectedDate.day), "EEEE, dd/MM/yyyy", { locale: vi })
+                : 'Buổi học'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {selectedDaySessions.map((schedule) => {
+              const status = EnumHelpers.parseScheduleStatus(schedule.status);
+              const booking = getBooking(schedule.bookingId, schedule.booking);
+              const tutorSubject = booking?.tutorSubject;
+              const subject = tutorSubject?.subject;
+              const level = tutorSubject?.level;
+              const { start, end } = getScheduleTimeRange(schedule);
+              const statusBgColor = 
+                status === ScheduleStatus.Completed
+                  ? 'bg-green-50 border-l-green-500'
+                  : status === ScheduleStatus.InProgress
+                  ? 'bg-amber-50 border-l-amber-500'
+                  : status === ScheduleStatus.Processing
+                  ? 'bg-indigo-50 border-l-indigo-500'
+                  : status === ScheduleStatus.Pending
+                  ? 'bg-gray-50 border-l-gray-400'
+                  : status === ScheduleStatus.Upcoming
+                  ? 'bg-blue-50 border-l-blue-500'
+                  : status === ScheduleStatus.Cancelled
+                  ? 'bg-red-50 border-l-red-500'
+                  : 'bg-gray-50 border-l-gray-400';
+              return (
+                <Card key={schedule.id} className={`border-l-4 border border-gray-300 ${statusBgColor}`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      {getSessionStatusBadge(schedule.status)}
+                    </div>
+                    <h4 className="font-semibold text-gray-900 mb-1">
+                      {subject?.subjectName || 'Môn học'}
+                      {level && ` - ${level.name}`}
+                    </h4>
+                    {start && (
+                      <p className="text-sm text-gray-600">
+                        {format(start, 'HH:mm', { locale: vi })} - {end ? format(end, 'HH:mm', { locale: vi }) : '...'}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog hiển thị lịch rảnh của gia sư (lọc >=12h và không trùng lịch học của learner) */}
       <Dialog open={slotDialog.open} onOpenChange={(open) => setSlotDialog(prev => ({ ...prev, open }))}>
@@ -653,7 +945,6 @@ export function ScheduleTab() {
                                 <div className="bg-gray-50 border-b border-r p-2 text-sm font-semibold text-gray-700">{t}</div>
                                 {dates.map(d => {
                                   const av = getSlot(d, hour);
-                                  const timeLabel = `${t} - ${av?.slot?.endTime?.slice(0, 5) ?? ''}`.trim();
                                   const busy = isLearnerBusy(d, hour);
                                   const busyInfo = learnerBusyInfoMap[`${d}-${hour}`];
 

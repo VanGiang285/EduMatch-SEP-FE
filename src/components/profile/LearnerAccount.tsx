@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/basic/button';
-import { User, Calendar, BookOpen, Wallet, MessageCircle, Settings, GraduationCap, FileText, Bell, ClipboardList, Receipt, AlertTriangle } from 'lucide-react';
+import { User, Calendar, BookOpen, Wallet, MessageCircle, Settings, GraduationCap, FileText, Bell, ClipboardList, Receipt, AlertTriangle, LayoutDashboard } from 'lucide-react';
 import { ProfileTab } from './tabs/ProfileTab';
 import { ScheduleTab } from './tabs/ScheduleTab';
 import { TutorScheduleTab } from './tabs/TutorScheduleTab';
@@ -18,6 +18,7 @@ import { TutorApplicationsTab } from './tabs/TutorApplicationsTab';
 import { RefundRequestsTab } from './tabs/RefundRequestsTab';
 import { ReportsTab } from './tabs/ReportsTab';
 import { ScheduleChangeTab } from './tabs/ScheduleChangeTab';
+import { DashboardTab } from './tabs/DashboardTab';
 import { Badge } from '@/components/ui/basic/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -66,9 +67,10 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
   const menuItems = [
     { id: 'profile', label: 'Thông tin người dùng', icon: User },
     ...(isTutor ? [{ id: 'tutorProfile', label: 'Hồ sơ gia sư', icon: GraduationCap }] : []),
+    ...(isTutor ? [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }] : []),
     { id: 'schedule', label: isTutor ? 'Lịch dạy' : 'Lịch học', icon: Calendar },
     { id: 'scheduleChange', label: 'Yêu cầu chuyển lịch', icon: ClipboardList },
-    { id: 'classes', label: isTutor ? 'Lịch đặt' : 'Lớp học', icon: BookOpen },
+    { id: 'classes', label: isTutor ? 'Lớp dạy' : 'Lớp học', icon: BookOpen },
     ...(!isTutor ? [{ id: 'classRequests', label: 'Yêu cầu mở lớp', icon: FileText }] : []),
     ...(isTutor ? [{ id: 'tutorApplications', label: 'Ứng tuyển lớp dạy', icon: ClipboardList }] : []),
     { id: 'wallet', label: 'Ví', icon: Wallet },
@@ -86,6 +88,8 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
         return <ProfileTab />;
       case 'tutorProfile':
         return <TutorProfileTab />;
+      case 'dashboard':
+        return <DashboardTab />;
       case 'schedule':
         return isTutor ? <TutorScheduleTab /> : <ScheduleTab />;
       case 'scheduleChange':

@@ -4,6 +4,12 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Skip middleware for Next.js internal assets (including CSS files)
+  // This prevents 404 errors for missing CSS files that Next.js tries to load
+  if (pathname.startsWith('/_next/static/')) {
+    return NextResponse.next();
+  }
+
   // FORCE LOG - This should ALWAYS appear
   console.log('🚨🚨🚨 MIDDLEWARE EXECUTING FOR:', pathname);
   console.log('🚨🚨🚨 Request URL:', request.url);

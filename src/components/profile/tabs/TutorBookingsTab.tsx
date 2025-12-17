@@ -1,37 +1,115 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/layout/card';
 import { Badge } from '@/components/ui/basic/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
 import { Button } from '@/components/ui/basic/button';
 import { Progress } from '@/components/ui/feedback/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   BookOpen,
   Calendar,
   MapPin,
   Video,
   MessageCircle,
-  MoreHorizontal,
   Loader2,
-  CheckCircle,
-  XCircle,
-  ArrowLeft,
-  Clock,
+  TrendingUp,
+  Wallet,
+  CheckCircle2,
+  GraduationCap,
+  Users,
 } from 'lucide-react';
-import { BookingDto } from '@/types/backend';
-import { BookingStatus, PaymentStatus, ScheduleStatus, TutorPayoutStatus } from '@/types/enums';
+import { BookingDto, ScheduleDto } from '@/types/backend';
+import { BookingStatus, ScheduleStatus, TeachingMode } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomToast } from '@/hooks/useCustomToast';
-import { useSchedules } from '@/hooks/useSchedules';
 import { useLearnerProfiles } from '@/hooks/useLearnerProfiles';
+import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useBookings } from '@/hooks/useBookings';
-import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
-import { BookingNotesPanel } from '@/components/booking/BookingNotesPanel';
+import { ClassDetail } from './ClassDetail';
+import { Label } from '@/components/ui/form/label';
+import { ScheduleService } from '@/services';
+
+const NextSessionDisplay = ({ booking, tutorEmail }: { booking: BookingDto; tutorEmail?: string }) => {
+  const [nextSessionDate, setNextSessionDate] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchNextSession = async () => {
+      if (!tutorEmail || !booking.id) {
+        setNextSessionDate(null);
+        setLoading(false);
+        return;
+      }
+
+      const bookingId = booking.id;
+
+      try {
+        const result = await ScheduleService.getByTutorEmailAndStatus(
+          tutorEmail,
+          bookingId,
+          {
+            status: ScheduleStatus.Upcoming,
+            take: 1,
+          }
+        );
+
+        if (result.success && result.data && result.data.length > 0) {
+          const schedule = result.data[0];
+          const startDate = schedule.availability?.startDate;
+          if (startDate) {
+            setNextSessionDate(startDate);
+          } else {
+            setNextSessionDate(null);
+          }
+        } else {
+          setNextSessionDate(null);
+        }
+      } catch (error) {
+        console.error('Error fetching next session:', error);
+        setNextSessionDate(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNextSession();
+  }, [booking.id, tutorEmail]);
+
+  if (loading) {
+    return (
+      <p className="text-sm text-gray-600">Đang tải...</p>
+    );
+  }
+
+  if (!nextSessionDate) {
+    return (
+      <p className="text-sm text-gray-600">
+        Chưa có buổi dạy sắp tới.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <p className="font-semibold text-gray-900 mb-1">
+        {new Date(nextSessionDate).toLocaleDateString("vi-VN", {
+          weekday: "short",
+          day: "2-digit",
+          month: "2-digit",
+        })}
+      </p>
+      <p className="text-2xl font-bold text-green-600">
+        {new Date(nextSessionDate).toLocaleTimeString("vi-VN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </p>
+    </>
+  );
+};
 
 export function TutorBookingsTab() {
   const { user } = useAuth();
@@ -45,21 +123,21 @@ export function TutorBookingsTab() {
     loadTutorBookings: loadBookings,
     updateStatus: updateBookingStatus,
     getBookingById,
-    loadBookingDetails,
-    getBooking: getBookingFromCache,
   } = useBookings();
   const [filter, setFilter] = useState<string>('all');
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ bookingId: number | null; status: BookingStatus | null }>({ bookingId: null, status: null });
-  const { schedules, loading: loadingSchedules, loadSchedulesByBookingId, clearSchedules, updateScheduleStatus } = useSchedules();
-  const { learnerProfiles, loadLearnerProfiles, getLearnerProfile } = useLearnerProfiles();
-  const [scheduleStatusFilter, setScheduleStatusFilter] = useState<'all' | ScheduleStatus>('all');
+  const { loadLearnerProfiles, getLearnerProfile } = useLearnerProfiles();
+  const { loadTutorProfiles, getTutorProfile } = useTutorProfiles();
+  const [schedulesByBookingId, setSchedulesByBookingId] = useState<Map<number, ScheduleDto[]>>(new Map());
+  const loadedScheduleIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     // Load tutor profile khi có email
     if (user?.email) {
       loadTutorProfile(user.email);
+      loadTutorProfiles([user.email]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email]); // Loại bỏ loadTutorProfile khỏi dependency để tránh loop
@@ -148,84 +226,6 @@ export function TutorBookingsTab() {
     }
   };
 
-  const getPaymentStatusColor = (status: PaymentStatus | string) => {
-    const parsedStatus = EnumHelpers.parsePaymentStatus(status);
-    switch (parsedStatus) {
-      case PaymentStatus.Pending:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case PaymentStatus.Paid:
-        return 'bg-green-100 text-green-800 border-green-200';
-      case PaymentStatus.Refunded:
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getScheduleStatusColor = (status: ScheduleStatus | string) => {
-    const parsedStatus = EnumHelpers.parseScheduleStatus(status);
-    switch (parsedStatus) {
-      case ScheduleStatus.Upcoming:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case ScheduleStatus.InProgress:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case ScheduleStatus.Completed:
-        return 'bg-green-100 text-green-800 border-green-200';
-      case ScheduleStatus.Cancelled:
-        return 'bg-red-100 text-red-800 border-red-200';
-      case ScheduleStatus.Pending:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case ScheduleStatus.Processing:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getTutorPayoutStatusColor = (status: TutorPayoutStatus | string | number) => {
-    const parsedStatus = EnumHelpers.parseTutorPayoutStatus(status);
-    switch (parsedStatus) {
-      case TutorPayoutStatus.Pending:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case TutorPayoutStatus.OnHold:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case TutorPayoutStatus.ReadyForPayout:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case TutorPayoutStatus.Paid:
-        return 'bg-green-100 text-green-800 border-green-200';
-      case TutorPayoutStatus.Cancelled:
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getNextSession = (booking: BookingDto) => {
-    if (!booking.schedules || booking.schedules.length === 0) return null;
-
-    const upcomingSchedules = booking.schedules
-      .filter(
-        (s) =>
-          EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Upcoming &&
-          s.availability?.startDate &&
-          new Date(s.availability.startDate) > new Date()
-      )
-      .sort(
-        (a, b) =>
-          new Date(a.availability?.startDate || 0).getTime() -
-          new Date(b.availability?.startDate || 0).getTime()
-      );
-
-    return upcomingSchedules.length > 0 ? upcomingSchedules[0].availability?.startDate : null;
-  };
-
-  const getCompletedSessions = (booking: BookingDto) => {
-    if (!booking.schedules) return 0;
-    return booking.schedules.filter(
-      (s) => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Completed
-    ).length;
-  };
-
   const getActiveSessions = (booking: BookingDto) => {
     if (!booking.schedules) return 0;
     return booking.schedules.filter(
@@ -246,109 +246,32 @@ export function TutorBookingsTab() {
     ).length;
   };
 
-  const getScheduleStatusSummary = (booking: BookingDto) => {
-    if (!booking.schedules || booking.schedules.length === 0) return [];
-
-    const summaryMap = new Map<ScheduleStatus, number>();
-    booking.schedules.forEach((schedule) => {
-      const status = EnumHelpers.parseScheduleStatus(schedule.status);
-      summaryMap.set(status, (summaryMap.get(status) || 0) + 1);
-    });
-
-    return Array.from(summaryMap.entries())
-      .filter(([_, count]) => count > 0)
-      .map(([status, count]) => ({ status, count }))
-      .sort((a, b) => a.status - b.status);
-  };
-
-  const getScheduleStatusBgColor = (status: ScheduleStatus) => {
-    switch (status) {
-      case ScheduleStatus.Upcoming:
-        return 'bg-blue-400';
-      case ScheduleStatus.InProgress:
-        return 'bg-yellow-400';
-      case ScheduleStatus.Completed:
-        return 'bg-green-500';
-      case ScheduleStatus.Cancelled:
-        return 'bg-red-400';
-      case ScheduleStatus.Pending:
-        return 'bg-yellow-400';
-      case ScheduleStatus.Processing:
-        return 'bg-blue-400';
-      default:
-        return 'bg-gray-300';
-    }
-  };
-
-  const filteredSchedules = useMemo(() => {
-    if (scheduleStatusFilter === 'all') return schedules;
-    return schedules.filter(
-      (schedule) =>
-        EnumHelpers.parseScheduleStatus(schedule.status) === scheduleStatusFilter
-    );
-  }, [scheduleStatusFilter, schedules]);
-
-  const payoutSummary = useMemo(() => {
-    let received = 0;
-    let notReceived = 0;
-    schedules.forEach((s) => {
-      const payout = s.tutorPayout;
-      if (!payout) return;
-      const status = EnumHelpers.parseTutorPayoutStatus(payout.status);
-      if (status === TutorPayoutStatus.Paid) {
-        received += payout.amount || 0;
-      } else if (status !== TutorPayoutStatus.Cancelled) {
-        notReceived += payout.amount || 0;
-      }
-    });
-    return { received, notReceived, total: received + notReceived };
-  }, [schedules]);
 
   const handleViewDetail = async (bookingId: number) => {
-    setSelectedBookingId(bookingId);
-    setScheduleStatusFilter('all');
-
     const bookingFromList = bookings.find((b) => b.id === bookingId);
     if (bookingFromList) {
       setSelectedBooking(bookingFromList);
+      setSelectedBookingId(bookingId);
     } else {
-      setSelectedBooking(null);
-    }
-
-    try {
-      const detail = await getBookingById(bookingId);
-      if (detail) {
-        setSelectedBooking(detail);
-        if (detail.learnerEmail) {
-          await loadLearnerProfiles([detail.learnerEmail]);
+      try {
+        const detail = await getBookingById(bookingId);
+        if (detail) {
+          setSelectedBooking(detail);
+          setSelectedBookingId(bookingId);
+          if (detail.learnerEmail) {
+            await loadLearnerProfiles([detail.learnerEmail]);
+          }
         }
+      } catch (error: any) {
+        showError('Lỗi khi tải chi tiết lớp học', error.message);
       }
-      await loadSchedulesByBookingId(bookingId);
-    } catch (error: any) {
-      showError('Lỗi khi tải chi tiết lớp học', error.message);
     }
   };
 
   const handleBackToList = () => {
     setSelectedBookingId(null);
     setSelectedBooking(null);
-    clearSchedules();
-    setScheduleStatusFilter('all');
   };
-
-
-  // Load booking details khi schedules thay đổi
-  useEffect(() => {
-    if (schedules.length > 0) {
-      const bookingIdsToLoad = schedules
-        .filter((schedule) => schedule.bookingId && !schedule.booking)
-        .map((schedule) => schedule.bookingId!);
-
-      if (bookingIdsToLoad.length > 0) {
-        loadBookingDetails(bookingIdsToLoad);
-      }
-    }
-  }, [schedules, loadBookingDetails]);
 
   // Tính toán counts cho từng trạng thái (memo hóa)
   const bookingCounts = useMemo(() => {
@@ -373,8 +296,27 @@ export function TutorBookingsTab() {
     };
   }, [bookings]);
 
+  const totalEarnings = useMemo(() => {
+    return bookings
+      .filter(b => {
+        const status = EnumHelpers.parseBookingStatus(b.status);
+        return status === BookingStatus.Confirmed || status === BookingStatus.Completed;
+      })
+      .reduce((sum, b) => sum + (b.tutorReceiveAmount || 0), 0);
+  }, [bookings]);
+
+  const totalCompletedSessions = useMemo(() => {
+    return bookings.reduce((sum, b) => {
+      const schedules = schedulesByBookingId.get(b.id) || b.schedules || [];
+      const completed = schedules.filter(
+        (s) => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Completed
+      ).length;
+      return sum + completed;
+    }, 0);
+  }, [bookings, schedulesByBookingId]);
+
   // Lọc bookings để hiển thị theo filter hiện tại
-  const filteredBookings = bookings.filter((booking) => {
+  const filteredBookings = useMemo(() => bookings.filter((booking) => {
     if (filter === "all") return true;
     const parsedStatus = EnumHelpers.parseBookingStatus(booking.status);
     if (filter === "active")
@@ -390,319 +332,56 @@ export function TutorBookingsTab() {
       );
     if (filter === "cancelled") return parsedStatus === BookingStatus.Cancelled;
     return true;
-  });
+  }), [bookings, filter]);
 
-  // Render detail view: chỉ hiện bảng lịch / buổi học của booking được chọn
+  const filteredBookingIdsKey = useMemo(() => filteredBookings.map(b => b.id).join(','), [filteredBookings]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const load = async () => {
+      const idsToLoad = filteredBookings
+        .map((b) => b.id)
+        .filter((id) => typeof id === 'number' && !loadedScheduleIdsRef.current.has(id));
+
+      if (idsToLoad.length === 0) return;
+
+      idsToLoad.forEach((id) => loadedScheduleIdsRef.current.add(id));
+
+      await Promise.all(
+        idsToLoad.map(async (bookingId) => {
+          try {
+            const res = await ScheduleService.getAllNoPaging(bookingId);
+            if (ignore) return;
+            if (res.success && res.data) {
+              setSchedulesByBookingId((prev) => {
+                const next = new Map(prev);
+                next.set(bookingId, res.data || []);
+                return next;
+              });
+            }
+          } catch {
+            // ignore
+          }
+        })
+      );
+    };
+
+    load();
+
+    return () => {
+      ignore = true;
+    };
+  }, [filteredBookingIdsKey, filteredBookings]);
+
+  // Render detail view: sử dụng ClassDetail component
   if (selectedBookingId && selectedBooking) {
-    const tutorSubject = selectedBooking.tutorSubject;
-    const subject = tutorSubject?.subject;
-    const level = tutorSubject?.level;
-    const learnerEmail = selectedBooking.learnerEmail;
-    const learnerProfile = learnerEmail ? getLearnerProfile(learnerEmail) : undefined;
-    const scheduleSummary = getScheduleStatusSummary(selectedBooking);
-
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={handleBackToList} className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Quay lại
-          </Button>
-        </div>
-
-        <div className="grid gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <p className="text-xs uppercase text-gray-500">Môn học</p>
-            <p className="text-sm font-semibold text-gray-900">{subject?.subjectName || 'N/A'}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase text-gray-500">Cấp độ</p>
-            <p className="text-sm font-semibold text-gray-900">{level?.name || 'Không xác định'}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase text-gray-500">Email học viên</p>
-            <p className="text-sm font-semibold text-gray-900">
-              {learnerEmail || 'Chưa có thông tin'}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase text-gray-500">Trạng thái đơn</p>
-            <Badge className={getBookingStatusColor(selectedBooking.status)}>
-              {EnumHelpers.getBookingStatusLabel(selectedBooking.status)}
-            </Badge>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Card className="bg-white border border-gray-300">
-            <CardContent className="p-4">
-              <p className="text-xs uppercase text-gray-500">Đã nhận</p>
-              <p className="text-xl font-semibold text-green-700">
-                {formatCurrency(payoutSummary.received)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border border-gray-300">
-            <CardContent className="p-4">
-              <p className="text-xs uppercase text-gray-500">Chưa nhận</p>
-              <p className="text-xl font-semibold text-yellow-700">
-                {formatCurrency(payoutSummary.notReceived)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border border-gray-300">
-            <CardContent className="p-4">
-              <p className="text-xs uppercase text-gray-500">Tổng dự kiến nhận</p>
-              <p className="text-xl font-semibold text-[#257180]">
-                {formatCurrency(payoutSummary.total)}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div>
-
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-sm font-medium text-gray-700">Trạng thái:</span>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { value: 'all' as const, label: 'Tất cả' },
-                { value: ScheduleStatus.Upcoming, label: 'Sắp diễn ra' },
-                { value: ScheduleStatus.InProgress, label: 'Đang học' },
-                { value: ScheduleStatus.Completed, label: 'Hoàn thành' },
-                { value: ScheduleStatus.Cancelled, label: 'Đã hủy' },
-                { value: ScheduleStatus.Pending, label: 'Chờ xử lý' },
-                { value: ScheduleStatus.Processing, label: 'Đang xử lý' },
-              ].map((option) => (
-                <Button
-                  key={`schedule-filter-${option.label}`}
-                  size="sm"
-                  variant={scheduleStatusFilter === option.value ? 'default' : 'outline'}
-                  className={
-                    scheduleStatusFilter === option.value
-                      ? 'bg-[#257180] text-white'
-                      : 'text-gray-600'
-                  }
-                  onClick={() => setScheduleStatusFilter(option.value)}
-                >
-                  {option.label}
-                  {option.value === 'all'
-                    ? schedules.length > 0 && <span className="ml-1 text-xs">({schedules.length})</span>
-                    : schedules.length > 0 && (
-                      <span className="ml-1 text-xs">
-                        (
-                        {
-                          schedules.filter(
-                            (schedule) =>
-                              EnumHelpers.parseScheduleStatus(schedule.status) === option.value
-                          ).length
-                        }
-                        )
-                      </span>
-                    )}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {loadingSchedules ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-[#257180]" />
-            </div>
-          ) : filteredSchedules.length === 0 ? (
-            <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Calendar className="h-16 w-16 text-gray-300 mb-4" />
-                <p className="text-gray-600">Chưa có buổi học nào</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {filteredSchedules
-                .sort((a, b) => {
-                  const dateA = a.availability?.startDate
-                    ? new Date(a.availability.startDate).getTime()
-                    : 0;
-                  const dateB = b.availability?.startDate
-                    ? new Date(b.availability.startDate).getTime()
-                    : 0;
-                  return dateA - dateB;
-                })
-                .map((schedule) => {
-                  const availability = schedule.availability;
-                  const slot = availability?.slot;
-
-                  // Lấy booking từ schedule hoặc từ hook (nếu schedule chỉ có bookingId)
-                  const booking = getBookingFromCache(schedule.bookingId, schedule.booking);
-                  // Từ booking lấy tutorSubject (tutorSubjectId)
-                  const tutorSubject = booking?.tutorSubject;
-                  // Từ tutorSubject lấy subject (môn học) và level
-                  const subject = tutorSubject?.subject;
-                  const level = tutorSubject?.level;
-
-                  // Lấy startDate và endDate từ availability (đã là datetime đầy đủ như "2025-11-02T15:00:00")
-                  let scheduleDate: Date | null = null;
-                  if (availability?.startDate) {
-                    scheduleDate = new Date(availability.startDate);
-                    // Nếu có slot.startTime, override time từ slot
-                    if (slot?.startTime) {
-                      const [startHours, startMinutes] = slot.startTime.split(':').map(Number);
-                      scheduleDate.setHours(startHours, startMinutes, 0, 0);
-                    }
-                    // Nếu không có slot, scheduleDate đã có time từ availability.startDate
-                  }
-
-                  const isOnline = !!(schedule.meetingSession || schedule.hasMeetingSession);
-                  const tutorPayout = schedule.tutorPayout;
-
-                  // Lấy endDate: ưu tiên lấy từ slot.endTime, nếu không có mới dùng availability.endDate
-                  let endDate: Date | null = null;
-                  if (scheduleDate && slot?.endTime) {
-                    // Ưu tiên: tính từ scheduleDate + slot.endTime
-                    const [endHours, endMinutes] = slot.endTime.split(':').map(Number);
-                    endDate = new Date(scheduleDate);
-                    endDate.setHours(endHours, endMinutes, 0, 0);
-                  } else if (availability?.endDate) {
-                    // Fallback: dùng availability.endDate nếu không có slot.endTime
-                    endDate = new Date(availability.endDate);
-                  }
-
-                  return (
-                    <Card key={schedule.id} className="hover:shadow-md transition-shadow border border-gray-300 border-l-4 border-l-gray-300 bg-white">
-                      <CardContent className="p-6">
-                        <div className="flex flex-col md:flex-row gap-6">
-                          {scheduleDate && (
-                            <div className="flex-shrink-0">
-                              <div className="bg-gradient-to-br from-[#257180] to-[#1a5a66] rounded-lg p-4 text-center w-28 h-28 flex flex-col items-center justify-center text-white shadow-md">
-                                <div className="text-4xl font-bold leading-none">
-                                  {scheduleDate.getDate()}
-                                </div>
-                                <div className="text-sm font-medium mt-1 opacity-90">
-                                  Tháng {scheduleDate.getMonth() + 1}
-                                </div>
-                                <div className="text-xs font-medium mt-1 opacity-80">
-                                  {format(scheduleDate, 'EEE', { locale: vi })}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1">
-                                {/* Subject và Level */}
-                                {(subject || level) && (
-                                  <div className="mb-3">
-                                    <h4 className="font-semibold text-lg text-gray-900">
-                                      {subject?.subjectName || 'Môn học'}
-                                      {level && (
-                                        <span className="ml-2 text-base font-normal text-gray-500">
-                                          - {level.name}
-                                        </span>
-                                      )}
-                                    </h4>
-                                  </div>
-                                )}
-
-                                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                                  <Badge className={getScheduleStatusColor(schedule.status)}>
-                                    {EnumHelpers.getScheduleStatusLabel(schedule.status)}
-                                  </Badge>
-                                  {isOnline ? (
-                                    <Badge className="bg-blue-500 text-white border-blue-600">
-                                      <Video className="h-3 w-3 mr-1" />
-                                      Zoom Meeting
-                                    </Badge>
-                                  ) : (
-                                    <Badge className="bg-gray-500 text-white border-gray-600">
-                                      <MapPin className="h-3 w-3 mr-1" />
-                                      Offline
-                                    </Badge>
-                                  )}
-                                </div>
-
-                                <div className="space-y-3 bg-gray-50 rounded-lg p-4">
-                                  {scheduleDate && (
-                                    <div className="flex items-center gap-3">
-                                      <div className="bg-white rounded-lg p-2 shadow-sm">
-                                        <Calendar className="h-5 w-5 text-[#257180]" />
-                                      </div>
-                                      <div>
-                                        <div className="text-xs text-gray-500">Ngày học</div>
-                                        <div className="text-gray-900 font-medium">
-                                          {format(scheduleDate, "EEEE, dd/MM/yyyy", { locale: vi })}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {scheduleDate && endDate && (
-                                    <div className="flex items-center gap-3">
-                                      <div className="bg-white rounded-lg p-2 shadow-sm">
-                                        <Clock className="h-5 w-5 text-[#257180]" />
-                                      </div>
-                                      <div className="flex-1">
-                                        <div className="text-xs text-gray-500">Bắt đầu - Kết thúc</div>
-                                        <div className="text-gray-900 font-medium">
-                                          {format(scheduleDate, "HH:mm", { locale: vi })} - {format(endDate, "HH:mm", { locale: vi })}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {schedule.meetingSession?.meetLink && (
-                                    <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
-                                      <div className="bg-blue-50 rounded-lg p-2">
-                                        <Video className="h-5 w-5 text-blue-600" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="text-xs text-gray-500">Link Zoom Meeting</div>
-                                        <a
-                                          href={schedule.meetingSession.meetLink}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-blue-600 hover:text-blue-800 font-medium hover:underline inline-flex items-center gap-1 max-w-full"
-                                          title={schedule.meetingSession.meetLink}
-                                        >
-                                          <span className="truncate break-all">
-                                            {schedule.meetingSession.meetLink}
-                                          </span>
-                                        </a>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {tutorPayout && (
-                                    <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                                      <div className="flex items-center justify-between gap-2">
-                                        <div className="text-xs text-gray-500">Thanh toán cho gia sư</div>
-                                        <Badge className={getTutorPayoutStatusColor(tutorPayout.status)}>
-                                          {EnumHelpers.getTutorPayoutStatusLabel(tutorPayout.status)}
-                                        </Badge>
-                                      </div>
-                                      <div className="flex items-center justify-between text-sm text-gray-700">
-                                        <span>Số tiền nhận</span>
-                                        <span className="font-semibold text-[#257180]">
-                                          {formatCurrency(tutorPayout.amount)}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-            </div>
-          )}
-        </div>
-
-        <BookingNotesPanel bookingId={selectedBookingId} />
-      </div>
+      <ClassDetail
+        booking={selectedBooking}
+        userRole="tutor"
+        onBack={handleBackToList}
+      />
     );
   }
 
@@ -719,269 +398,456 @@ export function TutorBookingsTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-gray-900">Lịch đặt</h2>
-        <p className="text-gray-600 mt-1">Quản lý các đặt lịch từ học viên</p>
+        <h2 className="text-2xl font-semibold text-gray-900">Lớp dạy của tôi</h2>
+        <p className="text-gray-600 mt-1">
+          Quản lý và theo dõi các lớp học bạn đang giảng dạy
+        </p>
       </div>
 
-      <Tabs value={filter} onValueChange={setFilter}>
-        <TabsList className="w-full overflow-x-auto flex flex-wrap sm:flex-nowrap gap-2">
-          <TabsTrigger
-            value="all"
-            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+      {/* Stats theo mockup */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <BookOpen className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Đang dạy</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {bookingCounts.active}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Hoàn thành</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {bookingCounts.completed}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Buổi đã dạy</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {totalCompletedSessions}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Thu nhập</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {(totalEarnings / 1000000).toFixed(1)}tr
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filter trạng thái giống Mockups */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-2">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <span className="font-medium">Trạng thái lớp dạy:</span>
+          <span className="text-gray-800">
+            {filter === "all"
+              ? "Tất cả"
+              : filter === "active"
+              ? "Đang dạy"
+              : filter === "pending"
+              ? "Chờ xác nhận"
+              : filter === "completed"
+              ? "Hoàn thành"
+              : "Đã hủy"}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={filter === "active" ? "default" : "outline"}
+            size="sm"
+            className={
+              filter === "active"
+                ? "bg-[#257180] text-white"
+                : "border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+            }
+            onClick={() => setFilter("active")}
+          >
+            Đang dạy ({bookingCounts.active})
+          </Button>
+          <Button
+            variant={filter === "pending" ? "default" : "outline"}
+            size="sm"
+            className={
+              filter === "pending"
+                ? "bg-[#257180] text-white"
+                : "border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+            }
+            onClick={() => setFilter("pending")}
+          >
+            Chờ xác nhận ({bookingCounts.pending})
+          </Button>
+          <Button
+            variant={filter === "completed" ? "default" : "outline"}
+            size="sm"
+            className={
+              filter === "completed"
+                ? "bg-[#257180] text-white"
+                : "border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+            }
+            onClick={() => setFilter("completed")}
+          >
+            Hoàn thành ({bookingCounts.completed})
+          </Button>
+          <Button
+            variant={filter === "cancelled" ? "default" : "outline"}
+            size="sm"
+            className={
+              filter === "cancelled"
+                ? "bg-[#257180] text-white"
+                : "border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+            }
+            onClick={() => setFilter("cancelled")}
+          >
+            Đã hủy ({bookingCounts.cancelled})
+          </Button>
+          <Button
+            variant={filter === "all" ? "default" : "outline"}
+            size="sm"
+            className={
+              filter === "all"
+                ? "bg-[#257180] text-white"
+                : "border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+            }
+            onClick={() => setFilter("all")}
           >
             Tất cả ({bookingCounts.all})
-          </TabsTrigger>
-          <TabsTrigger
-            value="active"
-            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
-          >
-            Đang học (
-            {bookingCounts.active}
-            )
-          </TabsTrigger>
-          <TabsTrigger
-            value="pending"
-            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
-          >
-            Chờ xác nhận (
-            {bookingCounts.pending})
-          </TabsTrigger>
-          <TabsTrigger
-            value="completed"
-            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
-          >
-            Hoàn thành (
-            {bookingCounts.completed})
-          </TabsTrigger>
-          <TabsTrigger
-            value="cancelled"
-            className="whitespace-nowrap data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
-          >
-            Đã hủy (
-            {bookingCounts.cancelled})
-          </TabsTrigger>
-        </TabsList>
+          </Button>
+        </div>
+      </div>
 
-        <TabsContent value={filter} className="mt-6 space-y-4">
-          {loading && bookings.length === 0 ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-[#257180]" />
-              <p className="ml-3 text-gray-600">Đang tải danh sách đặt lịch...</p>
-            </div>
-          ) : filteredBookings.length === 0 ? (
-            <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <BookOpen className="h-16 w-16 text-gray-300 mb-4" />
-                <p className="text-gray-600">Không có đặt lịch nào</p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredBookings.map((booking) => {
+      <div className="mt-6 space-y-4">
+        {loading && bookings.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-[#257180]" />
+          </div>
+        ) : filteredBookings.length === 0 ? (
+          <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <BookOpen className="h-16 w-16 text-gray-300 mb-4" />
+              <p className="text-gray-600">Không có lớp dạy nào</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {filteredBookings.map((booking) => {
               const learnerEmail = booking.learnerEmail;
               const learnerProfile = getLearnerProfile(learnerEmail);
+              const learnerName = learnerProfile?.user?.userName || learnerEmail || 'Học viên';
               const tutorSubject = booking.tutorSubject;
               const subject = tutorSubject?.subject;
               const level = tutorSubject?.level;
-              const nextSession = getNextSession(booking);
-              const finishedSessions = getFinishedSessions(booking);
-              const progress = (finishedSessions / booking.totalSessions) * 100;
-              const scheduleStatusSummary = getScheduleStatusSummary(booking);
+              const tutor = (user?.email ? getTutorProfile(user.email) : undefined) || tutorSubject?.tutor;
+              const tutorEmailForSchedules = user?.email || tutorSubject?.tutorEmail;
+              const schedulesForBooking = schedulesByBookingId.get(booking.id) || booking.schedules || [];
+              const completedSessions = schedulesForBooking.filter(
+                (s) => EnumHelpers.parseScheduleStatus(s.status) === ScheduleStatus.Completed
+              ).length;
 
               return (
                 <Card
                   key={booking.id}
-                  className="hover:shadow-md transition-shadow cursor-pointer bg-white border border-gray-300"
-                  onClick={() => handleViewDetail(booking.id)}
+                  className="overflow-hidden hover:shadow-lg transition-shadow border border-gray-300"
                 >
+                  <div className="bg-gradient-to-r from-[#257180] to-[#1f5a66] px-6 py-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-2xl font-semibold text-white mb-2">
+                          {subject?.subjectName || 'Môn học'}
+                          {level ? ` - ${level.name}` : ''}
+                        </h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge className={getBookingStatusColor(booking.status)}>
+                            {EnumHelpers.getBookingStatusLabel(booking.status)}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className="bg-white/10 text-white border-white/20"
+                          >
+                            {completedSessions}/{booking.totalSessions} buổi học
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <CardContent className="p-6">
-                    <div className="flex flex-col lg:flex-row gap-6">
-                      {/* Learner Info */}
-                      <div className="flex gap-4 flex-1">
-                        <Avatar className="h-16 w-16">
-                          <AvatarImage
-                            src={learnerProfile?.profile.avatarUrl}
-                            alt={learnerEmail || 'Học viên'}
-                          />
-                          <AvatarFallback>
-                            {learnerEmail?.[0]?.toUpperCase() || 'HV'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-lg">
-                                  {subject?.subjectName || 'Môn học'}
-                                </h3>
-                                {level && (
-                                  <Badge variant="outline" className="text-sm border-gray-300">
-                                    {level.name}
-                                  </Badge>
-                                )}
+                    <div className="space-y-6">
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <GraduationCap className="w-4 h-4 text-[#257180]" />
+                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Thông tin học viên
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <Avatar className="h-16 w-16 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] shadow-sm">
+                            <AvatarImage
+                              src={learnerProfile?.profile.avatarUrl}
+                              alt={learnerName}
+                              className="object-cover rounded-lg"
+                            />
+                            <AvatarFallback className="rounded-lg font-semibold">
+                              {learnerName
+                                ? learnerName
+                                    .split(' ')
+                                    .slice(-2)
+                                    .map((n) => n[0])
+                                    .join('') || learnerName[0]?.toUpperCase()
+                                : 'HV'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xl font-semibold text-gray-900 mb-2">
+                                {learnerName}
+                              </p>
+                              <div className="space-y-1.5">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Users className="w-4 h-4 text-[#257180] flex-shrink-0" />
+                                  <span className="text-gray-600">Học viên của bạn</span>
+                                </div>
                               </div>
-                              <p className="text-gray-600">
-                                Học viên: {learnerEmail || 'Chưa có thông tin'}
+                            </div>
+                            <div className="flex flex-col justify-center md:items-end">
+                              <Label className="text-xs text-gray-500 mb-1">Thu nhập</Label>
+                              <p className="text-2xl font-semibold text-[#257180] mb-2">
+                                {formatCurrency(booking.tutorReceiveAmount || 0)}
                               </p>
                             </div>
-                            <div className="flex flex-wrap sm:flex-col gap-2 items-start sm:items-end">
-                              <Badge className={getBookingStatusColor(booking.status)}>
-                                {EnumHelpers.getBookingStatusLabel(booking.status)}
-                              </Badge>
-                              <Badge className={getPaymentStatusColor(booking.paymentStatus)}>
-                                {EnumHelpers.getPaymentStatusLabel(booking.paymentStatus)}
-                              </Badge>
-                            </div>
-                          </div>
-
-                          <div className="mt-3 space-y-2">
-                            {level && (
-                              <div className="flex items-center gap-2 text-gray-600 text-sm">
-                                <span>Cấp độ: {level.name}</span>
-                              </div>
-                            )}
-                            {nextSession && (
-                              <div className="flex items-center gap-2 text-gray-600 text-sm">
-                                <Calendar className="h-4 w-4" />
-                                <span>
-                                  Buổi tiếp theo:{' '}
-                                  {format(new Date(nextSession), "dd/MM/yyyy 'lúc' HH:mm", {
-                                    locale: vi,
-                                  })}
-                                </span>
-                              </div>
-                            )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Progress & Actions */}
-                      <div className="lg:w-80 space-y-4">
-                        <div>
-                          <div className="flex justify-between text-sm mb-2">
-                            <span className="text-gray-600">Tiến độ</span>
-
-                          </div>
-                          {scheduleStatusSummary.length > 0 ? (
-                            <>
-                              <div className="flex h-2 w-full overflow-hidden rounded bg-gray-200">
-                                {scheduleStatusSummary.map(({ status, count }) => (
-                                  <div
-                                    key={`${booking.id}-${status}`}
-                                    className={`${getScheduleStatusBgColor(status)} h-full`}
-                                    style={{
-                                      width: `${(count / booking.totalSessions) * 100}%`,
-                                    }}
-                                    title={`${EnumHelpers.getScheduleStatusLabel(status)}: ${count} buổi`}
-                                  />
-                                ))}
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <BookOpen className="w-4 h-4 text-[#257180]" />
+                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Thông tin lớp học
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="p-4 bg-white border border-gray-200 rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                              {tutor?.teachingModes !== undefined && EnumHelpers.parseTeachingMode(tutor.teachingModes) === TeachingMode.Online ? (
+                                <Video className="w-5 h-5 text-[#257180]" />
+                              ) : (
+                                <MapPin className="w-5 h-5 text-[#257180]" />
+                              )}
+                              <span className="text-xs text-gray-500">Hình thức</span>
+                            </div>
+                            <p className="font-medium text-gray-900">
+                              {tutor?.teachingModes !== undefined
+                                ? EnumHelpers.getTeachingModeLabel(tutor.teachingModes)
+                                : 'Chưa cập nhật'}
+                            </p>
+                            {(tutor?.subDistrict || tutor?.province) && (
+                              <div className="flex items-start gap-1.5 mt-2">
+                                <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                                <p className="text-xs text-gray-500 line-clamp-2">
+                                  {tutor.subDistrict?.name && tutor.province?.name
+                                    ? `${tutor.subDistrict.name}, ${tutor.province.name}`
+                                    : tutor.province?.name || 'Việt Nam'}
+                                </p>
                               </div>
-                              <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
-                                {scheduleStatusSummary.map(({ status, count }) => (
-                                  <div key={`legend-${booking.id}-${status}`} className="flex items-center gap-1">
-                                    <span
-                                      className={`inline-block h-2 w-2 rounded-full ${getScheduleStatusBgColor(status)}`}
-                                    />
-                                    <span>
-                                      {EnumHelpers.getScheduleStatusLabel(status)}: {count}
+                            )}
+                          </div>
+
+                          <div className="p-4 bg-white border border-gray-200 rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Calendar className="w-5 h-5 text-[#257180]" />
+                              <span className="text-xs text-gray-500">Thời gian</span>
+                            </div>
+                            {(() => {
+                              const schedules = (schedulesForBooking || []).filter(
+                                (s) => s.availability?.startDate
+                              );
+
+                              if (schedules.length === 0) {
+                                return (
+                                  <p className="text-sm text-gray-900">
+                                    <span className="font-medium">Bắt đầu:</span> Chưa cập nhật
+                                  </p>
+                                );
+                              }
+
+                              const sorted = [...schedules].sort(
+                                (a, b) =>
+                                  new Date(a.availability!.startDate).getTime() -
+                                  new Date(b.availability!.startDate).getTime()
+                              );
+                              const first = sorted[0];
+
+                              const start = new Date(first.availability!.startDate);
+                              const slot = first.availability?.slot;
+                              if (slot?.startTime) {
+                                const [h, m] = slot.startTime.split(':').map(Number);
+                                start.setHours(h, m, 0, 0);
+                              }
+
+                              const startDate = start.toLocaleDateString('vi-VN');
+                              const startTime = start.toLocaleTimeString('vi-VN', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              });
+
+                              const datesOnly = sorted
+                                .map((s) => new Date(s.availability!.startDate))
+                                .sort((a, b) => a.getTime() - b.getTime());
+
+                              const endDate =
+                                datesOnly.length > 1
+                                  ? datesOnly[datesOnly.length - 1].toLocaleDateString('vi-VN')
+                                  : null;
+
+                              return (
+                                <>
+                                  <p className="text-sm text-gray-900">
+                                    <span className="font-medium">Bắt đầu:</span> {startDate} lúc {startTime}
+                                  </p>
+                                  {endDate && (
+                                    <p className="text-sm text-gray-900 mt-1">
+                                      <span className="font-medium">Kết thúc:</span> {endDate}
+                                    </p>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+
+                          <div className="p-4 bg-white border border-gray-200 rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Wallet className="w-5 h-5 text-[#257180]" />
+                              <span className="text-xs text-gray-500">Tổng chi phí</span>
+                            </div>
+                            <p className="text-lg font-semibold text-gray-900">
+                              {formatCurrency(booking.tutorReceiveAmount || 0)}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {booking.totalSessions} buổi
+                            </p>
+                          </div>
+
+                          <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                              <TrendingUp className="w-5 h-5 text-blue-600" />
+                              <span className="text-xs text-blue-700 font-medium">
+                                Tiến độ giảng dạy
+                              </span>
+                            </div>
+                            {(() => {
+                              const schedules = schedulesForBooking || [];
+                              const completed = schedules.filter(
+                                (s) =>
+                                  EnumHelpers.parseScheduleStatus(s.status) ===
+                                  ScheduleStatus.Completed
+                              ).length;
+                              const total = booking.totalSessions;
+                              const remaining = Math.max(total - completed, 0);
+                              const percent =
+                                total > 0
+                                  ? Math.round((completed / total) * 100)
+                                  : 0;
+
+                              return (
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-semibold text-gray-900">
+                                      {completed}/{total}
+                                    </span>
+                                    <span className="text-sm font-medium text-blue-700">
+                                      {percent}%
                                     </span>
                                   </div>
-                                ))}
-                              </div>
-                            </>
-                          ) : (
-                            <Progress value={progress} className="h-2" />
-                          )}
-                        </div>
-
-                        <div className="bg-gray-50 rounded-lg p-3 space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Giá/buổi:</span>
-                            <span className="font-medium">{formatCurrency(booking.unitPrice)}</span>
+                                  <Progress
+                                    value={percent}
+                                    className="h-2.5 bg-white"
+                                  />
+                                  <p className="text-xs text-gray-600">
+                                    Còn {remaining} buổi dạy
+                                  </p>
+                                </div>
+                              );
+                            })()}
                           </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Tổng tiền:</span>
-                            <span className="font-semibold text-[#257180]">
-                              {formatCurrency(booking.totalAmount)}
-                            </span>
-                          </div>
-                          {booking.systemFeeAmount && booking.systemFeeAmount > 0 && (
-                            <>
-                              <div className="flex justify-between text-xs text-gray-500 pt-1 border-t border-gray-200">
-                                <span>Phí hệ thống:</span>
-                                <span className="font-medium text-gray-700">
-                                  {formatCurrency(booking.systemFeeAmount)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between text-sm font-semibold text-green-600 pt-1 border-t border-gray-300">
-                                <span>Số tiền nhận được:</span>
-                                <span>
-                                  {formatCurrency(booking.tutorReceiveAmount)}
-                                </span>
-                              </div>
-                            </>
-                          )}
-                        </div>
 
-                        {EnumHelpers.parseBookingStatus(booking.status) === BookingStatus.Pending && (
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setConfirmDialog({ bookingId: booking.id, status: BookingStatus.Confirmed });
-                              }}
-                            >
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Chấp nhận
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setConfirmDialog({ bookingId: booking.id, status: BookingStatus.Cancelled });
-                              }}
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Hủy
-                            </Button>
+                          <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Calendar className="w-5 h-5 text-green-600" />
+                              <span className="text-xs text-green-700 font-medium">
+                                Buổi dạy tiếp theo
+                              </span>
+                            </div>
+                            <NextSessionDisplay booking={booking} tutorEmail={tutorEmailForSchedules} />
                           </div>
-                        )}
-
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="lg"
-                            className="flex-1 border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // TODO: mở chat
-                            }}
-                          >
-                            <MessageCircle className="h-4 w-4 mr-2" />
-                            Nhắn tin
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewDetail(booking.id);
-                            }}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
                         </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-2 border-t border-[#257180]/20">
+                        <Button
+                          className="flex-1 bg-[#257180] hover:bg-[#1f5a66] text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDetail(booking.id);
+                          }}
+                        >
+                          <BookOpen className="w-4 h-4 mr-2" />
+                          Xem chi tiết lớp dạy
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1 border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          Nhắn tin với học viên
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               );
-            })
-          )}
-        </TabsContent>
-      </Tabs>
+            })}
+          </div>
+        )}
+      </div>
 
       <ConfirmDialog
         open={confirmDialog.bookingId !== null && confirmDialog.status !== null}

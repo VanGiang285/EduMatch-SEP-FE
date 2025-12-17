@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   BookOpen,
@@ -10,12 +10,10 @@ import {
   GraduationCap,
   Loader2,
   MapPin,
-  Medal,
   MessageCircle,
   Star,
   Video,
   CheckCircle,
-  XCircle,
   TrendingUp,
   Wallet,
 } from "lucide-react";
@@ -23,8 +21,6 @@ import {
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/layout/card";
 import { Badge } from "@/components/ui/basic/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/basic/avatar";
@@ -40,10 +36,11 @@ import { useBookings } from "@/hooks/useBookings";
 import { useChatContext } from "@/contexts/ChatContext";
 import { useAuth as useAuthContext } from "@/contexts/AuthContext";
 
-import { BookingDto, TutorProfileDto, TutorFeedbackDto, TutorRatingSummary } from "@/types/backend";
-import { BookingStatus, PaymentStatus, TeachingMode, ScheduleStatus } from "@/types/enums";
+import { BookingDto, ScheduleDto, TutorProfileDto, TutorRatingSummary } from "@/types/backend";
+import { BookingStatus, TeachingMode, ScheduleStatus } from "@/types/enums";
 import { EnumHelpers } from "@/types/enums";
 import { FeedbackService, ScheduleService } from "@/services";
+import { ClassDetail } from "./ClassDetail";
 
 type FilterValue = "all" | "active" | "pending" | "completed" | "cancelled";
 
@@ -69,19 +66,6 @@ const getBookingStatusBadge = (status: BookingStatus | string) => {
   }
 };
 
-const getPaymentStatusBadge = (status: PaymentStatus | string) => {
-  const parsed = EnumHelpers.parsePaymentStatus(status);
-  switch (parsed) {
-    case PaymentStatus.Pending:
-      return "bg-orange-100 text-orange-800 border-orange-200";
-    case PaymentStatus.Paid:
-      return "bg-green-100 text-green-800 border-green-200";
-    case PaymentStatus.Refunded:
-      return "bg-purple-100 text-purple-800 border-purple-200";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-200";
-  }
-};
 
 const NextSessionDisplay = ({ booking }: { booking: BookingDto }) => {
   const [nextSessionDate, setNextSessionDate] = useState<string | null>(null);
@@ -175,9 +159,9 @@ export function ClassesTab() {
   const [allBookings, setAllBookings] = useState<BookingDto[]>([]);
   const [filter, setFilter] = useState<FilterValue>("active");
   const [selectedBooking, setSelectedBooking] = useState<BookingDto | null>(null);
-  const [feedback, setFeedback] = useState<TutorFeedbackDto | null>(null);
-  const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [tutorRatings, setTutorRatings] = useState<Map<number, TutorRatingSummary>>(new Map());
+  const [schedulesByBookingId, setSchedulesByBookingId] = useState<Map<number, ScheduleDto[]>>(new Map());
+  const loadedScheduleIdsRef = useRef<Set<number>>(new Set());
 
   // Load bookings learner
   useEffect(() => {
@@ -304,14 +288,55 @@ export function ClassesTab() {
     });
   }, [allBookings, filter]);
 
+  const filteredBookingIdsKey = useMemo(
+    () => filteredBookings.map((b) => b.id).join(","),
+    [filteredBookings]
+  );
+
+  useEffect(() => {
+    let ignore = false;
+
+    const load = async () => {
+      const idsToLoad = filteredBookings
+        .map((b) => b.id)
+        .filter((id) => typeof id === "number" && !loadedScheduleIdsRef.current.has(id));
+
+      if (idsToLoad.length === 0) return;
+
+      idsToLoad.forEach((id) => loadedScheduleIdsRef.current.add(id));
+
+      await Promise.all(
+        idsToLoad.map(async (bookingId) => {
+          try {
+            const res = await ScheduleService.getAllNoPaging(bookingId);
+            if (ignore) return;
+            if (res.success && res.data) {
+              setSchedulesByBookingId((prev) => {
+                const next = new Map(prev);
+                next.set(bookingId, res.data || []);
+                return next;
+              });
+            }
+          } catch {
+            // ignore
+          }
+        })
+      );
+    };
+
+    load();
+
+    return () => {
+      ignore = true;
+    };
+  }, [filteredBookingIdsKey, filteredBookings]);
+
   const handleViewDetail = (booking: BookingDto) => {
     setSelectedBooking(booking);
-    setFeedback(null);
   };
 
   const handleBackToList = () => {
     setSelectedBooking(null);
-    setFeedback(null);
   };
 
   const handleOpenChat = async (
@@ -341,295 +366,15 @@ export function ClassesTab() {
     );
   };
 
-  // Load feedback khi vào detail
-  useEffect(() => {
-    const load = async () => {
-      if (!selectedBooking || !user?.email) return;
-      setLoadingFeedback(true);
-      try {
-        const res = await FeedbackService.getFeedbackByLearner(user.email);
-        if (res.success && res.data) {
-          const fb =
-            res.data.find((f) => f.bookingId === selectedBooking.id) || null;
-          setFeedback(fb);
-        }
-      } catch (err) {
-        console.error("Error loading feedback:", err);
-      } finally {
-        setLoadingFeedback(false);
-      }
-    };
-    load();
-  }, [selectedBooking, user?.email]);
 
   // ========= DETAIL VIEW =========
   if (selectedBooking) {
-    const tutorSubject = selectedBooking.tutorSubject;
-    const subject = tutorSubject?.subject;
-    const level = tutorSubject?.level;
-    const tutorEmail = tutorSubject?.tutorEmail;
-    const tutor = tutorEmail ? getTutorProfile(tutorEmail) : tutorSubject?.tutor;
-
-    const schedules = selectedBooking.schedules || [];
-    const totalSessions = selectedBooking.totalSessions;
-    const completedSessions = schedules.filter(
-      (s) => EnumHelpers.parseScheduleStatus(s.status) === 2
-    ).length;
-    const progress = totalSessions
-      ? (completedSessions / totalSessions) * 100
-      : 0;
-
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={handleBackToList}
-            className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-          >
-            <Clock className="h-4 w-4 mr-2" />
-            Quay lại
-          </Button>
-        </div>
-
-        {/* Thông tin lớp + gia sư */}
-        <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
-          <CardContent className="p-6 space-y-4">
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="flex gap-4 flex-1">
-                <Avatar className="h-16 w-16 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] shadow-sm">
-                  <AvatarImage
-                    src={tutor?.avatarUrl}
-                    alt={tutor?.userName || "Gia sư"}
-                    className="object-cover rounded-lg"
-                  />
-                  <AvatarFallback className="rounded-lg font-semibold">
-                    {tutor?.userName
-                      ? tutor.userName
-                          .split(" ")
-                          .slice(-2)
-                          .map((n) => n[0])
-                          .join("")
-                      : "GS"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-lg text-gray-900">
-                          {subject?.subjectName || "Môn học"}
-                        </h3>
-                        {level && (
-                          <Badge variant="outline" className="text-sm border-gray-300">
-                            {level.name}
-                          </Badge>
-                        )}
-                        <Badge className={getPaymentStatusBadge(selectedBooking.paymentStatus)}>
-                          {EnumHelpers.getPaymentStatusLabel(selectedBooking.paymentStatus)}
-                        </Badge>
-                      </div>
-                      <p className="text-gray-600 text-sm">
-                        Gia sư: {tutor?.userName || "Chưa có thông tin"}
-                      </p>
-                    </div>
-                    <Badge className={getBookingStatusBadge(selectedBooking.status)}>
-                      {EnumHelpers.getBookingStatusLabel(selectedBooking.status)}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4 rounded-lg border border-gray-300 bg-gray-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <p className="text-xs uppercase text-gray-500">Môn học</p>
-                <p className="text-sm font-semibold text-gray-900">
-                  {subject?.subjectName || "N/A"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase text-gray-500">Cấp độ</p>
-                <p className="text-sm font-semibold text-gray-900">
-                  {level?.name || "Không xác định"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase text-gray-500">Số buổi</p>
-                <p className="text-sm font-semibold text-gray-900">
-                  {completedSessions}/{totalSessions} buổi
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase text-gray-500">Tiến độ</p>
-                <Progress value={progress} className="h-2 mt-1" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Danh sách buổi học (rút gọn) */}
-        <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
-          <CardHeader>
-            <CardTitle>Danh sách buổi học</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {schedules.length === 0 ? (
-              <p className="text-gray-600 text-sm">Chưa có buổi học nào.</p>
-            ) : (
-              schedules
-                .slice()
-                .sort(
-                  (a, b) =>
-                    new Date(a.availability?.startDate || 0).getTime() -
-                    new Date(b.availability?.startDate || 0).getTime()
-                )
-                .map((s) => {
-                  const start = s.availability?.startDate
-                    ? new Date(s.availability.startDate)
-                    : null;
-                  const statusLabel = EnumHelpers.getScheduleStatusLabel(s.status);
-                  const parsedStatus = EnumHelpers.parseScheduleStatus(s.status);
-                  return (
-                    <div
-                      key={s.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-white p-2 shadow-sm">
-                          <Calendar className="h-5 w-5 text-[#257180]" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {start
-                              ? start.toLocaleDateString("vi-VN", {
-                                  weekday: "long",
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                })
-                              : "Chưa cập nhật"}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            Trạng thái: {statusLabel}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {parsedStatus === 2 && (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        )}
-                        {parsedStatus === 3 && (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Đánh giá */}
-        <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
-          <CardHeader>
-            <CardTitle>Đánh giá của bạn về lớp học</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loadingFeedback ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-6 w-6 animate-spin text-[#257180]" />
-              </div>
-            ) : feedback ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`h-5 w-5 ${
-                          star <= Math.round(feedback.overallRating)
-                            ? "fill-yellow-400 text-yellow-400"
-                            : "text-gray-300"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-lg font-semibold text-gray-900">
-                    {feedback.overallRating.toFixed(1)}
-                  </span>
-                </div>
-                {feedback.comment && (
-                  <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">
-                    {feedback.comment}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-600">
-                Bạn chưa tạo đánh giá cho lớp học này.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Học vấn & Chứng chỉ */}
-        {tutor && (tutor.tutorEducations?.length || 0) > 0 && (
-          <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
-            <CardHeader>
-              <CardTitle>Học vấn của gia sư</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {tutor.tutorEducations!.map((edu) => (
-                <div key={edu.id} className="flex items-start gap-2">
-                  <GraduationCap className="w-4 h-4 text-blue-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="text-gray-700">{edu.institution?.name || "Education"}</p>
-                    <p className="text-sm text-gray-500">
-                      {edu.issueDate ? new Date(edu.issueDate).getFullYear() : "N/A"}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {tutor && (tutor.tutorCertificates?.length || 0) > 0 && (
-          <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
-            <CardHeader>
-              <CardTitle>Chứng chỉ của gia sư</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {tutor.tutorCertificates!.map((cert) => (
-                <div key={cert.id} className="flex items-start gap-2 justify-between">
-                  <div className="flex items-start gap-2">
-                    <Medal className="w-4 h-4 mt-0.5 flex-shrink-0 text-yellow-600" />
-                    <div>
-                      <span className="text-gray-700">
-                        {cert.certificateType?.name || "Certificate"}
-                      </span>
-                      {cert.certificateType?.code && (
-                        <p className="text-xs text-gray-500">
-                          {cert.certificateType.code}
-                        </p>
-                      )}
-                      <p className="text-sm text-gray-500">
-                        {cert.issueDate ? new Date(cert.issueDate).getFullYear() : "N/A"}
-                        {cert.expiryDate && (
-                          <span>
-                            {" "}
-                            - {new Date(cert.expiryDate).getFullYear()}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      <ClassDetail
+        booking={selectedBooking}
+        userRole="learner"
+        onBack={handleBackToList}
+      />
     );
   }
 
@@ -818,7 +563,7 @@ export function ClassesTab() {
               const level = tutorSubject?.level;
               const tutorId = tutorSubject?.tutorId;
               const ratingSummary = tutorId ? tutorRatings.get(tutorId) : undefined;
-              const schedules = booking.schedules || [];
+              const schedules = schedulesByBookingId.get(booking.id) || booking.schedules || [];
               const completedSessionsForHeader = schedules.filter(
                 (s) => EnumHelpers.parseScheduleStatus(s.status) === 4 // ScheduleStatus.Completed
               ).length;
@@ -984,7 +729,7 @@ export function ClassesTab() {
                               <span className="text-xs text-gray-500">Thời gian</span>
                             </div>
                             {(() => {
-                              const schedules = (booking.schedules || []).filter(
+                              const schedules = (schedulesByBookingId.get(booking.id) || booking.schedules || []).filter(
                                 (s) => s.availability?.startDate
                               );
 
