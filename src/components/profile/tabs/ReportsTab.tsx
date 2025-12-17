@@ -172,6 +172,41 @@ const getStatusColor = (status: ReportStatus | number | string): string => {
   }
 };
 
+const getStatusIcon = (status: ReportStatus | number | string) => {
+  let statusNum: number;
+  if (typeof status === 'string') {
+    statusNum = parseInt(status, 10);
+    if (isNaN(statusNum)) {
+      if (status === 'Pending') return <Clock className="h-4 w-4 text-yellow-600" />;
+      if (status === 'UnderReview') return <Shield className="h-4 w-4 text-blue-600" />;
+      if (status === 'Resolved') return <CheckCircle className="h-4 w-4 text-green-600" />;
+      if (status === 'Dismissed') return <XCircle className="h-4 w-4 text-red-600" />;
+      return <AlertTriangle className="h-4 w-4 text-gray-500" />;
+    }
+  } else if (typeof status === 'number') {
+    statusNum = status;
+  } else {
+    statusNum = status as number;
+  }
+
+  switch (statusNum) {
+    case ReportStatus.Pending:
+    case 0:
+      return <Clock className="h-4 w-4 text-yellow-600" />;
+    case ReportStatus.UnderReview:
+    case 1:
+      return <Shield className="h-4 w-4 text-blue-600" />;
+    case ReportStatus.Resolved:
+    case 2:
+      return <CheckCircle className="h-4 w-4 text-green-600" />;
+    case ReportStatus.Dismissed:
+    case 3:
+      return <XCircle className="h-4 w-4 text-red-600" />;
+    default:
+      return <AlertTriangle className="h-4 w-4 text-gray-500" />;
+  }
+};
+
 export function ReportsTab() {
   const { user } = useAuth();
   const { showSuccess, showError } = useCustomToast();

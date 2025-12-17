@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/form/input';
 import { Separator } from '@/components/ui/layout/separator';
 import { Textarea } from '@/components/ui/form/textarea';
 import { Label } from '@/components/ui/form/label';
-import { Calendar, Clock, MapPin, Video, MessageCircle, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight, PlayCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Video, MessageCircle, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight, PlayCircle, Upload, X } from 'lucide-react';
 import { ScheduleStatus, ScheduleChangeRequestStatus, TutorAvailabilityStatus } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/form/select';
-import { ReportService } from '@/services';
+import { ReportService, MediaService } from '@/services';
 
 export function ScheduleTab() {
   const { user } = useAuth();
@@ -86,6 +86,69 @@ export function ScheduleTab() {
     reason: '',
     submitting: false,
   });
+  const [reportUploadingFiles, setReportUploadingFiles] = useState<File[]>([]);
+  const [reportUploadedUrls, setReportUploadedUrls] = useState<string[]>([]);
+  const [reportUploading, setReportUploading] = useState(false);
+
+  const handleReportFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user?.email) {
+      showError('Vui lòng đăng nhập để upload file');
+      return;
+    }
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const validFiles = files.filter(file => {
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      if (!isImage && !isVideo) {
+        showError('Lỗi', 'Chỉ chấp nhận file ảnh hoặc video');
+        return false;
+      }
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        showError('Lỗi', `File ${file.name} vượt quá 10MB`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    setReportUploading(true);
+    try {
+      const uploadPromises = validFiles.map(async (file) => {
+        const mediaType = file.type.startsWith('image/') ? 'Image' : 'Video';
+        const response = await MediaService.uploadFile({
+          file,
+          ownerEmail: user.email!,
+          mediaType: mediaType as 'Image' | 'Video',
+        });
+
+        if (response.success && response.data?.secureUrl) {
+          return { url: response.data.secureUrl, file };
+        } else {
+          throw new Error(`Không thể upload file ${file.name}`);
+        }
+      });
+
+      const results = await Promise.all(uploadPromises);
+      setReportUploadedUrls(prev => [...prev, ...results.map(r => r.url)]);
+      setReportUploadingFiles(prev => [...prev, ...results.map(r => r.file)]);
+      showSuccess('Thành công', `Đã upload ${results.length} file thành công`);
+    } catch (error: any) {
+      console.error('Error uploading files:', error);
+      showError('Lỗi', error.message || 'Không thể upload file');
+    } finally {
+      setReportUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleReportRemoveFile = (index: number) => {
+    setReportUploadedUrls(prev => prev.filter((_, i) => i !== index));
+    setReportUploadingFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     if (user?.email) {
@@ -504,6 +567,7 @@ export function ScheduleTab() {
         reportedUserEmail: tutorEmail,
         reason: reportDialog.reason.trim(),
         bookingId,
+        evidenceUrls: reportUploadedUrls.length > 0 ? reportUploadedUrls : undefined,
       };
       const response = await ReportService.createReport(request);
       if (!response.success || !response.data?.id) {
@@ -522,11 +586,13 @@ export function ScheduleTab() {
         reason: '',
         submitting: false,
       });
+      setReportUploadedUrls([]);
+      setReportUploadingFiles([]);
     } catch {
       showError('Lỗi', 'Không thể tạo báo cáo');
       setReportDialog(prev => ({ ...prev, submitting: false }));
     }
-  }, [getBooking, reportDialog, reportSchedule, showError, showSuccess]);
+  }, [getBooking, reportDialog, reportSchedule, reportUploadedUrls, showError, showSuccess]);
 
   if (loading) {
     return (
@@ -1018,19 +1084,96 @@ export function ScheduleTab() {
               </div>
             );
           })()}
-          <div className="space-y-2">
-            <Label htmlFor="report-reason">Lý do báo cáo</Label>
-            <Textarea
-              id="report-reason"
-              rows={4}
-              value={reportDialog.reason}
-              onChange={(e) =>
-                setReportDialog(prev => ({ ...prev, reason: e.target.value }))
-              }
-              placeholder="Mô tả chi tiết vấn đề bạn gặp phải..."
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="report-reason">Lý do báo cáo</Label>
+              <Textarea
+                id="report-reason"
+                rows={4}
+                value={reportDialog.reason}
+                onChange={(e) =>
+                  setReportDialog(prev => ({ ...prev, reason: e.target.value }))
+                }
+                placeholder="Mô tả chi tiết vấn đề bạn gặp phải..."
+              />
+            </div>
+
+            <div>
+              <Label>Bằng chứng (ảnh/video) - Tùy chọn</Label>
+              <div className="mt-2 space-y-3">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center justify-center px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-[#257180] hover:bg-[#257180]/5 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*,video/*"
+                      multiple
+                      onChange={handleReportFileSelect}
+                      className="hidden"
+                      disabled={reportUploading}
+                    />
+                    <div className="flex items-center gap-2">
+                      {reportUploading ? (
+                        <>
+                          <Loader2 className="h-5 w-5 animate-spin text-[#257180]" />
+                          <span className="text-sm text-gray-600">Đang upload...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-5 w-5 text-[#257180]" />
+                          <span className="text-sm text-gray-700">Chọn ảnh/video</span>
+                        </>
+                      )}
+                    </div>
+                  </label>
+                  <span className="text-xs text-gray-500">Tối đa 10MB/file</span>
+                </div>
+                {reportUploadedUrls.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700">
+                      Đã upload ({reportUploadedUrls.length} file):
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {reportUploadedUrls.map((url, index) => {
+                        const file = reportUploadingFiles[index];
+                        const isImage = file?.type.startsWith('image/');
+                        return (
+                          <div
+                            key={index}
+                            className="relative group border rounded-lg overflow-hidden bg-gray-50"
+                          >
+                            {isImage ? (
+                              <img
+                                src={url}
+                                alt={`Evidence ${index + 1}`}
+                                className="w-full h-24 object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-24 flex items-center justify-center bg-gray-100">
+                                <Video className="h-8 w-8 text-gray-400" />
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleReportRemoveFile(index)}
+                              className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                            <div className="p-2">
+                              <p className="text-xs text-gray-600 truncate">
+                                {file?.name || `File ${index + 1}`}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() =>
@@ -1042,14 +1185,14 @@ export function ScheduleTab() {
                 })
               }
               disabled={reportDialog.submitting}
-              className="border-gray-300 bg-white hover:bg-gray-100"
+              className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
             >
               Hủy
             </Button>
             <Button
               onClick={handleSubmitReport}
               disabled={reportDialog.submitting}
-              className="bg-[#FD8B51] hover:bg-[#CB6040] text-white"
+              className="bg-[#257180] hover:bg-[#1f5a66] text-white"
             >
               {reportDialog.submitting ? 'Đang gửi...' : 'Tạo báo cáo'}
             </Button>
