@@ -133,7 +133,7 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
                       variant="ghost"
                       className={`w-full justify-start mb-1 focus-visible:ring-gray-300 ${isActive
                         ? 'bg-[#257180]/10 text-[#257180] hover:bg-[#257180]/20 hover:text-[#257180] border-l-4 border-[#257180]'
-                        : 'hover:bg-gray-100 border-l-4 border-transparent'
+                        : 'hover:bg-[#FD8B51]/10 hover:text-[#FD8B51] border-l-4 border-transparent'
                         }`}
                       onClick={() => setActiveTab(item.id)}
                     >
