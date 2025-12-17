@@ -1,3 +1,5 @@
+const isProd = process.env.NODE_ENV === 'production';
+
 const nextConfig = {
   images: {
     domains: ['images.unsplash.com', 'res.cloudinary.com'],
@@ -101,7 +103,7 @@ const nextConfig = {
     } : false,
   },
   async headers() {
-    return [
+    const headers = [
       {
         source: '/(.*)',
         headers: [
@@ -124,9 +126,11 @@ const nextConfig = {
           },
         ],
       },
-      {
-        // Static assets có thể cache lâu hơn nhưng vẫn có thể invalidate
-        // Next.js tự động thêm hash vào tên file nên có thể cache lâu
+    ];
+
+    if (isProd) {
+      // Ở production, cho phép cache lâu static assets vì tên file có hash
+      headers.push({
         source: '/_next/static/(.*)',
         headers: [
           {
@@ -134,8 +138,10 @@ const nextConfig = {
             value: 'public, max-age=31536000, immutable',
           },
         ],
-      },
-    ];
+      });
+    }
+
+    return headers;
   },
 }
 module.exports = nextConfig
