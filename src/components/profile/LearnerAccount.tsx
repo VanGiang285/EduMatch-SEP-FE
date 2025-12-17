@@ -131,13 +131,13 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
                     <Button
                       key={item.id}
                       variant="ghost"
-                      className={`w-full justify-start mb-1 focus-visible:ring-gray-300 ${isActive
+                      className={`w-full justify-start mb-1 focus-visible:ring-gray-300 group ${isActive
                         ? 'bg-[#257180]/10 text-[#257180] hover:bg-[#257180]/20 hover:text-[#257180] border-l-4 border-[#257180]'
-                        : 'hover:bg-[#FD8B51]/10 hover:text-[#FD8B51] border-l-4 border-transparent'
+                        : 'hover:text-[#FD8B51] border-l-4 border-transparent'
                         }`}
                       onClick={() => setActiveTab(item.id)}
                     >
-                      <Icon className={`h-4 w-4 mr-3 ${isActive ? 'text-[#257180]' : 'text-gray-500'}`} />
+                      <Icon className={`h-4 w-4 mr-3 ${isActive ? 'text-[#257180]' : 'text-gray-500 group-hover:text-[#FD8B51]'}`} />
                       <span className="flex-1 text-left">{item.label}</span>
                       {item.badge !== undefined && item.badge > 0 && (
                         <Badge className="ml-auto h-5 px-2 bg-[#257180] text-white">

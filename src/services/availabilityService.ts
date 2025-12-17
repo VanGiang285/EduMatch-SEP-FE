@@ -8,7 +8,7 @@ import { TutorAvailabilityStatus } from '@/types/enums';
 export class AvailabilityService {
   // Tạo nhiều lịch rảnh cùng lúc
   static async createAvailabilities(requests: TutorAvailabilityCreateRequest[]): Promise<ApiResponse<TutorAvailabilityDto[]>> {
-    return apiClient.post<TutorAvailabilityDto[]>(API_ENDPOINTS.AVAILABILITY.CREATE_LIST, { requests });
+    return apiClient.post<TutorAvailabilityDto[]>(API_ENDPOINTS.AVAILABILITY.CREATE_LIST, requests);
   }
 
   // Cập nhật nhiều lịch rảnh cùng lúc
@@ -18,7 +18,7 @@ export class AvailabilityService {
 
   // Xóa nhiều lịch rảnh (chỉ được xóa khi status = Available)
   static async deleteAvailabilities(availabilityIds: number[]): Promise<ApiResponse<number[]>> {
-    return apiClient.delete<number[]>(API_ENDPOINTS.AVAILABILITY.DELETE_LIST + `?ids=${availabilityIds.join(',')}`);
+    return apiClient.delete<number[]>(API_ENDPOINTS.AVAILABILITY.DELETE_LIST, availabilityIds);
   }
 
   // Lấy tất cả lịch rảnh trong tương lai của gia sư (startDate > now)

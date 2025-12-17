@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "../ui/basic/button";
-import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings, FileText, ChevronDown, Sparkles, Receipt, AlertTriangle, ClipboardList } from "lucide-react";
+import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings, FileText, ChevronDown, Sparkles, AlertTriangle, ClipboardList, LayoutDashboard } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from 'sonner';
@@ -202,6 +202,15 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                             Hồ sơ gia sư
                           </DropdownMenuItem>
                         )}
+                        {isTutor && (
+                          <DropdownMenuItem
+                            onClick={() => router.push('/profile?tab=dashboard')}
+                            className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
+                          >
+                            <LayoutDashboard className="h-4 w-4 mr-2" />
+                            Dashboard
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=schedule')}
                           className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
@@ -239,15 +248,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                           <Wallet className="h-4 w-4 mr-2" />
                           Ví
                         </DropdownMenuItem>
-                        {!isTutor && (
-                          <DropdownMenuItem
-                            onClick={() => router.push('/profile?tab=refundRequests')}
-                            className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
-                          >
-                            <Receipt className="h-4 w-4 mr-2" />
-                            Yêu cầu hoàn tiền
-                          </DropdownMenuItem>
-                        )}
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=reports')}
                           className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
@@ -446,6 +446,18 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                         <span className="text-sm">Hồ sơ gia sư</span>
                       </button>
                     )}
+                    {isTutor && (
+                      <button
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          router.push('/profile?tab=dashboard');
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                      >
+                        <LayoutDashboard className="w-4 h-4" />
+                        <span className="text-sm">Dashboard</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setMobileMenuOpen(false);
@@ -496,18 +508,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                       <Wallet className="w-4 h-4" />
                       <span className="text-sm">Ví</span>
                     </button>
-                    {!isTutor && (
-                      <button
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          router.push('/profile?tab=refundRequests');
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
-                      >
-                        <Receipt className="w-4 h-4" />
-                        <span className="text-sm">Yêu cầu hoàn tiền</span>
-                      </button>
-                    )}
                     <button
                       onClick={() => {
                         setMobileMenuOpen(false);

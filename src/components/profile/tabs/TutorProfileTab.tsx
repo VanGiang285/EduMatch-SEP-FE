@@ -665,7 +665,7 @@ export function TutorProfileTab() {
             slotsToDelete.forEach(slotId => {
               const key = `${dateKey}-${slotId}`;
               const availability = existingAvailabilityMap.get(key);
-              if (availability && (availability.status === TutorAvailabilityStatus.Available || availability.status === TutorAvailabilityStatus.Booked)) {
+              if (availability && EnumHelpers.parseTutorAvailabilityStatus(availability.status) === TutorAvailabilityStatus.Available) {
                 availabilitiesToDelete.push(availability.id);
               }
             });
@@ -676,20 +676,10 @@ export function TutorProfileTab() {
                 const key = `${dateKey}-${slotId}`;
                 const existingAvailability = existingAvailabilityMap.get(key);
                 if (!existingAvailability) {
-                  const timeParts = slot.startTime.split(':');
-                  let startTimeFormatted: string;
-                  if (timeParts.length >= 3) {
-                    startTimeFormatted = `${timeParts[0]}:${timeParts[1]}:${timeParts[2]}`;
-                  } else if (timeParts.length === 2) {
-                    startTimeFormatted = `${timeParts[0]}:${timeParts[1]}:00`;
-                  } else {
-                    startTimeFormatted = slot.startTime + ':00';
-                  }
-                  const startDateTime = `${dateKey}T${startTimeFormatted}`;
                   availabilitiesToCreate.push({
                     tutorId: tutorId,
                     slotId: slotId,
-                    startDate: startDateTime,
+                    startDate: dateKey,
                   });
                 }
               }
