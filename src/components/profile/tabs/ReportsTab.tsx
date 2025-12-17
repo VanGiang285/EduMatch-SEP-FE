@@ -41,12 +41,13 @@ import {
 } from '@/components/ui/navigation/pagination';
 import { Label } from '@/components/ui/form/label';
 import { Search, Plus, Eye, Loader2, ArrowUpDown, X, Edit, Shield, AlertTriangle, Clock, CheckCircle, XCircle } from 'lucide-react';
-import { ReportService, TutorService, MediaService } from '@/services';
+import { ReportService, TutorService, MediaService, ScheduleService } from '@/services';
 import { ReportListItemDto, ReportFullDetailDto, TutorProfileDto } from '@/types/backend';
 import { ReportStatus, MediaType, ReportEvidenceType, TutorStatus } from '@/types/enums';
 import { ReportCreateRequest, ReportUpdateByLearnerRequest, ReportDefenseCreateRequest, BasicEvidenceRequest } from '@/types/requests';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Select,
   SelectContent,
@@ -174,6 +175,8 @@ const getStatusColor = (status: ReportStatus | number | string): string => {
 export function ReportsTab() {
   const { user } = useAuth();
   const { showSuccess, showError } = useCustomToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const showErrorRef = React.useRef(showError);
 
   React.useEffect(() => {
@@ -194,6 +197,7 @@ export function ReportsTab() {
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [linkedScheduleId, setLinkedScheduleId] = useState<number | null>(null);
 
   const isLearner = user?.role === 'learner';
   const isTutor = user?.role === 'tutor';
@@ -203,6 +207,30 @@ export function ReportsTab() {
     reason: '',
     evidences: [] as BasicEvidenceRequest[],
   });
+
+  // Open create-report dialog from other screens (ex: ScheduleTab)
+  useEffect(() => {
+    const create = searchParams?.get('createReport');
+    if (create !== '1') return;
+
+    const reportedEmail = searchParams?.get('reportedEmail') || '';
+    const scheduleIdParam = searchParams?.get('scheduleId');
+    const scheduleIdNum =
+      scheduleIdParam && !Number.isNaN(Number(scheduleIdParam))
+        ? Number(scheduleIdParam)
+        : null;
+
+    setFormData((prev) => ({
+      ...prev,
+      reportedUserEmail: reportedEmail || prev.reportedUserEmail,
+    }));
+    setLinkedScheduleId(scheduleIdNum);
+    setShowCreateDialog(true);
+
+    // Prevent reopening on subsequent renders
+    router.replace('/profile?tab=reports');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const [defenseFormData, setDefenseFormData] = useState({
     note: '',
@@ -585,10 +613,19 @@ export function ReportsTab() {
       const response = await ReportService.createReport(request);
       if (response.success) {
         showSuccess('Thành công', 'Đã tạo báo cáo');
+        // If opened from a schedule, link schedule to report (mark on-hold/reported)
+        if (linkedScheduleId && response.data?.id) {
+          try {
+            await ScheduleService.reportSchedule(linkedScheduleId, response.data.id);
+          } catch {
+            // Don't block success UI if linking fails; user can retry from schedule if needed
+          }
+        }
         setShowCreateDialog(false);
         setFormData({ reportedUserEmail: '', reason: '', evidences: [] });
         setUploadingFiles([]);
         setUploadedUrls([]);
+        setLinkedScheduleId(null);
         fetchReports();
       } else {
         showError('Lỗi', response.message || 'Không thể tạo báo cáo');

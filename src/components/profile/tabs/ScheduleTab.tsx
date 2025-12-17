@@ -17,6 +17,7 @@ import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useScheduleChangeRequests } from '@/hooks/useScheduleChangeRequests';
 import { useTutorAvailability } from '@/hooks/useTutorAvailability';
 import { useCustomToast } from '@/hooks/useCustomToast';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { ScheduleDto, TutorAvailabilityDto } from '@/types/backend';
@@ -27,10 +28,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/form/select';
+import { useRouter } from 'next/navigation';
 
 export function ScheduleTab() {
   const { user } = useAuth();
-  const { schedules, loading, loadLearnerSchedules: loadSchedules } = useSchedules();
+  const {
+    schedules,
+    loading,
+    loadLearnerSchedules: loadSchedules,
+    cancelScheduleCompletion,
+    finishSchedule,
+  } = useSchedules();
   const { loadBookingDetails, getBooking } = useBookings();
   const { getTutorProfile, loadTutorProfiles } = useTutorProfiles();
   const { fetchByScheduleId, create, loading: changeRequestLoading } = useScheduleChangeRequests();
@@ -46,6 +54,7 @@ export function ScheduleTab() {
     isLoading: loadingAvailabilities,
   } = useTutorAvailability(12);
   const { showError, showSuccess } = useCustomToast();
+  const router = useRouter();
   const [pendingBySchedule, setPendingBySchedule] = useState<Record<number, boolean>>({});
   const [statusFilter, setStatusFilter] = useState<'all' | ScheduleStatus>('all');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -59,6 +68,11 @@ export function ScheduleTab() {
     selectedAvailabilityId?: number | null;
     reason?: string;
   }>({ open: false, selectedAvailabilityId: null, weekStart: undefined });
+  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; scheduleId: number | null }>({
+    open: false,
+    scheduleId: null,
+  });
+  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
 
   useEffect(() => {
     if (user?.email) {
@@ -66,9 +80,6 @@ export function ScheduleTab() {
         startDate?: string;
         endDate?: string;
       } = {};
-
-      // Chỉ lấy lịch từ hiện tại trở đi
-      params.startDate = new Date().toISOString();
 
       loadSchedules(user.email, params);
     }
@@ -216,14 +227,8 @@ export function ScheduleTab() {
     }
   };
 
-  const allowedSchedules = schedules.filter(s =>
-    [ScheduleStatus.Upcoming, ScheduleStatus.InProgress].includes(
-      EnumHelpers.parseScheduleStatus(s.status)
-    )
-  );
-
-  // Danh sách lịch đang học / sắp học, có filter trạng thái
-  const filteredSchedules = allowedSchedules.filter(s =>
+  // Danh sách lịch học, có filter trạng thái
+  const filteredSchedules = schedules.filter(s =>
     statusFilter === 'all'
       ? true
       : EnumHelpers.parseScheduleStatus(s.status) === statusFilter
@@ -421,6 +426,49 @@ export function ScheduleTab() {
   const selectedDaySessions = selectedDate
     ? getSessionsForDate(selectedDate.day, selectedDate.month, selectedDate.year)
     : [];
+  
+  const handleCancelSchedule = useCallback(async (scheduleId: number) => {
+    try {
+      setActionLoadingId(scheduleId);
+      const ok = await cancelScheduleCompletion(scheduleId);
+      if (ok) {
+        showSuccess('Đã hủy lịch học');
+      } else {
+        showError('Không thể hủy lịch học');
+      }
+    } catch {
+      showError('Không thể hủy lịch học');
+    } finally {
+      setActionLoadingId(null);
+      setCancelDialog({ open: false, scheduleId: null });
+    }
+  }, [cancelScheduleCompletion, showError, showSuccess]);
+
+  const handleFinish = useCallback(async (scheduleId: number) => {
+    try {
+      setActionLoadingId(scheduleId);
+      const ok = await finishSchedule(scheduleId);
+      if (ok) {
+        showSuccess('Đã xác nhận học xong');
+      } else {
+        showError('Không thể xác nhận học xong');
+      }
+    } catch {
+      showError('Không thể xác nhận học xong');
+    } finally {
+      setActionLoadingId(null);
+    }
+  }, [finishSchedule, showError, showSuccess]);
+
+  const handleCreateReport = useCallback((schedule: ScheduleDto) => {
+    const booking = getBooking(schedule.bookingId, schedule.booking);
+    const tutorEmail = booking?.tutorSubject?.tutorEmail;
+    if (!tutorEmail) {
+      showError('Lỗi', 'Không tìm thấy email gia sư để báo cáo.');
+      return;
+    }
+    router.push(`/profile?tab=reports&createReport=1&reportedEmail=${encodeURIComponent(tutorEmail)}&scheduleId=${schedule.id}`);
+  }, [getBooking, router, showError]);
 
   if (loading) {
     return (
@@ -437,7 +485,7 @@ export function ScheduleTab() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900">Lịch học</h2>
-          <p className="text-gray-600 mt-1">Hiển thị các buổi đang học và sắp diễn ra.</p>
+          <p className="text-gray-600 mt-1">Hiển thị lịch học theo trạng thái.</p>
         </div>
         <div className="w-64">
           <Select
@@ -453,6 +501,10 @@ export function ScheduleTab() {
               <SelectItem value="all">Tất cả</SelectItem>
               <SelectItem value={ScheduleStatus.Upcoming.toString()}>Sắp diễn ra</SelectItem>
               <SelectItem value={ScheduleStatus.InProgress.toString()}>Đang học</SelectItem>
+              <SelectItem value={ScheduleStatus.Pending.toString()}>Chờ xử lý</SelectItem>
+              <SelectItem value={ScheduleStatus.Processing.toString()}>Đang xử lý</SelectItem>
+              <SelectItem value={ScheduleStatus.Completed.toString()}>Hoàn thành</SelectItem>
+              <SelectItem value={ScheduleStatus.Cancelled.toString()}>Đã hủy</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -471,6 +523,7 @@ export function ScheduleTab() {
           {filteredSchedules.map((schedule) => {
             const availability = schedule.availability;
             const slot = availability?.slot;
+            const status = EnumHelpers.parseScheduleStatus(schedule.status);
 
             // Lấy booking từ schedule hoặc từ hook (nếu schedule chỉ có bookingId)
             const booking = getBooking(schedule.bookingId, schedule.booking);
@@ -592,6 +645,39 @@ export function ScheduleTab() {
                               <MessageCircle className="h-4 w-4 mr-2" />
                               Nhắn tin
                             </Button>
+                            {status === ScheduleStatus.Upcoming && (
+                              <Button
+                                size="lg"
+                                variant="outline"
+                                className="min-w-[140px] border-gray-300 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
+                                onClick={() => setCancelDialog({ open: true, scheduleId: schedule.id })}
+                                disabled={actionLoadingId === schedule.id}
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Hủy lịch
+                              </Button>
+                            )}
+                            {status === ScheduleStatus.Pending && (
+                              <>
+                                <Button
+                                  size="lg"
+                                  className="min-w-[160px] bg-[#257180] hover:bg-[#257180]/90 text-white"
+                                  onClick={() => handleFinish(schedule.id)}
+                                  disabled={actionLoadingId === schedule.id}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Xác nhận học xong
+                                </Button>
+                                <Button
+                                  size="lg"
+                                  variant="outline"
+                                  className="min-w-[140px] border-gray-300 bg-white text-amber-700 hover:bg-amber-50"
+                                  onClick={() => handleCreateReport(schedule)}
+                                >
+                                  Báo cáo
+                                </Button>
+                              </>
+                            )}
                             {canRequestChange(schedule) && (
                               <Button
                                 size="lg"
@@ -602,7 +688,10 @@ export function ScheduleTab() {
                                 Yêu cầu đổi lịch
                               </Button>
                             )}
-                            {isOnline && schedule.meetingSession && (
+                            {isOnline && schedule.meetingSession && 
+                              [ScheduleStatus.Upcoming, ScheduleStatus.InProgress].includes(
+                                EnumHelpers.parseScheduleStatus(schedule.status)
+                              ) && (
                               <Button
                                 size="lg"
                                 className="min-w-[140px] bg-[#257180] hover:bg-[#257180]/90 text-white"
@@ -819,6 +908,23 @@ export function ScheduleTab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={cancelDialog.open}
+        onOpenChange={(open) => setCancelDialog(prev => ({ ...prev, open }))}
+        title="Xác nhận hủy lịch học"
+        description="Bạn có chắc chắn muốn hủy buổi học này không?"
+        type="error"
+        confirmText="Hủy lịch"
+        cancelText="Đóng"
+        loading={cancelDialog.scheduleId !== null && actionLoadingId === cancelDialog.scheduleId}
+        onConfirm={() => {
+          if (cancelDialog.scheduleId) {
+            void handleCancelSchedule(cancelDialog.scheduleId);
+          }
+        }}
+        onCancel={() => setCancelDialog({ open: false, scheduleId: null })}
+      />
 
       {/* Dialog hiển thị lịch rảnh của gia sư (lọc >=12h và không trùng lịch học của learner) */}
       <Dialog open={slotDialog.open} onOpenChange={(open) => setSlotDialog(prev => ({ ...prev, open }))}>

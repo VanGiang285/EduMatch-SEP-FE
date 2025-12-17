@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useCustomToast } from '@/hooks/useCustomToast';
 import { useScheduleChangeRequests } from '@/hooks/useScheduleChangeRequests';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import {
   Select,
   SelectContent,
@@ -30,10 +31,10 @@ import {
 
 export function TutorScheduleTab() {
   const { user } = useAuth();
-  const { showError } = useCustomToast();
+  const { showError, showSuccess } = useCustomToast();
   const { getBooking, loadBookingDetails } = useBookings();
   const { getLearnerProfile, loadLearnerProfiles } = useLearnerProfiles();
-  const { schedules, loading, loadSchedulesByTutorEmail } = useSchedules();
+  const { schedules, loading, loadSchedulesByTutorEmail, cancelScheduleCompletion } = useSchedules();
   const {
     schedules: learnerSchedules,
     loadSchedulesByLearnerEmail,
@@ -62,6 +63,11 @@ export function TutorScheduleTab() {
     selectedAvailabilityId?: number | null;
     reason?: string;
   }>({ open: false, selectedAvailabilityId: null });
+  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; scheduleId: number | null }>({
+    open: false,
+    scheduleId: null,
+  });
+  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
 
   const loadSchedules = useCallback(async () => {
     if (!user?.email) return;
@@ -71,9 +77,6 @@ export function TutorScheduleTab() {
       endDate?: string;
       status?: ScheduleStatus;
     } = {};
-
-    // Chỉ lấy từ hiện tại trở đi
-    params.startDate = new Date().toISOString();
 
     await loadSchedulesByTutorEmail(user.email, params);
   }, [user?.email, loadSchedulesByTutorEmail]);
@@ -176,9 +179,7 @@ export function TutorScheduleTab() {
 
 
   const displaySchedules = useMemo(() => {
-    const allowed = [ScheduleStatus.Upcoming, ScheduleStatus.InProgress];
     return schedules
-      .filter((s) => allowed.includes(EnumHelpers.parseScheduleStatus(s.status)))
       .filter((s) =>
         statusFilter === 'all'
           ? true
@@ -409,6 +410,26 @@ export function TutorScheduleTab() {
     ? getSessionsForDate(selectedDate.day, selectedDate.month, selectedDate.year)
     : [];
 
+  const handleCancelSchedule = useCallback(
+    async (scheduleId: number) => {
+      try {
+        setActionLoadingId(scheduleId);
+        const ok = await cancelScheduleCompletion(scheduleId);
+        if (ok) {
+          showSuccess('Đã hủy lịch dạy');
+        } else {
+          showError('Không thể hủy lịch dạy');
+        }
+      } catch {
+        showError('Không thể hủy lịch dạy');
+      } finally {
+        setActionLoadingId(null);
+        setCancelDialog({ open: false, scheduleId: null });
+      }
+    },
+    [cancelScheduleCompletion, showError, showSuccess]
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -438,6 +459,10 @@ export function TutorScheduleTab() {
               <SelectItem value="all">Tất cả</SelectItem>
               <SelectItem value={ScheduleStatus.Upcoming.toString()}>Sắp diễn ra</SelectItem>
               <SelectItem value={ScheduleStatus.InProgress.toString()}>Đang học</SelectItem>
+              <SelectItem value={ScheduleStatus.Pending.toString()}>Chờ xử lý</SelectItem>
+              <SelectItem value={ScheduleStatus.Processing.toString()}>Đang xử lý</SelectItem>
+              <SelectItem value={ScheduleStatus.Completed.toString()}>Hoàn thành</SelectItem>
+              <SelectItem value={ScheduleStatus.Cancelled.toString()}>Đã hủy</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -597,6 +622,19 @@ export function TutorScheduleTab() {
                           Nhắn tin
                         </Button>
 
+                        {EnumHelpers.parseScheduleStatus(schedule.status) === ScheduleStatus.Upcoming && (
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            className="min-w-[140px] border-gray-300 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => setCancelDialog({ open: true, scheduleId: schedule.id })}
+                            disabled={actionLoadingId === schedule.id}
+                          >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Hủy lịch
+                          </Button>
+                        )}
+
                         {canRequestChange(schedule) && (
                           <Button
                             size="lg"
@@ -625,7 +663,10 @@ export function TutorScheduleTab() {
                             Yêu cầu chuyển lịch
                           </Button>
                         )}
-                        {isOnline && schedule.meetingSession && (
+                        {isOnline && schedule.meetingSession && 
+                          [ScheduleStatus.Upcoming, ScheduleStatus.InProgress].includes(
+                            EnumHelpers.parseScheduleStatus(schedule.status)
+                          ) && (
                           <Button
                             size="lg"
                             className="min-w-[140px] bg-[#257180] hover:bg-[#257180]/90 text-white"
@@ -1145,6 +1186,23 @@ export function TutorScheduleTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={cancelDialog.open}
+        onOpenChange={(open) => setCancelDialog(prev => ({ ...prev, open }))}
+        title="Xác nhận hủy lịch dạy"
+        description="Bạn có chắc chắn muốn hủy buổi dạy này không?"
+        type="error"
+        confirmText="Hủy lịch"
+        cancelText="Đóng"
+        loading={cancelDialog.scheduleId !== null && actionLoadingId === cancelDialog.scheduleId}
+        onConfirm={() => {
+          if (cancelDialog.scheduleId) {
+            void handleCancelSchedule(cancelDialog.scheduleId);
+          }
+        }}
+        onCancel={() => setCancelDialog({ open: false, scheduleId: null })}
+      />
     </div>
   );
 }
