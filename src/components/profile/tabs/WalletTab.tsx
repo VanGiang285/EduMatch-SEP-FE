@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/data/mockLearnerData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
+import { SelectWithSearch, SelectWithSearchItem } from '@/components/ui/form/select-with-search';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { useWalletContext } from '@/contexts/WalletContext';
 import { WalletService } from '@/services/walletService';
@@ -640,21 +641,17 @@ export function WalletTab() {
                   <span className="text-sm text-gray-500">Đang tải danh sách ngân hàng...</span>
                 </div>
               ) : (
-                <Select
-                  value={newBankAccount.bankId.toString()}
+                <SelectWithSearch
+                  value={newBankAccount.bankId > 0 ? newBankAccount.bankId.toString() : ''}
                   onValueChange={(value) => setNewBankAccount({ ...newBankAccount, bankId: parseInt(value) })}
+                  placeholder="Chọn ngân hàng"
                 >
-                  <SelectTrigger id="bankId">
-                    <SelectValue placeholder="Chọn ngân hàng" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {banks.map((bank) => (
-                      <SelectItem key={bank.id} value={bank.id.toString()}>
-                        {bank.name} ({bank.code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  {banks.map((bank) => (
+                    <SelectWithSearchItem key={bank.id} value={bank.id.toString()}>
+                      {bank.name} ({bank.code})
+                    </SelectWithSearchItem>
+                  ))}
+                </SelectWithSearch>
               )}
             </div>
 
