@@ -23,7 +23,7 @@ import { BookingDto, ScheduleDto } from '@/types/backend';
 import { BookingStatus, ScheduleStatus, TeachingMode } from '@/types/enums';
 import { EnumHelpers } from '@/types/enums';
 import { useAuth } from '@/hooks/useAuth';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { useLearnerProfiles } from '@/hooks/useLearnerProfiles';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useBookings } from '@/hooks/useBookings';
@@ -113,7 +113,6 @@ const NextSessionDisplay = ({ booking, tutorEmail }: { booking: BookingDto; tuto
 
 export function TutorBookingsTab() {
   const { user } = useAuth();
-  const { showError, showSuccess } = useCustomToast();
   const {
     bookings,
     loading,
@@ -167,7 +166,7 @@ export function TutorBookingsTab() {
     try {
       const updated = await updateBookingStatus(bookingId, status);
       if (updated) {
-        showSuccess(
+        toast.success(
           status === BookingStatus.Confirmed ? 'Đã chấp nhận' : 'Đã hủy'
         );
 
@@ -196,10 +195,10 @@ export function TutorBookingsTab() {
           handleBackToList();
         }
       } else {
-        showError('Không thể cập nhật trạng thái', 'Vui lòng thử lại sau.');
+        toast.error('Không thể cập nhật trạng thái. Vui lòng thử lại sau.');
       }
     } catch (error: any) {
-      showError('Lỗi khi cập nhật trạng thái', error.message);
+      toast.error(`Lỗi khi cập nhật trạng thái: ${error.message}`);
     }
   };
 
@@ -245,7 +244,7 @@ export function TutorBookingsTab() {
           }
         }
       } catch (error: any) {
-        showError('Lỗi khi tải chi tiết lớp học', error.message);
+        toast.error(`Lỗi khi tải chi tiết lớp học: ${error.message}`);
       }
     }
   };

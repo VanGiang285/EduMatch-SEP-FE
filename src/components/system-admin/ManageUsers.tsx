@@ -43,7 +43,7 @@ import { CreateBusinessAdminDialog } from './CreateBusinessAdminDialog';
 import { AdminService } from '@/services/adminService';
 import { ManageUserDto } from '@/types/backend';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 
 const ROLE = {
   LEARNER: 1,
@@ -123,7 +123,6 @@ const resolveRoleId = (input: ManageUserDto | number | string | undefined | null
 
 export function ManageUsers() {
   const { user } = useAuth();
-  const { showSuccess, showError } = useCustomToast();
   const [users, setUsers] = useState<ManageUserDto[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<ManageUserDto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -160,11 +159,11 @@ export function ManageUsers() {
             }));
           setUsers(filtered);
         } else {
-          showError('Lỗi', response.message || 'Không thể tải danh sách người dùng');
+          toast.error(response.message || 'Không thể tải danh sách người dùng');
         }
       } catch (error: any) {
         console.error('Error loading users:', error);
-        showError('Lỗi', 'Không thể tải danh sách người dùng. Vui lòng thử lại.');
+        toast.error('Không thể tải danh sách người dùng. Vui lòng thử lại.');
       } finally {
         setIsLoading(false);
       }
@@ -288,13 +287,13 @@ export function ManageUsers() {
         setUsers(users.map(u => 
           u.email === email ? { ...u, isActive: true } : u
         ));
-        showSuccess('Thành công', 'Đã kích hoạt tài khoản thành công');
+        toast.success('Đã kích hoạt tài khoản thành công');
       } else {
-        showError('Lỗi', response.message || 'Không thể kích hoạt tài khoản');
+        toast.error(response.message || 'Không thể kích hoạt tài khoản');
       }
     } catch (error: any) {
       console.error('Error activating user:', error);
-      showError('Lỗi', 'Không thể kích hoạt tài khoản. Vui lòng thử lại.');
+      toast.error('Không thể kích hoạt tài khoản. Vui lòng thử lại.');
     } finally {
       setIsActivating(null);
     }
@@ -309,13 +308,13 @@ export function ManageUsers() {
         setUsers(users.map(u => 
           u.email === email ? { ...u, isActive: false } : u
         ));
-        showSuccess('Thành công', 'Đã vô hiệu hóa tài khoản thành công');
+        toast.success('Đã vô hiệu hóa tài khoản thành công');
       } else {
-        showError('Lỗi', response.message || 'Không thể vô hiệu hóa tài khoản');
+        toast.error(response.message || 'Không thể vô hiệu hóa tài khoản');
       }
     } catch (error: any) {
       console.error('Error deactivating user:', error);
-      showError('Lỗi', 'Không thể vô hiệu hóa tài khoản. Vui lòng thử lại.');
+      toast.error('Không thể vô hiệu hóa tài khoản. Vui lòng thử lại.');
     } finally {
       setIsDeactivating(null);
     }
@@ -332,7 +331,7 @@ export function ManageUsers() {
             u.email !== user?.email || u.roleId !== 4
           );
           setUsers(filtered);
-          showSuccess('Thành công', 'Đã tạo tài khoản Business Admin thành công');
+          toast.success('Đã tạo tài khoản Business Admin thành công');
         }
       } catch (error) {
         console.error('Error reloading users:', error);

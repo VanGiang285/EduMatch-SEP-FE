@@ -9,7 +9,7 @@ import { Eye, EyeOff, User, GraduationCap } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useCustomToast } from "@/hooks/useCustomToast";
+import { toast } from 'sonner';
 import { RadioGroup, RadioGroupItem } from "../ui/form/radio-group";
 import { AuthService } from "@/services";
 interface RegisterPageProps {
@@ -29,8 +29,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   const [passwordMatchError, setPasswordMatchError] = useState("");
   const [role, setRole] = useState<"learner" | "tutor">("learner");
   const { register } = useAuth();
-  const { showSuccess } = useCustomToast();
-  const router = useRouter();
+    const router = useRouter();
   
   // Check password match real-time
   const checkPasswordMatch = (pwd: string, confirmPwd: string) => {
@@ -99,7 +98,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
 
       if (role === "learner") {
         await register(trimmedFullName, trimmedEmail, trimmedPassword);
-        showSuccess("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
+        toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
         router.push(`/login?email=${encodeURIComponent(trimmedEmail)}`);
         return;
       }

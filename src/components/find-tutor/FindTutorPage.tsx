@@ -36,7 +36,7 @@ import { useFindTutor } from '@/hooks/useFindTutor';
 import { TeachingMode } from '@/types/enums';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { useChatContext } from '@/contexts/ChatContext';
 import { LocationService, ProvinceDto } from '@/services/locationService';
 import { FeedbackService } from '@/services/feedbackService';
@@ -151,8 +151,7 @@ function groupSubjectsBySubjectName(tutorSubjects: any[]): Array<{ subjectName: 
 export function FindTutorPage() {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
-  const { showWarning } = useCustomToast();
-  const {
+    const {
     tutors,
     subjects,
     levels,
@@ -464,7 +463,7 @@ export function FindTutorPage() {
     e.stopPropagation();
 
     if (!isAuthenticated) {
-      showWarning(
+      toast.warning(
         'Vui lòng đăng nhập',
         'Bạn cần đăng nhập để thêm gia sư vào danh sách yêu thích.'
       );
@@ -515,7 +514,7 @@ export function FindTutorPage() {
     e.stopPropagation();
 
     if (!isAuthenticated) {
-      showWarning(
+      toast.warning(
         'Vui lòng đăng nhập',
         'Bạn cần đăng nhập để nhắn tin với gia sư.'
       );
@@ -873,7 +872,7 @@ export function FindTutorPage() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (!isAuthenticated) {
-                                    showWarning('Vui lòng đăng nhập', 'Bạn cần đăng nhập để đặt buổi học thử.');
+                                    toast.warning('Bạn cần đăng nhập để đặt buổi học thử.');
                                     router.push('/login');
                                     return;
                                   }

@@ -41,7 +41,7 @@ import {
 } from '@/data/mockBusinessAdminData';
 import { TutorService } from '@/services/tutorService';
 import { TutorProfileDto } from '@/types/backend';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { TutorStatus, EnumHelpers, TeachingMode } from '@/types/enums';
 import { UpdateTutorStatusRequest } from '@/types/requests';
 import { LocationService } from '@/services/locationService';
@@ -164,8 +164,7 @@ const mapTutorProfileToUI = (dto: TutorProfileDto): UITutor => {
 };
 
 export function ManageTutors() {
-  const { showSuccess, showError } = useCustomToast();
-  const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [cityFilter, setCityFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -205,11 +204,11 @@ export function ManageTutors() {
           const mappedTutors = response.data.map(mapTutorProfileToUI);
           setTutors(mappedTutors);
         } else {
-          showError('Lỗi', response.message || 'Không thể tải danh sách gia sư');
+          toast.error('Lỗi', response.message || 'Không thể tải danh sách gia sư');
         }
       } catch (error: any) {
         console.error('Error loading tutors:', error);
-        showError('Lỗi', 'Không thể tải danh sách gia sư. Vui lòng thử lại.');
+        toast.error('Không thể tải danh sách gia sư. Vui lòng thử lại.');
       } finally {
         setIsLoading(false);
       }
@@ -307,13 +306,13 @@ export function ManageTutors() {
           setTutors(prev => prev.map(t => 
             t.id === tutor.id ? { ...t, isActive: false, tutorProfile: { ...t.tutorProfile, status: TutorStatus.Rejected } } : t
           ));
-          showSuccess('Thành công', `Đã vô hiệu hóa tài khoản ${tutor.userName}`);
+          toast.success('Thành công', `Đã vô hiệu hóa tài khoản ${tutor.userName}`);
         } else {
-          showError('Lỗi', response.message || 'Không thể vô hiệu hóa tài khoản');
+          toast.error('Lỗi', response.message || 'Không thể vô hiệu hóa tài khoản');
         }
       } catch (error: any) {
         console.error('Error deactivating tutor:', error);
-        showError('Lỗi', 'Không thể vô hiệu hóa tài khoản. Vui lòng thử lại.');
+        toast.error('Không thể vô hiệu hóa tài khoản. Vui lòng thử lại.');
       } finally {
         setIsDeactivating(null);
       }
@@ -329,13 +328,13 @@ export function ManageTutors() {
           setTutors(prev => prev.map(t => 
             t.id === tutor.id ? { ...t, isActive: true, tutorProfile: { ...t.tutorProfile, status: TutorStatus.Approved } } : t
           ));
-          showSuccess('Thành công', `Đã kích hoạt tài khoản ${tutor.userName}`);
+          toast.success('Thành công', `Đã kích hoạt tài khoản ${tutor.userName}`);
         } else {
-          showError('Lỗi', response.message || 'Không thể kích hoạt tài khoản');
+          toast.error('Lỗi', response.message || 'Không thể kích hoạt tài khoản');
         }
       } catch (error: any) {
         console.error('Error activating tutor:', error);
-        showError('Lỗi', 'Không thể kích hoạt tài khoản. Vui lòng thử lại.');
+        toast.error('Không thể kích hoạt tài khoản. Vui lòng thử lại.');
       } finally {
         setIsActivating(null);
       }

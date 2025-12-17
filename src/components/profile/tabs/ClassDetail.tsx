@@ -54,7 +54,7 @@ import { vi } from 'date-fns/locale';
 import { useChatContext } from '@/contexts/ChatContext';
 import { useAuth as useAuthContext } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useLearnerProfiles } from '@/hooks/useLearnerProfiles';
 import { FeedbackService, ScheduleService } from '@/services';
@@ -76,7 +76,6 @@ export function ClassDetail({ booking, userRole, onBack }: ClassDetailProps) {
   const { openChatWithTutor, openChatWithLearner } = useChatContext();
   const { isAuthenticated } = useAuthContext();
   const router = useRouter();
-  const { showError, showWarning } = useCustomToast();
   const { loadTutorProfile: loadTutorProfileByEmail, getTutorProfile } = useTutorProfiles();
   const { loadLearnerProfile, getLearnerProfile } = useLearnerProfiles();
   const [schedules, setSchedules] = useState<ScheduleDto[]>(booking.schedules || []);
@@ -331,11 +330,11 @@ export function ClassDetail({ booking, userRole, onBack }: ClassDetailProps) {
   const handleOpenChat = async () => {
     if (userRole === 'learner') {
       if (!tutorEmail || !tutor) {
-        showError('Lỗi', 'Không tìm thấy thông tin gia sư để nhắn tin.');
+        toast.error('Không tìm thấy thông tin gia sư để nhắn tin.');
         return;
       }
       if (!isAuthenticated) {
-        showWarning('Vui lòng đăng nhập', 'Bạn cần đăng nhập để nhắn tin với gia sư.');
+        toast.warning('Bạn cần đăng nhập để nhắn tin với gia sư.');
         router.push('/login');
         return;
       }
@@ -348,11 +347,11 @@ export function ClassDetail({ booking, userRole, onBack }: ClassDetailProps) {
     } else {
       const bookingTutorId = tutorSubject?.tutorId || tutor?.id;
       if (!bookingTutorId || !learnerEmail) {
-        showError('Lỗi', 'Không tìm thấy thông tin học viên để nhắn tin.');
+        toast.error('Không tìm thấy thông tin học viên để nhắn tin.');
         return;
       }
       if (!isAuthenticated) {
-        showWarning('Vui lòng đăng nhập', 'Bạn cần đăng nhập để nhắn tin với học viên.');
+        toast.warning('Bạn cần đăng nhập để nhắn tin với học viên.');
         router.push('/login');
         return;
       }

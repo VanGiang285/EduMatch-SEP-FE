@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { ChatService } from "@/services/chatService";
 import { useAuth } from "./AuthContext";
-import { useCustomToast } from "@/hooks/useCustomToast";
+import { toast } from 'sonner';
 
 interface ChatContextType {
   openChatWithTutor: (tutorId: number, tutorEmail: string, tutorName?: string, tutorAvatar?: string) => Promise<void>;
@@ -20,9 +20,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isFloatingChatOpen, setIsFloatingChatOpen] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const { user } = useAuth();
-  const { showError } = useCustomToast();
-
-  const openChatWithTutor = useCallback(async (
+    const openChatWithTutor = useCallback(async (
     tutorId: number,
     tutorEmail: string,
     tutorName?: string,
@@ -38,7 +36,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     if (!user?.email) {
       console.error('User email is missing');
-      showError("Lỗi", "Vui lòng đăng nhập để nhắn tin.");
+      toast.error('Vui lòng đăng nhập để nhắn tin.');
       return;
     }
 
@@ -56,22 +54,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         console.log('Floating chat should be open now');
       } else {
         console.error('Failed to create/get chat room:', roomResponse);
-        showError("Lỗi", "Không thể tạo phòng chat. Vui lòng thử lại.");
+        toast.error('Không thể tạo phòng chat. Vui lòng thử lại.');
       }
     } catch (error) {
       console.error("Failed to open chat with tutor:", error);
-      showError("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại.");
+      toast.error('Không thể mở phòng chat. Vui lòng thử lại.');
     }
-  }, [user?.email, showError]);
+  }, [user?.email]);
 
   const openChatWithLearner = useCallback(async (tutorId: number, learnerEmail: string) => {
     if (!user?.email) {
-      showError("Lỗi", "Vui lòng đăng nhập để nhắn tin.");
+      toast.error('Vui lòng đăng nhập để nhắn tin.');
       return;
     }
 
     if (!tutorId || !learnerEmail) {
-      showError("Lỗi", "Không tìm thấy thông tin học viên để nhắn tin.");
+      toast.error('Không tìm thấy thông tin học viên để nhắn tin.');
       return;
     }
 
@@ -82,13 +80,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setSelectedRoomId(roomResponse.data.id);
         setIsFloatingChatOpen(true);
       } else {
-        showError("Lỗi", "Không thể tạo phòng chat. Vui lòng thử lại.");
+        toast.error('Không thể tạo phòng chat. Vui lòng thử lại.');
       }
     } catch (error) {
       console.error("Failed to open chat with learner:", error);
-      showError("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại.");
+      toast.error('Không thể mở phòng chat. Vui lòng thử lại.');
     }
-  }, [user?.email, showError]);
+  }, [user?.email]);
 
   return (
     <ChatContext.Provider

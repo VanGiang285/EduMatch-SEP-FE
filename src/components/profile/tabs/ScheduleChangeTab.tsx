@@ -9,7 +9,7 @@ import { Loader2, Clock, CheckCircle, XCircle, X } from "lucide-react";
 import { ScheduleChangeRequestStatus } from "@/types/enums";
 import { EnumHelpers } from "@/types/enums";
 import { useAuth } from "@/hooks/useAuth";
-import { useCustomToast } from "@/hooks/useCustomToast";
+import { toast } from "sonner";
 import { useBookings } from "@/hooks/useBookings";
 import { useTutorProfiles } from "@/hooks/useTutorProfiles";
 import { useScheduleChangeRequests } from "@/hooks/useScheduleChangeRequests";
@@ -26,7 +26,6 @@ import {
 
 export function ScheduleChangeTab() {
     const { user } = useAuth();
-    const { showError, showSuccess } = useCustomToast();
     const { loadBookingDetails, getBooking } = useBookings();
     const { getTutorProfile, loadTutorProfiles } = useTutorProfiles();
     const {
@@ -474,9 +473,9 @@ export function ScheduleChangeTab() {
                                 if (res) {
                                     // Reload lại toàn bộ requests để cập nhật trạng thái
                                     await loadRequests();
-                                    showSuccess('Đã cập nhật trạng thái yêu cầu.');
+                                    toast.success('Đã cập nhật trạng thái yêu cầu.');
                                 } else {
-                                    showError('Cập nhật trạng thái thất bại.');
+                                    toast.error('Cập nhật trạng thái thất bại.');
                                 }
                                 setConfirmDialog({ open: false });
                             }}

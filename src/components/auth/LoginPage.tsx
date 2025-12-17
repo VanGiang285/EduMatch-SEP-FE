@@ -8,7 +8,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCustomToast } from "@/hooks/useCustomToast";
+import { toast } from "sonner";
 import { AuthService } from "@/services/authService";
 import { ROLE_NAME_TO_ROLE_MAP, USER_ROLES, ERROR_MESSAGES } from "@/constants";
 interface LoginPageProps {
@@ -23,7 +23,6 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const { login } = useAuth();
-  const { showSuccess, showInfo } = useCustomToast();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -55,7 +54,7 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
     try {
       setIsLoading(true);
       await login(trimmedEmail, trimmedPassword, rememberMe);
-      showSuccess("Đăng nhập thành công!");
+      toast.success("Đăng nhập thành công!");
       
       // Get current user to check role and redirect immediately
       try {
@@ -103,7 +102,7 @@ export function LoginPage({ onSwitchToRegister, onForgotPassword }: LoginPagePro
       if (message && (message.includes('Email not verified') || message.includes('not verified'))) {
         try {
           await AuthService.resendVerification(trimmedEmail);
-          showInfo('Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư của bạn');
+          toast.info('Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư của bạn');
         } catch (resendError) {
           console.warn('Failed to resend verification email:', resendError);
         }

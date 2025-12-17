@@ -49,7 +49,7 @@ import {
 import { Label } from '@/components/ui/form/label';
 import { Textarea } from '@/components/ui/form/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { ReportService, TutorService, BookingService } from '@/services';
 import { ReportFullDetailDto, ReportListItemDto, ReportDefenseDto, ReportEvidenceDto, BookingCancelPreviewDto } from '@/types/backend';
 import { MediaType, ReportStatus } from '@/types/enums';
@@ -200,13 +200,6 @@ const normalizeEvidenceList = (
   }));
 
 export function ManageReports() {
-  const { showSuccess, showError } = useCustomToast();
-  const showErrorRef = useRef(showError);
-
-  useEffect(() => {
-    showErrorRef.current = showError;
-  }, [showError]);
-
   const [reports, setReports] = useState<ReportListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -244,7 +237,7 @@ export function ManageReports() {
       }
     } catch (error) {
       console.error('Failed to fetch reports', error);
-      showErrorRef.current('Lỗi', 'Không thể tải danh sách báo cáo');
+      toast.error('Không thể tải danh sách báo cáo');
       setReports([]);
     } finally {
       setLoading(false);
@@ -473,7 +466,7 @@ export function ManageReports() {
       await loadReportDetail(reportId);
     } catch (error) {
       console.error('Failed to fetch report detail', error);
-      showErrorRef.current('Lỗi', 'Không thể tải chi tiết báo cáo');
+      toast.error('Không thể tải chi tiết báo cáo');
       setDetailDialogOpen(false);
     } finally {
       setDetailLoading(false);
@@ -482,12 +475,12 @@ export function ManageReports() {
 
   const handleOpenCancelBookingDialog = async () => {
     if (!selectedReport?.bookingId && !selectedReport?.booking?.id) {
-      showError('Lỗi', 'Không tìm thấy thông tin booking');
+      toast.error('Không tìm thấy thông tin booking');
       return;
     }
     const bookingId = selectedReport.bookingId || selectedReport.booking?.id;
     if (!bookingId) {
-      showError('Lỗi', 'Không tìm thấy thông tin booking');
+      toast.error('Không tìm thấy thông tin booking');
       return;
     }
 
@@ -498,12 +491,12 @@ export function ManageReports() {
       if (response.success && response.data) {
         setCancelPreview(response.data);
       } else {
-        showError('Lỗi', response.message || 'Không thể lấy thông tin preview');
+        toast.error('Lỗi', response.message || 'Không thể lấy thông tin preview');
         setCancelBookingDialogOpen(false);
       }
     } catch (error: any) {
       console.error('Error loading cancel preview:', error);
-      showError('Lỗi', 'Không thể lấy thông tin preview');
+      toast.error('Không thể lấy thông tin preview');
       setCancelBookingDialogOpen(false);
     } finally {
       setLoadingCancelPreview(false);
@@ -512,12 +505,12 @@ export function ManageReports() {
 
   const handleCancelBooking = async () => {
     if (!selectedReport?.bookingId && !selectedReport?.booking?.id) {
-      showError('Lỗi', 'Không tìm thấy thông tin booking');
+      toast.error('Không tìm thấy thông tin booking');
       return;
     }
     const bookingId = selectedReport.bookingId || selectedReport.booking?.id;
     if (!bookingId) {
-      showError('Lỗi', 'Không tìm thấy thông tin booking');
+      toast.error('Không tìm thấy thông tin booking');
       return;
     }
 
@@ -525,7 +518,7 @@ export function ManageReports() {
     try {
       const response = await BookingService.cancelByLearner(bookingId);
       if (response.success) {
-        showSuccess('Thành công', 'Đã hủy booking thành công');
+        toast.success('Đã hủy booking thành công');
         setCancelBookingDialogOpen(false);
         setCancelPreview(null);
         if (selectedReport) {
@@ -533,11 +526,11 @@ export function ManageReports() {
         }
         fetchReports();
       } else {
-        showError('Lỗi', response.message || 'Không thể hủy booking');
+        toast.error('Lỗi', response.message || 'Không thể hủy booking');
       }
     } catch (error: any) {
       console.error('Error cancelling booking:', error);
-      showError('Lỗi', 'Không thể hủy booking');
+      toast.error('Không thể hủy booking');
     } finally {
       setCancellingBooking(false);
     }
@@ -552,7 +545,7 @@ export function ManageReports() {
   const handleConfirmAction = async () => {
     if (!selectedReport || !actionType) return;
     if (!actionNote.trim()) {
-      showError('Thiếu thông tin', 'Vui lòng nhập ghi chú xử lý');
+      toast.error('Vui lòng nhập ghi chú xử lý');
       return;
     }
 
@@ -567,7 +560,7 @@ export function ManageReports() {
 
       const updatedReport = response.success ? response.data : undefined;
       if (updatedReport) {
-        showSuccess(
+        toast.success(
           'Thành công',
           actionType === 'resolve'
             ? 'Đã đánh dấu báo cáo là ĐÃ GIẢI QUYẾT'
@@ -588,18 +581,18 @@ export function ManageReports() {
             await loadReportDetail(selectedReport.id);
           } catch (error) {
             console.error('Failed to refresh report detail', error);
-            showErrorRef.current('Lỗi', 'Không thể làm mới chi tiết báo cáo');
+            toast.error('Không thể làm mới chi tiết báo cáo');
             setDetailDialogOpen(false);
           } finally {
             setDetailLoading(false);
           }
         }
       } else {
-        showError('Lỗi', 'Không thể cập nhật trạng thái báo cáo');
+        toast.error('Không thể cập nhật trạng thái báo cáo');
       }
     } catch (error) {
       console.error('Failed to update report', error);
-      showError('Lỗi', 'Không thể cập nhật trạng thái báo cáo');
+      toast.error('Không thể cập nhật trạng thái báo cáo');
     } finally {
       setActionSubmitting(false);
       setActionDialogOpen(false);

@@ -15,13 +15,12 @@ import { DollarSign, TrendingUp, Users, GraduationCap, FileText } from 'lucide-r
 import { mockDashboardStats, formatCurrency } from '@/data/mockBusinessAdminData';
 import { AdminService } from '@/services/adminService';
 import { AdminSummaryStatsDto, MonthlyAdminStatsDto } from '@/types/backend';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { WalletService } from '@/services/walletService';
 import { WalletTransactionDto, WalletTransactionType } from '@/types/backend';
 
 export function Dashboard() {
-  const { showError } = useCustomToast();
-  const [summary, setSummary] = useState<AdminSummaryStatsDto | null>(null);
+    const [summary, setSummary] = useState<AdminSummaryStatsDto | null>(null);
   const [monthlyStats, setMonthlyStats] = useState<MonthlyAdminStatsDto[]>([]);
   const [loadingSummary, setLoadingSummary] = useState<boolean>(false);
   const [loadingMonthly, setLoadingMonthly] = useState<boolean>(false);
@@ -40,17 +39,17 @@ export function Dashboard() {
         if (summaryRes.success && summaryRes.data) {
           setSummary(summaryRes.data);
         } else if (!summaryRes.success) {
-          showError('Lỗi', summaryRes.message || 'Không thể tải thống kê tổng quan');
+          toast.error('Lỗi', summaryRes.message || 'Không thể tải thống kê tổng quan');
         }
       } catch (error) {
-        showError('Lỗi', 'Không thể tải thống kê tổng quan. Vui lòng thử lại.');
+        toast.error('Không thể tải thống kê tổng quan. Vui lòng thử lại.');
       } finally {
         setLoadingSummary(false);
       }
     };
 
     loadSummary();
-  }, [showError]);
+  }, []);
 
   useEffect(() => {
     const loadMonthly = async () => {
@@ -61,17 +60,17 @@ export function Dashboard() {
         if (monthlyRes.success && monthlyRes.data) {
           setMonthlyStats(monthlyRes.data);
         } else if (!monthlyRes.success) {
-          showError('Lỗi', monthlyRes.message || 'Không thể tải thống kê theo tháng');
+          toast.error('Lỗi', monthlyRes.message || 'Không thể tải thống kê theo tháng');
         }
       } catch (error) {
-        showError('Lỗi', 'Không thể tải thống kê theo tháng. Vui lòng thử lại.');
+        toast.error('Không thể tải thống kê theo tháng. Vui lòng thử lại.');
       } finally {
         setLoadingMonthly(false);
       }
     };
 
     loadMonthly();
-  }, [selectedYear, showError]);
+  }, [selectedYear]);
 
   useEffect(() => {
     const loadRecentTransactions = async () => {
@@ -91,17 +90,17 @@ export function Dashboard() {
           );
           setRecentTransactions(sorted.slice(0, 10));
         } else if (!res.success) {
-          showError('Lỗi', res.message || 'Không thể tải giao dịch gần đây');
+          toast.error('Lỗi', res.message || 'Không thể tải giao dịch gần đây');
         }
       } catch (error) {
-        showError('Lỗi', 'Không thể tải giao dịch gần đây. Vui lòng thử lại.');
+        toast.error('Không thể tải giao dịch gần đây. Vui lòng thử lại.');
       } finally {
         setLoadingTransactions(false);
       }
     };
 
     loadRecentTransactions();
-  }, [showError]);
+  }, []);
 
   const overview = useMemo(() => {
     if (!summary || monthlyStats.length === 0) {

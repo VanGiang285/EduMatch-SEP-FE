@@ -77,7 +77,7 @@ import { TutorVerificationRequestService, TutorService } from '@/services';
 import { TutorVerificationRequestDto, TutorProfileDto } from '@/types/backend';
 import { TutorVerificationRequestStatus, TeachingMode, VerifyStatus, EnumHelpers, TutorStatus } from '@/types/enums';
 import { RejectTutorRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { formatCurrency } from '@/data/mockBusinessAdminData';
 import { UserProfileService } from '@/services/userProfileService';
 import { FeedbackService } from '@/services/feedbackService';
@@ -485,11 +485,6 @@ const getVerifyStatusColor = (status: VerifyStatus | number): string => {
 };
 
 export function ManageTutorApplications() {
-  const { showSuccess, showError } = useCustomToast();
-  const showErrorRef = useRef(showError);
-  useEffect(() => {
-    showErrorRef.current = showError;
-  }, [showError]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<TutorVerificationRequestStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -577,7 +572,7 @@ export function ManageTutorApplications() {
       }
     } catch (error) {
       console.error('Error fetching requests:', error);
-      showErrorRef.current?.('Lỗi', 'Không thể tải danh sách đơn đăng ký');
+      toast.error('Không thể tải danh sách đơn đăng ký');
       setRequests([]);
     } finally {
       setLoading(false);
@@ -673,11 +668,11 @@ export function ManageTutorApplications() {
             setLoadingRating(false);
           }
         } else {
-          showError('Lỗi', 'Không thể tải thông tin gia sư');
+          toast.error('Không thể tải thông tin gia sư');
         }
       } catch (error) {
         console.error('Error fetching tutor:', error);
-        showError('Lỗi', 'Không thể tải thông tin gia sư');
+        toast.error('Không thể tải thông tin gia sư');
       } finally {
         setLoadingTutor(false);
       }
@@ -686,7 +681,7 @@ export function ManageTutorApplications() {
 
   const handleApproveApplication = async () => {
     if (!selectedRequest?.tutorId) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư');
+      toast.error('Không tìm thấy thông tin gia sư');
       return;
     }
 
@@ -694,15 +689,15 @@ export function ManageTutorApplications() {
       setIsProcessing(true);
       const response = await TutorService.approveAndVerifyAll(selectedRequest.tutorId);
       if (response.success) {
-        showSuccess('Thành công', 'Đã duyệt đơn đăng ký và xác minh tất cả chứng chỉ, bằng cấp');
+        toast.success('Đã duyệt đơn đăng ký và xác minh tất cả chứng chỉ, bằng cấp');
         setShowDetailDialog(false);
         fetchRequests();
       } else {
-        showError('Lỗi', response.message || 'Không thể duyệt đơn đăng ký');
+        toast.error('Lỗi', response.message || 'Không thể duyệt đơn đăng ký');
       }
     } catch (error) {
       console.error('Error approving application:', error);
-      showError('Lỗi', 'Không thể duyệt đơn đăng ký');
+      toast.error('Không thể duyệt đơn đăng ký');
     } finally {
       setIsProcessing(false);
     }
@@ -710,12 +705,12 @@ export function ManageTutorApplications() {
 
   const handleRejectApplication = async () => {
     if (!rejectReason.trim()) {
-      showError('Lỗi', 'Vui lòng nhập lý do từ chối');
+      toast.error('Vui lòng nhập lý do từ chối');
       return;
     }
 
     if (!selectedRequest?.tutorId) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư');
+      toast.error('Không tìm thấy thông tin gia sư');
       return;
     }
 
@@ -724,17 +719,17 @@ export function ManageTutorApplications() {
       const request: RejectTutorRequest = { reason: rejectReason.trim() };
       const response = await TutorService.rejectAll(selectedRequest.tutorId, request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã từ chối đơn đăng ký');
+        toast.success('Đã từ chối đơn đăng ký');
         setShowRejectDialog(false);
         setShowDetailDialog(false);
         setRejectReason('');
         fetchRequests();
       } else {
-        showError('Lỗi', response.message || 'Không thể từ chối đơn đăng ký');
+        toast.error('Lỗi', response.message || 'Không thể từ chối đơn đăng ký');
       }
     } catch (error) {
       console.error('Error rejecting application:', error);
-      showError('Lỗi', 'Không thể từ chối đơn đăng ký');
+      toast.error('Không thể từ chối đơn đăng ký');
     } finally {
       setIsProcessing(false);
     }

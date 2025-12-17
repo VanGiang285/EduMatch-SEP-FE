@@ -18,7 +18,7 @@ import { useTutorAvailability } from '@/hooks/useTutorAvailability';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/feedback/dialog';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { useScheduleChangeRequests } from '@/hooks/useScheduleChangeRequests';
 import {
   Select,
@@ -30,7 +30,6 @@ import {
 
 export function TutorScheduleTab() {
   const { user } = useAuth();
-  const { showError } = useCustomToast();
   const { getBooking, loadBookingDetails } = useBookings();
   const { getLearnerProfile, loadLearnerProfiles } = useLearnerProfiles();
   const { schedules, loading, loadSchedulesByTutorEmail } = useSchedules();
@@ -609,7 +608,7 @@ export function TutorScheduleTab() {
                               const learnerEmail = booking?.learnerEmail;
                               const tutorId = booking?.tutorSubject?.tutor?.id || booking?.tutorSubject?.tutorId;
                               if (!learnerEmail || !tutorId) {
-                                showError('Thiếu thông tin learner hoặc tutor');
+                                toast.error('Thiếu thông tin learner hoặc tutor');
                                 return;
                               }
                               await loadLearnerUpcoming(learnerEmail);
@@ -1110,7 +1109,7 @@ export function TutorScheduleTab() {
                 const schedule = slotDialog.schedule;
                 const newAvailabilityId = slotDialog.selectedAvailabilityId;
                 if (!schedule || !newAvailabilityId) {
-                  showError('Vui lòng chọn slot mới.');
+                  toast.error('Vui lòng chọn slot mới.');
                   return;
                 }
 
@@ -1119,11 +1118,11 @@ export function TutorScheduleTab() {
                 const oldAvailabilityId = schedule.availability?.id;
 
                 if (!user?.email || !learnerEmail) {
-                  showError('Thiếu thông tin người gửi hoặc học viên.');
+                  toast.error('Thiếu thông tin người gửi hoặc học viên.');
                   return;
                 }
                 if (!oldAvailabilityId) {
-                  showError('Không tìm thấy lịch cũ của buổi học.');
+                  toast.error('Không tìm thấy lịch cũ của buổi học.');
                   return;
                 }
 
@@ -1141,7 +1140,7 @@ export function TutorScheduleTab() {
                   setPendingBySchedule(prev => ({ ...prev, [schedule.id]: true }));
                   setSlotDialog({ open: false, schedule: undefined, selectedAvailabilityId: null, reason: '' });
                 } else {
-                  showError('Gửi yêu cầu đổi lịch thất bại.');
+                  toast.error('Gửi yêu cầu đổi lịch thất bại.');
                 }
               }}
             >

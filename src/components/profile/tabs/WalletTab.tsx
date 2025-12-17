@@ -31,12 +31,11 @@ import { WalletTransactionDto, UserBankAccountDto, BankDto } from '@/types/backe
 import { WalletTransactionType } from '@/types/backend';
 import { ErrorHandler } from '@/lib/error-handler';
 import { CreateUserBankAccountRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 
 export function WalletTab() {
   const { balance, wallet, loading: walletLoading, refetch: refetchBalance } = useWalletContext();
-  const { showSuccess, showError } = useCustomToast();
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState<boolean>(false);
@@ -174,7 +173,7 @@ export function WalletTab() {
 
   const handleAddBankAccount = async () => {
     if (!newBankAccount.bankId || !newBankAccount.accountNumber || !newBankAccount.accountHolderName) {
-      showError('Lỗi', 'Vui lòng điền đầy đủ thông tin');
+      toast.error('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
@@ -183,7 +182,7 @@ export function WalletTab() {
 
     // Validate account number length to allow both bank accounts and phone numbers
     if (accountNumberWithoutSpaces.length < 6 || accountNumberWithoutSpaces.length > 20) {
-      showError('Lỗi', 'Số tài khoản phải có từ 6 đến 20 ký tự');
+      toast.error('Số tài khoản phải có từ 6 đến 20 ký tự');
       return;
     }
 
@@ -195,7 +194,7 @@ export function WalletTab() {
     });
 
     if (existingAccount) {
-      showError('Lỗi', `Số tài khoản ${newBankAccount.accountNumber} đã tồn tại cho ngân hàng ${existingAccount.bank.name}. Vui lòng kiểm tra lại.`);
+      toast.error(`Số tài khoản ${newBankAccount.accountNumber} đã tồn tại cho ngân hàng ${existingAccount.bank.name}. Vui lòng kiểm tra lại.`);
       return;
     }
 
@@ -210,7 +209,7 @@ export function WalletTab() {
       };
       const response = await WalletService.createBankAccount(request);
       if (response.success) {
-        showSuccess('Thành công', 'Thêm tài khoản ngân hàng thành công');
+        toast.success('Thêm tài khoản ngân hàng thành công');
         setShowAddBankDialog(false);
         setNewBankAccount({ bankId: 0, accountNumber: '', accountHolderName: '' });
         setIsCapsLockOn(false);
@@ -220,7 +219,7 @@ export function WalletTab() {
       }
     } catch (err) {
       ErrorHandler.logError(err, 'WalletTab.handleAddBankAccount');
-      showError('Lỗi', 'Không thể thêm tài khoản ngân hàng');
+      toast.error('Không thể thêm tài khoản ngân hàng');
     }
   };
 
@@ -236,7 +235,7 @@ export function WalletTab() {
       setDeletingAccountId(accountToDelete.id);
       const response = await WalletService.deleteBankAccount(accountToDelete.id);
       if (response.success) {
-        showSuccess('Thành công', 'Xóa tài khoản ngân hàng thành công');
+        toast.success('Xóa tài khoản ngân hàng thành công');
         setShowDeleteConfirmDialog(false);
         setAccountToDelete(null);
         await fetchBankAccounts();
@@ -245,7 +244,7 @@ export function WalletTab() {
       }
     } catch (err) {
       ErrorHandler.logError(err, 'WalletTab.handleDeleteBankAccount');
-      showError('Lỗi', 'Không thể xóa tài khoản ngân hàng');
+      toast.error('Không thể xóa tài khoản ngân hàng');
     } finally {
       setDeletingAccountId(null);
     }
@@ -261,23 +260,23 @@ export function WalletTab() {
 
   const handleTopUp = async () => {
     if (!topUpAmount) {
-      showError('Lỗi', 'Vui lòng nhập số tiền nạp');
+      toast.error('Vui lòng nhập số tiền nạp');
       return;
     }
 
     const amount = Number(topUpAmount);
     if (amount <= 0) {
-      showError('Lỗi', 'Số tiền nạp phải lớn hơn 0');
+      toast.error('Số tiền nạp phải lớn hơn 0');
       return;
     }
 
     // Validate amount range: 50,000 - 5,000,000 VND
     if (amount < 50000) {
-      showError('Lỗi', 'Số tiền nạp tối thiểu là 50,000 VND');
+      toast.error('Số tiền nạp tối thiểu là 50,000 VND');
       return;
     }
     if (amount > 5000000) {
-      showError('Lỗi', 'Số tiền nạp tối đa là 5,000,000 VND');
+      toast.error('Số tiền nạp tối đa là 5,000,000 VND');
       return;
     }
 
@@ -293,7 +292,7 @@ export function WalletTab() {
         const paymentUrl = response.data;
 
         if (paymentUrl) {
-          showSuccess('Thành công', 'Đang chuyển hướng đến trang thanh toán VNPay...');
+          toast.success('Đang chuyển hướng đến trang thanh toán VNPay...');
           setShowTopUpDialog(false);
           setTopUpAmount('');
 
@@ -307,7 +306,7 @@ export function WalletTab() {
       }
     } catch (err) {
       ErrorHandler.logError(err, 'WalletTab.handleTopUp');
-      showError('Lỗi', 'Không thể tạo yêu cầu nạp tiền. Vui lòng thử lại.');
+      toast.error('Không thể tạo yêu cầu nạp tiền. Vui lòng thử lại.');
     } finally {
       setIsProcessingTopUp(false);
     }
@@ -315,7 +314,7 @@ export function WalletTab() {
 
   const handleWithdraw = async () => {
     if (!withdrawAmount || !selectedBankAccountId) {
-      showError('Lỗi', 'Vui lòng điền đầy đủ thông tin');
+      toast.error('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
@@ -323,15 +322,15 @@ export function WalletTab() {
 
     // Validate amount range: 50,000 - 5,000,000 VND (theo backend)
     if (amount < 50000) {
-      showError('Lỗi', 'Số tiền rút tối thiểu là 50,000 VND');
+      toast.error('Số tiền rút tối thiểu là 50,000 VND');
       return;
     }
     if (amount > 5000000) {
-      showError('Lỗi', 'Số tiền rút tối đa là 5,000,000 VND');
+      toast.error('Số tiền rút tối đa là 5,000,000 VND');
       return;
     }
     if (amount > currentBalance) {
-      showError('Lỗi', 'Số tiền rút vượt quá số dư khả dụng');
+      toast.error('Số tiền rút vượt quá số dư khả dụng');
       return;
     }
 
@@ -345,7 +344,7 @@ export function WalletTab() {
       if (response.success) {
         // Backend trả về message (string) trong response.data
         const message = response.data || 'Yêu cầu rút tiền đã được tạo thành công';
-        showSuccess('Thành công', `${message}. Yêu cầu của bạn sẽ được xử lý trong vòng 1-2 ngày làm việc.`);
+        toast.success(`${message}. Yêu cầu của bạn sẽ được xử lý trong vòng 1-2 ngày làm việc.`);
 
         setShowWithdrawDialog(false);
         setWithdrawAmount('');
@@ -359,7 +358,7 @@ export function WalletTab() {
       }
     } catch (err) {
       ErrorHandler.logError(err, 'WalletTab.handleWithdraw');
-      showError('Lỗi', 'Không thể tạo yêu cầu rút tiền. Vui lòng thử lại.');
+      toast.error('Không thể tạo yêu cầu rút tiền. Vui lòng thử lại.');
     } finally {
       setIsProcessingWithdraw(false);
     }

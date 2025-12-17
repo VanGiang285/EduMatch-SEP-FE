@@ -20,7 +20,6 @@ import { toast } from 'sonner';
 import { ClassRequestService } from '@/services/classRequestService';
 import { CreateClassRequestRequest, CreateClassRequestSlotRequest, UpdateClassRequestRequest } from '@/types/requests';
 import { TeachingMode } from '@/types/enums';
-import { useCustomToast } from '@/hooks/useCustomToast';
 import { SubjectService } from '@/services/subjectService';
 import { SubjectDto } from '@/types/backend';
 
@@ -37,8 +36,7 @@ interface TimeSlotSelection {
 }
 
 export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, onSuccess }: CreateClassRequestDialogProps) {
-  const { showSuccess, showError } = useCustomToast();
-  const [step, setStep] = useState(1);
+    const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   
@@ -192,33 +190,33 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
       setIsSubmitting(true);
       try {
         if (!title.trim()) {
-          showError('Lỗi', 'Vui lòng nhập tiêu đề yêu cầu');
+          toast.error('Vui lòng nhập tiêu đề yêu cầu');
           setIsSubmitting(false);
           return;
         }
         if (!learningGoal.trim()) {
-          showError('Lỗi', 'Vui lòng nhập mục tiêu học tập');
+          toast.error('Vui lòng nhập mục tiêu học tập');
           setIsSubmitting(false);
           return;
         }
         if (!tutorRequirement.trim()) {
-          showError('Lỗi', 'Vui lòng nhập yêu cầu gia sư');
+          toast.error('Vui lòng nhập yêu cầu gia sư');
           setIsSubmitting(false);
           return;
         }
         if (!expectedStartDate) {
-          showError('Lỗi', 'Vui lòng chọn ngày bắt đầu dự kiến');
+          toast.error('Vui lòng chọn ngày bắt đầu dự kiến');
           setIsSubmitting(false);
           return;
         }
         const sessionsNum = parseInt(totalSessions);
         if (isNaN(sessionsNum) || sessionsNum < 1 || sessionsNum > 100) {
-          showError('Lỗi', 'Số buổi phải từ 1 đến 100');
+          toast.error('Số buổi phải từ 1 đến 100');
           setIsSubmitting(false);
           return;
         }
         if (selectedSlots.length === 0) {
-          showError('Lỗi', 'Vui lòng chọn ít nhất một khung giờ học');
+          toast.error('Vui lòng chọn ít nhất một khung giờ học');
           setIsSubmitting(false);
           return;
         }
@@ -229,12 +227,12 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
         }));
 
         if (!gradeId) {
-          showError('Lỗi', 'Vui lòng chọn lớp học');
+          toast.error('Vui lòng chọn lớp học');
           setIsSubmitting(false);
           return;
         }
         if (!minPrice || !maxPrice) {
-          showError('Lỗi', 'Vui lòng nhập mức giá mong muốn');
+          toast.error('Vui lòng nhập mức giá mong muốn');
           setIsSubmitting(false);
           return;
         }
@@ -259,7 +257,7 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
         const response = await ClassRequestService.updateClassRequest(editingRequest.id, updateRequest);
 
         if (response.success) {
-          showSuccess('Thành công', 'Cập nhật yêu cầu mở lớp thành công!');
+          toast.success('Cập nhật yêu cầu mở lớp thành công!');
           setStep(1);
           onOpenChange(false);
           if (onSuccess) {
@@ -279,9 +277,9 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
           if (errors.ExpectedSessions) errorMessages.push(`Số buổi: ${Array.isArray(errors.ExpectedSessions) ? errors.ExpectedSessions.join(', ') : errors.ExpectedSessions}`);
           if (errors.ExpectedStartDate) errorMessages.push(`Ngày bắt đầu: ${Array.isArray(errors.ExpectedStartDate) ? errors.ExpectedStartDate.join(', ') : errors.ExpectedStartDate}`);
           if (errors.Slots) errorMessages.push(`Khung giờ: ${Array.isArray(errors.Slots) ? errors.Slots.join(', ') : errors.Slots}`);
-          showError('Lỗi validation', errorMessages.length > 0 ? errorMessages.join('\n') : 'Vui lòng kiểm tra lại thông tin đã nhập');
+          toast.error('Lỗi validation', errorMessages.length > 0 ? errorMessages.join('\n') : 'Vui lòng kiểm tra lại thông tin đã nhập');
         } else {
-          showError('Lỗi', err.message || 'Không thể cập nhật yêu cầu. Vui lòng thử lại.');
+          toast.error('Lỗi', err.message || 'Không thể cập nhật yêu cầu. Vui lòng thử lại.');
         }
       } finally {
         setIsSubmitting(false);
@@ -299,24 +297,24 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
         };
       });
       if (!title.trim()) {
-        showError('Lỗi', 'Vui lòng nhập tiêu đề yêu cầu');
+        toast.error('Vui lòng nhập tiêu đề yêu cầu');
         return;
       }
       if (!learningGoal.trim()) {
-        showError('Lỗi', 'Vui lòng nhập mục tiêu học tập');
+        toast.error('Vui lòng nhập mục tiêu học tập');
         return;
       }
       if (!tutorRequirement.trim()) {
-        showError('Lỗi', 'Vui lòng nhập yêu cầu gia sư');
+        toast.error('Vui lòng nhập yêu cầu gia sư');
         return;
       }
       if (!expectedStartDate) {
-        showError('Lỗi', 'Vui lòng chọn ngày bắt đầu dự kiến');
+        toast.error('Vui lòng chọn ngày bắt đầu dự kiến');
         return;
       }
       const sessionsNum = parseInt(totalSessions);
       if (isNaN(sessionsNum) || sessionsNum < 1 || sessionsNum > 100) {
-        showError('Lỗi', 'Số buổi phải từ 1 đến 100');
+        toast.error('Số buổi phải từ 1 đến 100');
         return;
       }
 
@@ -339,7 +337,7 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
       const response = await ClassRequestService.createClassRequest(request);
 
       if (response.success && response.data) {
-        showSuccess('Thành công', 'Tạo yêu cầu mở lớp thành công!');
+        toast.success('Tạo yêu cầu mở lớp thành công!');
         setStep(1);
         setSubjectId('');
         setGradeId('');
@@ -363,7 +361,7 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
       }
     } catch (err: any) {
       if (err.status === 403 || err.message?.includes('403') || err.message?.includes('Forbidden')) {
-        showError('Lỗi', 'Bạn không có quyền tạo yêu cầu. Vui lòng đăng nhập với tài khoản Learner.');
+        toast.error('Bạn không có quyền tạo yêu cầu. Vui lòng đăng nhập với tài khoản Learner.');
       } else if (err.status === 400 && (err.details?.errors || err.details)) {
         const errors = err.details?.errors || err.details;
         const errorMessages: string[] = [];
@@ -372,9 +370,9 @@ export function CreateClassRequestDialog({ open, onOpenChange, editingRequest, o
         if (errors.TutorRequirement) errorMessages.push(`Yêu cầu gia sư: ${Array.isArray(errors.TutorRequirement) ? errors.TutorRequirement.join(', ') : errors.TutorRequirement}`);
         if (errors.ExpectedSessions) errorMessages.push(`Số buổi: ${Array.isArray(errors.ExpectedSessions) ? errors.ExpectedSessions.join(', ') : errors.ExpectedSessions}`);
         if (errors.ExpectedStartDate) errorMessages.push(`Ngày bắt đầu: ${Array.isArray(errors.ExpectedStartDate) ? errors.ExpectedStartDate.join(', ') : errors.ExpectedStartDate}`);
-        showError('Lỗi validation', errorMessages.length > 0 ? errorMessages.join('\n') : 'Vui lòng kiểm tra lại thông tin đã nhập');
+        toast.error('Lỗi validation', errorMessages.length > 0 ? errorMessages.join('\n') : 'Vui lòng kiểm tra lại thông tin đã nhập');
       } else {
-        showError('Lỗi', err.message || 'Không thể tạo yêu cầu. Vui lòng thử lại.');
+        toast.error('Lỗi', err.message || 'Không thể tạo yêu cầu. Vui lòng thử lại.');
       }
     } finally {
       setIsSubmitting(false);

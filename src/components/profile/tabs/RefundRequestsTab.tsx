@@ -35,7 +35,7 @@ import { BookingRefundRequestService, RefundPolicyService, BookingService, Media
 import { BookingRefundRequestDto, RefundPolicyDto, BookingDto } from '@/types/backend';
 import { BookingRefundRequestStatus } from '@/types/enums';
 import { BookingRefundRequestCreateRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/data/mockLearnerData';
 import {
@@ -79,7 +79,6 @@ const getStatusColor = (status: BookingRefundRequestStatus): string => {
 
 export function RefundRequestsTab() {
   const { user } = useAuth();
-  const { showSuccess, showError } = useCustomToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingRefundRequestStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -143,7 +142,7 @@ export function RefundRequestsTab() {
       }
     } catch (error) {
       console.error('Error fetching requests:', error);
-      showError('Lỗi', 'Không thể tải danh sách yêu cầu hoàn tiền');
+      toast.error('Không thể tải danh sách yêu cầu hoàn tiền');
       setRequests([]);
     } finally {
       setLoading(false);
@@ -175,7 +174,7 @@ export function RefundRequestsTab() {
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
-      showError('Lỗi', 'Không thể tải danh sách booking');
+      toast.error('Không thể tải danh sách booking');
     } finally {
       setLoadingBookings(false);
     }
@@ -232,11 +231,11 @@ export function RefundRequestsTab() {
         setSelectedRequest(response.data);
         setShowDetailDialog(true);
       } else {
-        showError('Lỗi', 'Không thể tải chi tiết yêu cầu hoàn tiền');
+        toast.error('Không thể tải chi tiết yêu cầu hoàn tiền');
       }
     } catch (error) {
       console.error('Error fetching request detail:', error);
-      showError('Lỗi', 'Không thể tải chi tiết yêu cầu hoàn tiền');
+      toast.error('Không thể tải chi tiết yêu cầu hoàn tiền');
     }
   };
 
@@ -258,12 +257,12 @@ export function RefundRequestsTab() {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
       if (!isImage && !isVideo) {
-        showError('Lỗi', 'Chỉ chấp nhận file ảnh hoặc video');
+        toast.error('Chỉ chấp nhận file ảnh hoặc video');
         return false;
       }
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (file.size > maxSize) {
-        showError('Lỗi', `File ${file.name} vượt quá 10MB`);
+        toast.error(`File ${file.name} vượt quá 10MB`);
         return false;
       }
       return true;
@@ -291,10 +290,10 @@ export function RefundRequestsTab() {
       const urls = await Promise.all(uploadPromises);
       setUploadedUrls(prev => [...prev, ...urls]);
       setUploadingFiles(prev => [...prev, ...validFiles]);
-      showSuccess('Thành công', `Đã upload ${urls.length} file thành công`);
+      toast.success(`Đã upload ${urls.length} file thành công`);
     } catch (error: any) {
       console.error('Error uploading files:', error);
-      showError('Lỗi', error.message || 'Không thể upload file');
+      toast.error(error.message || 'Không thể upload file');
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -308,11 +307,11 @@ export function RefundRequestsTab() {
 
   const handleSubmitCreate = async () => {
     if (!user?.email) {
-      showError('Lỗi', 'Vui lòng đăng nhập');
+      toast.error('Vui lòng đăng nhập');
       return;
     }
     if (!formData.bookingId || !formData.refundPolicyId) {
-      showError('Lỗi', 'Vui lòng chọn booking và chính sách hoàn tiền');
+      toast.error('Vui lòng chọn booking và chính sách hoàn tiền');
       return;
     }
 
@@ -328,18 +327,18 @@ export function RefundRequestsTab() {
       };
       const response = await BookingRefundRequestService.create(request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã tạo yêu cầu hoàn tiền');
+        toast.success('Đã tạo yêu cầu hoàn tiền');
         setShowCreateDialog(false);
         setFormData({ bookingId: 0, refundPolicyId: 0, reason: '', fileUrls: [] });
         setUploadingFiles([]);
         setUploadedUrls([]);
         fetchRequests();
       } else {
-        showError('Lỗi', response.message || 'Không thể tạo yêu cầu hoàn tiền');
+        toast.error(response.message || 'Không thể tạo yêu cầu hoàn tiền');
       }
     } catch (error) {
       console.error('Error creating request:', error);
-      showError('Lỗi', 'Không thể tạo yêu cầu hoàn tiền');
+      toast.error('Không thể tạo yêu cầu hoàn tiền');
     } finally {
       setIsProcessing(false);
     }

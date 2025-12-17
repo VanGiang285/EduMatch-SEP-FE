@@ -46,7 +46,7 @@ import { AvailabilityService } from '@/services/availabilityService';
 import { MediaService } from '@/services/mediaService';
 import { UserProfileService } from '@/services/userProfileService';
 import { LocationService, ProvinceDto, SubDistrictDto } from '@/services/locationService';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { TutorProfileDto, TutorEducationDto, TutorCertificateDto, TutorSubjectDto, TutorAvailabilityDto } from '@/types/backend';
 import { TutorProfileUpdateRequest, TutorEducationCreateRequest, TutorCertificateCreateRequest, TutorSubjectCreateRequest, TutorEducationUpdateRequest, TutorCertificateUpdateRequest, TutorSubjectUpdateRequest, TutorAvailabilityCreateRequest } from '@/types/requests';
 import { TeachingMode, VerifyStatus, EnumHelpers, TutorAvailabilityStatus, DayOfWeekEnum, MediaType } from '@/types/enums';
@@ -86,7 +86,6 @@ interface TutorSubject {
 
 export function TutorProfileTab() {
   const { user, isAuthenticated } = useAuth();
-  const { showSuccess, showError, showWarning } = useCustomToast();
   const { openChatWithTutor } = useChatContext();
   const router = useRouter();
 
@@ -105,10 +104,7 @@ export function TutorProfileTab() {
     e.stopPropagation();
     
     if (!isAuthenticated) {
-      showWarning(
-        'Vui lòng đăng nhập',
-        'Bạn cần đăng nhập để nhắn tin với gia sư.'
-      );
+      toast.warning('Bạn cần đăng nhập để nhắn tin với gia sư.');
       router.push('/login');
       return;
     }
@@ -558,14 +554,14 @@ export function TutorProfileTab() {
           setAvailabilityCalendar(prev => ({ ...prev, schedule, originalSchedule }));
         } else {
           // Không có tutor profile - có thể chưa đăng ký làm gia sư
-          showError('Thông báo', 'Bạn chưa có hồ sơ gia sư. Vui lòng đăng ký làm gia sư trước.');
+          toast.error('Thông báo', 'Bạn chưa có hồ sơ gia sư. Vui lòng đăng ký làm gia sư trước.');
         }
       } catch (error: any) {
         console.error('Error loading tutor profile:', error);
         if (error.status === 404) {
-          showError('Thông báo', 'Bạn chưa có hồ sơ gia sư. Vui lòng đăng ký làm gia sư trước.');
+          toast.error('Thông báo', 'Bạn chưa có hồ sơ gia sư. Vui lòng đăng ký làm gia sư trước.');
         } else {
-          showError('Lỗi', 'Không thể tải thông tin hồ sơ gia sư. Vui lòng thử lại.');
+          toast.error('Lỗi', 'Không thể tải thông tin hồ sơ gia sư. Vui lòng thử lại.');
         }
       } finally {
         setIsLoading(false);
@@ -578,7 +574,7 @@ export function TutorProfileTab() {
 
   const handleSave = async () => {
     if (!tutorId || !tutorProfile) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      toast.error('Lỗi', 'Không tìm thấy thông tin gia sư.');
       return;
     }
 
@@ -595,22 +591,22 @@ export function TutorProfileTab() {
       
       // Validate required fields
       if (!phone) {
-        showError('Lỗi', 'Vui lòng nhập số điện thoại.');
+        toast.error('Lỗi', 'Vui lòng nhập số điện thoại.');
         setIsSaving(false);
         return;
       }
       if (!finalUserName) {
-        showError('Lỗi', 'Vui lòng nhập họ và tên.');
+        toast.error('Lỗi', 'Vui lòng nhập họ và tên.');
         setIsSaving(false);
         return;
       }
       if (!userEmail) {
-        showError('Lỗi', 'Email không được để trống.');
+        toast.error('Lỗi', 'Email không được để trống.');
         setIsSaving(false);
         return;
       }
       if (!dateOfBirth) {
-        showError('Lỗi', 'Vui lòng nhập ngày sinh.');
+        toast.error('Lỗi', 'Vui lòng nhập ngày sinh.');
         setIsSaving(false);
         return;
       }
@@ -804,16 +800,16 @@ export function TutorProfileTab() {
         
         setIsEditing(false);
         setSaveSuccess(true);
-        showSuccess('Thành công', 'Cập nhật hồ sơ gia sư thành công.');
+        toast.success('Thành công', 'Cập nhật hồ sơ gia sư thành công.');
         setTimeout(() => setSaveSuccess(false), 3000);
         
         await reloadTutorProfile();
       } else {
-        showError('Lỗi', response.message || 'Không thể cập nhật hồ sơ gia sư.');
+        toast.error('Lỗi', response.message || 'Không thể cập nhật hồ sơ gia sư.');
       }
     } catch (error: any) {
       console.error('Error updating tutor profile:', error);
-      showError('Lỗi', 'Không thể cập nhật hồ sơ gia sư. Vui lòng thử lại.');
+      toast.error('Lỗi', 'Không thể cập nhật hồ sơ gia sư. Vui lòng thử lại.');
     } finally {
       setIsSaving(false);
     }
@@ -897,22 +893,22 @@ export function TutorProfileTab() {
   // Handlers for education
   const handleAddEducation = async () => {
     if (!tutorId || tutorId <= 0) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      toast.error('Lỗi', 'Không tìm thấy thông tin gia sư.');
       return;
     }
 
     if (!newEducation.institutionId) {
-      showError('Lỗi', 'Vui lòng chọn trường học.');
+      toast.error('Lỗi', 'Vui lòng chọn trường học.');
       return;
     }
 
     if (!newEducation.certificateFile) {
-      showError('Lỗi', 'Vui lòng tải lên bằng cấp (PDF, JPG, PNG).');
+      toast.error('Lỗi', 'Vui lòng tải lên bằng cấp (PDF, JPG, PNG).');
       return;
     }
 
     if (!user?.email) {
-      showError('Lỗi', 'Không tìm thấy thông tin người dùng.');
+      toast.error('Lỗi', 'Không tìm thấy thông tin người dùng.');
       return;
     }
 
@@ -926,7 +922,7 @@ export function TutorProfileTab() {
           certificateFile: newEducation.certificateFile!,
         }]
       }));
-      showSuccess('Thành công', 'Học vấn đã được thêm vào danh sách. Nhấn "Lưu thay đổi" để lưu.');
+      toast.success('Thành công', 'Học vấn đã được thêm vào danh sách. Nhấn "Lưu thay đổi" để lưu.');
       setShowEducationModal(false);
       setNewEducation({
         institutionId: 0,
@@ -946,7 +942,7 @@ export function TutorProfileTab() {
       });
 
       if (!uploadResponse.success || !uploadResponse.data) {
-        showError('Lỗi', uploadResponse.message || 'Không thể upload file. Vui lòng thử lại.');
+        toast.error('Lỗi', uploadResponse.message || 'Không thể upload file. Vui lòng thử lại.');
         setIsUploadingEducation(false);
         return;
       }
@@ -956,7 +952,7 @@ export function TutorProfileTab() {
       
       if (!certificateUrl) {
         console.error('Cannot extract URL from upload response:', uploadResponse);
-        showError('Lỗi', 'Không thể lấy URL file sau khi upload.');
+        toast.error('Lỗi', 'Không thể lấy URL file sau khi upload.');
         setIsUploadingEducation(false);
         return;
       }
@@ -969,7 +965,7 @@ export function TutorProfileTab() {
 
       const response = await CertificateService.createTutorEducation(tutorId, request);
       if (response.success && response.data) {
-        showSuccess('Thành công', 'Thêm học vấn thành công.');
+        toast.success('Thành công', 'Thêm học vấn thành công.');
         setShowEducationModal(false);
         setNewEducation({
           institutionId: 0,
@@ -979,11 +975,11 @@ export function TutorProfileTab() {
         });
         await reloadTutorProfile();
       } else {
-        showError('Lỗi', response.message || 'Không thể thêm học vấn.');
+        toast.error('Lỗi', response.message || 'Không thể thêm học vấn.');
       }
     } catch (error: any) {
       console.error('Error adding education:', error);
-      showError('Lỗi', error.message || 'Không thể thêm học vấn. Vui lòng thử lại.');
+      toast.error('Lỗi', error.message || 'Không thể thêm học vấn. Vui lòng thử lại.');
     } finally {
       setIsUploadingEducation(false);
     }
@@ -991,7 +987,7 @@ export function TutorProfileTab() {
 
   const handleDeleteEducation = async (id: number) => {
     if (!tutorId) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      toast.error('Lỗi', 'Không tìm thấy thông tin gia sư.');
       return;
     }
 
@@ -1008,43 +1004,43 @@ export function TutorProfileTab() {
         ...prev,
         educations: prev.educations.filter(e => e.id !== id)
       }));
-      showSuccess('Thành công', 'Học vấn đã được đánh dấu xóa. Nhấn "Lưu thay đổi" để xác nhận.');
+      toast.success('Thành công', 'Học vấn đã được đánh dấu xóa. Nhấn "Lưu thay đổi" để xác nhận.');
       return;
     }
 
     try {
       const response = await CertificateService.deleteTutorEducation(tutorId, id);
       if (response.success) {
-        showSuccess('Thành công', 'Xóa học vấn thành công.');
+        toast.success('Thành công', 'Xóa học vấn thành công.');
         await reloadTutorProfile();
       } else {
-        showError('Lỗi', response.message || 'Không thể xóa học vấn.');
+        toast.error('Lỗi', response.message || 'Không thể xóa học vấn.');
       }
     } catch (error: any) {
       console.error('Error deleting education:', error);
-      showError('Lỗi', 'Không thể xóa học vấn. Vui lòng thử lại.');
+      toast.error('Lỗi', 'Không thể xóa học vấn. Vui lòng thử lại.');
     }
   };
 
   // Handlers for certificate
   const handleAddCertificate = async () => {
     if (!tutorId || tutorId <= 0) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      toast.error('Lỗi', 'Không tìm thấy thông tin gia sư.');
       return;
     }
 
     if (!newCertificate.certificateTypeId) {
-      showError('Lỗi', 'Vui lòng chọn loại chứng chỉ.');
+      toast.error('Lỗi', 'Vui lòng chọn loại chứng chỉ.');
       return;
     }
 
     if (!newCertificate.certificateFile) {
-      showError('Lỗi', 'Vui lòng tải lên chứng chỉ (PDF, JPG, PNG).');
+      toast.error('Lỗi', 'Vui lòng tải lên chứng chỉ (PDF, JPG, PNG).');
       return;
     }
 
     if (!user?.email) {
-      showError('Lỗi', 'Không tìm thấy thông tin người dùng.');
+      toast.error('Lỗi', 'Không tìm thấy thông tin người dùng.');
       return;
     }
 
@@ -1059,7 +1055,7 @@ export function TutorProfileTab() {
           certificateFile: newCertificate.certificateFile!,
         }]
       }));
-      showSuccess('Thành công', 'Chứng chỉ đã được thêm vào danh sách. Nhấn "Lưu thay đổi" để lưu.');
+      toast.success('Thành công', 'Chứng chỉ đã được thêm vào danh sách. Nhấn "Lưu thay đổi" để lưu.');
       setShowCertificateModal(false);
       setNewCertificate({
         certificateTypeId: 0,
@@ -1081,7 +1077,7 @@ export function TutorProfileTab() {
       });
 
       if (!uploadResponse.success || !uploadResponse.data) {
-        showError('Lỗi', uploadResponse.message || 'Không thể upload file. Vui lòng thử lại.');
+        toast.error('Lỗi', uploadResponse.message || 'Không thể upload file. Vui lòng thử lại.');
         setIsUploadingCertificate(false);
         return;
       }
@@ -1091,7 +1087,7 @@ export function TutorProfileTab() {
       
       if (!certificateUrl) {
         console.error('Cannot extract URL from upload response:', uploadResponse);
-        showError('Lỗi', 'Không thể lấy URL file sau khi upload.');
+        toast.error('Lỗi', 'Không thể lấy URL file sau khi upload.');
         setIsUploadingCertificate(false);
         return;
       }
@@ -1105,7 +1101,7 @@ export function TutorProfileTab() {
 
       const response = await CertificateService.createTutorCertificate(tutorId, request);
       if (response.success && response.data) {
-        showSuccess('Thành công', 'Thêm chứng chỉ thành công.');
+        toast.success('Thành công', 'Thêm chứng chỉ thành công.');
         setShowCertificateModal(false);
         setNewCertificate({
           certificateTypeId: 0,
@@ -1117,11 +1113,11 @@ export function TutorProfileTab() {
         });
         await reloadTutorProfile();
       } else {
-        showError('Lỗi', response.message || 'Không thể thêm chứng chỉ.');
+        toast.error('Lỗi', response.message || 'Không thể thêm chứng chỉ.');
       }
     } catch (error: any) {
       console.error('Error adding certificate:', error);
-      showError('Lỗi', error.message || 'Không thể thêm chứng chỉ. Vui lòng thử lại.');
+      toast.error('Lỗi', error.message || 'Không thể thêm chứng chỉ. Vui lòng thử lại.');
     } finally {
       setIsUploadingCertificate(false);
     }
@@ -1129,7 +1125,7 @@ export function TutorProfileTab() {
 
   const handleDeleteCertificate = async (id: number) => {
     if (!tutorId) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      toast.error('Lỗi', 'Không tìm thấy thông tin gia sư.');
       return;
     }
 
@@ -1146,39 +1142,39 @@ export function TutorProfileTab() {
         ...prev,
         certificates: prev.certificates.filter(c => c.id !== id)
       }));
-      showSuccess('Thành công', 'Chứng chỉ đã được đánh dấu xóa. Nhấn "Lưu thay đổi" để xác nhận.');
+      toast.success('Thành công', 'Chứng chỉ đã được đánh dấu xóa. Nhấn "Lưu thay đổi" để xác nhận.');
       return;
     }
 
     try {
       const response = await CertificateService.deleteTutorCertificate(tutorId, id);
       if (response.success) {
-        showSuccess('Thành công', 'Xóa chứng chỉ thành công.');
+        toast.success('Thành công', 'Xóa chứng chỉ thành công.');
         await reloadTutorProfile();
       } else {
-        showError('Lỗi', response.message || 'Không thể xóa chứng chỉ.');
+        toast.error('Lỗi', response.message || 'Không thể xóa chứng chỉ.');
       }
     } catch (error: any) {
       console.error('Error deleting certificate:', error);
-      showError('Lỗi', 'Không thể xóa chứng chỉ. Vui lòng thử lại.');
+      toast.error('Lỗi', 'Không thể xóa chứng chỉ. Vui lòng thử lại.');
     }
   };
 
   const handleAddSubject = async () => {
     if (!tutorId) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      toast.error('Lỗi', 'Không tìm thấy thông tin gia sư.');
       return;
     }
 
     if (!newSubject.subjectId || newSubject.selectedLevels.length === 0 || !newSubject.hourlyRate) {
-      showError('Lỗi', 'Vui lòng điền đầy đủ thông tin môn học và chọn ít nhất một cấp độ.');
+      toast.error('Lỗi', 'Vui lòng điền đầy đủ thông tin môn học và chọn ít nhất một cấp độ.');
       return;
     }
 
     try {
       const hourlyRate = parseFloat(newSubject.hourlyRate);
       if (isNaN(hourlyRate) || hourlyRate <= 0) {
-        showError('Lỗi', 'Vui lòng nhập giá hợp lệ.');
+        toast.error('Lỗi', 'Vui lòng nhập giá hợp lệ.');
         return;
       }
 
@@ -1193,7 +1189,7 @@ export function TutorProfileTab() {
           ...prev,
           toCreate: [...prev.toCreate, ...requests]
         }));
-        showSuccess('Thành công', `Đã thêm ${requests.length} môn học vào danh sách. Nhấn "Lưu thay đổi" để lưu.`);
+        toast.success('Thành công', `Đã thêm ${requests.length} môn học vào danh sách. Nhấn "Lưu thay đổi" để lưu.`);
         setShowSubjectModal(false);
         setNewSubject({
           subjectId: 0,
@@ -1210,11 +1206,11 @@ export function TutorProfileTab() {
 
       const failed = results.filter(r => !r.success);
       if (failed.length > 0) {
-        showError('Lỗi', `Không thể thêm ${failed.length} môn học. Vui lòng thử lại.`);
+        toast.error('Lỗi', `Không thể thêm ${failed.length} môn học. Vui lòng thử lại.`);
         return;
       }
 
-      showSuccess('Thành công', `Thêm ${results.length} môn học thành công.`);
+      toast.success('Thành công', `Thêm ${results.length} môn học thành công.`);
       setShowSubjectModal(false);
       setNewSubject({
         subjectId: 0,
@@ -1225,13 +1221,13 @@ export function TutorProfileTab() {
       await reloadTutorProfile();
     } catch (error: any) {
       console.error('Error adding subject:', error);
-      showError('Lỗi', 'Không thể thêm môn học. Vui lòng thử lại.');
+      toast.error('Lỗi', 'Không thể thêm môn học. Vui lòng thử lại.');
     }
   };
 
   const handleDeleteSubject = async (id: number) => {
     if (!tutorId) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      toast.error('Lỗi', 'Không tìm thấy thông tin gia sư.');
       return;
     }
 
@@ -1248,33 +1244,33 @@ export function TutorProfileTab() {
         ...prev,
         subjects: prev.subjects.filter(s => s.id !== id)
       }));
-      showSuccess('Thành công', 'Môn học đã được đánh dấu xóa. Nhấn "Lưu thay đổi" để xác nhận.');
+      toast.success('Thành công', 'Môn học đã được đánh dấu xóa. Nhấn "Lưu thay đổi" để xác nhận.');
       return;
     }
 
     try {
       const response = await SubjectService.deleteTutorSubject(tutorId, id);
       if (response.success) {
-        showSuccess('Thành công', 'Xóa môn học thành công.');
+        toast.success('Thành công', 'Xóa môn học thành công.');
         await reloadTutorProfile();
       } else {
-        showError('Lỗi', response.message || 'Không thể xóa môn học.');
+        toast.error('Lỗi', response.message || 'Không thể xóa môn học.');
       }
     } catch (error: any) {
       console.error('Error deleting subject:', error);
-      showError('Lỗi', 'Không thể xóa môn học. Vui lòng thử lại.');
+      toast.error('Lỗi', 'Không thể xóa môn học. Vui lòng thử lại.');
     }
   };
 
   // Handlers for time slots
   const handleAddTimeSlot = async () => {
     if (!tutorId || tutorId <= 0) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      toast.error('Lỗi', 'Không tìm thấy thông tin gia sư.');
       return;
     }
 
     if (!newTimeSlot.slotId || !newTimeSlot.startDate) {
-      showError('Lỗi', 'Vui lòng chọn slot và ngày bắt đầu.');
+      toast.error('Lỗi', 'Vui lòng chọn slot và ngày bắt đầu.');
       return;
     }
 
@@ -1293,7 +1289,7 @@ export function TutorProfileTab() {
 
       const response = await AvailabilityService.createAvailabilities([request]);
       if (response.success && response.data) {
-        showSuccess('Thành công', 'Thêm khung giờ thành công.');
+        toast.success('Thành công', 'Thêm khung giờ thành công.');
         setShowTimeSlotModal(false);
         setNewTimeSlot({
           dayOfWeek: DayOfWeekEnum.Monday.toString(),
@@ -1304,11 +1300,11 @@ export function TutorProfileTab() {
         // Reload tutor profile
         await reloadTutorProfile();
       } else {
-        showError('Lỗi', response.message || 'Không thể thêm khung giờ.');
+        toast.error('Lỗi', response.message || 'Không thể thêm khung giờ.');
       }
     } catch (error: any) {
       console.error('Error adding time slot:', error);
-      showError('Lỗi', 'Không thể thêm khung giờ. Vui lòng thử lại.');
+      toast.error('Lỗi', 'Không thể thêm khung giờ. Vui lòng thử lại.');
     }
   };
 
@@ -1405,7 +1401,7 @@ export function TutorProfileTab() {
 
   const handleDeleteTimeSlot = async (availabilityId: number) => {
     if (!tutorId || tutorId <= 0) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư.');
+      toast.error('Lỗi', 'Không tìm thấy thông tin gia sư.');
       return;
     }
 
@@ -1416,16 +1412,16 @@ export function TutorProfileTab() {
     try {
       const response = await AvailabilityService.deleteAvailabilities([availabilityId]);
       if (response.success) {
-        showSuccess('Thành công', 'Xóa khung giờ thành công.');
+        toast.success('Thành công', 'Xóa khung giờ thành công.');
         
         // Reload tutor profile
         await reloadTutorProfile();
       } else {
-        showError('Lỗi', response.message || 'Không thể xóa khung giờ.');
+        toast.error('Lỗi', response.message || 'Không thể xóa khung giờ.');
       }
     } catch (error: any) {
       console.error('Error deleting time slot:', error);
-      showError('Lỗi', 'Không thể xóa khung giờ. Vui lòng thử lại.');
+      toast.error('Lỗi', 'Không thể xóa khung giờ. Vui lòng thử lại.');
     }
   };
 
@@ -1589,19 +1585,19 @@ export function TutorProfileTab() {
                       if (!file) return;
 
                       if (!user?.email) {
-                        showError('Lỗi', 'Không tìm thấy thông tin người dùng.');
+                        toast.error('Lỗi', 'Không tìm thấy thông tin người dùng.');
                         return;
                       }
 
                       // Validate file size (5MB)
                       if (file.size > 5 * 1024 * 1024) {
-                        showError('Lỗi', 'Kích thước file không được vượt quá 5MB.');
+                        toast.error('Lỗi', 'Kích thước file không được vượt quá 5MB.');
                         return;
                       }
 
                       // Validate file type
                       if (!file.type.match(/^image\/(jpeg|jpg|png)$/)) {
-                        showError('Lỗi', 'Chỉ chấp nhận file JPG, JPEG, PNG.');
+                        toast.error('Lỗi', 'Chỉ chấp nhận file JPG, JPEG, PNG.');
                         return;
                       }
 
@@ -1627,18 +1623,18 @@ export function TutorProfileTab() {
                           });
 
                           if (updateResponse.success) {
-                            showSuccess('Thành công', 'Cập nhật ảnh đại diện thành công.');
+                            toast.success('Thành công', 'Cập nhật ảnh đại diện thành công.');
                             // Reload tutor profile to get updated avatar
                             await reloadTutorProfile();
                           } else {
-                            showError('Lỗi', 'Upload thành công nhưng không thể cập nhật profile.');
+                            toast.error('Lỗi', 'Upload thành công nhưng không thể cập nhật profile.');
                           }
                         } else {
-                          showError('Lỗi', uploadResponse.message || 'Không thể upload ảnh. Vui lòng thử lại.');
+                          toast.error('Lỗi', uploadResponse.message || 'Không thể upload ảnh. Vui lòng thử lại.');
                         }
                       } catch (error: any) {
                         console.error('Error uploading avatar:', error);
-                        showError('Lỗi', error.message || 'Không thể upload ảnh. Vui lòng thử lại.');
+                        toast.error('Lỗi', error.message || 'Không thể upload ảnh. Vui lòng thử lại.');
                       } finally {
                         setIsUploadingAvatar(false);
                         // Reset input
@@ -2236,7 +2232,7 @@ export function TutorProfileTab() {
                           const response = await AvailabilityService.deleteAvailabilities(ids);
                           if (response.success) {
                             await reloadTutorProfile();
-                            showSuccess('Thành công', 'Đã xóa tất cả khung giờ trong tuần');
+                            toast.success('Thành công', 'Đã xóa tất cả khung giờ trong tuần');
                           }
                         }
                       }}

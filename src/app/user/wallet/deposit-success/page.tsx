@@ -8,15 +8,13 @@ import { Button } from '@/components/ui/basic/button';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { WalletService } from '@/services/walletService';
 import { useWalletContext } from '@/contexts/WalletContext';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 
 function DepositSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { refetch } = useWalletContext();
-  const { showSuccess, showError } = useCustomToast();
-
-  useEffect(() => {
+    useEffect(() => {
     const handleCallback = async () => {
       // Get VNPay response parameters
       const vnpResponseCode = searchParams?.get('vnp_ResponseCode');
@@ -32,7 +30,7 @@ function DepositSuccessContent() {
       if (vnpResponseCode === '00' && vnpTransactionStatus === '00') {
         // Payment successful
         const amount = vnpAmount ? parseInt(vnpAmount) / 100 : 0;
-        showSuccess(
+        toast.success(
           'Thanh toán thành công',
           `Bạn đã nạp ${WalletService.formatCurrency(amount)} vào ví thành công.`
         );
@@ -46,7 +44,7 @@ function DepositSuccessContent() {
         }, 2000);
       } else if (vnpResponseCode === '24' || vnpTransactionStatus === '02') {
         // Payment cancelled by user
-        showError(
+        toast.error(
           'Giao dịch đã bị hủy',
           'Bạn đã hủy giao dịch nạp tiền. Vui lòng thử lại nếu muốn tiếp tục.'
         );
@@ -57,7 +55,7 @@ function DepositSuccessContent() {
         }, 2000);
       } else {
         // Payment failed
-        showError(
+        toast.error(
           'Thanh toán thất bại',
           'Giao dịch không thành công. Vui lòng thử lại hoặc liên hệ hỗ trợ nếu vấn đề vẫn tiếp tục.'
         );
@@ -72,7 +70,7 @@ function DepositSuccessContent() {
     if (searchParams) {
       handleCallback();
     }
-  }, [searchParams, router, refetch, showSuccess, showError]);
+  }, [searchParams, router, refetch]);
 
   const vnpResponseCode = searchParams?.get('vnp_ResponseCode');
   const vnpTransactionStatus = searchParams?.get('vnp_TransactionStatus');

@@ -45,7 +45,7 @@ import { ReportService, TutorService, MediaService, ScheduleService } from '@/se
 import { ReportListItemDto, ReportFullDetailDto, TutorProfileDto } from '@/types/backend';
 import { ReportStatus, MediaType, ReportEvidenceType, TutorStatus } from '@/types/enums';
 import { ReportCreateRequest, ReportUpdateByLearnerRequest, ReportDefenseCreateRequest, BasicEvidenceRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -137,16 +137,17 @@ const getStatusLabel = (status: ReportStatus | number | string): string => {
   }
 };
 
+// Hệ thống màu badge trạng thái theo palette chung (primary #257180, accent #FD8B51)
 const getStatusColor = (status: ReportStatus | number | string): string => {
   let statusNum: number;
   if (typeof status === 'string') {
     statusNum = parseInt(status, 10);
     if (isNaN(statusNum)) {
-      if (status === 'Pending') return 'bg-yellow-100 text-yellow-800 border-gray-300';
-      if (status === 'UnderReview') return 'bg-blue-100 text-blue-800 border-gray-300';
-      if (status === 'Resolved') return 'bg-green-100 text-green-800 border-gray-300';
-      if (status === 'Dismissed') return 'bg-red-100 text-red-800 border-gray-300';
-      return 'bg-gray-100 text-gray-800 border-gray-300';
+      if (status === 'Pending') return 'bg-amber-50 text-amber-800 border-amber-200';
+      if (status === 'UnderReview') return 'bg-blue-50 text-blue-800 border-blue-200';
+      if (status === 'Resolved') return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+      if (status === 'Dismissed') return 'bg-red-50 text-red-800 border-red-200';
+      return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   } else if (typeof status === 'number') {
     statusNum = status;
@@ -157,18 +158,18 @@ const getStatusColor = (status: ReportStatus | number | string): string => {
   switch (statusNum) {
     case ReportStatus.Pending:
     case 0:
-      return 'bg-yellow-100 text-yellow-800 border-gray-300';
+      return 'bg-amber-50 text-amber-800 border-amber-200';
     case ReportStatus.UnderReview:
     case 1:
-      return 'bg-blue-100 text-blue-800 border-gray-300';
+      return 'bg-blue-50 text-blue-800 border-blue-200';
     case ReportStatus.Resolved:
     case 2:
-      return 'bg-green-100 text-green-800 border-gray-300';
+      return 'bg-emerald-50 text-emerald-800 border-emerald-200';
     case ReportStatus.Dismissed:
     case 3:
-      return 'bg-red-100 text-red-800 border-gray-300';
+      return 'bg-red-50 text-red-800 border-red-200';
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-300';
+      return 'bg-gray-50 text-gray-700 border-gray-200';
   }
 };
 
@@ -209,14 +210,8 @@ const getStatusIcon = (status: ReportStatus | number | string) => {
 
 export function ReportsTab() {
   const { user } = useAuth();
-  const { showSuccess, showError } = useCustomToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const showErrorRef = React.useRef(showError);
-
-  React.useEffect(() => {
-    showErrorRef.current = showError;
-  }, [showError]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReportStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -302,7 +297,7 @@ export function ReportsTab() {
       }
     } catch (error) {
       console.error('Error fetching reports:', error);
-      showErrorRef.current('Lỗi', 'Không thể tải danh sách báo cáo');
+      toast.error('Không thể tải danh sách báo cáo');
       setReports([]);
     } finally {
       setLoading(false);
@@ -324,7 +319,7 @@ export function ReportsTab() {
       }
     } catch (error) {
       console.error('Error fetching tutors:', error);
-      showError('Lỗi', 'Không thể tải danh sách gia sư');
+      toast.error('Không thể tải danh sách gia sư');
       setTutors([]);
     } finally {
       setLoadingTutors(false);
@@ -434,11 +429,11 @@ export function ReportsTab() {
         setCanSubmitDefense(!!canDefenseResponse.data && canDefenseResponse.success);
         setShowDetailDialog(true);
       } else {
-        showError('Lỗi', 'Không thể tải chi tiết báo cáo');
+        toast.error('Không thể tải chi tiết báo cáo');
       }
     } catch (error) {
       console.error('Error fetching report detail:', error);
-      showError('Lỗi', 'Không thể tải chi tiết báo cáo');
+      toast.error('Không thể tải chi tiết báo cáo');
     }
   };
 
@@ -472,12 +467,12 @@ export function ReportsTab() {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
       if (!isImage && !isVideo) {
-        showError('Lỗi', 'Chỉ chấp nhận file ảnh hoặc video');
+        toast.error('Chỉ chấp nhận file ảnh hoặc video');
         return false;
       }
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        showError('Lỗi', `File ${file.name} vượt quá 10MB`);
+        toast.error(`File ${file.name} vượt quá 10MB`);
         return false;
       }
       return true;
@@ -523,10 +518,10 @@ export function ReportsTab() {
           })),
         ],
       }));
-      showSuccess('Thành công', `Đã upload ${results.length} file thành công`);
+      toast.success(`Đã upload ${results.length} file thành công`);
     } catch (error: any) {
       console.error('Error uploading files:', error);
-      showError('Lỗi', error.message || 'Không thể upload file');
+      toast.error(error.message || 'Không thể upload file');
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -543,12 +538,12 @@ export function ReportsTab() {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
       if (!isImage && !isVideo) {
-        showError('Lỗi', 'Chỉ chấp nhận file ảnh hoặc video');
+        toast.error('Chỉ chấp nhận file ảnh hoặc video');
         return false;
       }
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        showError('Lỗi', `File ${file.name} vượt quá 10MB`);
+        toast.error(`File ${file.name} vượt quá 10MB`);
         return false;
       }
       return true;
@@ -565,17 +560,29 @@ export function ReportsTab() {
           ownerEmail: user.email!,
           mediaType: mediaType as 'Image' | 'Video',
         });
-        
-        const uploadResult = response.data?.data;
-        if (response.success && uploadResult?.secureUrl) {
+
+        const uploadPayload = response.data as any;
+        const secureUrl =
+          uploadPayload?.secureUrl ?? uploadPayload?.data?.secureUrl;
+        const publicId =
+          uploadPayload?.publicId ?? uploadPayload?.data?.publicId;
+
+        if (secureUrl) {
+          const mediaTypeNum =
+            mediaType === 'Image' ? MediaType.Image : MediaType.Video;
           return {
-            url: uploadResult.secureUrl,
-            publicId: uploadResult.publicId,
-            mediaType: file.type.startsWith('image/') ? MediaType.Image : MediaType.Video,
+            url: secureUrl,
+            publicId: publicId || undefined,
+            mediaType: mediaTypeNum,
             file,
           };
         } else {
-          throw new Error(`Không thể upload file ${file.name}`);
+          const uploadErrorMessage =
+            (typeof uploadPayload?.message === 'string' &&
+              uploadPayload.message) ||
+            (typeof uploadPayload?.error === 'string' && uploadPayload.error) ||
+            `Không thể upload file ${file.name}`;
+          throw new Error(uploadErrorMessage);
         }
       });
 
@@ -594,10 +601,10 @@ export function ReportsTab() {
           })),
         ],
       }));
-      showSuccess('Thành công', `Đã upload ${results.length} file thành công`);
+      toast.success(`Đã upload ${results.length} file thành công`);
     } catch (error: any) {
       console.error('Error uploading files:', error);
-      showError('Lỗi', error.message || 'Không thể upload file');
+      toast.error(error.message || 'Không thể upload file');
     } finally {
       setUploadingDefense(false);
       e.target.value = '';
@@ -624,11 +631,11 @@ export function ReportsTab() {
 
   const handleSubmitCreate = async () => {
     if (!user?.email) {
-      showError('Lỗi', 'Vui lòng đăng nhập');
+      toast.error('Vui lòng đăng nhập');
       return;
     }
     if (!formData.reportedUserEmail || !formData.reason.trim()) {
-      showError('Lỗi', 'Vui lòng điền đầy đủ thông tin');
+      toast.error('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
@@ -647,7 +654,7 @@ export function ReportsTab() {
       };
       const response = await ReportService.createReport(request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã tạo báo cáo');
+        toast.success('Đã tạo báo cáo');
         // If opened from a schedule, link schedule to report (mark on-hold/reported)
         if (linkedScheduleId && response.data?.id) {
           try {
@@ -663,11 +670,11 @@ export function ReportsTab() {
         setLinkedScheduleId(null);
         fetchReports();
       } else {
-        showError('Lỗi', response.message || 'Không thể tạo báo cáo');
+        toast.error(response.message || 'Không thể tạo báo cáo');
       }
     } catch (error) {
       console.error('Error creating report:', error);
-      showError('Lỗi', 'Không thể tạo báo cáo');
+      toast.error('Không thể tạo báo cáo');
     } finally {
       setIsProcessing(false);
     }
@@ -675,7 +682,7 @@ export function ReportsTab() {
 
   const handleConfirmUpdate = () => {
     if (!formData.reason.trim()) {
-      showError('Lỗi', 'Vui lòng điền lý do báo cáo');
+      toast.error('Vui lòng điền lý do báo cáo');
       return;
     }
     setShowConfirmUpdate(true);
@@ -684,7 +691,7 @@ export function ReportsTab() {
   const handleSubmitUpdate = async () => {
     if (!selectedReport) return;
     if (!formData.reason.trim()) {
-      showError('Lỗi', 'Vui lòng điền lý do báo cáo');
+      toast.error('Vui lòng điền lý do báo cáo');
       return;
     }
 
@@ -708,7 +715,7 @@ export function ReportsTab() {
             });
           }
         }
-        showSuccess('Thành công', 'Đã cập nhật báo cáo');
+        toast.success('Đã cập nhật báo cáo');
         setShowUpdateDialog(false);
         setFormData({ reportedUserEmail: '', reason: '', evidences: [] });
         setUploadingFiles([]);
@@ -721,11 +728,11 @@ export function ReportsTab() {
           }
         }
       } else {
-        showError('Lỗi', response.message || 'Không thể cập nhật báo cáo');
+        toast.error(response.message || 'Không thể cập nhật báo cáo');
       }
     } catch (error) {
       console.error('Error updating report:', error);
-      showError('Lỗi', 'Không thể cập nhật báo cáo');
+      toast.error('Không thể cập nhật báo cáo');
     } finally {
       setIsProcessing(false);
     }
@@ -742,15 +749,15 @@ export function ReportsTab() {
       setIsProcessing(true);
       const response = await ReportService.cancelLearnerReport(selectedReport.id);
       if (response.success) {
-        showSuccess('Thành công', 'Đã hủy báo cáo');
+        toast.success('Đã hủy báo cáo');
         setShowDetailDialog(false);
         fetchReports();
       } else {
-        showError('Lỗi', response.message || 'Không thể hủy báo cáo');
+        toast.error(response.message || 'Không thể hủy báo cáo');
       }
     } catch (error) {
       console.error('Error canceling report:', error);
-      showError('Lỗi', 'Không thể hủy báo cáo');
+      toast.error('Không thể hủy báo cáo');
     } finally {
       setIsProcessing(false);
     }
@@ -763,7 +770,7 @@ export function ReportsTab() {
   const handleSubmitDefense = async () => {
     if (!selectedReport) return;
     if (!defenseFormData.note.trim()) {
-      showError('Lỗi', 'Vui lòng điền nội dung kháng cáo');
+      toast.error('Vui lòng điền nội dung kháng cáo');
       return;
     }
 
@@ -782,7 +789,7 @@ export function ReportsTab() {
       };
       const response = await ReportService.addDefense(selectedReport.id, request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã gửi kháng cáo');
+        toast.success('Đã gửi kháng cáo');
         setShowDefenseDialog(false);
         setDefenseFormData({ note: '', evidences: [] });
         setUploadingDefenseFiles([]);
@@ -881,11 +888,11 @@ export function ReportsTab() {
         }
         fetchReports();
       } else {
-        showError('Lỗi', response.message || 'Không thể gửi kháng cáo');
+        toast.error(response.message || 'Không thể gửi kháng cáo');
       }
     } catch (error) {
       console.error('Error submitting defense:', error);
-      showError('Lỗi', 'Không thể gửi kháng cáo');
+      toast.error('Không thể gửi kháng cáo');
     } finally {
       setIsProcessing(false);
     }
@@ -895,7 +902,7 @@ export function ReportsTab() {
     try {
       const response = await ReportService.deleteEvidence(reportId, evidenceId);
       if (response.success) {
-        showSuccess('Thành công', 'Đã xóa bằng chứng');
+        toast.success('Đã xóa bằng chứng');
         if (selectedReport) {
           const detailResponse = await ReportService.getFullReportDetail(selectedReport.id);
           if (detailResponse.success && detailResponse.data) {
@@ -911,11 +918,11 @@ export function ReportsTab() {
           }
         }
       } else {
-        showError('Lỗi', response.message || 'Không thể xóa bằng chứng');
+        toast.error(response.message || 'Không thể xóa bằng chứng');
       }
     } catch (error) {
       console.error('Error deleting evidence:', error);
-      showError('Lỗi', 'Không thể xóa bằng chứng');
+      toast.error('Không thể xóa bằng chứng');
     }
   };
 
@@ -1134,9 +1141,9 @@ export function ReportsTab() {
                           <div className="flex items-center gap-2">
                             {isLearner ? (
                               <>
-                                <Avatar className="h-8 w-8">
+                                <Avatar className="h-8 w-8 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] shadow-sm">
                                   <AvatarImage src={report.reportedAvatarUrl} alt={report.reportedUserName} />
-                                  <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-xs">
+                                  <AvatarFallback className="rounded-lg bg-[#F2E5BF] text-[#257180] text-xs font-semibold">
                                     {report.reportedUserName?.[0]?.toUpperCase() || 'U'}
                                   </AvatarFallback>
                                 </Avatar>
@@ -1147,9 +1154,9 @@ export function ReportsTab() {
                               </>
                             ) : (
                               <>
-                                <Avatar className="h-8 w-8">
+                                <Avatar className="h-8 w-8 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] shadow-sm">
                                   <AvatarImage src={report.reporterAvatarUrl} alt={report.reporterName} />
-                                  <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-xs">
+                                  <AvatarFallback className="rounded-lg bg-[#F2E5BF] text-[#257180] text-xs font-semibold">
                                     {report.reporterName?.[0]?.toUpperCase() || 'U'}
                                   </AvatarFallback>
                                 </Avatar>
@@ -1164,11 +1171,8 @@ export function ReportsTab() {
                         <TableCell className="text-left">
                           <p className="text-sm line-clamp-2">{report.reason}</p>
                         </TableCell>
-                        <TableCell className="text-left">
-                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getStatusColor(report.status)}`}>
-                            {getStatusIcon(report.status)}
-                            <span>{getStatusLabel(report.status)}</span>
-                          </div>
+                        <TableCell className="text-left text-sm font-medium text-gray-800">
+                          {getStatusLabel(report.status)}
                         </TableCell>
                           <TableCell className="text-sm text-gray-600 text-left">
                             {formatDate(report.createdAt)}
@@ -1252,9 +1256,9 @@ export function ReportsTab() {
                         <div>
                           <Label className="text-sm text-gray-600">Người báo cáo</Label>
                           <div className="flex items-center gap-3 mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                            <Avatar className="h-10 w-10">
+                            <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] shadow-sm">
                               <AvatarImage src={selectedReport.reporterAvatarUrl} alt={selectedReport.reporterName} />
-                              <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
+                              <AvatarFallback className="rounded-lg bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
                                 {selectedReport.reporterName?.[0]?.toUpperCase() || 'U'}
                               </AvatarFallback>
                             </Avatar>
@@ -1267,9 +1271,9 @@ export function ReportsTab() {
                         <div>
                           <Label className="text-sm text-gray-600">Người bị báo cáo</Label>
                           <div className="flex items-center gap-3 mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                            <Avatar className="h-10 w-10">
+                            <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] shadow-sm">
                               <AvatarImage src={selectedReport.reportedAvatarUrl} alt={selectedReport.reportedUserName} />
-                              <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
+                              <AvatarFallback className="rounded-lg bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
                                 {selectedReport.reportedUserName?.[0]?.toUpperCase() || 'U'}
                               </AvatarFallback>
                             </Avatar>
@@ -1284,12 +1288,9 @@ export function ReportsTab() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label className="text-sm text-gray-600">Trạng thái</Label>
-                          <div className="mt-2">
-                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getStatusColor(selectedReport.status)}`}>
-                              {getStatusIcon(selectedReport.status)}
-                              <span>{getStatusLabel(selectedReport.status)}</span>
-                            </div>
-                          </div>
+                          <p className="mt-2 text-sm font-medium text-gray-900">
+                            {getStatusLabel(selectedReport.status)}
+                          </p>
                         </div>
                         <div>
                           <Label className="text-sm text-gray-600">Ngày tạo</Label>
@@ -1385,9 +1386,9 @@ export function ReportsTab() {
                             {selectedReport.defenses.map((defense) => (
                               <div key={defense.id} className="p-4 bg-white rounded-lg border border-gray-200">
                                 <div className="flex items-center gap-3 mb-3">
-                                  <Avatar className="h-10 w-10">
+                                  <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] shadow-sm">
                                     <AvatarImage src={tutorAvatars[defense.tutorEmail]} alt={tutorNames[defense.tutorEmail] || defense.tutorEmail} />
-                                    <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
+                                    <AvatarFallback className="rounded-lg bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
                                       {(tutorNames[defense.tutorEmail] || defense.tutorEmail)[0]?.toUpperCase() || 'T'}
                                     </AvatarFallback>
                                   </Avatar>

@@ -23,7 +23,7 @@ import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { ReportService, MediaService, FeedbackService } from '@/services';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWalletContext } from '@/contexts/WalletContext';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { useChatContext } from '@/contexts/ChatContext';
 import { ROUTES, USER_ROLES } from '@/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/form/select';
@@ -72,8 +72,7 @@ export function TutorDetailProfilePage({ tutorId }: TutorDetailProfilePageProps)
   const searchParams = useSearchParams();
   const { isAuthenticated, user } = useAuth();
   const { balance, loading: walletLoading } = useWalletContext();
-  const { showWarning, showInfo, showSuccess, showError } = useCustomToast();
-  const { openChatWithTutor } = useChatContext();
+    const { openChatWithTutor } = useChatContext();
   const { tutor, isLoading, error, loadTutorDetail, clearError } = useTutorDetail();
   const availabilitySectionRef = React.useRef<HTMLDivElement>(null);
   const { createBooking, error: bookingError } = useBookings();
@@ -721,7 +720,7 @@ const certificateNameList = React.useMemo(() => {
   const handleOpenBookingSelection = React.useCallback(
     async (isTrial: boolean) => {
       if (!isAuthenticated) {
-        showWarning('Vui lòng đăng nhập', 'Bạn cần đăng nhập để đặt lịch học.');
+        toast.warning('Bạn cần đăng nhập để đặt lịch học.');
         if (typeof window !== 'undefined') {
           const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
           router.push(`${ROUTES.LOGIN}?redirect=${redirectUrl}`);
@@ -732,12 +731,12 @@ const certificateNameList = React.useMemo(() => {
       }
 
       if (user?.role !== USER_ROLES.LEARNER) {
-        showWarning('Chưa hỗ trợ vai trò hiện tại', 'Tính năng đặt lịch chỉ áp dụng cho học viên.');
+        toast.warning('Tính năng đặt lịch chỉ áp dụng cho học viên.');
         return;
       }
 
       if (subjectLevelOptions.length === 0) {
-        showWarning('Chưa có môn học', 'Gia sư chưa cập nhật môn học hoặc cấp độ để đặt lịch.');
+        toast.warning('Gia sư chưa cập nhật môn học hoặc cấp độ để đặt lịch.');
         return;
       }
 
@@ -747,7 +746,7 @@ const certificateNameList = React.useMemo(() => {
       clearSelectedSlots();
       setIsBookingSelectionDialogOpen(true);
     },
-    [clearSelectedSlots, isAuthenticated, router, showWarning, subjectLevelOptions, user?.role]
+    [clearSelectedSlots, isAuthenticated, router, subjectLevelOptions, user?.role]
   );
 
   // Nếu được điều hướng với tab=availability thì tự chuyển tab và scroll
@@ -787,26 +786,26 @@ const certificateNameList = React.useMemo(() => {
 
   const handleConfirmBooking = React.useCallback(async () => {
     if (!user?.email) {
-      showWarning('Thiếu thông tin học viên', 'Không tìm thấy email của bạn. Vui lòng đăng nhập lại.');
+      toast.warning('Không tìm thấy email của bạn. Vui lòng đăng nhập lại.');
       return;
     }
     if (!selectedSubjectInfo || !selectedLevelInfo || !selectedLevelInfo.tutorSubjectId) {
-      showWarning('Thông tin môn học không hợp lệ', 'Vui lòng chọn lại môn học và cấp độ.');
+      toast.warning('Vui lòng chọn lại môn học và cấp độ.');
       return;
     }
     if (selectedSlotDetails.length === 0) {
-      showWarning('Chưa chọn khung giờ', 'Bạn cần chọn ít nhất một khung giờ học.');
+      toast.warning('Bạn cần chọn ít nhất một khung giờ học.');
       return;
     }
     if (isTrialBooking && selectedSlotDetails.length !== 1) {
-      showWarning('Học thử chỉ được đặt 1 buổi', 'Vui lòng chọn đúng 1 khung giờ cho buổi học thử.');
+      toast.warning('Vui lòng chọn đúng 1 khung giờ cho buổi học thử.');
       return;
     }
 
     // Với booking thường: kiểm tra số dư ví có đủ không
     if (!isTrialBooking) {
       if (walletLoading) {
-        showWarning('Đang kiểm tra số dư ví', 'Vui lòng đợi hệ thống cập nhật số dư ví của bạn.');
+        toast.warning('Vui lòng đợi hệ thống cập nhật số dư ví của bạn.');
         return;
       }
 
@@ -816,7 +815,7 @@ const certificateNameList = React.useMemo(() => {
           currency: 'VND',
         });
 
-        showWarning(
+        toast.warning(
           'Số dư không đủ',
           `Số dư ví của bạn hiện là ${formatter.format(balance)}, không đủ để đặt lịch với học phí dự kiến ${formatter.format(estimatedTotal)}. Vui lòng nạp thêm tiền.`
         );
@@ -824,7 +823,7 @@ const certificateNameList = React.useMemo(() => {
       }
     }
     if (selectedSlotDetails.some(detail => !detail.isAvailable)) {
-      showWarning('Khung giờ không còn trống', 'Vui lòng bỏ chọn các khung giờ đã được đặt.');
+      toast.warning('Vui lòng bỏ chọn các khung giờ đã được đặt.');
       return;
     }
 
@@ -839,7 +838,7 @@ const certificateNameList = React.useMemo(() => {
 
     if (slotsNot24HoursAway.length > 0) {
       const firstInvalidSlot = slotsNot24HoursAway[0];
-      showWarning(
+      toast.warning(
         'Không thể đặt lịch trong vòng 24 giờ',
         `Bạn chỉ có thể đặt lịch từ 24 giờ trở đi. Khung giờ "${firstInvalidSlot.dateLabel} ${firstInvalidSlot.timeRange}" quá gần thời điểm hiện tại.`
       );
@@ -863,11 +862,11 @@ const certificateNameList = React.useMemo(() => {
       const createdBooking = await createBooking(payload);
 
       if (!createdBooking) {
-        showError('Không thể đặt lịch', bookingError || 'Vui lòng thử lại sau.');
+        toast.error('Không thể đặt lịch', bookingError || 'Vui lòng thử lại sau.');
         return;
       }
 
-      showSuccess(
+      toast.success(
         isTrialBooking ? 'Đăng ký học thử thành công' : 'Đặt lịch thành công',
         isTrialBooking
           ? 'Buổi học thử đã được ghi nhận.'
@@ -878,7 +877,7 @@ const certificateNameList = React.useMemo(() => {
       clearSelectedSlots();
       router.push('/profile?tab=classes');
     } catch (error: any) {
-      showError('Không thể đặt lịch', error?.message || 'Đã xảy ra lỗi, vui lòng thử lại sau.');
+      toast.error('Không thể đặt lịch', error?.message || 'Đã xảy ra lỗi, vui lòng thử lại sau.');
     } finally {
       setIsCreatingBooking(false);
     }
@@ -891,9 +890,6 @@ const certificateNameList = React.useMemo(() => {
     selectedLevelInfo,
     selectedSlotDetails,
     selectedSubjectInfo,
-    showError,
-    showSuccess,
-    showWarning,
     user?.email,
     walletLoading,
   ]);
@@ -901,26 +897,26 @@ const certificateNameList = React.useMemo(() => {
   // Validate trước khi mở dialog xác nhận + check quota học thử theo môn
   const handleBookingRequest = React.useCallback(async (): Promise<boolean> => {
     if (!selectedSubjectInfo) {
-      showWarning('Vui lòng chọn môn học', 'Hãy chọn môn học trước khi chọn khung giờ.');
+      toast.warning('Hãy chọn môn học trước khi chọn khung giờ.');
       return false;
     }
     if (!selectedLevelInfo) {
-      showWarning('Vui lòng chọn cấp độ', 'Hãy chọn cấp độ trước khi chọn khung giờ.');
+      toast.warning('Hãy chọn cấp độ trước khi chọn khung giờ.');
       return false;
     }
     if (selectedSlots.size === 0) {
-      showWarning('Chưa chọn khung giờ', 'Bạn cần chọn ít nhất một khung giờ học.');
+      toast.warning('Bạn cần chọn ít nhất một khung giờ học.');
       return false;
     }
     if (selectedSlotDetails.length !== selectedSlots.size) {
-      showWarning(
+      toast.warning(
         'Khung giờ không khả dụng',
         'Một số khung giờ đã không còn trống. Vui lòng chọn lại.'
       );
       return false;
     }
     if (selectedSlotDetails.some(detail => !detail.isAvailable)) {
-      showWarning('Khung giờ không còn trống', 'Vui lòng bỏ chọn các khung giờ đã được đặt.');
+      toast.warning('Vui lòng bỏ chọn các khung giờ đã được đặt.');
       return false;
     }
 
@@ -935,7 +931,7 @@ const certificateNameList = React.useMemo(() => {
 
     if (slotsNot24HoursAway.length > 0) {
       const firstInvalidSlot = slotsNot24HoursAway[0];
-      showWarning(
+      toast.warning(
         'Không thể đặt lịch trong vòng 24 giờ',
         `Bạn chỉ có thể đặt lịch từ 24 giờ trở đi. Khung giờ "${firstInvalidSlot.dateLabel} ${firstInvalidSlot.timeRange}" quá gần thời điểm hiện tại.`
       );
@@ -945,7 +941,7 @@ const certificateNameList = React.useMemo(() => {
     if (isTrialBooking) {
       const subjectId = selectedLevelInfo?.subjectId;
       if (subjectId === undefined || subjectId === null) {
-        showWarning(
+        toast.warning(
           'Thiếu thông tin môn học',
           'Không xác định được môn để kiểm tra học thử. Vui lòng chọn lại.'
         );
@@ -956,7 +952,7 @@ const certificateNameList = React.useMemo(() => {
       const statusFromList = subjectStatuses?.find(s => s.subjectId === subjectId);
       if (statusFromList) {
         if (statusFromList.hasTrialed) {
-          showWarning(
+          toast.warning(
             'Đã dùng học thử cho môn này',
             `Bạn đã sử dụng buổi học thử miễn phí cho môn "${statusFromList.subjectName}" với gia sư này.`
           );
@@ -966,7 +962,7 @@ const certificateNameList = React.useMemo(() => {
         // Fallback: gọi API kiểm tra riêng nếu vì lý do nào đó chưa có trong danh sách
         const hasTrial = await checkHasTrialLesson(tutorId, subjectId);
         if (hasTrial) {
-          showWarning(
+          toast.warning(
             'Đã dùng học thử cho môn này',
             'Bạn đã đăng ký học thử môn này với gia sư này. Mỗi môn chỉ được học thử 1 lần.'
           );
@@ -985,7 +981,6 @@ const certificateNameList = React.useMemo(() => {
     selectedSlots,
     selectedSubjectInfo,
     subjectStatuses,
-    showWarning,
     tutorId,
   ]);
 
@@ -1000,12 +995,12 @@ const certificateNameList = React.useMemo(() => {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
       if (!isImage && !isVideo) {
-        showError('Lỗi', 'Chỉ chấp nhận file ảnh hoặc video');
+        toast.error('Chỉ chấp nhận file ảnh hoặc video');
         return false;
       }
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        showError('Lỗi', `File ${file.name} vượt quá 10MB`);
+        toast.error('Lỗi', `File ${file.name} vượt quá 10MB`);
         return false;
       }
       return true;
@@ -1061,10 +1056,10 @@ const certificateNameList = React.useMemo(() => {
           caption: '',
         })),
       ]);
-      showSuccess('Thành công', `Đã upload ${results.length} file thành công`);
+      toast.success('Thành công', `Đã upload ${results.length} file thành công`);
     } catch (error: any) {
       console.error('Error uploading files:', error);
-      showError('Lỗi', error.message || 'Không thể upload file');
+      toast.error('Lỗi', error.message || 'Không thể upload file');
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -1079,11 +1074,11 @@ const certificateNameList = React.useMemo(() => {
 
   const handleSubmitReport = async () => {
     if (!user?.email || !tutor?.userEmail) {
-      showError('Lỗi', 'Vui lòng đăng nhập');
+      toast.error('Vui lòng đăng nhập');
       return;
     }
     if (!reportReason.trim()) {
-      showError('Lỗi', 'Vui lòng điền lý do báo cáo');
+      toast.error('Vui lòng điền lý do báo cáo');
       return;
     }
 
@@ -1096,18 +1091,18 @@ const certificateNameList = React.useMemo(() => {
       };
       const response = await ReportService.createReport(request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã tạo báo cáo');
+        toast.success('Đã tạo báo cáo');
         setShowReportDialog(false);
         setReportReason('');
         setReportEvidences([]);
         setUploadingFiles([]);
         setUploadedUrls([]);
       } else {
-        showError('Lỗi', response.message || 'Không thể tạo báo cáo');
+        toast.error('Lỗi', response.message || 'Không thể tạo báo cáo');
       }
     } catch (error) {
       console.error('Error creating report:', error);
-      showError('Lỗi', 'Không thể tạo báo cáo');
+      toast.error('Không thể tạo báo cáo');
     } finally {
       setIsSubmittingReport(false);
     }
@@ -1238,7 +1233,7 @@ const certificateNameList = React.useMemo(() => {
                         size="sm"
                         onClick={async () => {
                           if (!isAuthenticated) {
-                            showWarning(
+                            toast.warning(
                               'Vui lòng đăng nhập',
                               'Bạn cần đăng nhập để thêm gia sư vào danh sách yêu thích.'
                             );
@@ -1897,7 +1892,7 @@ const certificateNameList = React.useMemo(() => {
                         e.stopPropagation();
 
                         if (!isAuthenticated) {
-                          showWarning(
+                          toast.warning(
                             'Vui lòng đăng nhập',
                             'Bạn cần đăng nhập để nhắn tin với gia sư.'
                           );
@@ -1957,7 +1952,7 @@ const certificateNameList = React.useMemo(() => {
                 className="w-full hover:bg-[#FD8B51] hover:text-white"
                 onClick={() => {
                   if (!isAuthenticated) {
-                    showWarning('Cần đăng nhập', 'Bạn cần đăng nhập để báo cáo gia sư');
+                    toast.warning('Bạn cần đăng nhập để báo cáo gia sư');
                     return;
                   }
                   setShowReportDialog(true);
@@ -2189,12 +2184,12 @@ const certificateNameList = React.useMemo(() => {
                               const onClick = () => {
                                 if (!slotAvailable || slotBooked || slotLearnerBusy) {
                                   if (slotLearnerBusy) {
-                                    showWarning(
+                                    toast.warning(
                                       'Bạn đã có lịch học',
                                       'Bạn đã có buổi học khác trong khung giờ này. Vui lòng chọn giờ khác.'
                                     );
                                   } else if (slotExists && !slot24HoursAway) {
-                                    showWarning(
+                                    toast.warning(
                                       'Không thể đặt lịch trong vòng 24 giờ',
                                       'Bạn chỉ có thể đặt lịch từ 24 giờ trở đi. Vui lòng chọn khung giờ khác.'
                                     );
@@ -2203,7 +2198,7 @@ const certificateNameList = React.useMemo(() => {
                                 }
 
                                 if (isTrialBooking && !slotSelected && selectedSlotDetails.length >= 1) {
-                                  showWarning(
+                                  toast.warning(
                                     'Chỉ chọn 1 buổi học thử',
                                     'Mỗi môn học với gia sư này chỉ được đặt 1 buổi học thử.'
                                   );

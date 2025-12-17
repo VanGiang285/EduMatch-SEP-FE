@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { CheckCircle, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { AdminService } from '@/services/adminService';
 import { CreateAdminAccDto } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 
 interface CreateBusinessAdminDialogProps {
   open: boolean;
@@ -22,8 +22,7 @@ export function CreateBusinessAdminDialog({
   onOpenChange,
   onCreateSuccess 
 }: CreateBusinessAdminDialogProps) {
-  const { showSuccess, showError } = useCustomToast();
-  const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
@@ -71,15 +70,15 @@ export function CreateBusinessAdminDialog({
 
       const response = await AdminService.createAdmin(request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã tạo tài khoản Business Admin thành công');
+        toast.success('Đã tạo tài khoản Business Admin thành công');
         handleClose();
         onCreateSuccess();
       } else {
-        showError('Lỗi', response.message || 'Không thể tạo tài khoản Business Admin');
+        toast.error('Lỗi', response.message || 'Không thể tạo tài khoản Business Admin');
       }
     } catch (error: any) {
       console.error('Error creating admin:', error);
-      showError('Lỗi', error.message || 'Không thể tạo tài khoản Business Admin. Vui lòng thử lại.');
+      toast.error('Lỗi', error.message || 'Không thể tạo tài khoản Business Admin. Vui lòng thử lại.');
     } finally {
       setIsSubmitting(false);
     }

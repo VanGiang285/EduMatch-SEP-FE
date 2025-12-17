@@ -71,15 +71,13 @@ import { SystemFeeService } from '@/services/systemFeeService';
 import { WalletDto, WalletTransactionDto, SystemWalletDashboardDto, SystemFeeDto } from '@/types/backend';
 import { WalletTransactionType, WalletTransactionReason } from '@/types/backend';
 import { SystemFeeCreateRequest, SystemFeeUpdateRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 
 const ITEMS_PER_PAGE = 10;
 const SYSTEM_FEE_ITEMS_PER_PAGE = 10;
 
 export function ManageSystemWallet() {
-  const { showSuccess, showError } = useCustomToast();
-  
-  // Wallet states
+    // Wallet states
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -117,11 +115,11 @@ export function ManageSystemWallet() {
         if (response.success && response.data) {
           setSystemWallet(response.data);
         } else {
-          showError('Lỗi', response.message || 'Không thể tải thông tin ví hệ thống');
+          toast.error('Lỗi', response.message || 'Không thể tải thông tin ví hệ thống');
         }
       } catch (error: any) {
         console.error('Error loading system wallet:', error);
-        showError('Lỗi', 'Không thể tải thông tin ví hệ thống. Vui lòng thử lại.');
+        toast.error('Không thể tải thông tin ví hệ thống. Vui lòng thử lại.');
       } finally {
         setIsLoadingWallet(false);
       }
@@ -149,11 +147,11 @@ export function ManageSystemWallet() {
           }));
           setTransactions(normalized);
         } else {
-          showError('Lỗi', response.message || 'Không thể tải lịch sử giao dịch');
+          toast.error('Lỗi', response.message || 'Không thể tải lịch sử giao dịch');
         }
       } catch (error: any) {
         console.error('Error loading transactions:', error);
-        showError('Lỗi', 'Không thể tải lịch sử giao dịch. Vui lòng thử lại.');
+        toast.error('Không thể tải lịch sử giao dịch. Vui lòng thử lại.');
       } finally {
         setIsLoadingTransactions(false);
       }
@@ -172,11 +170,11 @@ export function ManageSystemWallet() {
         if (response.success && response.data) {
           setDashboard(response.data);
         } else {
-          showError('Lỗi', response.message || 'Không thể tải dữ liệu dashboard');
+          toast.error('Lỗi', response.message || 'Không thể tải dữ liệu dashboard');
         }
       } catch (error: any) {
         console.error('Error loading dashboard:', error);
-        showError('Lỗi', 'Không thể tải dữ liệu dashboard. Vui lòng thử lại.');
+        toast.error('Không thể tải dữ liệu dashboard. Vui lòng thử lại.');
       } finally {
         setIsLoadingDashboard(false);
       }
@@ -199,11 +197,11 @@ export function ManageSystemWallet() {
           setSystemFees(response.data.items || []);
           setSystemFeeTotalPages(Math.ceil((response.data.totalCount || 0) / SYSTEM_FEE_ITEMS_PER_PAGE));
         } else {
-          showError('Lỗi', response.message || 'Không thể tải danh sách phí hệ thống');
+          toast.error('Lỗi', response.message || 'Không thể tải danh sách phí hệ thống');
         }
       } catch (error: any) {
         console.error('Error loading system fees:', error);
-        showError('Lỗi', 'Không thể tải danh sách phí hệ thống. Vui lòng thử lại.');
+        toast.error('Không thể tải danh sách phí hệ thống. Vui lòng thử lại.');
       } finally {
         setIsLoadingSystemFees(false);
       }
@@ -293,12 +291,12 @@ export function ManageSystemWallet() {
 
   const handleSaveSystemFee = async () => {
     if (!systemFeeForm.name.trim()) {
-      showError('Lỗi', 'Vui lòng nhập tên phí hệ thống');
+      toast.error('Vui lòng nhập tên phí hệ thống');
       return;
     }
 
     if (!systemFeeForm.percentage && !systemFeeForm.fixedAmount) {
-      showError('Lỗi', 'Vui lòng nhập phần trăm hoặc số tiền cố định');
+      toast.error('Vui lòng nhập phần trăm hoặc số tiền cố định');
       return;
     }
 
@@ -312,7 +310,7 @@ export function ManageSystemWallet() {
         };
         const response = await SystemFeeService.updateSystemFee(request);
         if (response.success) {
-          showSuccess('Thành công', 'Cập nhật phí hệ thống thành công');
+          toast.success('Cập nhật phí hệ thống thành công');
           setShowSystemFeeDialog(false);
           // Reload system fees
           const reloadResponse = await SystemFeeService.getAllPaging({
@@ -323,13 +321,13 @@ export function ManageSystemWallet() {
             setSystemFees(reloadResponse.data.items || []);
           }
         } else {
-          showError('Lỗi', response.message || 'Không thể cập nhật phí hệ thống');
+          toast.error('Lỗi', response.message || 'Không thể cập nhật phí hệ thống');
         }
       } else {
         // Create
         const response = await SystemFeeService.createSystemFee(systemFeeForm);
         if (response.success) {
-          showSuccess('Thành công', 'Tạo phí hệ thống thành công');
+          toast.success('Tạo phí hệ thống thành công');
           setShowSystemFeeDialog(false);
           // Reload system fees
           const reloadResponse = await SystemFeeService.getAllPaging({
@@ -341,12 +339,12 @@ export function ManageSystemWallet() {
             setSystemFeeTotalPages(Math.ceil((reloadResponse.data.totalCount || 0) / SYSTEM_FEE_ITEMS_PER_PAGE));
           }
         } else {
-          showError('Lỗi', response.message || 'Không thể tạo phí hệ thống');
+          toast.error('Lỗi', response.message || 'Không thể tạo phí hệ thống');
         }
       }
     } catch (error: any) {
       console.error('Error saving system fee:', error);
-      showError('Lỗi', 'Không thể lưu phí hệ thống. Vui lòng thử lại.');
+      toast.error('Không thể lưu phí hệ thống. Vui lòng thử lại.');
     } finally {
       setIsSavingSystemFee(false);
     }

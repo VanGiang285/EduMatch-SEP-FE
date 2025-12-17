@@ -62,7 +62,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avata
 import { AdminService } from '@/services/adminService';
 import { ManageUserDto, UserProfileDto } from '@/types/backend';
 import { useAuth } from '@/hooks/useAuth';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { UserProfileService } from '@/services/userProfileService';
 import { LocationService, ProvinceDto } from '@/services/locationService';
 import { EnumHelpers, Gender, VerifyStatus, TeachingMode } from '@/types/enums';
@@ -449,11 +449,6 @@ const resolveRoleId = (input: ManageUserDto | number | string | undefined | null
 
 export function ManageBusinessUsers() {
   const { user } = useAuth();
-  const { showSuccess, showError } = useCustomToast();
-  const showErrorRef = useRef(showError);
-  useEffect(() => {
-    showErrorRef.current = showError;
-  }, [showError]);
   const [users, setUsers] = useState<ManageUserDto[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<ManageUserDto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -530,11 +525,11 @@ export function ManageBusinessUsers() {
           setUsers(filtered);
           preloadAvatars(filtered);
         } else {
-          showErrorRef.current?.('Lỗi', response.message || 'Không thể tải danh sách người dùng');
+          toast.error(response.message || 'Không thể tải danh sách người dùng');
         }
       } catch (error) {
         console.error('Error loading users:', error);
-        showErrorRef.current?.('Lỗi', 'Không thể tải danh sách người dùng.');
+        toast.error('Không thể tải danh sách người dùng.');
       } finally {
         setIsLoading(false);
       }
@@ -660,13 +655,13 @@ export function ManageBusinessUsers() {
       const response = await AdminService.activateUser(email);
       if (response.success) {
         setUsers((prev) => prev.map((u) => (u.email === email ? { ...u, isActive: true } : u)));
-        showSuccess('Thành công', 'Đã kích hoạt tài khoản');
+        toast.success('Đã kích hoạt tài khoản');
       } else {
-        showError('Lỗi', response.message || 'Không thể kích hoạt tài khoản');
+        toast.error('Lỗi', response.message || 'Không thể kích hoạt tài khoản');
       }
     } catch (error) {
       console.error('Error activating user:', error);
-      showError('Lỗi', 'Không thể kích hoạt tài khoản.');
+      toast.error('Không thể kích hoạt tài khoản.');
     } finally {
       setIsActivating(null);
     }
@@ -678,13 +673,13 @@ export function ManageBusinessUsers() {
       const response = await AdminService.deactivateUser(email);
       if (response.success) {
         setUsers((prev) => prev.map((u) => (u.email === email ? { ...u, isActive: false } : u)));
-        showSuccess('Thành công', 'Đã vô hiệu hóa tài khoản');
+        toast.success('Đã vô hiệu hóa tài khoản');
       } else {
-        showError('Lỗi', response.message || 'Không thể vô hiệu hóa tài khoản');
+        toast.error('Lỗi', response.message || 'Không thể vô hiệu hóa tài khoản');
       }
     } catch (error) {
       console.error('Error deactivating user:', error);
-      showError('Lỗi', 'Không thể vô hiệu hóa tài khoản.');
+      toast.error('Không thể vô hiệu hóa tài khoản.');
     } finally {
       setIsDeactivating(null);
     }
@@ -745,7 +740,7 @@ export function ManageBusinessUsers() {
           });
           setDetailType('learner');
         } else {
-          showError('Lỗi', response.message || 'Không thể tải thông tin học viên');
+          toast.error('Lỗi', response.message || 'Không thể tải thông tin học viên');
         }
       } else if (roleId === ROLE.TUTOR) {
         const response = await TutorService.getTutorByEmail(userData.email);
@@ -769,12 +764,12 @@ export function ManageBusinessUsers() {
             }
           }
         } else {
-          showError('Lỗi', response.message || 'Không thể tải thông tin gia sư');
+          toast.error('Lỗi', response.message || 'Không thể tải thông tin gia sư');
         }
       }
     } catch (error) {
       console.error('Error loading detail:', error);
-      showError('Lỗi', 'Không thể tải chi tiết người dùng.');
+      toast.error('Không thể tải chi tiết người dùng.');
     } finally {
       setIsDetailLoading(false);
       setDetailLoadingEmail(null);

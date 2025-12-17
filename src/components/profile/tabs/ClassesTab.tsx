@@ -30,7 +30,7 @@ import { Separator } from "@/components/ui/layout/separator";
 import { Label } from "@/components/ui/form/label";
 
 import { useAuth } from "@/hooks/useAuth";
-import { useCustomToast } from "@/hooks/useCustomToast";
+import { toast } from "sonner";
 import { useTutorProfiles } from "@/hooks/useTutorProfiles";
 import { useBookings } from "@/hooks/useBookings";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -145,7 +145,6 @@ export function ClassesTab() {
   const { user } = useAuth();
   const { isAuthenticated } = useAuthContext();
   const { openChatWithTutor } = useChatContext();
-  const { showError, showWarning } = useCustomToast();
   const router = useRouter();
 
   const {
@@ -340,12 +339,12 @@ export function ClassesTab() {
     const tutorEmail = tutorSubject?.tutorEmail || tutor?.userEmail;
 
     if (!tutorId || !tutorEmail) {
-      showError("Lỗi", "Không tìm thấy thông tin gia sư để nhắn tin.");
+      toast.error("Không tìm thấy thông tin gia sư để nhắn tin.");
       return;
     }
 
     if (!isAuthenticated) {
-      showWarning("Vui lòng đăng nhập", "Bạn cần đăng nhập để nhắn tin với gia sư.");
+      toast.warning("Bạn cần đăng nhập để nhắn tin với gia sư.");
       router.push("/login");
       return;
     }

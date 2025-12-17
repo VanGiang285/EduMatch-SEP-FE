@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "../ui/basic/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCustomToast } from "@/hooks/useCustomToast";
+import { toast } from 'sonner';
 import { useState, useEffect } from "react";
 import { APP_CONFIG } from "@/constants/config";
 import { debugGoogleToken } from "@/lib/debug-google-token";
@@ -18,8 +18,7 @@ export function GoogleSignInButton({
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   const { googleLogin } = useAuth();
-  const { showSuccess, showError } = useCustomToast();
-  useEffect(() => {
+    useEffect(() => {
     const initializeGoogle = async () => {
       try {
         // Load Google Identity Services script
@@ -45,10 +44,10 @@ export function GoogleSignInButton({
                 console.log('🔍 Debugging Google ID Token...');
                 debugGoogleToken.testToken(response.credential);
                 await googleLogin(response.credential);
-                showSuccess(mode === 'signin' ? 'Đăng nhập thành công!' : 'Đăng ký thành công!');
+                toast.success(mode === 'signin' ? 'Đăng nhập thành công!' : 'Đăng ký thành công!');
               } catch (error: any) {
                 console.error('Google sign in error:', error);
-                showError(error.message || 'Đăng nhập Google thất bại');
+                toast.error(error.message || 'Đăng nhập Google thất bại');
               } finally {
                 setIsLoading(false);
               }
@@ -98,7 +97,7 @@ export function GoogleSignInButton({
                   family_name: userData.family_name,
                 }));
                 await googleLogin(mockIdToken);
-                showSuccess(mode === 'signin' ? 'Đăng nhập thành công!' : 'Đăng ký thành công!');
+                toast.success(mode === 'signin' ? 'Đăng nhập thành công!' : 'Đăng ký thành công!');
               }
             }
           }).requestAccessToken();
@@ -106,7 +105,7 @@ export function GoogleSignInButton({
       });
     } catch (error: any) {
       console.error('Google sign in error:', error);
-      showError(error.message || 'Đăng nhập Google thất bại');
+      toast.error(error.message || 'Đăng nhập Google thất bại');
     } finally {
       setIsLoading(false);
     }

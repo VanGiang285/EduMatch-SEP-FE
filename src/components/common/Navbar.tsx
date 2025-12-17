@@ -3,7 +3,7 @@ import { Button } from "../ui/basic/button";
 import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings, FileText, ChevronDown, Sparkles, Receipt, AlertTriangle, ClipboardList } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCustomToast } from "@/hooks/useCustomToast";
+import { toast } from 'sonner';
 import { useWalletContext } from "@/contexts/WalletContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -36,8 +36,7 @@ interface NavbarProps {
 export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, onNavigateToAIChat, onNavigateToMessages, onNavigateToNotifications, onNavigateToFavorites, onNavigateToWallet, onNavigateToClassRequests, currentPage, walletBalance: propWalletBalance }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
-  const { showWarning } = useCustomToast();
-  const router = useRouter();
+    const router = useRouter();
   const walletContext = useWalletContext();
   const walletBalance = walletContext?.balance ?? propWalletBalance ?? 0;
 
@@ -60,7 +59,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
 
     if (!isAuthenticated || !user) {
       console.log('🔍 Navbar - Not authenticated, redirecting to login');
-      showWarning('Cần đăng nhập', 'Bạn cần đăng nhập để trở thành gia sư', 3000);
+      toast.warning('Cần đăng nhập', 'Bạn cần đăng nhập để trở thành gia sư', 3000);
       setTimeout(() => {
         onNavigateToLogin();
       }, 1000);

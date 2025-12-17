@@ -18,8 +18,9 @@ import { useBookings } from '@/hooks/useBookings';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useScheduleChangeRequests } from '@/hooks/useScheduleChangeRequests';
 import { useTutorAvailability } from '@/hooks/useTutorAvailability';
-import { useCustomToast } from '@/hooks/useCustomToast';
-import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { toast } from 'sonner';
+// ConfirmDialog nhập nhưng hiện tại đã tắt UI hủy lịch học theo yêu cầu, giữ import/comment để tránh lỗi runtime
+// import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { ScheduleDto, TutorAvailabilityDto } from '@/types/backend';
@@ -31,6 +32,8 @@ import {
   SelectValue,
 } from '@/components/ui/form/select';
 import { ReportService, MediaService } from '@/services';
+import { BasicEvidenceRequest, ReportCreateRequest } from '@/types/requests';
+import { MediaType } from '@/types/enums';
 
 export function ScheduleTab() {
   const { user } = useAuth();
@@ -38,7 +41,6 @@ export function ScheduleTab() {
     schedules,
     loading,
     loadLearnerSchedules: loadSchedules,
-    cancelScheduleCompletion,
     finishSchedule,
     reportSchedule,
   } = useSchedules();
@@ -56,7 +58,6 @@ export function ScheduleTab() {
     goToCurrentWeek,
     isLoading: loadingAvailabilities,
   } = useTutorAvailability(12);
-  const { showError, showSuccess } = useCustomToast();
   const [pendingBySchedule, setPendingBySchedule] = useState<Record<number, boolean>>({});
   const [statusFilter, setStatusFilter] = useState<'all' | ScheduleStatus>('all');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -70,10 +71,10 @@ export function ScheduleTab() {
     selectedAvailabilityId?: number | null;
     reason?: string;
   }>({ open: false, selectedAvailabilityId: null, weekStart: undefined });
-  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; scheduleId: number | null }>({
-    open: false,
-    scheduleId: null,
-  });
+  // const [cancelDialog, setCancelDialog] = useState<{ open: boolean; scheduleId: number | null }>({
+  //   open: false,
+  //   scheduleId: null,
+  // });
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [reportDialog, setReportDialog] = useState<{
     open: boolean;
@@ -89,10 +90,11 @@ export function ScheduleTab() {
   const [reportUploadingFiles, setReportUploadingFiles] = useState<File[]>([]);
   const [reportUploadedUrls, setReportUploadedUrls] = useState<string[]>([]);
   const [reportUploading, setReportUploading] = useState(false);
+  const [reportEvidences, setReportEvidences] = useState<BasicEvidenceRequest[]>([]);
 
   const handleReportFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!user?.email) {
-      showError('Vui lòng đăng nhập để upload file');
+      toast.error('Vui lòng đăng nhập để upload file');
       return;
     }
     const files = Array.from(e.target.files || []);
@@ -102,12 +104,12 @@ export function ScheduleTab() {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
       if (!isImage && !isVideo) {
-        showError('Lỗi', 'Chỉ chấp nhận file ảnh hoặc video');
+        toast.error('Chỉ chấp nhận file ảnh hoặc video');
         return false;
       }
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (file.size > maxSize) {
-        showError('Lỗi', `File ${file.name} vượt quá 10MB`);
+        toast.error(`File ${file.name} vượt quá 10MB`);
         return false;
       }
       return true;
@@ -125,20 +127,39 @@ export function ScheduleTab() {
           mediaType: mediaType as 'Image' | 'Video',
         });
 
-        if (response.success && response.data?.secureUrl) {
-          return { url: response.data.secureUrl, file };
+        const uploadPayload = response.data as any;
+        const secureUrl =
+          uploadPayload?.secureUrl ?? uploadPayload?.data?.secureUrl;
+        const publicId =
+          uploadPayload?.publicId ?? uploadPayload?.data?.publicId;
+
+        if (secureUrl) {
+          const mediaTypeNum =
+            mediaType === 'Image' ? MediaType.Image : MediaType.Video;
+          const evidence: BasicEvidenceRequest = {
+            mediaType: mediaTypeNum,
+            fileUrl: secureUrl,
+            filePublicId: publicId || undefined,
+          };
+          return { url: secureUrl, file, evidence };
         } else {
-          throw new Error(`Không thể upload file ${file.name}`);
+          const uploadErrorMessage =
+            (typeof uploadPayload?.message === 'string' &&
+              uploadPayload.message) ||
+            (typeof uploadPayload?.error === 'string' && uploadPayload.error) ||
+            `Không thể upload file ${file.name}`;
+          throw new Error(uploadErrorMessage);
         }
       });
 
       const results = await Promise.all(uploadPromises);
       setReportUploadedUrls(prev => [...prev, ...results.map(r => r.url)]);
       setReportUploadingFiles(prev => [...prev, ...results.map(r => r.file)]);
-      showSuccess('Thành công', `Đã upload ${results.length} file thành công`);
+      setReportEvidences(prev => [...prev, ...results.map(r => r.evidence)]);
+      toast.success(`Đã upload ${results.length} file thành công`);
     } catch (error: any) {
       console.error('Error uploading files:', error);
-      showError('Lỗi', error.message || 'Không thể upload file');
+      toast.error(error.message || 'Không thể upload file');
     } finally {
       setReportUploading(false);
       e.target.value = '';
@@ -148,6 +169,7 @@ export function ScheduleTab() {
   const handleReportRemoveFile = (index: number) => {
     setReportUploadedUrls(prev => prev.filter((_, i) => i !== index));
     setReportUploadingFiles(prev => prev.filter((_, i) => i !== index));
+    setReportEvidences(prev => prev.filter((_, i) => i !== index));
   };
 
   useEffect(() => {
@@ -503,38 +525,23 @@ export function ScheduleTab() {
     ? getSessionsForDate(selectedDate.day, selectedDate.month, selectedDate.year)
     : [];
   
-  const handleCancelSchedule = useCallback(async (scheduleId: number) => {
-    try {
-      setActionLoadingId(scheduleId);
-      const ok = await cancelScheduleCompletion(scheduleId);
-      if (ok) {
-        showSuccess('Đã hủy lịch học');
-      } else {
-        showError('Không thể hủy lịch học');
-      }
-    } catch {
-      showError('Không thể hủy lịch học');
-    } finally {
-      setActionLoadingId(null);
-      setCancelDialog({ open: false, scheduleId: null });
-    }
-  }, [cancelScheduleCompletion, showError, showSuccess]);
+  // Hàm hủy lịch học đã được tắt theo yêu cầu – giữ placeholder để tham chiếu sau này nếu cần
 
   const handleFinish = useCallback(async (scheduleId: number) => {
     try {
       setActionLoadingId(scheduleId);
       const ok = await finishSchedule(scheduleId);
       if (ok) {
-        showSuccess('Đã xác nhận học xong');
+        toast.success('Đã xác nhận học xong');
       } else {
-        showError('Không thể xác nhận học xong');
+        toast.error('Không thể xác nhận học xong');
       }
     } catch {
-      showError('Không thể xác nhận học xong');
+      toast.error('Không thể xác nhận học xong');
     } finally {
       setActionLoadingId(null);
     }
-  }, [finishSchedule, showError, showSuccess]);
+  }, [finishSchedule]);
 
   const handleCreateReport = useCallback((schedule: ScheduleDto) => {
     setReportDialog({
@@ -553,33 +560,35 @@ export function ScheduleTab() {
     const booking = getBooking(schedule.bookingId, schedule.booking);
     const tutorEmail = booking?.tutorSubject?.tutorEmail;
     if (!tutorEmail) {
-      showError('Lỗi', 'Không tìm thấy email gia sư để báo cáo.');
+      toast.error('Không tìm thấy email gia sư để báo cáo.');
       return;
     }
     if (!reportDialog.reason.trim()) {
-      showError('Lỗi', 'Vui lòng nhập lý do báo cáo.');
+      toast.error('Vui lòng nhập lý do báo cáo.');
       return;
     }
     try {
       setReportDialog(prev => ({ ...prev, submitting: true }));
       const bookingId = booking?.id;
-      const request = {
+      const request: ReportCreateRequest = {
         reportedUserEmail: tutorEmail,
         reason: reportDialog.reason.trim(),
         bookingId,
-        evidenceUrls: reportUploadedUrls.length > 0 ? reportUploadedUrls : undefined,
+        evidences: reportEvidences.length > 0 ? reportEvidences : undefined,
       };
       const response = await ReportService.createReport(request);
       if (!response.success || !response.data?.id) {
-        showError('Lỗi', response.message || 'Không thể tạo báo cáo');
+        toast.error(response.message || 'Không thể tạo báo cáo');
         setReportDialog(prev => ({ ...prev, submitting: false }));
         return;
       }
       const ok = await reportSchedule(schedule.id, response.data.id);
       if (!ok) {
-        showError('Lỗi', 'Không thể liên kết báo cáo với buổi học');
+        toast.error('Không thể liên kết báo cáo với buổi học');
+        setReportDialog(prev => ({ ...prev, submitting: false }));
+        return;
       }
-      showSuccess('Thành công', 'Đã tạo báo cáo');
+      toast.success('Đã tạo báo cáo');
       setReportDialog({
         open: false,
         schedule: undefined,
@@ -588,11 +597,12 @@ export function ScheduleTab() {
       });
       setReportUploadedUrls([]);
       setReportUploadingFiles([]);
+      setReportEvidences([]);
     } catch {
-      showError('Lỗi', 'Không thể tạo báo cáo');
+      toast.error('Không thể tạo báo cáo');
       setReportDialog(prev => ({ ...prev, submitting: false }));
     }
-  }, [getBooking, reportDialog, reportSchedule, reportUploadedUrls, showError, showSuccess]);
+  }, [getBooking, reportDialog, reportEvidences, reportSchedule]);
 
   if (loading) {
     return (
@@ -774,7 +784,7 @@ export function ScheduleTab() {
                                 <Button
                                   size="lg"
                                   variant="outline"
-                                  className="min-w-[140px] border-gray-300 bg-white text-amber-700 hover:bg-amber-50"
+                                  className="min-w-[140px]"
                                   onClick={() => handleCreateReport(schedule)}
                                 >
                                   Báo cáo
@@ -1498,7 +1508,7 @@ export function ScheduleTab() {
                 const schedule = slotDialog.schedule;
                 const newAvailabilityId = slotDialog.selectedAvailabilityId;
                 if (!schedule || !newAvailabilityId) {
-                  showError('Vui lòng chọn slot mới.');
+                  toast.error('Vui lòng chọn slot mới.');
                   return;
                 }
 
@@ -1507,11 +1517,11 @@ export function ScheduleTab() {
                 const oldAvailabilityId = schedule.availability?.id;
 
                 if (!user?.email || !tutorEmail) {
-                  showError('Thiếu thông tin người gửi hoặc gia sư.');
+                  toast.error('Thiếu thông tin người gửi hoặc gia sư.');
                   return;
                 }
                 if (!oldAvailabilityId) {
-                  showError('Không tìm thấy lịch cũ của buổi học.');
+                  toast.error('Không tìm thấy lịch cũ của buổi học.');
                   return;
                 }
 
@@ -1526,11 +1536,11 @@ export function ScheduleTab() {
 
                 const created = await create(payload);
                 if (created) {
-                  showSuccess('Đã gửi yêu cầu đổi lịch.');
+                  toast.success('Đã gửi yêu cầu đổi lịch.');
                   setPendingBySchedule(prev => ({ ...prev, [schedule.id]: true }));
                   setSlotDialog({ open: false, schedule: undefined, weekStart: undefined, selectedAvailabilityId: null, reason: '' });
                 } else {
-                  showError('Gửi yêu cầu đổi lịch thất bại.');
+                  toast.error('Gửi yêu cầu đổi lịch thất bại.');
                 }
               }}
             >

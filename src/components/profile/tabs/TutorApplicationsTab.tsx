@@ -58,7 +58,7 @@ import {
 import { TutorApplicationService } from '@/services/tutorApplicationService';
 import { ClassRequestService, ClassRequestDetailDto } from '@/services/classRequestService';
 import { TutorAppliedItemDto } from '@/types/backend';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { TutorApplicationStatus, DayOfWeekEnum, EnumHelpers } from '@/types/enums';
 import { getClassRequestStatusText, getClassRequestStatusColor } from '@/data/mockClassRequests';
@@ -177,7 +177,6 @@ const renderSlots = (slots?: ClassRequestDetailDto['slots']) => {
 };
 
 export function TutorApplicationsTab() {
-  const { showError, showSuccess } = useCustomToast();
   const [appliedApplications, setAppliedApplications] = useState<TutorAppliedItemDto[]>([]);
   const [canceledApplications, setCanceledApplications] = useState<TutorAppliedItemDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,7 +208,7 @@ export function TutorApplicationsTab() {
       setAppliedApplications(appliedData);
       setCanceledApplications(canceledData);
     } catch (error) {
-      showError('Lỗi', 'Không thể tải danh sách ứng tuyển');
+      toast.error('Không thể tải danh sách ứng tuyển');
     } finally {
       setLoading(false);
     }
@@ -291,7 +290,7 @@ export function TutorApplicationsTab() {
         throw new Error(response.message || 'Không thể tải chi tiết yêu cầu');
       }
     } catch (error) {
-      showError('Lỗi', 'Không thể tải thông tin chi tiết');
+      toast.error('Không thể tải thông tin chi tiết');
     } finally {
       setDetailLoading(false);
     }
@@ -306,7 +305,7 @@ export function TutorApplicationsTab() {
   const handleSubmitEdit = async () => {
     if (!selectedApplication) return;
     if (!editMessage.trim()) {
-      showError('Thiếu thông tin', 'Vui lòng nhập nội dung cập nhật');
+      toast.error('Vui lòng nhập nội dung cập nhật');
       return;
     }
     setEditLoading(true);
@@ -318,12 +317,12 @@ export function TutorApplicationsTab() {
       if (!response.success) {
         throw new Error(response.message || 'Cập nhật thất bại');
       }
-      showSuccess('Thành công', 'Đã cập nhật tin nhắn ứng tuyển');
+      toast.success('Đã cập nhật tin nhắn ứng tuyển');
       setEditDialogOpen(false);
       setSelectedApplication(null);
       await loadApplications();
     } catch (error) {
-      showError('Lỗi', 'Không thể cập nhật tin nhắn');
+      toast.error('Không thể cập nhật tin nhắn');
     } finally {
       setEditLoading(false);
     }
@@ -337,12 +336,12 @@ export function TutorApplicationsTab() {
       if (!response.success) {
         throw new Error(response.message || 'Hủy ứng tuyển thất bại');
       }
-      showSuccess('Thành công', 'Đã hủy ứng tuyển');
+      toast.success('Đã hủy ứng tuyển');
       setCancelDialogOpen(false);
       setSelectedApplication(null);
       await loadApplications();
     } catch (error) {
-      showError('Lỗi', 'Không thể hủy ứng tuyển');
+      toast.error('Không thể hủy ứng tuyển');
     } finally {
       setCancelLoading(false);
     }

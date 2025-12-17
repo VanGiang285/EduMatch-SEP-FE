@@ -45,7 +45,7 @@ import { CreateClassRequestDialog } from '@/components/class-requests/CreateClas
 import { ClassRequestService, ClassRequestItemDto, ClassRequestDetailDto } from '@/services/classRequestService';
 import { TutorApplicationService } from '@/services/tutorApplicationService';
 import { TutorApplicationItemDto, TutorProfileDto } from '@/types/backend';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { ClassRequestStatus, TeachingMode, EnumHelpers, DayOfWeekEnum } from '@/types/enums';
 import { FormatService } from '@/lib/format';
 import { TutorService } from '@/services/tutorService';
@@ -68,7 +68,6 @@ const getStatusFromFilter = (filter: string): ClassRequestStatus | null => {
 };
 
 export function ClassRequestsTab() {
-  const { showSuccess, showError } = useCustomToast();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -223,7 +222,7 @@ export function ClassRequestsTab() {
 
         setRequests(allRequests);
       } catch (err: any) {
-        showError('Lỗi', 'Không thể tải danh sách yêu cầu. Vui lòng thử lại.');
+        toast.error('Không thể tải danh sách yêu cầu. Vui lòng thử lại.');
         setRequests([]);
       } finally {
         setLoading(false);
@@ -254,7 +253,7 @@ export function ClassRequestsTab() {
             }
           }
         } catch (err: any) {
-          showError('Lỗi', 'Không thể tải thông tin chi tiết');
+          toast.error('Không thể tải thông tin chi tiết');
         } finally {
           setLoadingDetail(false);
         }
@@ -298,7 +297,7 @@ export function ClassRequestsTab() {
         });
       } catch (error) {
         if (isMounted) {
-          showError('Lỗi', 'Không thể tải thông tin gia sư');
+          toast.error('Không thể tải thông tin gia sư');
         }
       } finally {
         if (isMounted) {
@@ -310,7 +309,7 @@ export function ClassRequestsTab() {
     return () => {
       isMounted = false;
     };
-  }, [applicants, showDetailDialog, tutorDetails, showError]);
+  }, [applicants, showDetailDialog, tutorDetails]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -350,10 +349,10 @@ export function ClassRequestsTab() {
         setSelectedRequest(response.data);
     setShowDetailDialog(true);
       } else {
-        showError('Lỗi', 'Không thể tải thông tin chi tiết');
+        toast.error('Không thể tải thông tin chi tiết');
       }
     } catch (err: any) {
-      showError('Lỗi', 'Không thể tải thông tin chi tiết');
+      toast.error('Không thể tải thông tin chi tiết');
     }
   };
 
@@ -389,7 +388,7 @@ export function ClassRequestsTab() {
     try {
       const response = await ClassRequestService.deleteClassRequest(requestToDelete.id);
       if (response.success) {
-        showSuccess('Thành công', 'Đã xóa yêu cầu mở lớp thành công.');
+        toast.success('Đã xóa yêu cầu mở lớp thành công.');
         setShowDeleteDialog(false);
         setShowDetailDialog(false);
         setRequestToDelete(null);
@@ -435,7 +434,7 @@ export function ClassRequestsTab() {
         throw new Error(response.message || 'Không thể xóa yêu cầu');
       }
     } catch (error: any) {
-      showError('Lỗi', error.message || 'Không thể xóa yêu cầu mở lớp. Vui lòng thử lại.');
+      toast.error(error.message || 'Không thể xóa yêu cầu mở lớp. Vui lòng thử lại.');
     } finally {
       setIsDeleting(false);
     }

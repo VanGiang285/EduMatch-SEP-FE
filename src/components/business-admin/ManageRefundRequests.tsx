@@ -31,7 +31,7 @@ import { Search, Eye, Loader2, ArrowUpDown, CheckCircle, XCircle, FileText } fro
 import { BookingRefundRequestService } from '@/services';
 import { BookingRefundRequestDto } from '@/types/backend';
 import { BookingRefundRequestStatus, EnumHelpers } from '@/types/enums';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { formatCurrency } from '@/data/mockBusinessAdminData';
 import {
   Select,
@@ -75,8 +75,7 @@ const getStatusColor = (status: BookingRefundRequestStatus | string | number | n
 };
 
 export function ManageRefundRequests() {
-  const { showSuccess, showError } = useCustomToast();
-  const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingRefundRequestStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRequest, setSelectedRequest] = useState<BookingRefundRequestDto | null>(null);
@@ -119,7 +118,7 @@ export function ManageRefundRequests() {
       }
     } catch (error) {
       console.error('Error fetching requests:', error);
-      showError('Lỗi', 'Không thể tải danh sách yêu cầu hoàn tiền');
+      toast.error('Không thể tải danh sách yêu cầu hoàn tiền');
       setRequests([]);
     } finally {
       setLoading(false);
@@ -187,11 +186,11 @@ export function ManageRefundRequests() {
         setSelectedRequest(response.data);
         setShowDetailDialog(true);
       } else {
-        showError('Lỗi', 'Không thể tải chi tiết yêu cầu hoàn tiền');
+        toast.error('Không thể tải chi tiết yêu cầu hoàn tiền');
       }
     } catch (error) {
       console.error('Error fetching request detail:', error);
-      showError('Lỗi', 'Không thể tải chi tiết yêu cầu hoàn tiền');
+      toast.error('Không thể tải chi tiết yêu cầu hoàn tiền');
     }
   };
 
@@ -200,15 +199,15 @@ export function ManageRefundRequests() {
       setIsProcessing(true);
       const response = await BookingRefundRequestService.updateStatus(requestId, status);
       if (response.success) {
-        showSuccess('Thành công', `Đã ${status === BookingRefundRequestStatus.Approved ? 'duyệt' : 'từ chối'} yêu cầu hoàn tiền`);
+        toast.success('Thành công', `Đã ${status === BookingRefundRequestStatus.Approved ? 'duyệt' : 'từ chối'} yêu cầu hoàn tiền`);
         setShowDetailDialog(false);
         fetchRequests();
       } else {
-        showError('Lỗi', response.message || 'Không thể cập nhật trạng thái');
+        toast.error('Lỗi', response.message || 'Không thể cập nhật trạng thái');
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      showError('Lỗi', 'Không thể cập nhật trạng thái');
+      toast.error('Không thể cập nhật trạng thái');
     } finally {
       setIsProcessing(false);
     }

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/basic/button';
 import { Textarea } from '@/components/ui/form/textarea';
 import { Loader2, StickyNote, X, ZoomIn } from 'lucide-react';
 import { useBookingNotes } from '@/hooks/useBookingNotes';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { MediaType } from '@/types/enums';
 import { MediaService } from '@/services/mediaService';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,8 +19,7 @@ interface BookingNotesPanelProps {
 export function BookingNotesPanel({ bookingId }: BookingNotesPanelProps) {
   const { notes, loading, error, loadNotes, createNote, updateNote, deleteNote } =
     useBookingNotes(bookingId);
-  const { showError, showSuccess } = useCustomToast();
-  const { user } = useAuth();
+    const { user } = useAuth();
   const [content, setContent] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -41,9 +40,9 @@ export function BookingNotesPanel({ bookingId }: BookingNotesPanelProps) {
 
   useEffect(() => {
     if (error) {
-      showError('Lỗi khi tải ghi chú', error);
+      toast.error('Lỗi khi tải ghi chú', error);
     }
-  }, [error, showError]);
+  }, [error]);
 
   const handleSubmit = async () => {
     if (!content.trim()) return;
@@ -56,12 +55,12 @@ export function BookingNotesPanel({ bookingId }: BookingNotesPanelProps) {
           media: mediaItems,
         });
         if (updated) {
-          showSuccess('Cập nhật ghi chú thành công');
+          toast.success('Cập nhật ghi chú thành công');
           setEditingId(null);
           setContent('');
           setMediaItems([]);
         } else {
-          showError('Không thể cập nhật ghi chú');
+          toast.error('Không thể cập nhật ghi chú');
         }
       } else {
         const created = await createNote({
@@ -70,15 +69,15 @@ export function BookingNotesPanel({ bookingId }: BookingNotesPanelProps) {
           media: mediaItems,
         });
         if (created) {
-          showSuccess('Thêm ghi chú thành công');
+          toast.success('Thêm ghi chú thành công');
           setContent('');
           setMediaItems([]);
         } else {
-          showError('Không thể thêm ghi chú');
+          toast.error('Không thể thêm ghi chú');
         }
       }
     } catch (err: any) {
-      showError('Lỗi khi lưu ghi chú', err.message);
+      toast.error('Lỗi khi lưu ghi chú', err.message);
     } finally {
       setSubmitting(false);
     }
@@ -103,14 +102,14 @@ export function BookingNotesPanel({ bookingId }: BookingNotesPanelProps) {
   const handleDelete = async (id: number) => {
     const ok = await deleteNote(id);
     if (ok) {
-      showSuccess('Xóa ghi chú thành công');
+      toast.success('Xóa ghi chú thành công');
       if (editingId === id) {
         setEditingId(null);
         setContent('');
         setMediaItems([]);
       }
     } else {
-      showError('Không thể xóa ghi chú');
+      toast.error('Không thể xóa ghi chú');
     }
   };
 
@@ -123,7 +122,7 @@ export function BookingNotesPanel({ bookingId }: BookingNotesPanelProps) {
         const isImage = file.type.startsWith('image/');
         const isVideo = file.type.startsWith('video/');
         if (!isImage && !isVideo) {
-          showError('Định dạng không hỗ trợ', 'Chỉ chấp nhận ảnh hoặc video.');
+          toast.error('Định dạng không hỗ trợ', 'Chỉ chấp nhận ảnh hoặc video.');
           continue;
         }
         const mediaType: MediaType = isImage ? MediaType.Image : MediaType.Video;
@@ -144,14 +143,14 @@ export function BookingNotesPanel({ bookingId }: BookingNotesPanelProps) {
             displayName: file.name,
           });
         } else {
-          showError('Upload thất bại', response.error?.message || payload?.message);
+          toast.error('Upload thất bại', response.error?.message || payload?.message);
         }
       }
       if (uploaded.length > 0) {
         setMediaItems(prev => [...prev, ...uploaded]);
       }
     } catch (err: any) {
-      showError('Lỗi khi upload', err.message);
+      toast.error('Lỗi khi upload', err.message);
     } finally {
       setUploading(false);
     }

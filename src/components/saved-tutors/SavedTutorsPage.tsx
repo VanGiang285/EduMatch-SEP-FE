@@ -38,7 +38,7 @@ import { TutorService } from '@/services/tutorService';
 import { TutorProfileDto, TutorRatingSummary } from '@/types/backend';
 import { TeachingMode } from '@/types/enums';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { useChatContext } from '@/contexts/ChatContext';
 import { FeedbackService } from '@/services/feedbackService';
 
@@ -148,8 +148,7 @@ function groupSubjectsBySubjectName(tutorSubjects: any[]): Array<{ subjectName: 
 export function SavedTutorsPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const { showWarning } = useCustomToast();
-  const {
+    const {
     subjects,
     levels,
     certificateTypes,
@@ -406,7 +405,7 @@ export function SavedTutorsPage() {
     e.stopPropagation();
     
     if (!isAuthenticated) {
-      showWarning(
+      toast.warning(
         'Vui lòng đăng nhập',
         'Bạn cần đăng nhập để nhắn tin với gia sư.'
       );
@@ -450,7 +449,7 @@ export function SavedTutorsPage() {
     
     // Check if user is authenticated
     if (!isAuthenticated) {
-      showWarning(
+      toast.warning(
         'Vui lòng đăng nhập',
         'Bạn cần đăng nhập để thêm gia sư vào danh sách yêu thích.'
       );

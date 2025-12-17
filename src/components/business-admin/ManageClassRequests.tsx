@@ -57,7 +57,7 @@ import {
 import { ClassRequestService, ClassRequestItemDto, ClassRequestDetailDto } from '@/services/classRequestService';
 import { TutorApplicationService } from '@/services/tutorApplicationService';
 import { TutorApplicationItemDto, TutorRatingSummary } from '@/types/backend';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { ClassRequestStatus, TeachingMode } from '@/types/enums';
 import { FeedbackService } from '@/services/feedbackService';
 import { Star } from 'lucide-react';
@@ -90,8 +90,7 @@ const getStatusFromFilter = (filter: string): ClassRequestStatus | null => {
 };
 
 export function ManageClassRequests() {
-  const { showSuccess, showError } = useCustomToast();
-  const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('pending'); // Mặc định: Chờ duyệt
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRequest, setSelectedRequest] = useState<ClassRequestDetailDto | null>(null);
@@ -125,7 +124,7 @@ export function ManageClassRequests() {
             allRequests = response.data;
           } else {
             if (response.message) {
-              showError('Lỗi', response.message);
+              toast.error('Lỗi', response.message);
             }
           }
         } else if (statusFilter === 'open' || targetStatus === ClassRequestStatus.Open) {
@@ -135,7 +134,7 @@ export function ManageClassRequests() {
             allRequests = response.data;
           } else {
             if (response.message) {
-              showError('Lỗi', response.message);
+              toast.error('Lỗi', response.message);
             }
           }
         } else {
@@ -168,7 +167,7 @@ export function ManageClassRequests() {
         
         setRequests(allRequests);
       } catch (err: any) {
-        showError('Lỗi', 'Không thể tải danh sách yêu cầu. Vui lòng thử lại.');
+        toast.error('Không thể tải danh sách yêu cầu. Vui lòng thử lại.');
         setRequests([]);
       } finally {
         setLoading(false);
@@ -257,7 +256,7 @@ export function ManageClassRequests() {
           }
         }
       } catch (err: any) {
-        showError('Lỗi', 'Không thể tải thông tin chi tiết');
+        toast.error('Không thể tải thông tin chi tiết');
         lastLoadedRequestIdRef.current = null;
       } finally {
         setLoadingDetail(false);
@@ -348,7 +347,7 @@ export function ManageClassRequests() {
       });
 
       if (response.success) {
-        showSuccess('Thành công', 'Đã duyệt yêu cầu mở lớp thành công');
+        toast.success('Đã duyệt yêu cầu mở lớp thành công');
         setShowDetailDialog(false);
         // Reload danh sách - yêu cầu đã duyệt sẽ chuyển từ PENDING sang OPEN
         // Nếu đang filter "pending", reload PENDING. Nếu filter "open", reload OPEN
@@ -389,7 +388,7 @@ export function ManageClassRequests() {
         throw new Error(response.message || 'Duyệt yêu cầu thất bại');
       }
       } catch (err: any) {
-        showError('Lỗi', err.message || 'Không thể duyệt yêu cầu. Vui lòng thử lại.');
+        toast.error('Lỗi', err.message || 'Không thể duyệt yêu cầu. Vui lòng thử lại.');
     } finally {
       setIsApproving(false);
     }
@@ -397,12 +396,12 @@ export function ManageClassRequests() {
 
   const handleReject = async () => {
     if (!rejectReason.trim()) {
-      showError('Lỗi', 'Vui lòng nhập lý do từ chối');
+      toast.error('Vui lòng nhập lý do từ chối');
       return;
     }
 
     if (!selectedRequest) {
-      showError('Lỗi', 'Không tìm thấy yêu cầu');
+      toast.error('Không tìm thấy yêu cầu');
       return;
     }
 
@@ -414,7 +413,7 @@ export function ManageClassRequests() {
       });
 
       if (response.success) {
-        showSuccess('Thành công', 'Đã từ chối yêu cầu mở lớp');
+        toast.success('Đã từ chối yêu cầu mở lớp');
         setShowRejectDialog(false);
         setShowDetailDialog(false);
         setRejectReason('');
@@ -457,7 +456,7 @@ export function ManageClassRequests() {
         throw new Error(response.message || 'Từ chối yêu cầu thất bại');
       }
       } catch (err: any) {
-        showError('Lỗi', err.message || 'Không thể từ chối yêu cầu. Vui lòng thử lại.');
+        toast.error('Lỗi', err.message || 'Không thể từ chối yêu cầu. Vui lòng thử lại.');
     } finally {
       setIsRejecting(false);
     }

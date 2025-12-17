@@ -40,7 +40,7 @@ import { Search, Eye, Plus, Edit, Loader2, ArrowUpDown, CheckCircle, XCircle, Fi
 import { RefundPolicyService } from '@/services';
 import { RefundPolicyDto } from '@/types/backend';
 import { RefundPolicyCreateRequest, RefundPolicyUpdateRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -48,8 +48,7 @@ type SortField = 'id' | 'name' | 'refundPercentage' | 'createdAt';
 type SortOrder = 'asc' | 'desc';
 
 export function ManageRefundPolicies() {
-  const { showSuccess, showError } = useCustomToast();
-  const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedPolicy, setSelectedPolicy] = useState<RefundPolicyDto | null>(null);
@@ -98,7 +97,7 @@ export function ManageRefundPolicies() {
       }
     } catch (error) {
       console.error('Error fetching policies:', error);
-      showError('Lỗi', 'Không thể tải danh sách chính sách hoàn tiền');
+      toast.error('Không thể tải danh sách chính sách hoàn tiền');
       setPolicies([]);
     } finally {
       setLoading(false);
@@ -179,11 +178,11 @@ export function ManageRefundPolicies() {
 
   const handleSubmitCreate = async () => {
     if (!formData.name.trim()) {
-      showError('Lỗi', 'Vui lòng nhập tên chính sách');
+      toast.error('Vui lòng nhập tên chính sách');
       return;
     }
     if (formData.refundPercentage < 0 || formData.refundPercentage > 100) {
-      showError('Lỗi', 'Phần trăm hoàn tiền phải từ 0 đến 100');
+      toast.error('Phần trăm hoàn tiền phải từ 0 đến 100');
       return;
     }
 
@@ -196,15 +195,15 @@ export function ManageRefundPolicies() {
       };
       const response = await RefundPolicyService.create(request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã tạo chính sách hoàn tiền mới');
+        toast.success('Đã tạo chính sách hoàn tiền mới');
         setShowCreateDialog(false);
         fetchPolicies();
       } else {
-        showError('Lỗi', response.message || 'Không thể tạo chính sách hoàn tiền');
+        toast.error('Lỗi', response.message || 'Không thể tạo chính sách hoàn tiền');
       }
     } catch (error) {
       console.error('Error creating policy:', error);
-      showError('Lỗi', 'Không thể tạo chính sách hoàn tiền');
+      toast.error('Không thể tạo chính sách hoàn tiền');
     } finally {
       setIsProcessing(false);
     }
@@ -213,11 +212,11 @@ export function ManageRefundPolicies() {
   const handleSubmitUpdate = async () => {
     if (!selectedPolicy) return;
     if (!formData.name.trim()) {
-      showError('Lỗi', 'Vui lòng nhập tên chính sách');
+      toast.error('Vui lòng nhập tên chính sách');
       return;
     }
     if (formData.refundPercentage < 0 || formData.refundPercentage > 100) {
-      showError('Lỗi', 'Phần trăm hoàn tiền phải từ 0 đến 100');
+      toast.error('Phần trăm hoàn tiền phải từ 0 đến 100');
       return;
     }
 
@@ -231,15 +230,15 @@ export function ManageRefundPolicies() {
       };
       const response = await RefundPolicyService.update(request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã cập nhật chính sách hoàn tiền');
+        toast.success('Đã cập nhật chính sách hoàn tiền');
         setShowEditDialog(false);
         fetchPolicies();
       } else {
-        showError('Lỗi', response.message || 'Không thể cập nhật chính sách hoàn tiền');
+        toast.error('Lỗi', response.message || 'Không thể cập nhật chính sách hoàn tiền');
       }
     } catch (error) {
       console.error('Error updating policy:', error);
-      showError('Lỗi', 'Không thể cập nhật chính sách hoàn tiền');
+      toast.error('Không thể cập nhật chính sách hoàn tiền');
     } finally {
       setIsProcessing(false);
     }
@@ -250,14 +249,14 @@ export function ManageRefundPolicies() {
       setIsProcessing(true);
       const response = await RefundPolicyService.updateIsActive(policy.id, !policy.isActive);
       if (response.success) {
-        showSuccess('Thành công', `Đã ${policy.isActive ? 'vô hiệu hóa' : 'kích hoạt'} chính sách hoàn tiền`);
+        toast.success('Thành công', `Đã ${policy.isActive ? 'vô hiệu hóa' : 'kích hoạt'} chính sách hoàn tiền`);
         fetchPolicies();
       } else {
-        showError('Lỗi', response.message || 'Không thể cập nhật trạng thái');
+        toast.error('Lỗi', response.message || 'Không thể cập nhật trạng thái');
       }
     } catch (error) {
       console.error('Error toggling active:', error);
-      showError('Lỗi', 'Không thể cập nhật trạng thái');
+      toast.error('Không thể cập nhật trạng thái');
     } finally {
       setIsProcessing(false);
     }
