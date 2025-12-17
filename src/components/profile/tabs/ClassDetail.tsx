@@ -5,8 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout
 import { Button } from '@/components/ui/basic/button';
 import { Badge } from '@/components/ui/basic/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
-import { Textarea } from '@/components/ui/form/textarea';
-import { Label } from '@/components/ui/form/label';
 import { Input } from '@/components/ui/form/input';
 import { Separator } from '@/components/ui/layout/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
@@ -36,15 +34,10 @@ import {
   Star,
   TrendingUp,
   CheckCircle2,
-  FileText,
-  Send,
   Wallet,
   CalendarDays,
   Edit,
   X,
-  Image as ImageIcon,
-  Upload,
-
 } from 'lucide-react';
 import { BookingDto, ScheduleDto, TutorRatingSummary } from '@/types/backend';
 import { BookingStatus, ScheduleStatus, TeachingMode } from '@/types/enums';
@@ -58,6 +51,7 @@ import { toast } from 'sonner';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useLearnerProfiles } from '@/hooks/useLearnerProfiles';
 import { FeedbackService, ScheduleService } from '@/services';
+import { BookingNotesPanel } from '@/components/booking/BookingNotesPanel';
 
 interface ClassDetailProps {
   booking: BookingDto;
@@ -67,8 +61,6 @@ interface ClassDetailProps {
 
 export function ClassDetail({ booking, userRole, onBack }: ClassDetailProps) {
   const [activeTab, setActiveTab] = useState('overview');
-  const [newNote, setNewNote] = useState('');
-  const [noteAttachments, setNoteAttachments] = useState<File[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedDate, setSelectedDate] = useState<{ day: number; month: number; year: number } | null>(null);
@@ -270,24 +262,6 @@ export function ClassDetail({ booking, userRole, onBack }: ClassDetailProps) {
     }
   };
 
-  const handleAddNote = () => {
-    if (newNote.trim()) {
-      console.log('Adding note:', newNote, 'with attachments:', noteAttachments);
-      setNewNote('');
-      setNoteAttachments([]);
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
-      setNoteAttachments([...noteAttachments, ...filesArray]);
-    }
-  };
-
-  const removeAttachment = (index: number) => {
-    setNoteAttachments(noteAttachments.filter((_, i) => i !== index));
-  };
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate();
@@ -1002,90 +976,14 @@ export function ClassDetail({ booking, userRole, onBack }: ClassDetailProps) {
           </TabsContent>
 
           <TabsContent value="notes" className="space-y-6">
-            <Card className="border border-gray-300">
-              <CardHeader>
-                <CardTitle>Thêm ghi chú mới</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <Textarea
-                    placeholder={
-                      userRole === 'tutor'
-                        ? 'Nhập ghi chú về tiến độ học tập của học viên...'
-                        : 'Nhập ghi chú về bài học, thắc mắc cần hỏi gia sư...'
-                    }
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    rows={4}
-                  />
-
-                  <div>
-                    <Label htmlFor="note-file" className="cursor-pointer">
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#257180] transition-colors">
-                        <Upload className="w-6 h-6 mx-auto mb-2 text-gray-400" />
-                        <p className="text-gray-600">Đính kèm ảnh hoặc video</p>
-                        <p className="text-xs text-gray-500 mt-1">PNG, JPG, MP4 tối đa 10MB</p>
-                      </div>
-                    </Label>
-                    <Input
-                      id="note-file"
-                      type="file"
-                      accept="image/*,video/*"
-                      multiple
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
-                  </div>
-
-                  {noteAttachments.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Tệp đính kèm ({noteAttachments.length})</Label>
-                      <div className="space-y-2">
-                        {noteAttachments.map((file, index) => (
-                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <ImageIcon className="w-4 h-4 text-gray-600" />
-                              <span className="text-gray-700">{file.name}</span>
-                              <span className="text-xs text-gray-500">
-                                ({(file.size / 1024).toFixed(1)} KB)
-                              </span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="p-2 hover:bg-[#FD8B51] hover:text-white"
-                              onClick={() => removeAttachment(index)}
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handleAddNote}
-                    className="bg-[#257180] hover:bg-[#1f5a66]"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Thêm ghi chú
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-gray-300">
-              <CardHeader>
-                <CardTitle>Lịch sử ghi chú (0)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <FileText className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                  <p className="text-gray-600">Chưa có ghi chú nào</p>
-                </div>
-              </CardContent>
-            </Card>
+            <BookingNotesPanel 
+              bookingId={booking.id} 
+              userRole={userRole}
+              tutorEmail={tutorEmail}
+              learnerEmail={learnerEmail}
+              tutorProfile={tutor}
+              learnerProfile={learnerProfile}
+            />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">

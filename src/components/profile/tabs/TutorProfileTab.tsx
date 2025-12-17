@@ -531,13 +531,13 @@ export function TutorProfileTab() {
             availabilities,
           }));
 
-          // Convert availabilities to schedule format for calendar view
           const schedule: Record<string, Record<string, number[]>> = {};
           availabilities.forEach((av) => {
             if (av.slot?.id && av.startDate) {
               const dateKey = av.startDate.split('T')[0];
-              const dayOfWeek = av.slot.dayOfWeek;
-              const dayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek] || 'monday';
+              const startDateObj = new Date(av.startDate);
+              const dayOfWeek = startDateObj.getDay();
+              const dayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
               
               if (!schedule[dateKey]) {
                 schedule[dateKey] = {};
@@ -855,25 +855,46 @@ export function TutorProfileTab() {
             hourlyRate: subj.hourlyRate || 0,
           }));
 
-          // Load availabilities from tutorProfile
           const availabilities: TutorAvailabilityDto[] = profile.tutorAvailabilities || [];
 
-    setProfileData(prev => ({
-      ...prev,
-          tutorProfile: {
-            bio: profile.bio || '',
-            teachingExp: profile.teachingExp || '',
-            videoIntroUrl: profile.videoIntroUrl || '',
-            teachingModes: profile.teachingModes !== undefined && profile.teachingModes !== null 
-              ? EnumHelpers.parseTeachingMode(profile.teachingModes)
-              : TeachingMode.Offline,
-            status: profile.status,
-          },
-          educations,
-          certificates,
-          subjects,
-          availabilities,
-        }));
+          setProfileData(prev => ({
+            ...prev,
+            tutorProfile: {
+              bio: profile.bio || '',
+              teachingExp: profile.teachingExp || '',
+              videoIntroUrl: profile.videoIntroUrl || '',
+              teachingModes: profile.teachingModes !== undefined && profile.teachingModes !== null 
+                ? EnumHelpers.parseTeachingMode(profile.teachingModes)
+                : TeachingMode.Offline,
+              status: profile.status,
+            },
+            educations,
+            certificates,
+            subjects,
+            availabilities,
+          }));
+
+          const schedule: Record<string, Record<string, number[]>> = {};
+          availabilities.forEach((av) => {
+            if (av.slot?.id && av.startDate) {
+              const dateKey = av.startDate.split('T')[0];
+              const startDateObj = new Date(av.startDate);
+              const dayOfWeek = startDateObj.getDay();
+              const dayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+              
+              if (!schedule[dateKey]) {
+                schedule[dateKey] = {};
+              }
+              if (!schedule[dateKey][dayKey]) {
+                schedule[dateKey][dayKey] = [];
+              }
+              if (!schedule[dateKey][dayKey].includes(av.slot.id)) {
+                schedule[dateKey][dayKey].push(av.slot.id);
+              }
+            }
+          });
+          const originalSchedule = JSON.parse(JSON.stringify(schedule));
+          setAvailabilityCalendar(prev => ({ ...prev, schedule, originalSchedule }));
       }
     } catch (error) {
       console.error('Error reloading tutor profile:', error);
