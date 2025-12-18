@@ -18,6 +18,9 @@ import { useBookings } from '@/hooks/useBookings';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useScheduleChangeRequests } from '@/hooks/useScheduleChangeRequests';
 import { useTutorAvailability } from '@/hooks/useTutorAvailability';
+import { useChatContext } from '@/contexts/ChatContext';
+import { useAuth as useAuthContext } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 // ConfirmDialog nhập nhưng hiện tại đã tắt UI hủy lịch học theo yêu cầu, giữ import/comment để tránh lỗi runtime
 // import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -36,7 +39,10 @@ import { BasicEvidenceRequest, ReportCreateRequest } from '@/types/requests';
 import { MediaType } from '@/types/enums';
 
 export function ScheduleTab() {
+  const router = useRouter();
   const { user } = useAuth();
+  const { isAuthenticated } = useAuthContext();
+  const { openChatWithTutor } = useChatContext();
   const {
     schedules,
     loading,
@@ -543,6 +549,58 @@ export function ScheduleTab() {
     }
   }, [finishSchedule]);
 
+  const handleOpenChat = useCallback(async (schedule: ScheduleDto, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+
+    if (!isAuthenticated) {
+      toast.warning('Vui lòng đăng nhập', { description: 'Bạn cần đăng nhập để nhắn tin với gia sư.' });
+      router.push('/login');
+      return;
+    }
+
+    const booking = getBooking(schedule.bookingId, schedule.booking);
+    const tutorSubject = booking?.tutorSubject;
+    const tutorEmail = tutorSubject?.tutorEmail || tutorSubject?.tutor?.userEmail;
+    
+    // Lấy tutorId - ưu tiên từ tutorSubject.tutorId, sau đó từ tutorSubject.tutor.id
+    let tutorId: number | undefined = tutorSubject?.tutorId;
+    if (!tutorId && tutorSubject?.tutor?.id) {
+      tutorId = tutorSubject.tutor.id;
+    }
+    
+    // Nếu vẫn chưa có tutorId, thử lấy từ tutorProfile
+    if (!tutorId && tutorEmail) {
+      const tutorProfile = getTutorProfile(tutorEmail);
+      if (tutorProfile?.id) {
+        tutorId = tutorProfile.id;
+      }
+    }
+    
+    const tutorName = tutorSubject?.tutor?.userName;
+    const tutorAvatar = tutorSubject?.tutor?.avatarUrl;
+
+    // Kiểm tra tutorId phải là number hợp lệ
+    if (!tutorId || typeof tutorId !== 'number' || !tutorEmail) {
+      console.error('Missing tutor info:', { tutorId, tutorEmail, tutorSubject, booking });
+      toast.error('Không tìm thấy thông tin gia sư để nhắn tin.');
+      return;
+    }
+
+    try {
+      await openChatWithTutor(
+        tutorId,
+        tutorEmail,
+        tutorName,
+        tutorAvatar
+      );
+    } catch (error) {
+      console.error('Error opening chat:', error);
+      toast.error('Không thể mở chat. Vui lòng thử lại.');
+    }
+  }, [isAuthenticated, getBooking, getTutorProfile, openChatWithTutor, router]);
+
   const handleCreateReport = useCallback((schedule: ScheduleDto) => {
     setReportDialog({
       open: true,
@@ -775,6 +833,7 @@ export function ScheduleTab() {
                               variant="outline"
                               size="lg"
                               className="min-w-[140px] border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                              onClick={(e) => handleOpenChat(schedule, e)}
                             >
                               <MessageCircle className="h-4 w-4 mr-2" />
                               Nhắn tin

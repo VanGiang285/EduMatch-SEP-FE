@@ -557,6 +557,16 @@ export const API_ENDPOINTS = {
     GET_BY_ID: '/api/MeetingSessions/get-by-id/:id',
     GET_BY_SCHEDULE_ID: '/api/MeetingSessions/get-by-schedule-id/:scheduleId',
   },
+
+  // ==================== TUTOR DASHBOARD ====================
+  TUTOR_DASHBOARD: {
+    GET_UPCOMING_LESSONS: '/api/tutor-dashboard/upcoming-lessons',
+    GET_TODAY_SCHEDULES: '/api/tutor-dashboard/today-schedules',
+    GET_PENDING_BOOKINGS: '/api/tutor-dashboard/pending-bookings',
+    GET_MONTHLY_EARNINGS: '/api/tutor-dashboard/earnings/monthly',
+    GET_CURRENT_MONTH_EARNING: '/api/tutor-dashboard/earnings/current-month',
+    GET_REPORTS_PENDING_DEFENSE: '/api/tutor-dashboard/reports/pending-defense',
+  },
 } as const;
 export const PAGINATION = {
   DEFAULT_PAGE: 1,

@@ -32,3 +32,4 @@ export * from './bookingNoteService';
 export * from './scheduleChangeRequestService';
 export * from './tutorPayoutService';
 export * from './meetingSessionService';
+export * from './tutorDashboardService';

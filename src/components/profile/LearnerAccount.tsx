@@ -64,9 +64,9 @@ export function LearnerAccount({ initialTab = 'profile' }: LearnerAccountProps) 
   const isTutor = user && user.role === USER_ROLES.TUTOR;
 
   const menuItems = [
+    ...(isTutor ? [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }] : []),
     { id: 'profile', label: 'Thông tin người dùng', icon: User },
     ...(isTutor ? [{ id: 'tutorProfile', label: 'Hồ sơ gia sư', icon: GraduationCap }] : []),
-    ...(isTutor ? [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }] : []),
     { id: 'schedule', label: isTutor ? 'Lịch dạy' : 'Lịch học', icon: Calendar },
     { id: 'scheduleChange', label: 'Yêu cầu chuyển lịch', icon: ClipboardList },
     { id: 'classes', label: isTutor ? 'Lớp dạy' : 'Lớp học', icon: BookOpen },

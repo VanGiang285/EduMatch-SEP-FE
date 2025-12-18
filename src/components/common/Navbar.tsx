@@ -186,6 +186,15 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
 
                     {!isAdmin && (
                       <>
+                        {isTutor && (
+                          <DropdownMenuItem
+                            onClick={() => router.push('/profile?tab=dashboard')}
+                            className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
+                          >
+                            <LayoutDashboard className="h-4 w-4 mr-2" />
+                            Dashboard
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=profile')}
                           className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
@@ -200,15 +209,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                           >
                             <GraduationCap className="h-4 w-4 mr-2" />
                             Hồ sơ gia sư
-                          </DropdownMenuItem>
-                        )}
-                        {isTutor && (
-                          <DropdownMenuItem
-                            onClick={() => router.push('/profile?tab=dashboard')}
-                            className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
-                          >
-                            <LayoutDashboard className="h-4 w-4 mr-2" />
-                            Dashboard
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem

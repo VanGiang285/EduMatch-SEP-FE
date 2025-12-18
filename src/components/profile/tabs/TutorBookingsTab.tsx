@@ -27,6 +27,9 @@ import { toast } from 'sonner';
 import { useLearnerProfiles } from '@/hooks/useLearnerProfiles';
 import { useTutorProfiles } from '@/hooks/useTutorProfiles';
 import { useBookings } from '@/hooks/useBookings';
+import { useChatContext } from '@/contexts/ChatContext';
+import { useAuth as useAuthContext } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ClassDetail } from './ClassDetail';
 import { Label } from '@/components/ui/form/label';
@@ -112,7 +115,10 @@ const NextSessionDisplay = ({ booking, tutorEmail }: { booking: BookingDto; tuto
 };
 
 export function TutorBookingsTab() {
+  const router = useRouter();
   const { user } = useAuth();
+  const { isAuthenticated } = useAuthContext();
+  const { openChatWithLearner } = useChatContext();
   const {
     bookings,
     loading,
@@ -252,6 +258,31 @@ export function TutorBookingsTab() {
   const handleBackToList = () => {
     setSelectedBookingId(null);
     setSelectedBooking(null);
+  };
+
+  const handleOpenChatWithLearner = async (booking: BookingDto, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+
+    if (!isAuthenticated) {
+      toast.warning(
+        'Vui lòng đăng nhập',
+        'Bạn cần đăng nhập để nhắn tin với học viên.'
+      );
+      router.push('/login');
+      return;
+    }
+
+    const learnerEmail = booking.learnerEmail;
+    const currentTutorId = tutorId || user?.id;
+
+    if (!learnerEmail || !currentTutorId) {
+      toast.error('Không tìm thấy thông tin học viên hoặc gia sư để nhắn tin.');
+      return;
+    }
+
+    await openChatWithLearner(currentTutorId, learnerEmail);
   };
 
   // Tính toán counts cho từng trạng thái (memo hóa)
@@ -800,9 +831,7 @@ export function TutorBookingsTab() {
                         <Button
                           variant="outline"
                           className="flex-1 min-w-[140px] border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
+                          onClick={(e) => handleOpenChatWithLearner(booking, e)}
                         >
                           <MessageCircle className="w-4 h-4 mr-2" />
                           Nhắn tin với học viên

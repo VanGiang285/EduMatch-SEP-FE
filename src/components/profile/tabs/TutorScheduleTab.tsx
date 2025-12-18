@@ -15,6 +15,9 @@ import { useBookings } from '@/hooks/useBookings';
 import { useLearnerProfiles } from '@/hooks/useLearnerProfiles';
 import { useSchedules } from '@/hooks/useSchedules';
 import { useTutorAvailability } from '@/hooks/useTutorAvailability';
+import { useChatContext } from '@/contexts/ChatContext';
+import { useAuth as useAuthContext } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/feedback/dialog';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -29,7 +32,10 @@ import {
 } from '@/components/ui/form/select';
 
 export function TutorScheduleTab() {
+  const router = useRouter();
   const { user } = useAuth();
+  const { isAuthenticated } = useAuthContext();
+  const { openChatWithLearner } = useChatContext();
   const { getBooking, loadBookingDetails } = useBookings();
   const { getLearnerProfile, loadLearnerProfiles } = useLearnerProfiles();
   const { schedules, loading, loadSchedulesByTutorEmail } = useSchedules();
@@ -404,6 +410,35 @@ export function TutorScheduleTab() {
     ? getSessionsForDate(selectedDate.day, selectedDate.month, selectedDate.year)
     : [];
 
+  const handleOpenChat = useCallback(async (schedule: ScheduleDto, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+
+    if (!isAuthenticated) {
+      toast.warning('Vui lòng đăng nhập', { description: 'Bạn cần đăng nhập để nhắn tin với học viên.' });
+      router.push('/login');
+      return;
+    }
+
+    const booking = getBooking(schedule.bookingId, schedule.booking);
+    const learnerEmail = booking?.learnerEmail;
+    const tutorSubject = booking?.tutorSubject;
+    const tutorId = tutorSubject?.tutor?.id || tutorSubject?.tutorId || user?.id;
+
+    if (!tutorId || !learnerEmail) {
+      toast.error('Không tìm thấy thông tin học viên hoặc gia sư để nhắn tin.');
+      return;
+    }
+
+    try {
+      await openChatWithLearner(tutorId, learnerEmail);
+    } catch (error) {
+      console.error('Error opening chat:', error);
+      toast.error('Không thể mở chat. Vui lòng thử lại.');
+    }
+  }, [isAuthenticated, getBooking, openChatWithLearner, router, user?.id]);
+
   // Hàm hủy lịch dạy không còn được sử dụng vì đã tắt chức năng hủy lịch theo yêu cầu
 
   if (loading) {
@@ -593,6 +628,7 @@ export function TutorScheduleTab() {
                           variant="outline"
                           size="lg"
                           className="min-w-[140px] border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                          onClick={(e) => handleOpenChat(schedule, e)}
                         >
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Nhắn tin

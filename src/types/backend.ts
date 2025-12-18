@@ -860,6 +860,18 @@ export interface TutorRatingSummary {
   updatedAt: string;
 }
 
+// ==================== TUTOR DASHBOARD ====================
+
+export interface TutorMonthlyEarningDto {
+  month: number;
+  year: number;
+  earning?: number;
+  totalEarnings?: number;
+  totalBookings?: number;
+  completedBookings?: number;
+  cancelledBookings?: number;
+}
+
 // ==================== SEARCH & FILTER ====================
 
 export interface TutorFilterDto {
