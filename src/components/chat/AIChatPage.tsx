@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/basic/button";
 import { Input } from "@/components/ui/form/input";
 import { Send, Loader2, Sparkles, Bot, Plus, MessageSquare, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCustomToast } from "@/hooks/useCustomToast";
+import { toast } from 'sonner';
 import { EduAIRobot } from "./EduAIRobot";
 import { AIChatbotService } from "@/services/aiChatbotService";
 import { ChatSessionDto, ChatMessageDto, ChatSuggestionTutorDto } from "@/types/backend";
@@ -89,8 +89,7 @@ const extractMessageText = (raw?: string | null): string | undefined => {
 
 export function AIChatPage() {
   const { user, isAuthenticated } = useAuth();
-  const { showError, showSuccess } = useCustomToast();
-  const router = useRouter();
+    const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -187,7 +186,7 @@ export function AIChatPage() {
       }
     } catch (error) {
       console.error("Error loading chat history:", error);
-      showError("Lỗi", "Không thể tải lịch sử chat");
+      toast.error('Không thể tải lịch sử chat');
       setMessages([]);
     } finally {
       setLoadingHistory(false);
@@ -196,7 +195,7 @@ export function AIChatPage() {
 
   const handleCreateSession = async () => {
     if (!isAuthenticated) {
-      showError("Lỗi", "Vui lòng đăng nhập để tạo session mới");
+      toast.error('Vui lòng đăng nhập để tạo session mới');
       return;
     }
     setIsCreatingSession(true);
@@ -208,13 +207,13 @@ export function AIChatPage() {
         setMessages([]);
         setMessageText("");
         await loadSessions();
-        showSuccess("Thành công", "Đã tạo cuộc trò chuyện mới");
+        toast.success('Đã tạo cuộc trò chuyện mới');
       } else {
-        showError("Lỗi", response.message || "Không thể tạo session mới");
+        toast.error("Lỗi", response.message || "Không thể tạo session mới");
       }
     } catch (error) {
       console.error("Error creating session:", error);
-      showError("Lỗi", "Không thể tạo session mới");
+      toast.error('Không thể tạo session mới');
     } finally {
       setIsCreatingSession(false);
     }
@@ -239,13 +238,13 @@ export function AIChatPage() {
           setMessageText("");
         }
         await loadSessions();
-        showSuccess("Thành công", "Đã xóa session");
+        toast.success('Đã xóa session');
       } else {
-        showError("Lỗi", response.message || "Không thể xóa session");
+        toast.error("Lỗi", response.message || "Không thể xóa session");
       }
     } catch (error) {
       console.error("Error deleting session:", error);
-      showError("Lỗi", "Không thể xóa session");
+      toast.error('Không thể xóa session');
     } finally {
       setIsDeletingSession(null);
     }
@@ -306,7 +305,7 @@ export function AIChatPage() {
       }
     } catch (error: any) {
       console.error("Failed to get AI response:", error);
-      showError("Lỗi", error.message || "Không thể nhận phản hồi từ AI. Vui lòng thử lại.");
+      toast.error("Lỗi", error.message || "Không thể nhận phản hồi từ AI. Vui lòng thử lại.");
       setMessages((prev) => prev.filter((msg) => msg.id !== userMessage.id));
     } finally {
       setIsTyping(false);
@@ -320,7 +319,7 @@ export function AIChatPage() {
       setCurrentSessionId(null);
       setMessages([]);
       setMessageText("");
-      showSuccess("Thành công", "Đã tạo cuộc trò chuyện mới");
+      toast.success('Đã tạo cuộc trò chuyện mới');
     }
   };
 

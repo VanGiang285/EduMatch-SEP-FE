@@ -27,11 +27,11 @@ import {
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
 import { Label } from '@/components/ui/form/label';
-import { Search, Eye, Loader2, ArrowUpDown, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Eye, Loader2, ArrowUpDown, CheckCircle, XCircle, FileText } from 'lucide-react';
 import { BookingRefundRequestService } from '@/services';
 import { BookingRefundRequestDto } from '@/types/backend';
 import { BookingRefundRequestStatus, EnumHelpers } from '@/types/enums';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { formatCurrency } from '@/data/mockBusinessAdminData';
 import {
   Select,
@@ -75,8 +75,7 @@ const getStatusColor = (status: BookingRefundRequestStatus | string | number | n
 };
 
 export function ManageRefundRequests() {
-  const { showSuccess, showError } = useCustomToast();
-  const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingRefundRequestStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRequest, setSelectedRequest] = useState<BookingRefundRequestDto | null>(null);
@@ -119,7 +118,7 @@ export function ManageRefundRequests() {
       }
     } catch (error) {
       console.error('Error fetching requests:', error);
-      showError('Lỗi', 'Không thể tải danh sách yêu cầu hoàn tiền');
+      toast.error('Không thể tải danh sách yêu cầu hoàn tiền');
       setRequests([]);
     } finally {
       setLoading(false);
@@ -187,11 +186,11 @@ export function ManageRefundRequests() {
         setSelectedRequest(response.data);
         setShowDetailDialog(true);
       } else {
-        showError('Lỗi', 'Không thể tải chi tiết yêu cầu hoàn tiền');
+        toast.error('Không thể tải chi tiết yêu cầu hoàn tiền');
       }
     } catch (error) {
       console.error('Error fetching request detail:', error);
-      showError('Lỗi', 'Không thể tải chi tiết yêu cầu hoàn tiền');
+      toast.error('Không thể tải chi tiết yêu cầu hoàn tiền');
     }
   };
 
@@ -200,15 +199,15 @@ export function ManageRefundRequests() {
       setIsProcessing(true);
       const response = await BookingRefundRequestService.updateStatus(requestId, status);
       if (response.success) {
-        showSuccess('Thành công', `Đã ${status === BookingRefundRequestStatus.Approved ? 'duyệt' : 'từ chối'} yêu cầu hoàn tiền`);
+        toast.success('Thành công', `Đã ${status === BookingRefundRequestStatus.Approved ? 'duyệt' : 'từ chối'} yêu cầu hoàn tiền`);
         setShowDetailDialog(false);
         fetchRequests();
       } else {
-        showError('Lỗi', response.message || 'Không thể cập nhật trạng thái');
+        toast.error('Lỗi', response.message || 'Không thể cập nhật trạng thái');
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      showError('Lỗi', 'Không thể cập nhật trạng thái');
+      toast.error('Không thể cập nhật trạng thái');
     } finally {
       setIsProcessing(false);
     }
@@ -221,7 +220,7 @@ export function ManageRefundRequests() {
         <p className="text-gray-600 mt-1">Duyệt và quản lý các yêu cầu hoàn tiền từ học viên</p>
       </div>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -267,11 +266,14 @@ export function ManageRefundRequests() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách yêu cầu hoàn tiền</CardTitle>
-            <Badge variant="outline">{filteredRequests.length} yêu cầu</Badge>
+            <div className="flex items-center gap-2 text-gray-700">
+              <FileText className="h-4 w-4" />
+              <span className="font-medium">{filteredRequests.length} yêu cầu</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -376,7 +378,7 @@ export function ManageRefundRequests() {
                               )}
                             </TableCell>
                             <TableCell className="text-left">
-                              <Badge className={getStatusColor(req.status)}>
+                              <Badge className={`${getStatusColor(req.status)} border`}>
                                 {getStatusLabel(req.status)}
                               </Badge>
                             </TableCell>
@@ -440,7 +442,7 @@ export function ManageRefundRequests() {
       </Card>
 
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Chi tiết yêu cầu hoàn tiền</DialogTitle>
           </DialogHeader>

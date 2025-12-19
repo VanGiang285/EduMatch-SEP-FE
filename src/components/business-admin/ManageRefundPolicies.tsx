@@ -36,11 +36,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/form/select';
-import { Search, Eye, Plus, Edit, Loader2, ArrowUpDown, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Eye, Plus, Edit, Loader2, ArrowUpDown, CheckCircle, XCircle, FileText } from 'lucide-react';
 import { RefundPolicyService } from '@/services';
 import { RefundPolicyDto } from '@/types/backend';
 import { RefundPolicyCreateRequest, RefundPolicyUpdateRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -48,8 +48,7 @@ type SortField = 'id' | 'name' | 'refundPercentage' | 'createdAt';
 type SortOrder = 'asc' | 'desc';
 
 export function ManageRefundPolicies() {
-  const { showSuccess, showError } = useCustomToast();
-  const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedPolicy, setSelectedPolicy] = useState<RefundPolicyDto | null>(null);
@@ -98,7 +97,7 @@ export function ManageRefundPolicies() {
       }
     } catch (error) {
       console.error('Error fetching policies:', error);
-      showError('Lỗi', 'Không thể tải danh sách chính sách hoàn tiền');
+      toast.error('Không thể tải danh sách chính sách hoàn tiền');
       setPolicies([]);
     } finally {
       setLoading(false);
@@ -179,11 +178,11 @@ export function ManageRefundPolicies() {
 
   const handleSubmitCreate = async () => {
     if (!formData.name.trim()) {
-      showError('Lỗi', 'Vui lòng nhập tên chính sách');
+      toast.error('Vui lòng nhập tên chính sách');
       return;
     }
     if (formData.refundPercentage < 0 || formData.refundPercentage > 100) {
-      showError('Lỗi', 'Phần trăm hoàn tiền phải từ 0 đến 100');
+      toast.error('Phần trăm hoàn tiền phải từ 0 đến 100');
       return;
     }
 
@@ -196,15 +195,15 @@ export function ManageRefundPolicies() {
       };
       const response = await RefundPolicyService.create(request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã tạo chính sách hoàn tiền mới');
+        toast.success('Đã tạo chính sách hoàn tiền mới');
         setShowCreateDialog(false);
         fetchPolicies();
       } else {
-        showError('Lỗi', response.message || 'Không thể tạo chính sách hoàn tiền');
+        toast.error('Lỗi', response.message || 'Không thể tạo chính sách hoàn tiền');
       }
     } catch (error) {
       console.error('Error creating policy:', error);
-      showError('Lỗi', 'Không thể tạo chính sách hoàn tiền');
+      toast.error('Không thể tạo chính sách hoàn tiền');
     } finally {
       setIsProcessing(false);
     }
@@ -213,11 +212,11 @@ export function ManageRefundPolicies() {
   const handleSubmitUpdate = async () => {
     if (!selectedPolicy) return;
     if (!formData.name.trim()) {
-      showError('Lỗi', 'Vui lòng nhập tên chính sách');
+      toast.error('Vui lòng nhập tên chính sách');
       return;
     }
     if (formData.refundPercentage < 0 || formData.refundPercentage > 100) {
-      showError('Lỗi', 'Phần trăm hoàn tiền phải từ 0 đến 100');
+      toast.error('Phần trăm hoàn tiền phải từ 0 đến 100');
       return;
     }
 
@@ -231,15 +230,15 @@ export function ManageRefundPolicies() {
       };
       const response = await RefundPolicyService.update(request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã cập nhật chính sách hoàn tiền');
+        toast.success('Đã cập nhật chính sách hoàn tiền');
         setShowEditDialog(false);
         fetchPolicies();
       } else {
-        showError('Lỗi', response.message || 'Không thể cập nhật chính sách hoàn tiền');
+        toast.error('Lỗi', response.message || 'Không thể cập nhật chính sách hoàn tiền');
       }
     } catch (error) {
       console.error('Error updating policy:', error);
-      showError('Lỗi', 'Không thể cập nhật chính sách hoàn tiền');
+      toast.error('Không thể cập nhật chính sách hoàn tiền');
     } finally {
       setIsProcessing(false);
     }
@@ -250,14 +249,14 @@ export function ManageRefundPolicies() {
       setIsProcessing(true);
       const response = await RefundPolicyService.updateIsActive(policy.id, !policy.isActive);
       if (response.success) {
-        showSuccess('Thành công', `Đã ${policy.isActive ? 'vô hiệu hóa' : 'kích hoạt'} chính sách hoàn tiền`);
+        toast.success('Thành công', `Đã ${policy.isActive ? 'vô hiệu hóa' : 'kích hoạt'} chính sách hoàn tiền`);
         fetchPolicies();
       } else {
-        showError('Lỗi', response.message || 'Không thể cập nhật trạng thái');
+        toast.error('Lỗi', response.message || 'Không thể cập nhật trạng thái');
       }
     } catch (error) {
       console.error('Error toggling active:', error);
-      showError('Lỗi', 'Không thể cập nhật trạng thái');
+      toast.error('Không thể cập nhật trạng thái');
     } finally {
       setIsProcessing(false);
     }
@@ -270,7 +269,7 @@ export function ManageRefundPolicies() {
         <p className="text-gray-600 mt-1">Quản lý các chính sách hoàn tiền cho học viên</p>
       </div>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -309,11 +308,14 @@ export function ManageRefundPolicies() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách chính sách hoàn tiền</CardTitle>
-            <Badge variant="outline">{filteredPolicies.length} chính sách</Badge>
+            <div className="flex items-center gap-2 text-gray-700">
+              <FileText className="h-4 w-4" />
+              <span className="font-medium">{filteredPolicies.length} chính sách</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -456,7 +458,7 @@ export function ManageRefundPolicies() {
       </Card>
 
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-2xl" aria-describedby={undefined}>
+        <DialogContent className="max-w-2xl border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Chi tiết chính sách hoàn tiền</DialogTitle>
           </DialogHeader>
@@ -498,7 +500,7 @@ export function ManageRefundPolicies() {
       </Dialog>
 
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl" aria-describedby={undefined}>
+        <DialogContent className="max-w-2xl border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Thêm chính sách hoàn tiền mới</DialogTitle>
           </DialogHeader>
@@ -539,7 +541,7 @@ export function ManageRefundPolicies() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
               Hủy
             </Button>
             <Button onClick={handleSubmitCreate} disabled={isProcessing} className="bg-[#257180] hover:bg-[#257180]/90 text-white">
@@ -551,7 +553,7 @@ export function ManageRefundPolicies() {
       </Dialog>
 
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl" aria-describedby={undefined}>
+        <DialogContent className="max-w-2xl border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Cập nhật chính sách hoàn tiền</DialogTitle>
           </DialogHeader>
@@ -592,7 +594,7 @@ export function ManageRefundPolicies() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)} className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
+            <Button variant="outline" onClick={() => setShowEditDialog(false)} className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
               Hủy
             </Button>
             <Button onClick={handleSubmitUpdate} disabled={isProcessing} className="bg-[#257180] hover:bg-[#257180]/90 text-white">

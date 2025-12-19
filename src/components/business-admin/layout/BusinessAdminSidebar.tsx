@@ -59,8 +59,6 @@ export function BusinessAdminSidebar({
     { id: 'tutor-applications', label: 'Đơn đăng ký Gia sư', icon: FileText, path: '/business-admin/applications' },
     { id: 'class-requests', label: 'Yêu cầu mở lớp', icon: ClipboardList, path: '/business-admin/class-requests' },
     { id: 'reports', label: 'Báo cáo', icon: AlertCircle, path: '/business-admin/reports' },
-    { id: 'refund-requests', label: 'Yêu cầu hoàn tiền', icon: Receipt, path: '/business-admin/refund-requests' },
-    { id: 'refund-policies', label: 'Chính sách hoàn tiền', icon: CreditCard, path: '/business-admin/refund-policies' },
     { id: 'wallet', label: 'Ví hệ thống', icon: Wallet, path: '/business-admin/wallet' },
   ];
 

@@ -40,13 +40,14 @@ import {
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
 import { Label } from '@/components/ui/form/label';
-import { Search, Plus, Eye, Loader2, ArrowUpDown, X, Edit, Shield } from 'lucide-react';
-import { ReportService, TutorService, MediaService } from '@/services';
+import { Search, Plus, Eye, Loader2, ArrowUpDown, X, Edit, Shield, AlertTriangle, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { ReportService, TutorService, MediaService, ScheduleService } from '@/services';
 import { ReportListItemDto, ReportFullDetailDto, TutorProfileDto } from '@/types/backend';
 import { ReportStatus, MediaType, ReportEvidenceType, TutorStatus } from '@/types/enums';
 import { ReportCreateRequest, ReportUpdateByLearnerRequest, ReportDefenseCreateRequest, BasicEvidenceRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Select,
   SelectContent,
@@ -136,16 +137,17 @@ const getStatusLabel = (status: ReportStatus | number | string): string => {
   }
 };
 
+// Hệ thống màu badge trạng thái theo palette chung (primary #257180, accent #FD8B51)
 const getStatusColor = (status: ReportStatus | number | string): string => {
   let statusNum: number;
   if (typeof status === 'string') {
     statusNum = parseInt(status, 10);
     if (isNaN(statusNum)) {
-      if (status === 'Pending') return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      if (status === 'UnderReview') return 'bg-blue-100 text-blue-800 border-blue-200';
-      if (status === 'Resolved') return 'bg-green-100 text-green-800 border-green-200';
-      if (status === 'Dismissed') return 'bg-red-100 text-red-800 border-red-200';
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      if (status === 'Pending') return 'bg-amber-50 text-amber-800 border-amber-200';
+      if (status === 'UnderReview') return 'bg-blue-50 text-blue-800 border-blue-200';
+      if (status === 'Resolved') return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+      if (status === 'Dismissed') return 'bg-red-50 text-red-800 border-red-200';
+      return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   } else if (typeof status === 'number') {
     statusNum = status;
@@ -156,29 +158,60 @@ const getStatusColor = (status: ReportStatus | number | string): string => {
   switch (statusNum) {
     case ReportStatus.Pending:
     case 0:
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      return 'bg-amber-50 text-amber-800 border-amber-200';
     case ReportStatus.UnderReview:
     case 1:
-      return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'bg-blue-50 text-blue-800 border-blue-200';
     case ReportStatus.Resolved:
     case 2:
-      return 'bg-green-100 text-green-800 border-green-200';
+      return 'bg-emerald-50 text-emerald-800 border-emerald-200';
     case ReportStatus.Dismissed:
     case 3:
-      return 'bg-red-100 text-red-800 border-red-200';
+      return 'bg-red-50 text-red-800 border-red-200';
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return 'bg-gray-50 text-gray-700 border-gray-200';
+  }
+};
+
+const getStatusIcon = (status: ReportStatus | number | string) => {
+  let statusNum: number;
+  if (typeof status === 'string') {
+    statusNum = parseInt(status, 10);
+    if (isNaN(statusNum)) {
+      if (status === 'Pending') return <Clock className="h-4 w-4 text-yellow-600" />;
+      if (status === 'UnderReview') return <Shield className="h-4 w-4 text-blue-600" />;
+      if (status === 'Resolved') return <CheckCircle className="h-4 w-4 text-green-600" />;
+      if (status === 'Dismissed') return <XCircle className="h-4 w-4 text-red-600" />;
+      return <AlertTriangle className="h-4 w-4 text-gray-500" />;
+    }
+  } else if (typeof status === 'number') {
+    statusNum = status;
+  } else {
+    statusNum = status as number;
+  }
+
+  switch (statusNum) {
+    case ReportStatus.Pending:
+    case 0:
+      return <Clock className="h-4 w-4 text-yellow-600" />;
+    case ReportStatus.UnderReview:
+    case 1:
+      return <Shield className="h-4 w-4 text-blue-600" />;
+    case ReportStatus.Resolved:
+    case 2:
+      return <CheckCircle className="h-4 w-4 text-green-600" />;
+    case ReportStatus.Dismissed:
+    case 3:
+      return <XCircle className="h-4 w-4 text-red-600" />;
+    default:
+      return <AlertTriangle className="h-4 w-4 text-gray-500" />;
   }
 };
 
 export function ReportsTab() {
   const { user } = useAuth();
-  const { showSuccess, showError } = useCustomToast();
-  const showErrorRef = React.useRef(showError);
-
-  React.useEffect(() => {
-    showErrorRef.current = showError;
-  }, [showError]);
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReportStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -194,6 +227,7 @@ export function ReportsTab() {
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [linkedScheduleId, setLinkedScheduleId] = useState<number | null>(null);
 
   const isLearner = user?.role === 'learner';
   const isTutor = user?.role === 'tutor';
@@ -203,6 +237,30 @@ export function ReportsTab() {
     reason: '',
     evidences: [] as BasicEvidenceRequest[],
   });
+
+  // Open create-report dialog from other screens (ex: ScheduleTab)
+  useEffect(() => {
+    const create = searchParams?.get('createReport');
+    if (create !== '1') return;
+
+    const reportedEmail = searchParams?.get('reportedEmail') || '';
+    const scheduleIdParam = searchParams?.get('scheduleId');
+    const scheduleIdNum =
+      scheduleIdParam && !Number.isNaN(Number(scheduleIdParam))
+        ? Number(scheduleIdParam)
+        : null;
+
+    setFormData((prev) => ({
+      ...prev,
+      reportedUserEmail: reportedEmail || prev.reportedUserEmail,
+    }));
+    setLinkedScheduleId(scheduleIdNum);
+    setShowCreateDialog(true);
+
+    // Prevent reopening on subsequent renders
+    router.replace('/profile?tab=reports');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const [defenseFormData, setDefenseFormData] = useState({
     note: '',
@@ -239,7 +297,7 @@ export function ReportsTab() {
       }
     } catch (error) {
       console.error('Error fetching reports:', error);
-      showErrorRef.current('Lỗi', 'Không thể tải danh sách báo cáo');
+      toast.error('Không thể tải danh sách báo cáo');
       setReports([]);
     } finally {
       setLoading(false);
@@ -261,7 +319,7 @@ export function ReportsTab() {
       }
     } catch (error) {
       console.error('Error fetching tutors:', error);
-      showError('Lỗi', 'Không thể tải danh sách gia sư');
+      toast.error('Không thể tải danh sách gia sư');
       setTutors([]);
     } finally {
       setLoadingTutors(false);
@@ -371,11 +429,11 @@ export function ReportsTab() {
         setCanSubmitDefense(!!canDefenseResponse.data && canDefenseResponse.success);
         setShowDetailDialog(true);
       } else {
-        showError('Lỗi', 'Không thể tải chi tiết báo cáo');
+        toast.error('Không thể tải chi tiết báo cáo');
       }
     } catch (error) {
       console.error('Error fetching report detail:', error);
-      showError('Lỗi', 'Không thể tải chi tiết báo cáo');
+      toast.error('Không thể tải chi tiết báo cáo');
     }
   };
 
@@ -409,12 +467,12 @@ export function ReportsTab() {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
       if (!isImage && !isVideo) {
-        showError('Lỗi', 'Chỉ chấp nhận file ảnh hoặc video');
+        toast.error('Chỉ chấp nhận file ảnh hoặc video');
         return false;
       }
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        showError('Lỗi', `File ${file.name} vượt quá 10MB`);
+        toast.error(`File ${file.name} vượt quá 10MB`);
         return false;
       }
       return true;
@@ -460,10 +518,10 @@ export function ReportsTab() {
           })),
         ],
       }));
-      showSuccess('Thành công', `Đã upload ${results.length} file thành công`);
+      toast.success(`Đã upload ${results.length} file thành công`);
     } catch (error: any) {
       console.error('Error uploading files:', error);
-      showError('Lỗi', error.message || 'Không thể upload file');
+      toast.error(error.message || 'Không thể upload file');
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -480,12 +538,12 @@ export function ReportsTab() {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
       if (!isImage && !isVideo) {
-        showError('Lỗi', 'Chỉ chấp nhận file ảnh hoặc video');
+        toast.error('Chỉ chấp nhận file ảnh hoặc video');
         return false;
       }
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        showError('Lỗi', `File ${file.name} vượt quá 10MB`);
+        toast.error(`File ${file.name} vượt quá 10MB`);
         return false;
       }
       return true;
@@ -502,17 +560,29 @@ export function ReportsTab() {
           ownerEmail: user.email!,
           mediaType: mediaType as 'Image' | 'Video',
         });
-        
-        const uploadResult = response.data?.data;
-        if (response.success && uploadResult?.secureUrl) {
+
+        const uploadPayload = response.data as any;
+        const secureUrl =
+          uploadPayload?.secureUrl ?? uploadPayload?.data?.secureUrl;
+        const publicId =
+          uploadPayload?.publicId ?? uploadPayload?.data?.publicId;
+
+        if (secureUrl) {
+          const mediaTypeNum =
+            mediaType === 'Image' ? MediaType.Image : MediaType.Video;
           return {
-            url: uploadResult.secureUrl,
-            publicId: uploadResult.publicId,
-            mediaType: file.type.startsWith('image/') ? MediaType.Image : MediaType.Video,
+            url: secureUrl,
+            publicId: publicId || undefined,
+            mediaType: mediaTypeNum,
             file,
           };
         } else {
-          throw new Error(`Không thể upload file ${file.name}`);
+          const uploadErrorMessage =
+            (typeof uploadPayload?.message === 'string' &&
+              uploadPayload.message) ||
+            (typeof uploadPayload?.error === 'string' && uploadPayload.error) ||
+            `Không thể upload file ${file.name}`;
+          throw new Error(uploadErrorMessage);
         }
       });
 
@@ -531,10 +601,10 @@ export function ReportsTab() {
           })),
         ],
       }));
-      showSuccess('Thành công', `Đã upload ${results.length} file thành công`);
+      toast.success(`Đã upload ${results.length} file thành công`);
     } catch (error: any) {
       console.error('Error uploading files:', error);
-      showError('Lỗi', error.message || 'Không thể upload file');
+      toast.error(error.message || 'Không thể upload file');
     } finally {
       setUploadingDefense(false);
       e.target.value = '';
@@ -561,11 +631,11 @@ export function ReportsTab() {
 
   const handleSubmitCreate = async () => {
     if (!user?.email) {
-      showError('Lỗi', 'Vui lòng đăng nhập');
+      toast.error('Vui lòng đăng nhập');
       return;
     }
     if (!formData.reportedUserEmail || !formData.reason.trim()) {
-      showError('Lỗi', 'Vui lòng điền đầy đủ thông tin');
+      toast.error('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
@@ -584,18 +654,27 @@ export function ReportsTab() {
       };
       const response = await ReportService.createReport(request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã tạo báo cáo');
+        toast.success('Đã tạo báo cáo');
+        // If opened from a schedule, link schedule to report (mark on-hold/reported)
+        if (linkedScheduleId && response.data?.id) {
+          try {
+            await ScheduleService.reportSchedule(linkedScheduleId, response.data.id);
+          } catch {
+            // Don't block success UI if linking fails; user can retry from schedule if needed
+          }
+        }
         setShowCreateDialog(false);
         setFormData({ reportedUserEmail: '', reason: '', evidences: [] });
         setUploadingFiles([]);
         setUploadedUrls([]);
+        setLinkedScheduleId(null);
         fetchReports();
       } else {
-        showError('Lỗi', response.message || 'Không thể tạo báo cáo');
+        toast.error(response.message || 'Không thể tạo báo cáo');
       }
     } catch (error) {
       console.error('Error creating report:', error);
-      showError('Lỗi', 'Không thể tạo báo cáo');
+      toast.error('Không thể tạo báo cáo');
     } finally {
       setIsProcessing(false);
     }
@@ -603,7 +682,7 @@ export function ReportsTab() {
 
   const handleConfirmUpdate = () => {
     if (!formData.reason.trim()) {
-      showError('Lỗi', 'Vui lòng điền lý do báo cáo');
+      toast.error('Vui lòng điền lý do báo cáo');
       return;
     }
     setShowConfirmUpdate(true);
@@ -612,7 +691,7 @@ export function ReportsTab() {
   const handleSubmitUpdate = async () => {
     if (!selectedReport) return;
     if (!formData.reason.trim()) {
-      showError('Lỗi', 'Vui lòng điền lý do báo cáo');
+      toast.error('Vui lòng điền lý do báo cáo');
       return;
     }
 
@@ -636,7 +715,7 @@ export function ReportsTab() {
             });
           }
         }
-        showSuccess('Thành công', 'Đã cập nhật báo cáo');
+        toast.success('Đã cập nhật báo cáo');
         setShowUpdateDialog(false);
         setFormData({ reportedUserEmail: '', reason: '', evidences: [] });
         setUploadingFiles([]);
@@ -649,11 +728,11 @@ export function ReportsTab() {
           }
         }
       } else {
-        showError('Lỗi', response.message || 'Không thể cập nhật báo cáo');
+        toast.error(response.message || 'Không thể cập nhật báo cáo');
       }
     } catch (error) {
       console.error('Error updating report:', error);
-      showError('Lỗi', 'Không thể cập nhật báo cáo');
+      toast.error('Không thể cập nhật báo cáo');
     } finally {
       setIsProcessing(false);
     }
@@ -670,15 +749,15 @@ export function ReportsTab() {
       setIsProcessing(true);
       const response = await ReportService.cancelLearnerReport(selectedReport.id);
       if (response.success) {
-        showSuccess('Thành công', 'Đã hủy báo cáo');
+        toast.success('Đã hủy báo cáo');
         setShowDetailDialog(false);
         fetchReports();
       } else {
-        showError('Lỗi', response.message || 'Không thể hủy báo cáo');
+        toast.error(response.message || 'Không thể hủy báo cáo');
       }
     } catch (error) {
       console.error('Error canceling report:', error);
-      showError('Lỗi', 'Không thể hủy báo cáo');
+      toast.error('Không thể hủy báo cáo');
     } finally {
       setIsProcessing(false);
     }
@@ -691,7 +770,7 @@ export function ReportsTab() {
   const handleSubmitDefense = async () => {
     if (!selectedReport) return;
     if (!defenseFormData.note.trim()) {
-      showError('Lỗi', 'Vui lòng điền nội dung kháng cáo');
+      toast.error('Vui lòng điền nội dung kháng cáo');
       return;
     }
 
@@ -710,7 +789,7 @@ export function ReportsTab() {
       };
       const response = await ReportService.addDefense(selectedReport.id, request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã gửi kháng cáo');
+        toast.success('Đã gửi kháng cáo');
         setShowDefenseDialog(false);
         setDefenseFormData({ note: '', evidences: [] });
         setUploadingDefenseFiles([]);
@@ -809,11 +888,11 @@ export function ReportsTab() {
         }
         fetchReports();
       } else {
-        showError('Lỗi', response.message || 'Không thể gửi kháng cáo');
+        toast.error(response.message || 'Không thể gửi kháng cáo');
       }
     } catch (error) {
       console.error('Error submitting defense:', error);
-      showError('Lỗi', 'Không thể gửi kháng cáo');
+      toast.error('Không thể gửi kháng cáo');
     } finally {
       setIsProcessing(false);
     }
@@ -823,7 +902,7 @@ export function ReportsTab() {
     try {
       const response = await ReportService.deleteEvidence(reportId, evidenceId);
       if (response.success) {
-        showSuccess('Thành công', 'Đã xóa bằng chứng');
+        toast.success('Đã xóa bằng chứng');
         if (selectedReport) {
           const detailResponse = await ReportService.getFullReportDetail(selectedReport.id);
           if (detailResponse.success && detailResponse.data) {
@@ -839,11 +918,11 @@ export function ReportsTab() {
           }
         }
       } else {
-        showError('Lỗi', response.message || 'Không thể xóa bằng chứng');
+        toast.error(response.message || 'Không thể xóa bằng chứng');
       }
     } catch (error) {
       console.error('Error deleting evidence:', error);
-      showError('Lỗi', 'Không thể xóa bằng chứng');
+      toast.error('Không thể xóa bằng chứng');
     }
   };
 
@@ -922,18 +1001,9 @@ export function ReportsTab() {
             {isLearner ? 'Quản lý các báo cáo của bạn' : 'Danh sách báo cáo liên quan đến bạn'}
           </p>
         </div>
-        {isLearner && (
-          <Button
-            onClick={handleCreate}
-            className="bg-[#257180] hover:bg-[#257180]/90 text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Tạo báo cáo mới
-          </Button>
-        )}
       </div>
 
-      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+      <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -974,11 +1044,14 @@ export function ReportsTab() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+      <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách báo cáo</CardTitle>
-            <Badge variant="outline">{filteredReports.length} báo cáo</Badge>
+            <div className="flex items-center gap-2 text-gray-600">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="font-medium">{filteredReports.length} báo cáo</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -1068,9 +1141,9 @@ export function ReportsTab() {
                           <div className="flex items-center gap-2">
                             {isLearner ? (
                               <>
-                                <Avatar className="h-8 w-8">
+                                <Avatar className="h-8 w-8 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] shadow-sm">
                                   <AvatarImage src={report.reportedAvatarUrl} alt={report.reportedUserName} />
-                                  <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-xs">
+                                  <AvatarFallback className="rounded-lg bg-[#F2E5BF] text-[#257180] text-xs font-semibold">
                                     {report.reportedUserName?.[0]?.toUpperCase() || 'U'}
                                   </AvatarFallback>
                                 </Avatar>
@@ -1081,9 +1154,9 @@ export function ReportsTab() {
                               </>
                             ) : (
                               <>
-                                <Avatar className="h-8 w-8">
+                                <Avatar className="h-8 w-8 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] shadow-sm">
                                   <AvatarImage src={report.reporterAvatarUrl} alt={report.reporterName} />
-                                  <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-xs">
+                                  <AvatarFallback className="rounded-lg bg-[#F2E5BF] text-[#257180] text-xs font-semibold">
                                     {report.reporterName?.[0]?.toUpperCase() || 'U'}
                                   </AvatarFallback>
                                 </Avatar>
@@ -1098,10 +1171,8 @@ export function ReportsTab() {
                         <TableCell className="text-left">
                           <p className="text-sm line-clamp-2">{report.reason}</p>
                         </TableCell>
-                        <TableCell className="text-left">
-                          <Badge className={getStatusColor(report.status)}>
-                            {getStatusLabel(report.status)}
-                          </Badge>
+                        <TableCell className="text-left text-sm font-medium text-gray-800">
+                          {getStatusLabel(report.status)}
                         </TableCell>
                           <TableCell className="text-sm text-gray-600 text-left">
                             {formatDate(report.createdAt)}
@@ -1161,7 +1232,7 @@ export function ReportsTab() {
 
       {showDetailDialog && selectedReport && (
         <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col" aria-describedby={undefined}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col border-gray-300 shadow-lg" aria-describedby={undefined}>
             <DialogHeader className="flex-shrink-0 pb-2">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <DialogTitle className="text-xl font-semibold text-gray-900">Chi tiết báo cáo</DialogTitle>
@@ -1176,7 +1247,7 @@ export function ReportsTab() {
               <div className="flex-1 overflow-y-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2 space-y-4">
-                <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+                <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold text-gray-900">Thông tin cơ bản</CardTitle>
                   </CardHeader>
@@ -1185,9 +1256,9 @@ export function ReportsTab() {
                         <div>
                           <Label className="text-sm text-gray-600">Người báo cáo</Label>
                           <div className="flex items-center gap-3 mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                            <Avatar className="h-10 w-10">
+                            <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] shadow-sm">
                               <AvatarImage src={selectedReport.reporterAvatarUrl} alt={selectedReport.reporterName} />
-                              <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
+                              <AvatarFallback className="rounded-lg bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
                                 {selectedReport.reporterName?.[0]?.toUpperCase() || 'U'}
                               </AvatarFallback>
                             </Avatar>
@@ -1200,9 +1271,9 @@ export function ReportsTab() {
                         <div>
                           <Label className="text-sm text-gray-600">Người bị báo cáo</Label>
                           <div className="flex items-center gap-3 mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                            <Avatar className="h-10 w-10">
+                            <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] shadow-sm">
                               <AvatarImage src={selectedReport.reportedAvatarUrl} alt={selectedReport.reportedUserName} />
-                              <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
+                              <AvatarFallback className="rounded-lg bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
                                 {selectedReport.reportedUserName?.[0]?.toUpperCase() || 'U'}
                               </AvatarFallback>
                             </Avatar>
@@ -1217,11 +1288,9 @@ export function ReportsTab() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label className="text-sm text-gray-600">Trạng thái</Label>
-                          <div className="mt-2">
-                            <Badge className={getStatusColor(selectedReport.status)}>
-                              {getStatusLabel(selectedReport.status)}
-                            </Badge>
-                          </div>
+                          <p className="mt-2 text-sm font-medium text-gray-900">
+                            {getStatusLabel(selectedReport.status)}
+                          </p>
                         </div>
                         <div>
                           <Label className="text-sm text-gray-600">Ngày tạo</Label>
@@ -1231,7 +1300,7 @@ export function ReportsTab() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+                <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold text-gray-900">Lý do báo cáo</CardTitle>
                   </CardHeader>
@@ -1243,7 +1312,7 @@ export function ReportsTab() {
                 </Card>
 
                 {selectedReport.handledByAdminEmail && (
-                  <Card className="border border-red-300 bg-red-50">
+                  <Card className="border border-gray-300 bg-red-50">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base font-semibold text-red-900">
                         Xử lý bởi {selectedReport.handledByAdminEmail}
@@ -1260,7 +1329,7 @@ export function ReportsTab() {
                 )}
 
                 {selectedReport.reporterEvidences && selectedReport.reporterEvidences.length > 0 && (
-                  <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+                  <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base font-semibold text-gray-900">
                         Bằng chứng từ người báo cáo ({selectedReport.reporterEvidences.length})
@@ -1317,9 +1386,9 @@ export function ReportsTab() {
                             {selectedReport.defenses.map((defense) => (
                               <div key={defense.id} className="p-4 bg-white rounded-lg border border-gray-200">
                                 <div className="flex items-center gap-3 mb-3">
-                                  <Avatar className="h-10 w-10">
+                                  <Avatar className="h-10 w-10 rounded-lg border border-[#F2E5BF] bg-[#F2E5BF] text-[#257180] shadow-sm">
                                     <AvatarImage src={tutorAvatars[defense.tutorEmail]} alt={tutorNames[defense.tutorEmail] || defense.tutorEmail} />
-                                    <AvatarFallback className="bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
+                                    <AvatarFallback className="rounded-lg bg-[#F2E5BF] text-[#257180] text-sm font-semibold">
                                       {(tutorNames[defense.tutorEmail] || defense.tutorEmail)[0]?.toUpperCase() || 'T'}
                                     </AvatarFallback>
                                   </Avatar>
@@ -1371,7 +1440,7 @@ export function ReportsTab() {
                         </CardContent>
                       </Card>
                     ) : (
-                      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+                      <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
                         <CardHeader className="pb-3">
                           <CardTitle className="text-base font-semibold text-gray-900">Kháng cáo</CardTitle>
                         </CardHeader>
@@ -1396,7 +1465,7 @@ export function ReportsTab() {
                       }
                     }}
                     disabled={isProcessing}
-                    className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                    className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Thay đổi
@@ -1445,7 +1514,7 @@ export function ReportsTab() {
 
       {previewImage && (
         <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] p-0" aria-describedby={undefined}>
+          <DialogContent className="max-w-4xl max-h-[90vh] p-0 border-gray-300 shadow-lg" aria-describedby={undefined}>
             <div className="relative w-full h-full flex items-center justify-center bg-black/90">
               <img
                 src={previewImage}
@@ -1467,7 +1536,7 @@ export function ReportsTab() {
 
       {showCreateDialog && (
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg">
             <DialogHeader>
               <DialogTitle>Tạo báo cáo mới</DialogTitle>
             </DialogHeader>
@@ -1578,7 +1647,7 @@ export function ReportsTab() {
 
       {showUpdateDialog && selectedReport && (
         <Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg">
             <DialogHeader>
               <DialogTitle>Cập nhật báo cáo</DialogTitle>
             </DialogHeader>
@@ -1709,7 +1778,7 @@ export function ReportsTab() {
 
       {showDefenseDialog && selectedReport && (
         <Dialog open={showDefenseDialog} onOpenChange={setShowDefenseDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg">
             <DialogHeader>
               <DialogTitle>Gửi kháng cáo</DialogTitle>
             </DialogHeader>

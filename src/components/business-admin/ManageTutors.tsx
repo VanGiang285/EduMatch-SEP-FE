@@ -41,7 +41,7 @@ import {
 } from '@/data/mockBusinessAdminData';
 import { TutorService } from '@/services/tutorService';
 import { TutorProfileDto } from '@/types/backend';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { TutorStatus, EnumHelpers, TeachingMode } from '@/types/enums';
 import { UpdateTutorStatusRequest } from '@/types/requests';
 import { LocationService } from '@/services/locationService';
@@ -164,8 +164,7 @@ const mapTutorProfileToUI = (dto: TutorProfileDto): UITutor => {
 };
 
 export function ManageTutors() {
-  const { showSuccess, showError } = useCustomToast();
-  const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [cityFilter, setCityFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -205,11 +204,11 @@ export function ManageTutors() {
           const mappedTutors = response.data.map(mapTutorProfileToUI);
           setTutors(mappedTutors);
         } else {
-          showError('Lỗi', response.message || 'Không thể tải danh sách gia sư');
+          toast.error('Lỗi', response.message || 'Không thể tải danh sách gia sư');
         }
       } catch (error: any) {
         console.error('Error loading tutors:', error);
-        showError('Lỗi', 'Không thể tải danh sách gia sư. Vui lòng thử lại.');
+        toast.error('Không thể tải danh sách gia sư. Vui lòng thử lại.');
       } finally {
         setIsLoading(false);
       }
@@ -307,13 +306,13 @@ export function ManageTutors() {
           setTutors(prev => prev.map(t => 
             t.id === tutor.id ? { ...t, isActive: false, tutorProfile: { ...t.tutorProfile, status: TutorStatus.Rejected } } : t
           ));
-          showSuccess('Thành công', `Đã vô hiệu hóa tài khoản ${tutor.userName}`);
+          toast.success('Thành công', `Đã vô hiệu hóa tài khoản ${tutor.userName}`);
         } else {
-          showError('Lỗi', response.message || 'Không thể vô hiệu hóa tài khoản');
+          toast.error('Lỗi', response.message || 'Không thể vô hiệu hóa tài khoản');
         }
       } catch (error: any) {
         console.error('Error deactivating tutor:', error);
-        showError('Lỗi', 'Không thể vô hiệu hóa tài khoản. Vui lòng thử lại.');
+        toast.error('Không thể vô hiệu hóa tài khoản. Vui lòng thử lại.');
       } finally {
         setIsDeactivating(null);
       }
@@ -329,13 +328,13 @@ export function ManageTutors() {
           setTutors(prev => prev.map(t => 
             t.id === tutor.id ? { ...t, isActive: true, tutorProfile: { ...t.tutorProfile, status: TutorStatus.Approved } } : t
           ));
-          showSuccess('Thành công', `Đã kích hoạt tài khoản ${tutor.userName}`);
+          toast.success('Thành công', `Đã kích hoạt tài khoản ${tutor.userName}`);
         } else {
-          showError('Lỗi', response.message || 'Không thể kích hoạt tài khoản');
+          toast.error('Lỗi', response.message || 'Không thể kích hoạt tài khoản');
         }
       } catch (error: any) {
         console.error('Error activating tutor:', error);
-        showError('Lỗi', 'Không thể kích hoạt tài khoản. Vui lòng thử lại.');
+        toast.error('Không thể kích hoạt tài khoản. Vui lòng thử lại.');
       } finally {
         setIsActivating(null);
       }
@@ -877,23 +876,45 @@ export function ManageTutors() {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Môn học:</span>
-                            <span className="font-medium">{selectedTutor.subjects.length}</span>
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="text-gray-600">Môn dạy:</span>
+                            <span className="font-medium text-right flex-1">
+                              {selectedTutor.subjects && selectedTutor.subjects.length > 0
+                                ? Array.from(
+                                    new Set(
+                                      selectedTutor.subjects
+                                        .map((s) => s.subject?.subjectName)
+                                        .filter(Boolean) as string[]
+                                    )
+                                  ).join(', ')
+                                : 'Chưa có môn dạy'}
+                            </span>
                           </div>
-                          <div className="flex justify-between">
+                          <div className="flex items-start justify-between gap-3">
                             <span className="text-gray-600">Chứng chỉ:</span>
-                            <span className="font-medium">{selectedTutor.certificates.length}</span>
+                            <span className="font-medium text-right flex-1">
+                              {selectedTutor.certificates && selectedTutor.certificates.length > 0
+                                ? selectedTutor.certificates
+                                    .map((c) => c.certificateType?.name || c.typeName)
+                                    .filter(Boolean)
+                                    .join(', ')
+                                : 'Không có chứng chỉ'}
+                            </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Hình thức:</span>
-                            <span className="font-medium truncate" title={getTeachingModeText(selectedTutor.tutorProfile.teachingModes)}>
+                            <span
+                              className="font-medium truncate"
+                              title={getTeachingModeText(selectedTutor.tutorProfile.teachingModes)}
+                            >
                               {getTeachingModeText(selectedTutor.tutorProfile.teachingModes)}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Tham gia:</span>
-                            <span className="font-medium">{new Date(selectedTutor.createdAt).toLocaleDateString('vi-VN')}</span>
+                            <span className="font-medium">
+                              {new Date(selectedTutor.createdAt).toLocaleDateString('vi-VN')}
+                            </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Đánh giá:</span>

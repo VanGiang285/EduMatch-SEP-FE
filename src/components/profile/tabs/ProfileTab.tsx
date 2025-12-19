@@ -11,19 +11,14 @@ import { Camera, Save, Loader2, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserProfileService } from '@/services/userProfileService';
 import { LocationService, ProvinceDto, SubDistrictDto } from '@/services/locationService';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { Gender } from '@/types/enums';
 import { UserProfileDto } from '@/types/backend';
 import { UserProfileUpdateRequest } from '@/types/requests';
 import { MediaService } from '@/services/mediaService';
 
 export function ProfileTab() {
-  const { user } = useAuth();
-  const { showSuccess, showError } = useCustomToast();
-  const showErrorRef = useRef(showError);
-  useEffect(() => {
-    showErrorRef.current = showError;
-  }, [showError]);
+  const { user, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -197,7 +192,7 @@ export function ProfileTab() {
           }
         }
       } catch (error) {
-        showErrorRef.current?.('Lỗi', 'Không thể tải thông tin người dùng. Vui lòng thử lại.');
+        toast.error('Không thể tải thông tin người dùng. Vui lòng thử lại.');
       } finally {
         setIsLoading(false);
       }
@@ -240,13 +235,13 @@ export function ProfileTab() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      showError('Lỗi', 'Vui lòng chọn file ảnh hợp lệ (JPG, PNG, etc.)');
+      toast.error('Vui lòng chọn file ảnh hợp lệ (JPG, PNG, etc.)');
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      showError('Lỗi', 'Kích thước file không được vượt quá 5MB');
+      toast.error('Kích thước file không được vượt quá 5MB');
       return;
     }
 
@@ -259,7 +254,7 @@ export function ProfileTab() {
 
     // Upload avatar immediately
     if (!user?.email) {
-      showError('Lỗi', 'Không tìm thấy thông tin người dùng.');
+      toast.error('Không tìm thấy thông tin người dùng.');
       return;
     }
 
@@ -280,7 +275,7 @@ export function ProfileTab() {
           avatarUrlPublicId: publicId || '',
         }));
         setAvatarPreview(secureUrl);
-        showSuccess('Thành công', 'Tải ảnh đại diện thành công.');
+        toast.success('Tải ảnh đại diện thành công.');
       } else {
         const uploadErrorMessage =
           typeof uploadResponse.message === 'string' && uploadResponse.message
@@ -291,7 +286,7 @@ export function ProfileTab() {
         throw new Error(uploadErrorMessage);
       }
     } catch (error: any) {
-      showErrorRef.current?.('Lỗi', error.message || 'Không thể tải ảnh lên. Vui lòng thử lại.');
+      toast.error(error.message || 'Không thể tải ảnh lên. Vui lòng thử lại.');
       setAvatarPreview(formData.avatarUrl || null);
     } finally {
       setIsUploadingAvatar(false);
@@ -310,7 +305,7 @@ export function ProfileTab() {
 
   const handleSave = async () => {
     if (!user?.email) {
-      showError('Lỗi', 'Không tìm thấy thông tin người dùng.');
+      toast.error('Không tìm thấy thông tin người dùng.');
       return;
     }
 
@@ -335,7 +330,19 @@ export function ProfileTab() {
 
       if (response.success && response.data) {
         setOriginalData(response.data);
-        showSuccess('Thành công', 'Cập nhật thông tin thành công.');
+
+        // Cập nhật lại user trong AuthContext để Navbar hiển thị avatar/tên mới
+        const newName =
+          response.data.userEmailNavigation?.userName ||
+          response.data.userEmailNavigation?.email ||
+          user.email;
+        updateUser({
+          name: newName,
+          fullName: newName,
+          avatar: response.data.avatarUrl || undefined,
+        });
+
+        toast.success('Cập nhật thông tin thành công.');
         setIsEditing(false);
       } else {
         const message =
@@ -345,7 +352,7 @@ export function ProfileTab() {
         throw new Error(message);
       }
     } catch (error: any) {
-      showError('Lỗi', error.message || 'Không thể cập nhật thông tin. Vui lòng thử lại.');
+      toast.error(error.message || 'Không thể cập nhật thông tin. Vui lòng thử lại.');
     } finally {
       setIsSaving(false);
     }
@@ -373,7 +380,7 @@ export function ProfileTab() {
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+            <Button variant="outline" onClick={handleCancel} disabled={isSaving} className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
               Hủy
             </Button>
             <Button
@@ -398,7 +405,7 @@ export function ProfileTab() {
         )}
       </div>
 
-      <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+      <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
         <CardHeader>
           <CardTitle className="text-gray-900">Ảnh đại diện</CardTitle>
         </CardHeader>
@@ -443,7 +450,7 @@ export function ProfileTab() {
                     variant="outline"
                     onClick={() => document.getElementById('avatar-upload')?.click()}
                     disabled={isUploadingAvatar}
-                    className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                    className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                   >
                     {isUploadingAvatar ? (
                       <>
@@ -476,7 +483,7 @@ export function ProfileTab() {
         </CardContent>
       </Card>
 
-      <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+      <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
         <CardHeader>
           <CardTitle className="text-gray-900">Thông tin cơ bản</CardTitle>
         </CardHeader>
@@ -547,7 +554,7 @@ export function ProfileTab() {
         </CardContent>
       </Card>
 
-      <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+      <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
         <CardHeader>
           <CardTitle className="text-gray-900">Địa chỉ</CardTitle>
         </CardHeader>

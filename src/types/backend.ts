@@ -277,6 +277,12 @@ export interface BookingDto {
   schedules?: ScheduleDto[];
 }
 
+export interface BookingCancelPreviewDto {
+  bookingId: number;
+  upcomingSchedules: number;
+  refundableAmount: number;
+}
+
 export interface ScheduleCompletionDto {
   id: number;
   scheduleId: number;
@@ -342,6 +348,12 @@ export interface ScheduleChangeRequestDto {
   schedule?: ScheduleDto;
   oldAvailability?: TutorAvailabilityDto;
   newAvailability?: TutorAvailabilityDto;
+}
+
+export interface ScheduleAttendanceSummaryDto {
+  studied: number;
+  notStudiedYet: number;
+  cancelled: number;
 }
 
 export interface SystemFeeDto {
@@ -492,6 +504,7 @@ export interface ReportListItemDto {
   reportedAvatarUrl?: string;
   reason: string;
   status: ReportStatus;
+  bookingId?: number;
   createdAt: string;
   updatedAt?: string;
 }
@@ -500,6 +513,7 @@ export interface ReportDetailDto extends ReportListItemDto {
   tutorDefenseNote?: string;
   adminNotes?: string;
   handledByAdminEmail?: string;
+  booking?: BookingDto;
 }
 
 export interface ReportEvidenceDto {
@@ -844,6 +858,18 @@ export interface TutorRatingSummary {
   averageRating: number;
   totalFeedbackCount: number;
   updatedAt: string;
+}
+
+// ==================== TUTOR DASHBOARD ====================
+
+export interface TutorMonthlyEarningDto {
+  month: number;
+  year: number;
+  earning?: number;
+  totalEarnings?: number;
+  totalBookings?: number;
+  completedBookings?: number;
+  cancelledBookings?: number;
 }
 
 // ==================== SEARCH & FILTER ====================

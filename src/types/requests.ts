@@ -427,6 +427,7 @@ export interface ReportDefenseUpdateRequest {
 export interface ReportCreateRequest {
   reportedUserEmail: string;
   reason: string;
+  bookingId?: number;
   evidences?: BasicEvidenceRequest[];
 }
 

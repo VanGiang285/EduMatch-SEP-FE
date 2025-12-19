@@ -49,9 +49,9 @@ import {
 import { Label } from '@/components/ui/form/label';
 import { Textarea } from '@/components/ui/form/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/basic/avatar';
-import { useCustomToast } from '@/hooks/useCustomToast';
-import { ReportService, TutorService } from '@/services';
-import { ReportFullDetailDto, ReportListItemDto, ReportDefenseDto, ReportEvidenceDto } from '@/types/backend';
+import { toast } from 'sonner';
+import { ReportService, TutorService, BookingService } from '@/services';
+import { ReportFullDetailDto, ReportListItemDto, ReportDefenseDto, ReportEvidenceDto, BookingCancelPreviewDto } from '@/types/backend';
 import { MediaType, ReportStatus } from '@/types/enums';
 import { 
   Search,
@@ -60,6 +60,7 @@ import {
   Loader2,
   XCircle,
   Shield,
+  FileText,
 } from 'lucide-react';
 
 const PAGE_SIZE = 10;
@@ -199,13 +200,6 @@ const normalizeEvidenceList = (
   }));
 
 export function ManageReports() {
-  const { showSuccess, showError } = useCustomToast();
-  const showErrorRef = useRef(showError);
-
-  useEffect(() => {
-    showErrorRef.current = showError;
-  }, [showError]);
-
   const [reports, setReports] = useState<ReportListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -226,6 +220,11 @@ export function ManageReports() {
   const [tutorNames, setTutorNames] = useState<Record<string, string>>({});
   const [tutorAvatars, setTutorAvatars] = useState<Record<string, string>>({});
   const [isDefenseWindowOpen, setIsDefenseWindowOpen] = useState(false);
+  const [isReportResolved, setIsReportResolved] = useState(false);
+  const [cancelBookingDialogOpen, setCancelBookingDialogOpen] = useState(false);
+  const [cancelPreview, setCancelPreview] = useState<BookingCancelPreviewDto | null>(null);
+  const [loadingCancelPreview, setLoadingCancelPreview] = useState(false);
+  const [cancellingBooking, setCancellingBooking] = useState(false);
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -238,7 +237,7 @@ export function ManageReports() {
       }
     } catch (error) {
       console.error('Failed to fetch reports', error);
-      showErrorRef.current('Lỗi', 'Không thể tải danh sách báo cáo');
+      toast.error('Không thể tải danh sách báo cáo');
       setReports([]);
     } finally {
       setLoading(false);
@@ -331,6 +330,17 @@ export function ManageReports() {
         setIsDefenseWindowOpen(!!canDefenseResponse.data && canDefenseResponse.success);
       } catch {
         setIsDefenseWindowOpen(false);
+      }
+
+      try {
+        const isResolvedResponse = await ReportService.isReportResolved(reportId);
+        if (isResolvedResponse.success && isResolvedResponse.data) {
+          setIsReportResolved(isResolvedResponse.data === 'yes');
+        } else {
+          setIsReportResolved(false);
+        }
+      } catch {
+        setIsReportResolved(false);
       }
 
       if (enriched.defenses && enriched.defenses.length > 0) {
@@ -451,14 +461,78 @@ export function ManageReports() {
     setSelectedReport(null);
     setDetailLoading(true);
     setIsDefenseWindowOpen(false);
+    setIsReportResolved(false);
     try {
       await loadReportDetail(reportId);
     } catch (error) {
       console.error('Failed to fetch report detail', error);
-      showErrorRef.current('Lỗi', 'Không thể tải chi tiết báo cáo');
+      toast.error('Không thể tải chi tiết báo cáo');
       setDetailDialogOpen(false);
     } finally {
       setDetailLoading(false);
+    }
+  };
+
+  const handleOpenCancelBookingDialog = async () => {
+    if (!selectedReport?.bookingId && !selectedReport?.booking?.id) {
+      toast.error('Không tìm thấy thông tin booking');
+      return;
+    }
+    const bookingId = selectedReport.bookingId || selectedReport.booking?.id;
+    if (!bookingId) {
+      toast.error('Không tìm thấy thông tin booking');
+      return;
+    }
+
+    setLoadingCancelPreview(true);
+    setCancelBookingDialogOpen(true);
+    try {
+      const response = await BookingService.getCancelPreview(bookingId);
+      if (response.success && response.data) {
+        setCancelPreview(response.data);
+      } else {
+        toast.error('Lỗi', response.message || 'Không thể lấy thông tin preview');
+        setCancelBookingDialogOpen(false);
+      }
+    } catch (error: any) {
+      console.error('Error loading cancel preview:', error);
+      toast.error('Không thể lấy thông tin preview');
+      setCancelBookingDialogOpen(false);
+    } finally {
+      setLoadingCancelPreview(false);
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    if (!selectedReport?.bookingId && !selectedReport?.booking?.id) {
+      toast.error('Không tìm thấy thông tin booking');
+      return;
+    }
+    const bookingId = selectedReport.bookingId || selectedReport.booking?.id;
+    if (!bookingId) {
+      toast.error('Không tìm thấy thông tin booking');
+      return;
+    }
+
+    setCancellingBooking(true);
+    try {
+      const response = await BookingService.cancelByLearner(bookingId);
+      if (response.success) {
+        toast.success('Đã hủy booking thành công');
+        setCancelBookingDialogOpen(false);
+        setCancelPreview(null);
+        if (selectedReport) {
+          await loadReportDetail(selectedReport.id);
+        }
+        fetchReports();
+      } else {
+        toast.error('Lỗi', response.message || 'Không thể hủy booking');
+      }
+    } catch (error: any) {
+      console.error('Error cancelling booking:', error);
+      toast.error('Không thể hủy booking');
+    } finally {
+      setCancellingBooking(false);
     }
   };
 
@@ -471,7 +545,7 @@ export function ManageReports() {
   const handleConfirmAction = async () => {
     if (!selectedReport || !actionType) return;
     if (!actionNote.trim()) {
-      showError('Thiếu thông tin', 'Vui lòng nhập ghi chú xử lý');
+      toast.error('Vui lòng nhập ghi chú xử lý');
       return;
     }
 
@@ -486,7 +560,7 @@ export function ManageReports() {
 
       const updatedReport = response.success ? response.data : undefined;
       if (updatedReport) {
-        showSuccess(
+        toast.success(
           'Thành công',
           actionType === 'resolve'
             ? 'Đã đánh dấu báo cáo là ĐÃ GIẢI QUYẾT'
@@ -507,18 +581,18 @@ export function ManageReports() {
             await loadReportDetail(selectedReport.id);
           } catch (error) {
             console.error('Failed to refresh report detail', error);
-            showErrorRef.current('Lỗi', 'Không thể làm mới chi tiết báo cáo');
+            toast.error('Không thể làm mới chi tiết báo cáo');
             setDetailDialogOpen(false);
           } finally {
             setDetailLoading(false);
           }
         }
       } else {
-        showError('Lỗi', 'Không thể cập nhật trạng thái báo cáo');
+        toast.error('Không thể cập nhật trạng thái báo cáo');
       }
     } catch (error) {
       console.error('Failed to update report', error);
-      showError('Lỗi', 'Không thể cập nhật trạng thái báo cáo');
+      toast.error('Không thể cập nhật trạng thái báo cáo');
     } finally {
       setActionSubmitting(false);
       setActionDialogOpen(false);
@@ -534,7 +608,7 @@ export function ManageReports() {
         </p>
       </div>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardContent className="p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
             <div className="relative flex-1">
@@ -593,12 +667,13 @@ export function ManageReports() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Danh sách báo cáo</CardTitle>
-          <Badge variant="outline" className="text-sm">
-            Tổng: {reports.length}
-          </Badge>
+          <div className="flex items-center gap-2 text-gray-700">
+            <FileText className="h-4 w-4" />
+            <span className="font-medium">Số báo cáo: {reports.length}</span>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -759,7 +834,7 @@ export function ManageReports() {
 
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
         <DialogContent
-          className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col"
+          className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col border-gray-300 shadow-lg"
           aria-describedby={undefined}
         >
           <DialogHeader className="flex-shrink-0 pb-2">
@@ -1055,6 +1130,16 @@ export function ManageReports() {
               <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
                 Đóng
               </Button>
+              {selectedReport && isReportResolved && (selectedReport.bookingId || selectedReport.booking?.id) && (
+                <Button
+                  variant="outline"
+                  className="border-red-300 text-red-600 hover:bg-red-50"
+                  onClick={handleOpenCancelBookingDialog}
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Hủy lớp học
+                </Button>
+              )}
               {selectedReport &&
                 !isDefenseWindowOpen &&
                 isPendingOrUnderReviewStatus(selectedReport.status) && (
@@ -1082,7 +1167,7 @@ export function ManageReports() {
       </Dialog>
 
       <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-        <DialogContent className="max-w-3xl" aria-describedby={undefined}>
+        <DialogContent className="max-w-3xl border-gray-300 shadow-lg" aria-describedby={undefined}>
           {previewImage && (
             <img
               src={previewImage}
@@ -1094,7 +1179,7 @@ export function ManageReports() {
       </Dialog>
 
       <AlertDialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border-gray-300 shadow-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>
               {actionType === 'resolve' ? 'Xác nhận đã giải quyết' : 'Bác bỏ báo cáo'}
@@ -1142,6 +1227,70 @@ export function ManageReports() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={cancelBookingDialogOpen} onOpenChange={setCancelBookingDialogOpen}>
+        <DialogContent className="max-w-md border-gray-300 shadow-lg" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Xác nhận hủy lớp học</DialogTitle>
+          </DialogHeader>
+          {loadingCancelPreview ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-[#257180]" />
+            </div>
+          ) : cancelPreview ? (
+            <div className="space-y-4 py-4">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Số buổi còn lại:</span>
+                  <span className="text-lg font-semibold text-gray-900">{cancelPreview.upcomingSchedules} buổi</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                  <span className="text-sm text-gray-600">Số tiền nhận được:</span>
+                  <span className="text-lg font-semibold text-[#257180]">
+                    {new Intl.NumberFormat('vi-VN', {
+                      style: 'currency',
+                      currency: 'VND',
+                    }).format(cancelPreview.refundableAmount)}
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600">
+                Bạn có chắc chắn muốn hủy lớp học này? Hành động này sẽ hoàn lại toàn bộ số tiền còn lại và hủy tất cả các buổi học chưa diễn ra.
+              </p>
+            </div>
+          ) : (
+            <div className="py-4">
+              <p className="text-sm text-gray-600">Không thể tải thông tin preview</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelBookingDialogOpen(false);
+                setCancelPreview(null);
+              }}
+              disabled={cancellingBooking}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleCancelBooking}
+              disabled={loadingCancelPreview || cancellingBooking || !cancelPreview}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {cancellingBooking ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                'Xác nhận hủy'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

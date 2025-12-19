@@ -4,34 +4,46 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/basic/button';
 import { Textarea } from '@/components/ui/form/textarea';
-import { Loader2, StickyNote, X, ZoomIn } from 'lucide-react';
+import { Loader2, StickyNote, X, ZoomIn, FileText, Send, Upload, Image as ImageIcon, Video, Eye, Edit, GraduationCap, User } from 'lucide-react';
 import { useBookingNotes } from '@/hooks/useBookingNotes';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { MediaType } from '@/types/enums';
 import { MediaService } from '@/services/mediaService';
 import { useAuth } from '@/hooks/useAuth';
-import { Dialog, DialogContent } from '@/components/ui/feedback/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/feedback/dialog';
+import { Label } from '@/components/ui/form/label';
+import { Input } from '@/components/ui/form/input';
 
 interface BookingNotesPanelProps {
   bookingId: number;
+  userRole?: 'learner' | 'tutor';
+  tutorEmail?: string;
+  learnerEmail?: string;
+  tutorProfile?: any;
+  learnerProfile?: any;
 }
 
-export function BookingNotesPanel({ bookingId }: BookingNotesPanelProps) {
+export function BookingNotesPanel({ bookingId, userRole, tutorEmail, learnerEmail, tutorProfile, learnerProfile }: BookingNotesPanelProps) {
   const { notes, loading, error, loadNotes, createNote, updateNote, deleteNote } =
     useBookingNotes(bookingId);
-  const { showError, showSuccess } = useCustomToast();
   const { user } = useAuth();
   const [content, setContent] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [mediaItems, setMediaItems] = useState<
-    { mediaType: MediaType; fileUrl: string; filePublicId?: string; displayName?: string }[]
+    { mediaType: MediaType; fileUrl: string; filePublicId?: string; displayName?: string; file?: File }[]
   >([]);
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: MediaType; name?: string } | null>(null);
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
-  const [detailNote, setDetailNote] = useState<typeof notes[number] | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editMediaItems, setEditMediaItems] = useState<
+    { mediaType: MediaType; fileUrl: string; filePublicId?: string; displayName?: string; file?: File }[]
+  >([]);
+  const [editMediaFiles, setEditMediaFiles] = useState<File[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     if (bookingId) {
@@ -41,124 +53,260 @@ export function BookingNotesPanel({ bookingId }: BookingNotesPanelProps) {
 
   useEffect(() => {
     if (error) {
-      showError('Lỗi khi tải ghi chú', error);
+      toast.error('Lỗi khi tải ghi chú', error);
     }
-  }, [error, showError]);
+  }, [error]);
 
   const handleSubmit = async () => {
     if (!content.trim()) return;
     setSubmitting(true);
     try {
-      if (editingId) {
-        const updated = await updateNote({
-          id: editingId,
-          content: content.trim(),
-          media: mediaItems,
-        });
-        if (updated) {
-          showSuccess('Cập nhật ghi chú thành công');
-          setEditingId(null);
-          setContent('');
-          setMediaItems([]);
-        } else {
-          showError('Không thể cập nhật ghi chú');
-        }
+      const created = await createNote({
+        bookingId,
+        content: content.trim(),
+        media: mediaItems,
+      });
+      if (created) {
+        toast.success('Thêm ghi chú thành công');
+        setContent('');
+        setMediaItems([]);
+        setMediaFiles([]);
       } else {
-        const created = await createNote({
-          bookingId,
-          content: content.trim(),
-          media: mediaItems,
-        });
-        if (created) {
-          showSuccess('Thêm ghi chú thành công');
-          setContent('');
-          setMediaItems([]);
-        } else {
-          showError('Không thể thêm ghi chú');
-        }
+        toast.error('Không thể thêm ghi chú');
       }
     } catch (err: any) {
-      showError('Lỗi khi lưu ghi chú', err.message);
+      toast.error('Lỗi khi lưu ghi chú', err.message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleEdit = (id: number) => {
-    const note = notes.find(n => n.id === id);
-    if (note) {
-      setEditingId(id);
-      setContent(note.content);
-      setMediaItems(
-        (note.media || []).map(m => ({
-          mediaType: m.mediaType as MediaType,
-          fileUrl: m.fileUrl,
-          filePublicId: m.filePublicId,
-          displayName: m.fileUrl.split('/').pop(),
-        }))
-      );
+  const handleEdit = (note: typeof notes[number]) => {
+    if (!note?.id || note.id <= 0) {
+      toast.error('Ghi chú không hợp lệ: ID không tồn tại');
+      console.error('Invalid note ID:', note?.id, 'Full note:', note);
+      return;
     }
+    console.log('🔍 handleEdit - Note ID:', note.id, 'Full note:', note);
+    setEditingNoteId(note.id);
+    setEditContent(note.content);
+    setEditMediaItems(
+      (note.media || []).map(m => ({
+        mediaType: m.mediaType as MediaType,
+        fileUrl: m.fileUrl,
+        filePublicId: m.filePublicId,
+        displayName: renderFileName(m.fileUrl.split('/').pop(), m.fileUrl),
+      }))
+    );
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editingNoteId || editingNoteId <= 0) {
+      toast.error('Lỗi: Không tìm thấy ID ghi chú hợp lệ');
+      console.error('❌ Invalid editingNoteId:', editingNoteId);
+      return;
+    }
+    
+    if (!editContent.trim()) {
+      toast.error('Vui lòng nhập nội dung ghi chú');
+      return;
+    }
+    
+    console.log('🔍 handleEditSubmit - editingNoteId:', editingNoteId);
+    setSubmitting(true);
+    try {
+      const updated = await updateNote({
+        id: editingNoteId,
+        content: editContent.trim(),
+        media: editMediaItems,
+      });
+      if (updated) {
+        toast.success('Cập nhật ghi chú thành công');
+        setEditDialogOpen(false);
+        setEditingNoteId(null);
+        setEditContent('');
+        setEditMediaItems([]);
+        setEditMediaFiles([]);
+      } else {
+        toast.error('Không thể cập nhật ghi chú');
+      }
+    } catch (err: any) {
+      toast.error('Lỗi khi cập nhật ghi chú', err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEditFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user?.email) {
+      toast.error('Vui lòng đăng nhập để upload file');
+      return;
+    }
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const validFiles = files.filter(file => {
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      if (!isImage && !isVideo) {
+        toast.error('Chỉ chấp nhận file ảnh hoặc video');
+        return false;
+      }
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        toast.error(`File ${file.name} vượt quá 10MB`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    setUploading(true);
+    try {
+      const uploadPromises = validFiles.map(async (file) => {
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+        const mediaType = isImage ? 'Image' : isVideo ? 'Video' : 'Image';
+        
+        const response = await MediaService.uploadFile({
+          file,
+          ownerEmail: user.email!,
+          mediaType: mediaType as 'Image' | 'Video',
+        });
+
+        const uploadPayload = response.data as any;
+        const secureUrl =
+          uploadPayload?.secureUrl ?? uploadPayload?.data?.secureUrl;
+        const publicId =
+          uploadPayload?.publicId ?? uploadPayload?.data?.publicId;
+
+        if (secureUrl) {
+          const mediaTypeNum = isImage ? MediaType.Image : MediaType.Video;
+          return {
+            mediaType: mediaTypeNum,
+            fileUrl: secureUrl,
+            filePublicId: publicId || undefined,
+            displayName: file.name,
+            file: file,
+          };
+        } else {
+          const uploadErrorMessage =
+            (typeof uploadPayload?.message === 'string' &&
+              uploadPayload.message) ||
+            (typeof uploadPayload?.error === 'string' && uploadPayload.error) ||
+            `Không thể upload file ${file.name}`;
+          throw new Error(uploadErrorMessage);
+        }
+      });
+
+      const results = await Promise.all(uploadPromises);
+      setEditMediaItems(prev => [...prev, ...results]);
+      setEditMediaFiles(prev => [...prev, ...validFiles]);
+      toast.success(`Đã upload ${results.length} file thành công`);
+    } catch (error: any) {
+      console.error('Error uploading files:', error);
+      toast.error(error.message || 'Không thể upload file');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const removeEditMedia = (index: number) => {
+    setEditMediaItems(prev => prev.filter((_, i) => i !== index));
+    setEditMediaFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleDelete = async (id: number) => {
     const ok = await deleteNote(id);
     if (ok) {
-      showSuccess('Xóa ghi chú thành công');
-      if (editingId === id) {
-        setEditingId(null);
-        setContent('');
-        setMediaItems([]);
-      }
+      toast.success('Xóa ghi chú thành công');
     } else {
-      showError('Không thể xóa ghi chú');
+      toast.error('Không thể xóa ghi chú');
     }
   };
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user?.email) {
+      toast.error('Vui lòng đăng nhập để upload file');
+      return;
+    }
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const validFiles = files.filter(file => {
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      if (!isImage && !isVideo) {
+        toast.error('Chỉ chấp nhận file ảnh hoặc video');
+        return false;
+      }
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        toast.error(`File ${file.name} vượt quá 10MB`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
     setUploading(true);
     try {
-      const uploaded: { mediaType: MediaType; fileUrl: string; filePublicId?: string; displayName?: string }[] = [];
-      for (const file of Array.from(files)) {
+      const uploadPromises = validFiles.map(async (file) => {
         const isImage = file.type.startsWith('image/');
         const isVideo = file.type.startsWith('video/');
-        if (!isImage && !isVideo) {
-          showError('Định dạng không hỗ trợ', 'Chỉ chấp nhận ảnh hoặc video.');
-          continue;
-        }
-        const mediaType: MediaType = isImage ? MediaType.Image : MediaType.Video;
-        const ownerEmail = user?.email || 'unknown@user';
+        const mediaType = isImage ? 'Image' : isVideo ? 'Video' : 'Image';
+        
         const response = await MediaService.uploadFile({
           file,
-          ownerEmail,
-          mediaType: isImage ? 'Image' : 'Video',
+          ownerEmail: user.email!,
+          mediaType: mediaType as 'Image' | 'Video',
         });
-        const payload = response.data;
-        const uploadedData = payload?.data;
-        const uploadOk = response.success && uploadedData;
-        if (uploadOk) {
-          uploaded.push({
-            mediaType,
-            fileUrl: uploadedData.secureUrl || uploadedData.originalUrl,
-            filePublicId: uploadedData.publicId,
+
+        const uploadPayload = response.data as any;
+        const secureUrl =
+          uploadPayload?.secureUrl ?? uploadPayload?.data?.secureUrl;
+        const publicId =
+          uploadPayload?.publicId ?? uploadPayload?.data?.publicId;
+
+        if (secureUrl) {
+          const mediaTypeNum = isImage ? MediaType.Image : MediaType.Video;
+          return {
+            mediaType: mediaTypeNum,
+            fileUrl: secureUrl,
+            filePublicId: publicId || undefined,
             displayName: file.name,
-          });
+            file: file,
+          };
         } else {
-          showError('Upload thất bại', response.error?.message || payload?.message);
+          const uploadErrorMessage =
+            (typeof uploadPayload?.message === 'string' &&
+              uploadPayload.message) ||
+            (typeof uploadPayload?.error === 'string' && uploadPayload.error) ||
+            `Không thể upload file ${file.name}`;
+          throw new Error(uploadErrorMessage);
         }
-      }
-      if (uploaded.length > 0) {
-        setMediaItems(prev => [...prev, ...uploaded]);
-      }
-    } catch (err: any) {
-      showError('Lỗi khi upload', err.message);
+      });
+
+      const results = await Promise.all(uploadPromises);
+      setMediaItems(prev => [...prev, ...results]);
+      setMediaFiles(prev => [...prev, ...validFiles]);
+      toast.success(`Đã upload ${results.length} file thành công`);
+    } catch (error: any) {
+      console.error('Error uploading files:', error);
+      toast.error(error.message || 'Không thể upload file');
     } finally {
       setUploading(false);
+      e.target.value = '';
     }
   };
 
   const removeMedia = (index: number) => {
     setMediaItems(prev => prev.filter((_, i) => i !== index));
+    setMediaFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -212,229 +360,294 @@ export function BookingNotesPanel({ bookingId }: BookingNotesPanelProps) {
     return parts[parts.length - 1] || 'Tệp đính kèm';
   };
 
+  const isNoteFromCurrentUser = (noteEmail?: string) => {
+    if (!noteEmail || !userRole) return false;
+    if (userRole === 'tutor' && tutorEmail) {
+      return noteEmail.toLowerCase() === tutorEmail.toLowerCase();
+    }
+    if (userRole === 'learner' && learnerEmail) {
+      return noteEmail.toLowerCase() === learnerEmail.toLowerCase();
+    }
+    return false;
+  };
+
+  const getNoteAuthorRole = (noteEmail?: string): 'tutor' | 'learner' | null => {
+    if (!noteEmail) return null;
+    if (tutorEmail && noteEmail.toLowerCase() === tutorEmail.toLowerCase()) return 'tutor';
+    if (learnerEmail && noteEmail.toLowerCase() === learnerEmail.toLowerCase()) return 'learner';
+    return null;
+  };
+
+  const getAuthorName = (noteEmail?: string) => {
+    if (!noteEmail) return 'Ẩn danh';
+    const authorRole = getNoteAuthorRole(noteEmail);
+    if (authorRole === 'tutor') {
+      return tutorProfile?.userName || tutorEmail || 'Gia sư';
+    }
+    if (authorRole === 'learner') {
+      return learnerProfile?.user?.userName || learnerEmail || 'Học viên';
+    }
+    return noteEmail;
+  };
+
   return (
-    <Card className="mt-6 border border-[#257180]/20">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <StickyNote className="h-5 w-5 text-[#257180]" />
-          <CardTitle>Ghi chú lớp học</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Textarea
-            ref={textareaRef}
-            value={content}
-            onChange={e => setContent(e.target.value)}
-            placeholder="Thêm ghi chú cho buổi học, nội dung, lưu ý quan trọng..."
-            className="min-h-[80px]"
-            onKeyDown={onKeyDown}
-          />
-          <div className="flex flex-wrap gap-2">
-            <label className="inline-flex items-center px-3 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 text-sm text-gray-700">
-              <input
+    <div className="space-y-6">
+      <Card className="border border-gray-300">
+        <CardHeader>
+          <CardTitle>Thêm ghi chú mới</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <Textarea
+              ref={textareaRef}
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              placeholder={
+                userRole === 'tutor'
+                  ? 'Nhập ghi chú về tiến độ học tập của học viên...'
+                  : 'Nhập ghi chú về bài học, thắc mắc cần hỏi gia sư...'
+              }
+              rows={4}
+              onKeyDown={onKeyDown}
+            />
+
+            <div>
+              <Label htmlFor="note-file" className="cursor-pointer">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#257180] transition-colors">
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-6 h-6 mx-auto mb-2 text-gray-400 animate-spin" />
+                      <p className="text-gray-600">Đang tải...</p>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                      <p className="text-gray-600">Đính kèm ảnh hoặc video</p>
+                      <p className="text-xs text-gray-500 mt-1">PNG, JPG, MP4 tối đa 10MB</p>
+                    </>
+                  )}
+                </div>
+              </Label>
+              <Input
+                id="note-file"
                 type="file"
-                className="hidden"
                 accept="image/*,video/*"
                 multiple
-                onChange={(e) => handleFiles(e.target.files)}
+                className="hidden"
+                onChange={handleFiles}
+                disabled={uploading}
               />
-              {uploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin text-[#257180]" />
-                  Đang tải...
-                </>
-              ) : (
-                'Thêm ảnh / video'
-              )}
-            </label>
-            {mediaItems.length > 0 && (
-              <span className="text-xs text-gray-600 self-center">
-                Đã đính kèm {mediaItems.length} tệp
-              </span>
-            )}
-          </div>
-          {mediaItems.length > 0 && (
-            <div className="flex flex-wrap gap-3">
-              {mediaItems.map((m, idx) => (
-                <div key={idx} className="relative w-28 h-28 rounded-lg overflow-hidden border border-gray-200 bg-black/5">
-                  {m.mediaType === MediaType.Image ? (
-                    <img
-                      src={m.fileUrl}
-                      alt="preview"
-                      className="object-cover w-full h-full cursor-pointer"
-                      onClick={() => setPreviewMedia({ url: m.fileUrl, type: MediaType.Image, name: renderFileName(m.displayName, m.fileUrl) })}
-                    />
-                  ) : (
-                    <video
-                      src={m.fileUrl}
-                      className="object-cover w-full h-full cursor-pointer"
-                      onClick={() => setPreviewMedia({ url: m.fileUrl, type: MediaType.Video, name: renderFileName(m.displayName, m.fileUrl) })}
-                    />
-                  )}
-                  <div className="absolute top-1 right-1 flex gap-1">
-                    <button
-                      className="bg-white/80 rounded-full p-1 hover:bg-white"
-                      onClick={() => setPreviewMedia({ url: m.fileUrl, type: m.mediaType, name: renderFileName(m.displayName, m.fileUrl) })}
-                    >
-                      <ZoomIn className="h-4 w-4 text-gray-600" />
-                    </button>
-                    <button
-                      className="bg-white/80 rounded-full p-1 hover:bg-white"
-                      onClick={() => removeMedia(idx)}
-                    >
-                      <X className="h-4 w-4 text-red-500" />
-                    </button>
-                  </div>
-                  <div className="absolute bottom-1 left-1 text-[10px] px-1 py-0.5 rounded bg-black/60 text-white">
-                    {renderFileName(m.displayName, m.fileUrl)}
-                  </div>
-                </div>
-              ))}
             </div>
-          )}
-          <div className="flex justify-end gap-2">
-            {editingId && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setEditingId(null);
-                  setContent('');
-                }}
-              >
-                Hủy chỉnh sửa
-              </Button>
+
+            {mediaItems.length > 0 && (
+              <div className="space-y-2">
+                <Label>Đã upload ({mediaItems.length} file):</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {mediaItems.map((item, index) => {
+                    const file = mediaFiles[index] || item.file;
+                    const isImage = file 
+                      ? file.type.startsWith('image/')
+                      : item.mediaType === MediaType.Image;
+                    return (
+                      <div
+                        key={index}
+                        className="relative group border rounded-lg overflow-hidden bg-gray-50"
+                      >
+                        {isImage ? (
+                          <img
+                            src={item.fileUrl}
+                            alt={`Upload ${index + 1}`}
+                            className="w-full h-24 object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-24 flex items-center justify-center bg-gray-100">
+                            <Video className="h-8 w-8 text-gray-400" />
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeMedia(index)}
+                          className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                        <div className="p-2">
+                          <p className="text-xs text-gray-600 truncate">
+                            {item.displayName || file?.name || `File ${index + 1}`}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
+
             <Button
-              type="button"
-              size="sm"
               onClick={handleSubmit}
               disabled={submitting || !content.trim()}
-              className="bg-[#257180] hover:bg-[#257180]/90 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-[#257180] hover:bg-[#1f5a66] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Đang lưu...
                 </>
-              ) : editingId ? (
-                'Cập nhật ghi chú'
               ) : (
-                'Thêm ghi chú'
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Thêm ghi chú
+                </>
               )}
             </Button>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-[#257180]" />
-          </div>
-        ) : notes.length === 0 ? (
-          <div className="text-sm text-gray-500">
-            Chưa có ghi chú nào cho booking này.
-          </div>
-        ) : (
-          <div className="space-y-3 max-h-80 overflow-y-auto">
-            {notes
-              .slice()
-              .sort(
-                (a, b) =>
-                  new Date(b.createdAt).getTime() -
-                  new Date(a.createdAt).getTime()
-              )
-              .map(note => (
-                <div key={note.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                  <button
-                    className={`w-full text-left px-3 py-3 flex flex-col gap-2 ${expandedIds.has(note.id) ? 'bg-gray-100' : 'bg-white'} hover:bg-gray-50`}
-                    onClick={() =>
-                      setExpandedIds(prev => {
-                        const next = new Set(prev);
-                        if (next.has(note.id)) next.delete(note.id);
-                        else next.add(note.id);
-                        return next;
-                      })
-                    }
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1">
-                        <div className="text-sm font-semibold text-gray-900 line-clamp-1 max-w-[220px] truncate">
-                          {note.content}
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          {new Date(note.createdAt).toLocaleString('vi-VN')}
-                        </div>
-                      </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                          className="bg-[#257180] text-white hover:bg-[#1e5a66] border-[#257180] px-4 shadow-sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDetailNote(note);
-                            }}
-                          >
-                            Xem chi tiết
-                          </Button>
-                        </div>
-                    </div>
-                  </button>
-                  {expandedIds.has(note.id) && (
-                    <div className="px-3 pb-3 bg-white">
-                      <div className="text-base text-gray-900 whitespace-pre-line max-h-40 overflow-y-auto pr-1">
-                        {note.content}
-                      </div>
-                      {note.media && note.media.length > 0 && (
-                        <div className="flex flex-wrap gap-3 pt-2">
-                          {note.media.map(m => (
-                            <div key={m.id} className="relative w-28 h-28 rounded-lg overflow-hidden border border-[#257180]/20 bg-black/5">
-                              {m.mediaType === MediaType.Image ? (
-                                <img
-                                  src={m.fileUrl}
-                                  alt="preview"
-                                  className="object-cover w-full h-full cursor-pointer"
-                                  onClick={() =>
-                                    setPreviewMedia({
-                                      url: m.fileUrl,
-                                      type: m.mediaType as MediaType,
-                                      name: renderFileName(m.fileUrl.split('/').pop(), m.fileUrl),
-                                    })
-                                  }
-                                />
-                              ) : (
-                                <video
-                                  src={m.fileUrl}
-                                  className="object-cover w-full h-full cursor-pointer"
-                                  onClick={() =>
-                                    setPreviewMedia({
-                                      url: m.fileUrl,
-                                      type: m.mediaType as MediaType,
-                                      name: renderFileName(m.fileUrl.split('/').pop(), m.fileUrl),
-                                    })
-                                  }
-                                />
-                              )}
-                              <div className="absolute bottom-1 left-1 text-[10px] px-1 py-0.5 rounded bg-black/60 text-white">
-                                {m.mediaType === MediaType.Image ? 'Ảnh' : 'Video'}
+      <Card className="border border-gray-300">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span className="font-medium">Lịch sử ghi chú ({notes.length})</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-[#257180]" />
+            </div>
+          ) : notes.length === 0 ? (
+            <div className="text-center py-8">
+              <FileText className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+              <p className="text-gray-600">Chưa có ghi chú nào</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {notes
+                .slice()
+                .sort(
+                  (a, b) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime()
+                )
+                .map(note => {
+                  const isCurrentUser = isNoteFromCurrentUser(note.createdByEmail);
+                  const authorRole = getNoteAuthorRole(note.createdByEmail);
+                  return (
+                    <div
+                      key={note.id}
+                      className={`p-4 rounded-lg ${
+                        isCurrentUser ? 'bg-blue-50 ml-8' : 'bg-gray-50 mr-8'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-gray-900">
+                              {getAuthorName(note.createdByEmail)}
+                            </p>
+                            {authorRole && (
+                              <div className="flex items-center gap-1 text-xs text-gray-600">
+                                {authorRole === 'tutor' ? (
+                                  <>
+                                    <GraduationCap className="h-3 w-3" />
+                                    <span className="font-medium">Gia sư</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <User className="h-3 w-3" />
+                                    <span className="font-medium">Học viên</span>
+                                  </>
+                                )}
                               </div>
+                            )}
+                            {isCurrentUser && (
+                              <div className="ml-auto flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEdit(note)}
+                                  className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51] h-7 px-2 text-xs"
+                                >
+                                  <Edit className="h-3 w-3 mr-1" />
+                                  Sửa
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDelete(note.id)}
+                                  className="border-gray-300 bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-300 h-7 px-2 text-xs"
+                                >
+                                  <X className="h-3 w-3 mr-1" />
+                                  Xóa
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-gray-600 mb-2 whitespace-pre-line">{note.content}</p>
+
+                          {note.media && note.media.length > 0 && (
+                            <div className="mt-2 space-y-2">
+                              {note.media.map((attachment) => {
+                                const mediaTypeValue = typeof attachment.mediaType === 'number' 
+                                  ? attachment.mediaType 
+                                  : typeof attachment.mediaType === 'string'
+                                    ? (attachment.mediaType === 'Image' || attachment.mediaType === '0' ? MediaType.Image : MediaType.Video)
+                                    : null;
+                                
+                                let isImage = mediaTypeValue === MediaType.Image;
+                                if (mediaTypeValue === null) {
+                                  const url = attachment.fileUrl.toLowerCase();
+                                  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+                                  isImage = imageExtensions.some(ext => url.includes(ext));
+                                }
+                                
+                                return (
+                                  <div
+                                    key={attachment.id}
+                                    className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200"
+                                  >
+                                    {isImage ? (
+                                      <ImageIcon className="w-4 h-4 text-blue-600" />
+                                    ) : (
+                                      <Video className="w-4 h-4 text-purple-600" />
+                                    )}
+                                    <span className="text-gray-700">{renderFileName(attachment.fileUrl.split('/').pop(), attachment.fileUrl)}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="ml-auto p-2 hover:bg-[#FD8B51] hover:text-white"
+                                      onClick={() =>
+                                        setPreviewMedia({
+                                          url: attachment.fileUrl,
+                                          type: isImage ? MediaType.Image : MediaType.Video,
+                                          name: renderFileName(attachment.fileUrl.split('/').pop(), attachment.fileUrl),
+                                        })
+                                      }
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                );
+                              })}
                             </div>
-                          ))}
+                          )}
+
+                          <p className="text-xs text-gray-500 mt-2">
+                            {new Date(note.createdAt).toLocaleString('vi-VN')}
+                          </p>
                         </div>
-                      )}
-                      {/* Update/Xóa chỉ hiển thị trong modal chi tiết, không hiển thị ở dropdown */}
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))}
-          </div>
-        )}
-      </CardContent>
+                  );
+                })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Dialog open={!!previewMedia} onOpenChange={(open) => !open && setPreviewMedia(null)}>
-        <DialogContent className="max-w-6xl p-0 overflow-hidden bg-white rounded-2xl border border-[#257180]/20 shadow-2xl">
+        <DialogContent className="max-w-6xl p-0 overflow-hidden bg-white rounded-2xl border border-gray-300 shadow-lg">
           <div className="bg-white">
             {previewMedia?.name && (
               <div className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-200">
@@ -461,93 +674,145 @@ export function BookingNotesPanel({ bookingId }: BookingNotesPanelProps) {
           </div>
         </DialogContent>
       </Dialog>
-      <Dialog open={!!detailNote} onOpenChange={(open) => !open && setDetailNote(null)}>
-        <DialogContent className="max-w-5xl bg-white rounded-2xl border border-[#257180]/20 shadow-2xl p-0 overflow-hidden">
-          {detailNote && (
-            <div className="space-y-4 p-6">
-              <div className="flex items-start justify-between gap-4 bg-gray-100 p-4 rounded-md">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-semibold text-gray-900">Ghi chú</h3>
-                  <div className="text-sm font-semibold text-gray-900">{detailNote.createdByEmail || 'Ẩn danh'}</div>
-                  <div className="text-xs text-gray-600">{new Date(detailNote.createdAt).toLocaleString('vi-VN')}</div>
-                </div>
-                {user?.email && detailNote.createdByEmail && user.email.toLowerCase() === detailNote.createdByEmail.toLowerCase() && (
-                  <div className="flex gap-2 pr-8">
-                    <Button
-                      variant="outline"
-                      className="bg-[#257180] text-white hover:bg-[#1e5a66] border-[#257180] px-4 shadow-sm"
-                      onClick={() => {
-                        setEditingId(detailNote.id);
-                        setContent(detailNote.content);
-                        setMediaItems(
-                          (detailNote.media || []).map(m => ({
-                            mediaType: m.mediaType as MediaType,
-                            fileUrl: m.fileUrl,
-                            filePublicId: m.filePublicId,
-                            displayName: renderFileName(m.fileUrl.split('/').pop(), m.fileUrl),
-                          }))
-                        );
-                        setDetailNote(null);
-                      }}
-                    >
-                      Cập nhật
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="border-red-200 text-red-500"
-                      onClick={() => {
-                        setDetailNote(null);
-                        handleDelete(detailNote.id);
-                      }}
-                    >
-                      Xóa
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <div className="text-base text-gray-900 whitespace-pre-line bg-white p-3 max-h-56 overflow-y-auto pr-1">
-                {detailNote.content}
-              </div>
-              {detailNote.media && detailNote.media.length > 0 && (
-                <div className="flex flex-wrap gap-3">
-                  {detailNote.media.map(m =>
-                    m.mediaType === MediaType.Image ? (
-                      <img
-                        key={m.id}
-                        src={m.fileUrl}
-                        alt="img"
-                        className="w-48 h-48 object-cover rounded-xl border border-[#257180]/20 shadow-sm cursor-pointer"
-                        onClick={() =>
-                          setPreviewMedia({
-                            url: m.fileUrl,
-                            type: m.mediaType as MediaType,
-                            name: renderFileName(m.fileUrl.split('/').pop(), m.fileUrl),
-                          })
-                        }
-                      />
-                    ) : (
-                      <video
-                        key={m.id}
-                        src={m.fileUrl}
-                        controls
-                        className="w-48 h-48 object-cover rounded-xl border border-[#257180]/20 shadow-sm cursor-pointer"
-                        onClick={() =>
-                          setPreviewMedia({
-                            url: m.fileUrl,
-                            type: m.mediaType as MediaType,
-                            name: renderFileName(m.fileUrl.split('/').pop(), m.fileUrl),
-                          })
-                        }
-                      />
-                    )
+
+      <Dialog open={editDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setEditDialogOpen(false);
+          setEditingNoteId(null);
+          setEditContent('');
+          setEditMediaItems([]);
+          setEditMediaFiles([]);
+        }
+      }}>
+        <DialogContent className="max-w-2xl border border-gray-300 shadow-lg">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa ghi chú</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label>Nội dung ghi chú</Label>
+              <Textarea
+                ref={editTextareaRef}
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                placeholder={
+                  userRole === 'tutor'
+                    ? 'Nhập ghi chú về tiến độ học tập của học viên...'
+                    : 'Nhập ghi chú về bài học, thắc mắc cần hỏi gia sư...'
+                }
+                rows={6}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-note-file" className="cursor-pointer">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#257180] transition-colors">
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-6 h-6 mx-auto mb-2 text-gray-400 animate-spin" />
+                      <p className="text-gray-600">Đang tải...</p>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                      <p className="text-gray-600">Đính kèm ảnh hoặc video</p>
+                      <p className="text-xs text-gray-500 mt-1">PNG, JPG, MP4 tối đa 10MB</p>
+                    </>
                   )}
                 </div>
-              )}
+              </Label>
+              <Input
+                id="edit-note-file"
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                className="hidden"
+                onChange={handleEditFiles}
+                disabled={uploading}
+              />
             </div>
-          )}
+
+            {editMediaItems.length > 0 && (
+              <div className="space-y-2">
+                <Label>Đã upload ({editMediaItems.length} file):</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {editMediaItems.map((item, index) => {
+                    const file = editMediaFiles[index] || item.file;
+                    const isImage = file 
+                      ? file.type.startsWith('image/')
+                      : item.mediaType === MediaType.Image;
+                    return (
+                      <div
+                        key={index}
+                        className="relative group border rounded-lg overflow-hidden bg-gray-50"
+                      >
+                        {isImage ? (
+                          <img
+                            src={item.fileUrl}
+                            alt={`Upload ${index + 1}`}
+                            className="w-full h-24 object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-24 flex items-center justify-center bg-gray-100">
+                            <Video className="h-8 w-8 text-gray-400" />
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeEditMedia(index)}
+                          className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                        <div className="p-2">
+                          <p className="text-xs text-gray-600 truncate">
+                            {item.displayName || file?.name || `File ${index + 1}`}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-[#257180]/20">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditDialogOpen(false);
+                  setEditingNoteId(null);
+                  setEditContent('');
+                  setEditMediaItems([]);
+                  setEditMediaFiles([]);
+                }}
+                disabled={submitting}
+                className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={handleEditSubmit}
+                disabled={submitting || !editContent.trim()}
+                className="bg-[#257180] hover:bg-[#1f5a66] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Cập nhật ghi chú
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }
 

@@ -45,7 +45,7 @@ import { CreateClassRequestDialog } from '@/components/class-requests/CreateClas
 import { ClassRequestService, ClassRequestItemDto, ClassRequestDetailDto } from '@/services/classRequestService';
 import { TutorApplicationService } from '@/services/tutorApplicationService';
 import { TutorApplicationItemDto, TutorProfileDto } from '@/types/backend';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { ClassRequestStatus, TeachingMode, EnumHelpers, DayOfWeekEnum } from '@/types/enums';
 import { FormatService } from '@/lib/format';
 import { TutorService } from '@/services/tutorService';
@@ -68,7 +68,6 @@ const getStatusFromFilter = (filter: string): ClassRequestStatus | null => {
 };
 
 export function ClassRequestsTab() {
-  const { showSuccess, showError } = useCustomToast();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -223,7 +222,7 @@ export function ClassRequestsTab() {
 
         setRequests(allRequests);
       } catch (err: any) {
-        showError('Lỗi', 'Không thể tải danh sách yêu cầu. Vui lòng thử lại.');
+        toast.error('Không thể tải danh sách yêu cầu. Vui lòng thử lại.');
         setRequests([]);
       } finally {
         setLoading(false);
@@ -254,7 +253,7 @@ export function ClassRequestsTab() {
             }
           }
         } catch (err: any) {
-          showError('Lỗi', 'Không thể tải thông tin chi tiết');
+          toast.error('Không thể tải thông tin chi tiết');
         } finally {
           setLoadingDetail(false);
         }
@@ -298,7 +297,7 @@ export function ClassRequestsTab() {
         });
       } catch (error) {
         if (isMounted) {
-          showError('Lỗi', 'Không thể tải thông tin gia sư');
+          toast.error('Không thể tải thông tin gia sư');
         }
       } finally {
         if (isMounted) {
@@ -310,7 +309,7 @@ export function ClassRequestsTab() {
     return () => {
       isMounted = false;
     };
-  }, [applicants, showDetailDialog, tutorDetails, showError]);
+  }, [applicants, showDetailDialog, tutorDetails]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -350,10 +349,10 @@ export function ClassRequestsTab() {
         setSelectedRequest(response.data);
     setShowDetailDialog(true);
       } else {
-        showError('Lỗi', 'Không thể tải thông tin chi tiết');
+        toast.error('Không thể tải thông tin chi tiết');
       }
     } catch (err: any) {
-      showError('Lỗi', 'Không thể tải thông tin chi tiết');
+      toast.error('Không thể tải thông tin chi tiết');
     }
   };
 
@@ -389,7 +388,7 @@ export function ClassRequestsTab() {
     try {
       const response = await ClassRequestService.deleteClassRequest(requestToDelete.id);
       if (response.success) {
-        showSuccess('Thành công', 'Đã xóa yêu cầu mở lớp thành công.');
+        toast.success('Đã xóa yêu cầu mở lớp thành công.');
         setShowDeleteDialog(false);
         setShowDetailDialog(false);
         setRequestToDelete(null);
@@ -435,7 +434,7 @@ export function ClassRequestsTab() {
         throw new Error(response.message || 'Không thể xóa yêu cầu');
       }
     } catch (error: any) {
-      showError('Lỗi', error.message || 'Không thể xóa yêu cầu mở lớp. Vui lòng thử lại.');
+      toast.error(error.message || 'Không thể xóa yêu cầu mở lớp. Vui lòng thử lại.');
     } finally {
       setIsDeleting(false);
     }
@@ -458,7 +457,7 @@ export function ClassRequestsTab() {
         </Button>
       </div>
 
-      <Card className="border border-[#257180]/20 bg-white hover:shadow-md transition-shadow">
+      <Card className="border border-gray-300 bg-white hover:shadow-md transition-shadow">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
@@ -497,13 +496,14 @@ export function ClassRequestsTab() {
         </CardContent>
       </Card>
 
-      <Card className="border border-[#257180]/20 bg-white hover:shadow-md transition-shadow">
+      <Card className="border border-gray-300 bg-white hover:shadow-md transition-shadow">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-gray-900">Danh sách yêu cầu</CardTitle>
-            <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20">
-              {filteredRequests.length} yêu cầu
-            </Badge>
+            <div className="flex items-center gap-2 text-gray-600">
+              <FileText className="h-4 w-4" />
+              <span className="font-medium">{filteredRequests.length} yêu cầu</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -641,7 +641,7 @@ export function ClassRequestsTab() {
       </Card>
 
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white border border-[#257180]/20">
+        <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white border border-gray-300 shadow-lg">
           <DialogHeader className="pb-4 border-b border-gray-200">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
@@ -860,7 +860,7 @@ export function ClassRequestsTab() {
                         : 'Chưa cập nhật';
                       const ratingValue = tutorProfile ? 5.0 : 5.0;
                       return (
-                        <Card key={applicant.applicationId} className="border border-[#257180]/20 bg-white hover:border-[#257180]/50 hover:shadow-md transition-all">
+                        <Card key={applicant.applicationId} className="border border-gray-300 bg-white hover:border-[#257180]/50 hover:shadow-md transition-all">
                           <CardContent className="p-4">
                             <div className="flex gap-3 mb-3">
                               <div className="relative flex-shrink-0">
@@ -912,7 +912,7 @@ export function ClassRequestsTab() {
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                className="flex-1 hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51] text-xs"
+                                className="flex-1 border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51] text-xs"
                                 onClick={() => handleViewTutorProfile(applicant.tutorId)}
                               >
                                 Xem hồ sơ
@@ -1042,7 +1042,7 @@ export function ClassRequestsTab() {
       />
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-md border border-[#257180]/20">
+        <DialogContent className="sm:max-w-md border-gray-300 shadow-lg">
           <DialogHeader className="pb-4 border-b border-gray-200">
             <DialogTitle className="text-xl font-semibold text-gray-900">Xác nhận xóa yêu cầu</DialogTitle>
           </DialogHeader>

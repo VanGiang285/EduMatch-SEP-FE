@@ -12,12 +12,11 @@ import { sendMessage, markMessagesAsRead } from '@/services/signalRService';
 import { ChatService } from '@/services/chatService';
 import { ChatRoomDto, ChatMessageDto } from '@/types/backend';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
 import { FormatService } from '@/lib/format';
 export function MessagesTab() {
   const { user } = useAuth();
-  const { showError } = useCustomToast();
   const { messages, setMessages, addMessage, isConnected } = useChat();
   const { getUserProfile } = useUserProfiles();
   const searchParams = useSearchParams();
@@ -33,7 +32,6 @@ export function MessagesTab() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
-  const showErrorRef = useRef(showError);
   const currentUserEmail = user?.email || "";
   useEffect(() => {
     if (messagesEndRef.current && scrollAreaRef.current && selectedConversation && conversationMessages.length > 0) {
@@ -54,9 +52,6 @@ export function MessagesTab() {
       }, 200);
     }
   }, [selectedConversation]);
-  useEffect(() => {
-    showErrorRef.current = showError;
-  }, [showError]);
   const areRoomsDifferent = (prevRooms: ChatRoomDto[], nextRooms: ChatRoomDto[]) => {
     if (prevRooms.length !== nextRooms.length) {
       return true;
@@ -187,7 +182,7 @@ export function MessagesTab() {
       } catch (error) {
         console.error("Failed to load chat rooms:", error);
         if (isMounted) {
-          showErrorRef.current("Lỗi", "Không thể tải danh sách phòng chat. Vui lòng thử lại.");
+          toast.error("Không thể tải danh sách phòng chat. Vui lòng thử lại.");
         }
       } finally {
         if (isMounted) {
@@ -298,7 +293,7 @@ export function MessagesTab() {
       } catch (error) {
         console.error("Failed to load messages:", error);
         if (isMounted) {
-          showErrorRef.current("Lỗi", "Không thể tải tin nhắn. Vui lòng thử lại.");
+          toast.error("Không thể tải tin nhắn. Vui lòng thử lại.");
         }
       }
     };
@@ -311,17 +306,17 @@ export function MessagesTab() {
     e?.preventDefault();
     if (!messageText.trim() || sending || !selectedConversation) return;
     if (!currentUserEmail) {
-      showErrorRef.current("Lỗi", "Vui lòng đăng nhập để gửi tin nhắn.");
+      toast.error("Vui lòng đăng nhập để gửi tin nhắn.");
       return;
     }
     const room = chatRooms.find(r => r.id === selectedConversation);
     if (!room) {
-      showErrorRef.current("Lỗi", "Không tìm thấy phòng chat.");
+      toast.error("Không tìm thấy phòng chat.");
       return;
     }
     const receiverEmail = room.tutor?.userEmail || "";
     if (!receiverEmail) {
-      showErrorRef.current("Lỗi", "Không tìm thấy thông tin người nhận.");
+      toast.error("Không tìm thấy thông tin người nhận.");
       return;
     }
     const messageContent = messageText.trim();
@@ -349,7 +344,7 @@ export function MessagesTab() {
       // Remove temporary message on error
       setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
       setMessageText(messageContent); // Restore message text
-      showErrorRef.current("Lỗi", "Không thể gửi tin nhắn. Vui lòng thử lại.");
+      toast.error("Không thể gửi tin nhắn. Vui lòng thử lại.");
     } finally {
       setSending(false);
     }
@@ -360,7 +355,7 @@ export function MessagesTab() {
         <h2 className="text-2xl font-semibold text-gray-900">Tin nhắn</h2>
         <p className="text-gray-600 mt-1">Trò chuyện với gia sư</p>
       </div>
-      <Card className="h-[600px] border border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
+      <Card className="h-[600px] border border-gray-300 bg-white transition-shadow hover:shadow-md">
         <CardContent className="p-0 h-full flex">
                 {}
                 <div className="w-80 border-r border-gray-200 flex flex-col">

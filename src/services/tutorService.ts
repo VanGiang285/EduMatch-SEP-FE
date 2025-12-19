@@ -66,10 +66,8 @@ export class TutorService {
     return apiClient.put<TutorEducationDto[]>(url, updates);
   }
 
-  // Lấy tutor profile theo email (QUAN TRỌNG!)
   static async getTutorByEmail(email: string): Promise<ApiResponse<TutorProfileDto>> {
-    const url = replaceUrlParams(API_ENDPOINTS.MANAGE_TUTOR_PROFILES.GET_BY_EMAIL, { email });
-    return apiClient.get<TutorProfileDto>(url);
+    return apiClient.get<TutorProfileDto>(API_ENDPOINTS.TUTORS.GET_BY_EMAIL, { email });
   }
 
   // Lấy tutor profile theo ID (full với relations)

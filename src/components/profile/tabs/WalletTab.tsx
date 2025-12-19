@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/data/mockLearnerData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
+import { SelectWithSearch, SelectWithSearchItem } from '@/components/ui/form/select-with-search';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { useWalletContext } from '@/contexts/WalletContext';
 import { WalletService } from '@/services/walletService';
@@ -31,12 +32,12 @@ import { WalletTransactionDto, UserBankAccountDto, BankDto } from '@/types/backe
 import { WalletTransactionType } from '@/types/backend';
 import { ErrorHandler } from '@/lib/error-handler';
 import { CreateUserBankAccountRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 
 export function WalletTab() {
   const { balance, wallet, loading: walletLoading, refetch: refetchBalance } = useWalletContext();
-  const { showSuccess, showError } = useCustomToast();
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState<boolean>(false);
   const [transactionsError, setTransactionsError] = useState<any | null>(null);
@@ -116,6 +117,12 @@ export function WalletTab() {
     fetchTransactions();
   }, []);
 
+  useEffect(() => {
+    if (!walletLoading && isInitialLoad) {
+      setIsInitialLoad(false);
+    }
+  }, [walletLoading, isInitialLoad]);
+
   // Fetch bank accounts and banks
   const fetchBankAccounts = async () => {
     try {
@@ -167,7 +174,7 @@ export function WalletTab() {
 
   const handleAddBankAccount = async () => {
     if (!newBankAccount.bankId || !newBankAccount.accountNumber || !newBankAccount.accountHolderName) {
-      showError('Lỗi', 'Vui lòng điền đầy đủ thông tin');
+      toast.error('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
@@ -176,7 +183,7 @@ export function WalletTab() {
 
     // Validate account number length to allow both bank accounts and phone numbers
     if (accountNumberWithoutSpaces.length < 6 || accountNumberWithoutSpaces.length > 20) {
-      showError('Lỗi', 'Số tài khoản phải có từ 6 đến 20 ký tự');
+      toast.error('Số tài khoản phải có từ 6 đến 20 ký tự');
       return;
     }
 
@@ -188,7 +195,7 @@ export function WalletTab() {
     });
 
     if (existingAccount) {
-      showError('Lỗi', `Số tài khoản ${newBankAccount.accountNumber} đã tồn tại cho ngân hàng ${existingAccount.bank.name}. Vui lòng kiểm tra lại.`);
+      toast.error(`Số tài khoản ${newBankAccount.accountNumber} đã tồn tại cho ngân hàng ${existingAccount.bank.name}. Vui lòng kiểm tra lại.`);
       return;
     }
 
@@ -203,7 +210,7 @@ export function WalletTab() {
       };
       const response = await WalletService.createBankAccount(request);
       if (response.success) {
-        showSuccess('Thành công', 'Thêm tài khoản ngân hàng thành công');
+        toast.success('Thêm tài khoản ngân hàng thành công');
         setShowAddBankDialog(false);
         setNewBankAccount({ bankId: 0, accountNumber: '', accountHolderName: '' });
         setIsCapsLockOn(false);
@@ -213,7 +220,7 @@ export function WalletTab() {
       }
     } catch (err) {
       ErrorHandler.logError(err, 'WalletTab.handleAddBankAccount');
-      showError('Lỗi', 'Không thể thêm tài khoản ngân hàng');
+      toast.error('Không thể thêm tài khoản ngân hàng');
     }
   };
 
@@ -229,7 +236,7 @@ export function WalletTab() {
       setDeletingAccountId(accountToDelete.id);
       const response = await WalletService.deleteBankAccount(accountToDelete.id);
       if (response.success) {
-        showSuccess('Thành công', 'Xóa tài khoản ngân hàng thành công');
+        toast.success('Xóa tài khoản ngân hàng thành công');
         setShowDeleteConfirmDialog(false);
         setAccountToDelete(null);
         await fetchBankAccounts();
@@ -238,7 +245,7 @@ export function WalletTab() {
       }
     } catch (err) {
       ErrorHandler.logError(err, 'WalletTab.handleDeleteBankAccount');
-      showError('Lỗi', 'Không thể xóa tài khoản ngân hàng');
+      toast.error('Không thể xóa tài khoản ngân hàng');
     } finally {
       setDeletingAccountId(null);
     }
@@ -254,23 +261,23 @@ export function WalletTab() {
 
   const handleTopUp = async () => {
     if (!topUpAmount) {
-      showError('Lỗi', 'Vui lòng nhập số tiền nạp');
+      toast.error('Vui lòng nhập số tiền nạp');
       return;
     }
 
     const amount = Number(topUpAmount);
     if (amount <= 0) {
-      showError('Lỗi', 'Số tiền nạp phải lớn hơn 0');
+      toast.error('Số tiền nạp phải lớn hơn 0');
       return;
     }
 
     // Validate amount range: 50,000 - 5,000,000 VND
     if (amount < 50000) {
-      showError('Lỗi', 'Số tiền nạp tối thiểu là 50,000 VND');
+      toast.error('Số tiền nạp tối thiểu là 50,000 VND');
       return;
     }
     if (amount > 5000000) {
-      showError('Lỗi', 'Số tiền nạp tối đa là 5,000,000 VND');
+      toast.error('Số tiền nạp tối đa là 5,000,000 VND');
       return;
     }
 
@@ -286,7 +293,7 @@ export function WalletTab() {
         const paymentUrl = response.data;
 
         if (paymentUrl) {
-          showSuccess('Thành công', 'Đang chuyển hướng đến trang thanh toán VNPay...');
+          toast.success('Đang chuyển hướng đến trang thanh toán VNPay...');
           setShowTopUpDialog(false);
           setTopUpAmount('');
 
@@ -300,7 +307,7 @@ export function WalletTab() {
       }
     } catch (err) {
       ErrorHandler.logError(err, 'WalletTab.handleTopUp');
-      showError('Lỗi', 'Không thể tạo yêu cầu nạp tiền. Vui lòng thử lại.');
+      toast.error('Không thể tạo yêu cầu nạp tiền. Vui lòng thử lại.');
     } finally {
       setIsProcessingTopUp(false);
     }
@@ -308,7 +315,7 @@ export function WalletTab() {
 
   const handleWithdraw = async () => {
     if (!withdrawAmount || !selectedBankAccountId) {
-      showError('Lỗi', 'Vui lòng điền đầy đủ thông tin');
+      toast.error('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
@@ -316,15 +323,15 @@ export function WalletTab() {
 
     // Validate amount range: 50,000 - 5,000,000 VND (theo backend)
     if (amount < 50000) {
-      showError('Lỗi', 'Số tiền rút tối thiểu là 50,000 VND');
+      toast.error('Số tiền rút tối thiểu là 50,000 VND');
       return;
     }
     if (amount > 5000000) {
-      showError('Lỗi', 'Số tiền rút tối đa là 5,000,000 VND');
+      toast.error('Số tiền rút tối đa là 5,000,000 VND');
       return;
     }
     if (amount > currentBalance) {
-      showError('Lỗi', 'Số tiền rút vượt quá số dư khả dụng');
+      toast.error('Số tiền rút vượt quá số dư khả dụng');
       return;
     }
 
@@ -338,7 +345,7 @@ export function WalletTab() {
       if (response.success) {
         // Backend trả về message (string) trong response.data
         const message = response.data || 'Yêu cầu rút tiền đã được tạo thành công';
-        showSuccess('Thành công', `${message}. Yêu cầu của bạn sẽ được xử lý trong vòng 1-2 ngày làm việc.`);
+        toast.success(`${message}. Yêu cầu của bạn sẽ được xử lý trong vòng 1-2 ngày làm việc.`);
 
         setShowWithdrawDialog(false);
         setWithdrawAmount('');
@@ -352,7 +359,7 @@ export function WalletTab() {
       }
     } catch (err) {
       ErrorHandler.logError(err, 'WalletTab.handleWithdraw');
-      showError('Lỗi', 'Không thể tạo yêu cầu rút tiền. Vui lòng thử lại.');
+      toast.error('Không thể tạo yêu cầu rút tiền. Vui lòng thử lại.');
     } finally {
       setIsProcessingWithdraw(false);
     }
@@ -370,12 +377,13 @@ export function WalletTab() {
         <CardContent className="p-8">
           <div className="flex items-center justify-between mb-3">
             <Wallet className="h-6 w-6 opacity-80" />
-            <Badge variant="secondary" className="bg-white/20 text-white">
-              Khả dụng
-            </Badge>
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-white/20 text-white border border-white/30">
+              <CheckCircle className="h-3 w-3" />
+              <span>Khả dụng</span>
+            </div>
           </div>
           <p className="text-sm opacity-90 mb-2">Số dư khả dụng</p>
-          {walletLoading ? (
+          {walletLoading && isInitialLoad ? (
             <div className="flex items-center gap-2 mb-6">
               <Loader2 className="h-8 w-8 animate-spin" />
               <p className="text-2xl font-bold">Đang tải...</p>
@@ -387,7 +395,7 @@ export function WalletTab() {
           <div className="flex gap-3">
             <Button
               variant="secondary"
-              className="flex-1 bg-white/90 hover:bg-white text-[#257180]"
+              className="flex-1 bg-white/90 hover:bg-[#257180] hover:text-white text-[#257180]"
               onClick={() => setShowTopUpDialog(true)}
             >
               <ArrowDownCircle className="h-4 w-4 mr-2" />
@@ -395,7 +403,7 @@ export function WalletTab() {
             </Button>
             <Button
               variant="outline"
-              className="flex-1 border-white/30 text-white hover:bg-white/10"
+              className="flex-1 border-gray-300 bg-white text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
               onClick={() => setShowWithdrawDialog(true)}
             >
               <ArrowUpCircle className="h-4 w-4 mr-2" />
@@ -408,13 +416,13 @@ export function WalletTab() {
       {/* Transaction History */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-          <TabsTrigger value="history">Lịch sử giao dịch</TabsTrigger>
-          <TabsTrigger value="bank-accounts">Tài khoản ngân hàng</TabsTrigger>
+          <TabsTrigger value="overview" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Tổng quan</TabsTrigger>
+          <TabsTrigger value="history" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Lịch sử giao dịch</TabsTrigger>
+          <TabsTrigger value="bank-accounts" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">Tài khoản ngân hàng</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
-          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
             <CardHeader>
               <CardTitle className="text-gray-900">Giao dịch gần đây</CardTitle>
             </CardHeader>
@@ -468,7 +476,7 @@ export function WalletTab() {
         </TabsContent>
 
         <TabsContent value="history" className="mt-6">
-          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
             <CardHeader>
               <CardTitle className="text-gray-900">Tất cả giao dịch</CardTitle>
             </CardHeader>
@@ -502,9 +510,9 @@ export function WalletTab() {
                             <p className="font-medium">
                               {WalletService.getTransactionReasonLabel(transaction.reason)}
                             </p>
-                            <Badge variant="outline" className="text-xs">
-                              {WalletService.getTransactionTypeLabel(transaction.transactionType)}
-                            </Badge>
+                            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border border-gray-300 text-gray-700">
+                              <span>{WalletService.getTransactionTypeLabel(transaction.transactionType)}</span>
+                            </div>
                           </div>
                           <div className="flex items-center gap-3 mt-1">
                             <p className="text-sm text-gray-500">
@@ -537,7 +545,7 @@ export function WalletTab() {
         </TabsContent>
 
         <TabsContent value="bank-accounts" className="mt-6">
-          <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+          <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-gray-900">Tài khoản ngân hàng</CardTitle>
@@ -577,9 +585,10 @@ export function WalletTab() {
                           <div className="flex items-center gap-2">
                             <p className="font-semibold text-gray-900">{account.bank.name}</p>
                             {account.isDefault && (
-                              <Badge variant="secondary" className="bg-[#257180] text-white">
-                                Mặc định
-                              </Badge>
+                              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-[#257180] text-white border border-gray-300">
+                                <CheckCircle className="h-3 w-3" />
+                                <span>Mặc định</span>
+                              </div>
                             )}
                           </div>
                           <p className="text-sm text-gray-600 mt-1">
@@ -596,7 +605,7 @@ export function WalletTab() {
                           size="sm"
                           onClick={() => handleDeleteClick(account)}
                           disabled={deletingAccountId === account.id}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="border-gray-300 bg-white text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300"
                         >
                           {deletingAccountId === account.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -616,7 +625,7 @@ export function WalletTab() {
 
       {/* Add Bank Account Dialog */}
       <Dialog open={showAddBankDialog} onOpenChange={setShowAddBankDialog}>
-        <DialogContent className="sm:max-w-md border-[#FD8B51]">
+        <DialogContent className="sm:max-w-md border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-gray-900">Thêm tài khoản ngân hàng</DialogTitle>
             <DialogDescription className="text-gray-600">
@@ -632,21 +641,17 @@ export function WalletTab() {
                   <span className="text-sm text-gray-500">Đang tải danh sách ngân hàng...</span>
                 </div>
               ) : (
-                <Select
-                  value={newBankAccount.bankId.toString()}
+                <SelectWithSearch
+                  value={newBankAccount.bankId > 0 ? newBankAccount.bankId.toString() : ''}
                   onValueChange={(value) => setNewBankAccount({ ...newBankAccount, bankId: parseInt(value) })}
+                  placeholder="Chọn ngân hàng"
                 >
-                  <SelectTrigger id="bankId">
-                    <SelectValue placeholder="Chọn ngân hàng" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {banks.map((bank) => (
-                      <SelectItem key={bank.id} value={bank.id.toString()}>
-                        {bank.name} ({bank.code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  {banks.map((bank) => (
+                    <SelectWithSearchItem key={bank.id} value={bank.id.toString()}>
+                      {bank.name} ({bank.code})
+                    </SelectWithSearchItem>
+                  ))}
+                </SelectWithSearch>
               )}
             </div>
 
@@ -726,7 +731,7 @@ export function WalletTab() {
                 setNewBankAccount({ bankId: 0, accountNumber: '', accountHolderName: '' });
                 setIsCapsLockOn(false);
               }}
-              className="border-[#257180] text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+              className="border-gray-300 bg-white text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
             >
               Hủy
             </Button>
@@ -743,7 +748,7 @@ export function WalletTab() {
 
       {/* Top Up Dialog */}
       <Dialog open={showTopUpDialog} onOpenChange={setShowTopUpDialog}>
-        <DialogContent className="sm:max-w-md border-[#FD8B51]">
+        <DialogContent className="sm:max-w-md border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-gray-900">Nạp tiền vào ví</DialogTitle>
             <DialogDescription className="text-gray-600">
@@ -770,7 +775,7 @@ export function WalletTab() {
                     key={amount}
                     variant="outline"
                     onClick={() => setTopUpAmount(amount.toString())}
-                    className="text-sm"
+                    className="text-sm border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                   >
                     {formatCurrency(amount)}
                   </Button>
@@ -792,7 +797,7 @@ export function WalletTab() {
                 setTopUpAmount('');
               }}
               disabled={isProcessingTopUp}
-              className="border-[#257180] text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+              className="border-gray-300 bg-white text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
             >
               Hủy
             </Button>
@@ -817,7 +822,7 @@ export function WalletTab() {
 
       {/* Withdraw Dialog */}
       <Dialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
-        <DialogContent className="sm:max-w-md border-[#FD8B51]">
+        <DialogContent className="sm:max-w-md border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-gray-900 text-xl font-semibold">Rút tiền từ ví</DialogTitle>
             <DialogDescription className="text-gray-600 text-sm mt-1">
@@ -909,9 +914,10 @@ export function WalletTab() {
                                 </span>
                               )}
                               {account.isDefault && (
-                                <Badge variant="secondary" className="bg-[#257180] text-white text-xs px-1.5 py-0.5 rounded">
-                                  Mặc định
-                                </Badge>
+                                <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded text-xs font-medium bg-[#257180] text-white border border-gray-300">
+                                  <CheckCircle className="h-3 w-3" />
+                                  <span>Mặc định</span>
+                                </div>
                               )}
                             </div>
                             <div className="space-y-1">
@@ -964,7 +970,7 @@ export function WalletTab() {
                 setSelectedBankAccountId(null);
               }}
               disabled={isProcessingWithdraw}
-              className="border-[#257180] text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+              className="border-gray-300 bg-white text-[#257180] hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
             >
               Hủy
             </Button>

@@ -16,7 +16,7 @@ import { sendMessage, markMessagesAsRead } from "@/services/signalRService";
 import { ChatService } from "@/services/chatService";
 import { ChatRoomDto, ChatMessageDto } from "@/types/backend";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCustomToast } from "@/hooks/useCustomToast";
+import { toast } from 'sonner';
 import { FormatService } from "@/lib/format";
 interface ChatModalProps {
   open: boolean;
@@ -35,20 +35,15 @@ export function ChatModal({
   tutorAvatar,
 }: ChatModalProps) {
   const { user } = useAuth();
-  const { showError, showSuccess } = useCustomToast();
-  const { messages, setMessages, addMessage, isConnected } = useChat();
+    const { messages, setMessages, addMessage, isConnected } = useChat();
   const [messageText, setMessageText] = useState("");
   const [loading, setLoading] = useState(false);
   const [chatRoom, setChatRoom] = useState<ChatRoomDto | null>(null);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const showErrorRef = useRef(showError);
-  const currentUserEmail = user?.email || "";
-  useEffect(() => {
-    showErrorRef.current = showError;
-  }, [showError]);
-  useEffect(() => {
+    const currentUserEmail = user?.email || "";
+    useEffect(() => {
     if (messagesEndRef.current && scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector(
         '[data-radix-scroll-area-viewport]'
@@ -89,12 +84,12 @@ export function ChatModal({
         } else {
           setChatRoom(null);
           setMessages([]);
-          showErrorRef.current("Lỗi", "Không thể tải phòng chat. Vui lòng thử lại.");
+          toast.error('Không thể tải phòng chat. Vui lòng thử lại.');
         }
       } catch (error) {
         if (!isMounted) return;
         console.error("Failed to load chat room:", error);
-        showErrorRef.current("Lỗi", "Không thể tải phòng chat. Vui lòng thử lại.");
+        toast.error('Không thể tải phòng chat. Vui lòng thử lại.');
         setChatRoom(null);
         setMessages([]);
       } finally {
@@ -119,7 +114,7 @@ export function ChatModal({
     e?.preventDefault();
     if (!messageText.trim() || sending) return;
     if (!currentUserEmail) {
-      showErrorRef.current("Lỗi", "Vui lòng đăng nhập để gửi tin nhắn.");
+      toast.error('Vui lòng đăng nhập để gửi tin nhắn.');
       return;
     }
     setSending(true);
@@ -141,7 +136,7 @@ export function ChatModal({
       setMessageText("");
     } catch (error) {
       console.error("Failed to send message:", error);
-      showErrorRef.current("Lỗi", "Không thể gửi tin nhắn. Vui lòng thử lại.");
+      toast.error('Không thể gửi tin nhắn. Vui lòng thử lại.');
     } finally {
       setSending(false);
     }

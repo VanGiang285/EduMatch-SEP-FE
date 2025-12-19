@@ -22,7 +22,7 @@ import { ChatService } from "@/services/chatService";
 import { ChatRoomDto, ChatMessageDto } from "@/types/backend";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatContext } from "@/contexts/ChatContext";
-import { useCustomToast } from "@/hooks/useCustomToast";
+import { toast } from 'sonner';
 import { useUserProfiles } from "@/hooks/useUserProfiles";
 import { FormatService } from "@/lib/format";
 import { USER_ROLES } from "@/constants";
@@ -30,8 +30,7 @@ export function FloatingChat() {
   const { isFloatingChatOpen, setIsFloatingChatOpen, selectedRoomId, setSelectedRoomId } = useChatContext();
   const { user } = useAuth();
   const { getUserProfile } = useUserProfiles();
-  const { showError } = useCustomToast();
-  const { messages, setMessages, addMessage, isConnected } = useChat();
+    const { messages, setMessages, addMessage, isConnected } = useChat();
   const [isMinimized, setIsMinimized] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const [messageText, setMessageText] = useState("");
@@ -44,12 +43,8 @@ export function FloatingChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
-  const showErrorRef = useRef(showError);
-  const currentUserEmail = user?.email || "";
-  useEffect(() => {
-    showErrorRef.current = showError;
-  }, [showError]);
-  useEffect(() => {
+    const currentUserEmail = user?.email || "";
+    useEffect(() => {
     if (!isMinimized && selectedRoom && roomMessages.length > 0) {
       setTimeout(() => {
         const scrollContainer = scrollAreaRef.current?.querySelector(
@@ -148,7 +143,7 @@ export function FloatingChat() {
       } catch (error) {
         console.error("Failed to load chat rooms:", error);
         if (isMounted) {
-          showErrorRef.current("Lỗi", "Không thể tải danh sách phòng chat. Vui lòng thử lại.");
+          toast.error('Không thể tải danh sách phòng chat. Vui lòng thử lại.');
         }
       } finally {
         if (isMounted) {
@@ -246,7 +241,7 @@ export function FloatingChat() {
         }
       } catch (error) {
         console.error("Failed to load messages:", error);
-        showErrorRef.current("Lỗi", "Không thể tải tin nhắn. Vui lòng thử lại.");
+        toast.error('Không thể tải tin nhắn. Vui lòng thử lại.');
       }
     };
     loadMessages();
@@ -262,19 +257,19 @@ export function FloatingChat() {
     e?.preventDefault();
     if (!messageText.trim() || sending || !selectedRoom) return;
     if (!currentUserEmail) {
-      showErrorRef.current("Lỗi", "Vui lòng đăng nhập để gửi tin nhắn.");
+      toast.error('Vui lòng đăng nhập để gửi tin nhắn.');
       return;
     }
     const room = chatRooms.find(r => r.id === selectedRoom);
     if (!room) {
-      showErrorRef.current("Lỗi", "Không tìm thấy phòng chat.");
+      toast.error('Không tìm thấy phòng chat.');
       return;
     }
     const receiverEmail = room.userEmail === currentUserEmail 
       ? (room.tutor?.userEmail || "")
       : room.userEmail;
     if (!receiverEmail) {
-      showErrorRef.current("Lỗi", "Không tìm thấy thông tin người nhận.");
+      toast.error('Không tìm thấy thông tin người nhận.');
       return;
     }
     const messageContent = messageText.trim();
@@ -302,7 +297,7 @@ export function FloatingChat() {
       // Remove temporary message on error
       setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
       setMessageText(messageContent); // Restore message text
-      showErrorRef.current("Lỗi", "Không thể gửi tin nhắn. Vui lòng thử lại.");
+      toast.error('Không thể gửi tin nhắn. Vui lòng thử lại.');
     } finally {
       setSending(false);
     }

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/form/label';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { AuthService } from '@/services';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
@@ -24,7 +24,6 @@ export function SettingsTab() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { showError, showSuccess } = useCustomToast();
   const { logout } = useAuth();
   const router = useRouter();
 
@@ -69,7 +68,7 @@ export function SettingsTab() {
           confirmPassword: '',
         });
         setErrors({});
-        showSuccess('Đổi mật khẩu thành công', 'Mật khẩu của bạn đã được thay đổi thành công. Vui lòng đăng nhập lại.');
+        toast.success('Mật khẩu của bạn đã được thay đổi thành công. Vui lòng đăng nhập lại.');
         if (response.data?.requiresLogout) {
           await logout();
         }
@@ -77,10 +76,10 @@ export function SettingsTab() {
           router.push('/login');
         }, 2000);
       } else {
-        showError('Không thể đổi mật khẩu', response.error?.message);
+        toast.error(response.error?.message || 'Không thể đổi mật khẩu');
       }
     } catch (error: any) {
-      showError('Lỗi khi đổi mật khẩu', error.message);
+      toast.error(`Lỗi khi đổi mật khẩu: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -94,7 +93,7 @@ export function SettingsTab() {
       </div>
 
       {/* Change Password */}
-      <Card className="hover:shadow-md transition-shadow bg-white border border-[#257180]/20">
+      <Card className="hover:shadow-md transition-shadow bg-white border border-gray-300">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-900">
             <Lock className="h-5 w-5" />

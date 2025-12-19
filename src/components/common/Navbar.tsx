@@ -1,9 +1,10 @@
 "use client";
 import { Button } from "../ui/basic/button";
-import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings, FileText, ChevronDown, Sparkles, Receipt, AlertTriangle, ClipboardList } from "lucide-react";
+import { Menu, X, Search, BookOpen, GraduationCap, MessageCircle, Bell, Heart, LogOut, User, Wallet, UserCircle, Calendar, Settings, FileText, ChevronDown, Sparkles, AlertTriangle, ClipboardList, LayoutDashboard } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCustomToast } from "@/hooks/useCustomToast";
+import { toast } from 'sonner';
+import { useWalletContext } from "@/contexts/WalletContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { USER_ROLES } from "@/constants";
@@ -32,16 +33,16 @@ interface NavbarProps {
   currentPage: string;
   walletBalance?: number;
 }
-export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, onNavigateToAIChat, onNavigateToMessages, onNavigateToNotifications, onNavigateToFavorites, onNavigateToWallet, onNavigateToClassRequests, currentPage, walletBalance = 0 }: NavbarProps) {
+export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHome, onNavigateToBecomeTutor, onNavigateToFindTutor, onNavigateToAIChat, onNavigateToMessages, onNavigateToNotifications, onNavigateToFavorites, onNavigateToWallet, onNavigateToClassRequests, currentPage, walletBalance: propWalletBalance }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
-  const { showWarning } = useCustomToast();
-  const router = useRouter();
+    const router = useRouter();
+  const walletContext = useWalletContext();
+  const walletBalance = walletContext?.balance ?? propWalletBalance ?? 0;
 
-  // Check if user is admin (system or business)
   const isAdmin = user && (user.role === USER_ROLES.SYSTEM_ADMIN || user.role === USER_ROLES.BUSINESS_ADMIN);
-  // Check if user is tutor
   const isTutor = user && user.role === USER_ROLES.TUTOR;
+  const isLearner = user && user.role === USER_ROLES.LEARNER;
 
   const handleLogout = async () => {
     try {
@@ -58,7 +59,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
 
     if (!isAuthenticated || !user) {
       console.log('🔍 Navbar - Not authenticated, redirecting to login');
-      showWarning('Cần đăng nhập', 'Bạn cần đăng nhập để trở thành gia sư', 3000);
+      toast.warning('Cần đăng nhập', 'Bạn cần đăng nhập để trở thành gia sư', 3000);
       setTimeout(() => {
         onNavigateToLogin();
       }, 1000);
@@ -84,33 +85,30 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
           {/* Hide menu items for admin users */}
           {!isAdmin && (
             <div className="hidden lg:flex items-center space-x-1">
-              <button
-                onClick={onNavigateToFindTutor}
-                className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
-              >
-                <Search className="w-4 h-4" />
-                Tìm gia sư
-              </button>
+              {(!isAuthenticated || isLearner) && (
+                <>
+                  <button
+                    onClick={onNavigateToFindTutor}
+                    className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
+                  >
+                    <Search className="w-4 h-4" />
+                    Tìm gia sư
+                  </button>
+                  <button
+                    onClick={onNavigateToAIChat}
+                    className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    AI Chat
+                  </button>
+                </>
+              )}
               <button
                 onClick={onNavigateToClassRequests}
                 className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
               >
                 <BookOpen className="w-4 h-4" />
                 Yêu cầu mở lớp
-              </button>
-              <button
-                onClick={onNavigateToAIChat}
-                className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
-              >
-                <Sparkles className="w-4 h-4" />
-                AI Chat
-              </button>
-              <button
-                onClick={handleBecomeTutorClick}
-                className="flex items-center gap-2 px-4 py-2 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium"
-              >
-                <GraduationCap className="w-4 h-4" />
-                Trở thành gia sư
               </button>
             </div>
           )}
@@ -133,7 +131,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                     onNavigateToNotifications?.();
                   }}
                   onMarkAllRead={() => {
-                    // Mark all as read is handled in NotificationDropdown component
                   }}
                 />
                 <button
@@ -161,16 +158,16 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/10 transition-all">
                       {user.avatar ? (
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.avatar} alt={user.name} />
-                          <AvatarFallback className="bg-[#FD8B51] text-white">
-                            {user.name?.[0] || 'U'}
+                        <Avatar className="h-8 w-8 rounded-lg">
+                          <AvatarImage src={user.avatar} alt={user.name} className="rounded-lg" />
+                          <AvatarFallback className="bg-[#F2E5BF] text-[#257180] rounded-lg font-semibold">
+                            {(user.name || 'U').slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       ) : (
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-[#FD8B51] text-white">
-                            {user.name?.[0] || 'U'}
+                        <Avatar className="h-8 w-8 rounded-lg">
+                          <AvatarFallback className="bg-[#F2E5BF] text-[#257180] rounded-lg font-semibold">
+                            {(user.name || 'U').slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       )}
@@ -180,7 +177,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                       <ChevronDown className="h-4 w-4 text-white/70" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 bg-white border border-[#FD8B51]">
+                  <DropdownMenuContent align="end" className="w-56 bg-white border border-gray-300 shadow-lg">
                     <div className="px-2 py-1.5">
                       <p className="font-medium text-gray-900 truncate">{user.name}</p>
                       <p className="text-sm text-gray-500 truncate">{user.email}</p>
@@ -189,9 +186,18 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
 
                     {!isAdmin && (
                       <>
+                        {isTutor && (
+                          <DropdownMenuItem
+                            onClick={() => router.push('/profile?tab=dashboard')}
+                            className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
+                          >
+                            <LayoutDashboard className="h-4 w-4 mr-2" />
+                            Dashboard
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=profile')}
-                          className="cursor-pointer"
+                          className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
                         >
                           <User className="h-4 w-4 mr-2" />
                           Thông tin người dùng
@@ -199,7 +205,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                         {isTutor && (
                           <DropdownMenuItem
                             onClick={() => router.push('/profile?tab=tutorProfile')}
-                            className="cursor-pointer"
+                            className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
                           >
                             <GraduationCap className="h-4 w-4 mr-2" />
                             Hồ sơ gia sư
@@ -207,7 +213,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                         )}
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=schedule')}
-                          className="cursor-pointer"
+                          className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
                         >
                           <Calendar className="h-4 w-4 mr-2" />
                           {isTutor ? 'Lịch dạy' : 'Lịch học'}
@@ -215,7 +221,7 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
 
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=scheduleChange')}
-                          className="cursor-pointer"
+                          className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
                         >
                           <ClipboardList className="h-4 w-4 mr-2" />
                           Yêu cầu chuyển lịch
@@ -223,58 +229,49 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
 
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=classes')}
-                          className="cursor-pointer"
+                          className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
                         >
                           <BookOpen className="h-4 w-4 mr-2" />
                           {isTutor ? 'Lịch đặt' : 'Lớp học'}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => router.push(isTutor ? '/profile?tab=tutorApplications' : '/profile?tab=classRequests')}
-                          className="cursor-pointer"
+                          className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
                         >
                           <FileText className="h-4 w-4 mr-2" />
                           {isTutor ? 'Ứng tuyển lớp dạy' : 'Yêu cầu mở lớp'}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=wallet')}
-                          className="cursor-pointer"
+                          className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
                         >
                           <Wallet className="h-4 w-4 mr-2" />
                           Ví
                         </DropdownMenuItem>
-                        {!isTutor && (
-                          <DropdownMenuItem
-                            onClick={() => router.push('/profile?tab=refundRequests')}
-                            className="cursor-pointer"
-                          >
-                            <Receipt className="h-4 w-4 mr-2" />
-                            Yêu cầu hoàn tiền
-                          </DropdownMenuItem>
-                        )}
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=reports')}
-                          className="cursor-pointer"
+                          className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
                         >
                           <AlertTriangle className="h-4 w-4 mr-2" />
                           Báo cáo
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=notifications')}
-                          className="cursor-pointer"
+                          className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
                         >
                           <Bell className="h-4 w-4 mr-2" />
                           Thông báo
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=messages')}
-                          className="cursor-pointer"
+                          className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
                         >
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Tin nhắn
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => router.push('/profile?tab=settings')}
-                          className="cursor-pointer"
+                          className="cursor-pointer hover:bg-[#FD8B51] hover:text-white"
                         >
                           <Settings className="h-4 w-4 mr-2" />
                           Cài đặt
@@ -333,36 +330,33 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
             {/* Hide mobile menu items for admin users */}
             {!isAdmin && (
               <>
-                <button
-                  onClick={onNavigateToFindTutor}
-                  className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
-                >
-                  <Search className="w-4 h-4" />
-                  Tìm gia sư
-                </button>
+                {(!isAuthenticated || isLearner) && (
+                  <>
+                    <button
+                      onClick={onNavigateToFindTutor}
+                      className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
+                    >
+                      <Search className="w-4 h-4" />
+                      Tìm gia sư
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        onNavigateToAIChat?.();
+                      }}
+                      className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      AI Chat
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={onNavigateToClassRequests}
                   className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
                 >
                   <BookOpen className="w-4 h-4" />
                   Yêu cầu mở lớp
-                </button>
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    onNavigateToAIChat?.();
-                  }}
-                  className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  AI Chat
-                </button>
-                <button
-                  onClick={handleBecomeTutorClick}
-                  className="flex items-center gap-3 px-4 py-3 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all font-medium w-full text-left"
-                >
-                  <GraduationCap className="w-4 h-4" />
-                  Trở thành gia sư
                 </button>
               </>
             )}
@@ -415,11 +409,13 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                         alt={user.name}
                         width={40}
                         height={40}
-                        className="rounded-full object-cover"
+                        className="rounded-lg object-cover"
                       />
                     ) : (
-                      <div className="w-10 h-10 bg-[#FD8B51] rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-white" />
+                      <div className="w-10 h-10 bg-[#F2E5BF] rounded-lg flex items-center justify-center">
+                        <span className="text-[#257180] font-bold text-sm">
+                          {(user.name || 'U').slice(0, 2).toUpperCase()}
+                        </span>
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
@@ -448,6 +444,18 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                       >
                         <GraduationCap className="w-4 h-4" />
                         <span className="text-sm">Hồ sơ gia sư</span>
+                      </button>
+                    )}
+                    {isTutor && (
+                      <button
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          router.push('/profile?tab=dashboard');
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
+                      >
+                        <LayoutDashboard className="w-4 h-4" />
+                        <span className="text-sm">Dashboard</span>
                       </button>
                     )}
                     <button
@@ -500,18 +508,6 @@ export function Navbar({ onNavigateToLogin, onNavigateToRegister, onNavigateToHo
                       <Wallet className="w-4 h-4" />
                       <span className="text-sm">Ví</span>
                     </button>
-                    {!isTutor && (
-                      <button
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          router.push('/profile?tab=refundRequests');
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-white hover:text-[#FD8B51] hover:bg-white/10 rounded-lg transition-all"
-                      >
-                        <Receipt className="w-4 h-4" />
-                        <span className="text-sm">Yêu cầu hoàn tiền</span>
-                      </button>
-                    )}
                     <button
                       onClick={() => {
                         setMobileMenuOpen(false);

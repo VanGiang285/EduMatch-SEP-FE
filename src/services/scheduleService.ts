@@ -1,7 +1,7 @@
 import { apiClient, replaceUrlParams } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants';
 import { ApiResponse } from '@/types/api';
-import { ScheduleDto } from '@/types/backend';
+import { ScheduleDto, ScheduleAttendanceSummaryDto } from '@/types/backend';
 import { ScheduleStatus } from '@/types/enums';
 import { PagedResult } from './bookingService';
 
@@ -247,5 +247,45 @@ export class ScheduleService {
     });
     const url = `${endpoint}?releaseToTutor=${releaseToTutor}`;
     return apiClient.post<object>(url);
+  }
+
+  static async getAttendanceSummary(bookingId: number): Promise<ApiResponse<ScheduleAttendanceSummaryDto>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.SCHEDULES.ATTENDANCE_SUMMARY, {
+      bookingId: bookingId.toString(),
+    });
+    return apiClient.get<ScheduleAttendanceSummaryDto>(endpoint);
+  }
+
+  static async adminFinishSchedule(id: number): Promise<ApiResponse<object>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.SCHEDULES.ADMIN_FINISH, {
+      id: id.toString(),
+    });
+    return apiClient.post<object>(endpoint);
+  }
+
+  static async adminCancelSchedule(id: number): Promise<ApiResponse<object>> {
+    const endpoint = replaceUrlParams(API_ENDPOINTS.SCHEDULES.ADMIN_CANCEL, {
+      id: id.toString(),
+    });
+    return apiClient.post<object>(endpoint);
+  }
+
+  static async getByTutorEmailAndStatus(
+    tutorEmail: string,
+    bookingId: number,
+    params?: {
+      status?: ScheduleStatus;
+      take?: number;
+    }
+  ): Promise<ApiResponse<ScheduleDto[]>> {
+    return apiClient.get<ScheduleDto[]>(
+      API_ENDPOINTS.SCHEDULES.GET_BY_TUTOR_EMAIL_AND_STATUS,
+      {
+        tutorEmail,
+        bookingId,
+        status: params?.status,
+        take: params?.take || 1,
+      }
+    );
   }
 }

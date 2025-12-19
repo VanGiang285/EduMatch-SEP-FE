@@ -53,11 +53,12 @@ import {
   Clock,
   ArrowUpDown,
   FileText,
+  CheckCircle,
 } from 'lucide-react';
 import { TutorApplicationService } from '@/services/tutorApplicationService';
 import { ClassRequestService, ClassRequestDetailDto } from '@/services/classRequestService';
 import { TutorAppliedItemDto } from '@/types/backend';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { TutorApplicationStatus, DayOfWeekEnum, EnumHelpers } from '@/types/enums';
 import { getClassRequestStatusText, getClassRequestStatusColor } from '@/data/mockClassRequests';
@@ -88,9 +89,16 @@ const parseApplicationStatus = (status: number | string): TutorApplicationStatus
 
 const getApplicationStatusBadge = (status: TutorApplicationStatus) => {
   if (status === TutorApplicationStatus.Applied) {
-    return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    return 'bg-emerald-50 text-emerald-700 border-gray-300';
   }
-  return 'bg-gray-100 text-gray-600 border-gray-200';
+  return 'bg-gray-100 text-gray-600 border-gray-300';
+};
+
+const getApplicationStatusIcon = (status: TutorApplicationStatus) => {
+  if (status === TutorApplicationStatus.Applied) {
+    return <CheckCircle className="h-3 w-3" />;
+  }
+  return <XCircle className="h-3 w-3" />;
 };
 
 const getApplicationStatusText = (status: TutorApplicationStatus) => {
@@ -148,13 +156,13 @@ const getModeLabel = (mode: string | number | null | undefined) => {
 const renderSlots = (slots?: ClassRequestDetailDto['slots']) => {
   if (!slots || slots.length === 0) return null;
   return (
-    <Card className="border border-[#257180]/20 bg-white transition-shadow hover:shadow-md">
+    <Card className="border border-gray-300 bg-white transition-shadow hover:shadow-md">
       <CardHeader>
         <CardTitle className="text-base text-gray-900">Lịch học dự kiến</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {slots.map((slot) => (
-          <div key={slot.id} className="p-3 border border-[#257180]/20 rounded-lg flex items-center justify-between">
+          <div key={slot.id} className="p-3 border border-gray-300 rounded-lg flex items-center justify-between">
             <span className="font-medium text-gray-900">
               {EnumHelpers.getDayOfWeekLabel(slot.dayOfWeek as DayOfWeekEnum)}
             </span>
@@ -169,7 +177,6 @@ const renderSlots = (slots?: ClassRequestDetailDto['slots']) => {
 };
 
 export function TutorApplicationsTab() {
-  const { showError, showSuccess } = useCustomToast();
   const [appliedApplications, setAppliedApplications] = useState<TutorAppliedItemDto[]>([]);
   const [canceledApplications, setCanceledApplications] = useState<TutorAppliedItemDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -201,7 +208,7 @@ export function TutorApplicationsTab() {
       setAppliedApplications(appliedData);
       setCanceledApplications(canceledData);
     } catch (error) {
-      showError('Lỗi', 'Không thể tải danh sách ứng tuyển');
+      toast.error('Không thể tải danh sách ứng tuyển');
     } finally {
       setLoading(false);
     }
@@ -283,7 +290,7 @@ export function TutorApplicationsTab() {
         throw new Error(response.message || 'Không thể tải chi tiết yêu cầu');
       }
     } catch (error) {
-      showError('Lỗi', 'Không thể tải thông tin chi tiết');
+      toast.error('Không thể tải thông tin chi tiết');
     } finally {
       setDetailLoading(false);
     }
@@ -298,7 +305,7 @@ export function TutorApplicationsTab() {
   const handleSubmitEdit = async () => {
     if (!selectedApplication) return;
     if (!editMessage.trim()) {
-      showError('Thiếu thông tin', 'Vui lòng nhập nội dung cập nhật');
+      toast.error('Vui lòng nhập nội dung cập nhật');
       return;
     }
     setEditLoading(true);
@@ -310,12 +317,12 @@ export function TutorApplicationsTab() {
       if (!response.success) {
         throw new Error(response.message || 'Cập nhật thất bại');
       }
-      showSuccess('Thành công', 'Đã cập nhật tin nhắn ứng tuyển');
+      toast.success('Đã cập nhật tin nhắn ứng tuyển');
       setEditDialogOpen(false);
       setSelectedApplication(null);
       await loadApplications();
     } catch (error) {
-      showError('Lỗi', 'Không thể cập nhật tin nhắn');
+      toast.error('Không thể cập nhật tin nhắn');
     } finally {
       setEditLoading(false);
     }
@@ -329,12 +336,12 @@ export function TutorApplicationsTab() {
       if (!response.success) {
         throw new Error(response.message || 'Hủy ứng tuyển thất bại');
       }
-      showSuccess('Thành công', 'Đã hủy ứng tuyển');
+      toast.success('Đã hủy ứng tuyển');
       setCancelDialogOpen(false);
       setSelectedApplication(null);
       await loadApplications();
     } catch (error) {
-      showError('Lỗi', 'Không thể hủy ứng tuyển');
+      toast.error('Không thể hủy ứng tuyển');
     } finally {
       setCancelLoading(false);
     }
@@ -362,7 +369,7 @@ export function TutorApplicationsTab() {
         </div>
         <Button
           variant="outline"
-          className="border-[#257180] text-[#257180] hover:bg-[#257180] hover:text-white"
+          className="border-gray-300 bg-white text-[#257180] hover:bg-[#257180] hover:text-white hover:border-[#257180]"
           onClick={loadApplications}
           disabled={loading}
         >
@@ -380,7 +387,7 @@ export function TutorApplicationsTab() {
         </Button>
       </div>
 
-      <Card className="border border-[#257180]/20 bg-white hover:shadow-md transition-shadow">
+      <Card className="border border-gray-300 bg-white hover:shadow-md transition-shadow">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-1">
@@ -419,24 +426,25 @@ export function TutorApplicationsTab() {
         </CardContent>
       </Card>
 
-      <Card className="border border-[#257180]/20 bg-white hover:shadow-md transition-shadow">
+      <Card className="border border-gray-300 bg-white hover:shadow-md transition-shadow">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-gray-900">Danh sách ứng tuyển</CardTitle>
-            <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20">
-              {filteredApplications.length} yêu cầu
-            </Badge>
+            <div className="flex items-center gap-2 text-gray-600">
+              <FileText className="h-4 w-4" />
+              <span className="font-medium">{filteredApplications.length} yêu cầu</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50 border-b border-gray-200">
-                  <TableHead className="w-[50px] text-left px-2">ID</TableHead>
-                  <TableHead className="min-w-[180px] max-w-[250px] px-3 text-left">Yêu cầu</TableHead>
-                  <TableHead className="w-[90px] px-2 text-left">Hình thức</TableHead>
-                  <TableHead className="w-[120px] px-2 text-left">
+                <TableRow className="bg-gray-50 text-gray-700">
+                  <TableHead className="py-2 px-3 text-left font-semibold">ID</TableHead>
+                  <TableHead className="py-2 px-3 text-left font-semibold">Yêu cầu</TableHead>
+                  <TableHead className="py-2 px-3 text-left font-semibold">Hình thức</TableHead>
+                  <TableHead className="py-2 px-3 text-left font-semibold">
                     <button
                       type="button"
                       onClick={() => {
@@ -454,8 +462,8 @@ export function TutorApplicationsTab() {
                       />
                     </button>
                   </TableHead>
-                  <TableHead className="w-[100px] px-2 text-left">Trạng thái</TableHead>
-                  <TableHead className="w-[110px] px-2 text-left">
+                  <TableHead className="py-2 px-3 text-left font-semibold">Trạng thái</TableHead>
+                  <TableHead className="py-2 px-3 text-left font-semibold">
                     <button
                       type="button"
                       onClick={() => {
@@ -470,7 +478,7 @@ export function TutorApplicationsTab() {
                       />
                     </button>
                   </TableHead>
-                  <TableHead className="w-[90px] text-left px-2">Thao tác</TableHead>
+                  <TableHead className="py-2 px-3 text-left font-semibold">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -508,9 +516,9 @@ export function TutorApplicationsTab() {
                           </div>
                         </TableCell>
                         <TableCell className="px-2 text-left">
-                          <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20 text-xs whitespace-nowrap">
-                            {getModeLabel(application.mode)}
-                          </Badge>
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-[#F2E5BF] text-[#257180] border border-gray-300 whitespace-nowrap">
+                            <span>{getModeLabel(application.mode)}</span>
+                          </div>
                         </TableCell>
                         <TableCell className="px-2 text-left">
                           <div className="text-xs text-gray-900">
@@ -518,9 +526,10 @@ export function TutorApplicationsTab() {
                           </div>
                         </TableCell>
                         <TableCell className="px-2 text-left">
-                          <Badge className={`${getApplicationStatusBadge(applicationStatus)} text-xs`}>
-                            {getApplicationStatusText(applicationStatus)}
-                          </Badge>
+                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getApplicationStatusBadge(applicationStatus)}`}>
+                            {getApplicationStatusIcon(applicationStatus)}
+                            <span>{getApplicationStatusText(applicationStatus)}</span>
+                          </div>
                         </TableCell>
                         <TableCell className="text-xs text-gray-600 whitespace-nowrap px-2 text-left">
                           {FormatService.formatDate(application.appliedAt)}
@@ -612,7 +621,7 @@ export function TutorApplicationsTab() {
           }
         }}
       >
-        <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white">
+        <DialogContent className="w-full !max-w-[95vw] sm:!max-w-[70vw] max-h-[90vh] overflow-y-auto bg-white border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-2xl sm:text-3xl font-bold text-gray-900">
               {detailRequest ? (detailRequest.title || `${detailRequest.subjectName || ''} ${detailRequest.level || ''}`.trim()) : 'Chi tiết yêu cầu mở lớp'}
@@ -637,13 +646,14 @@ export function TutorApplicationsTab() {
                       const statusNum = parseClassRequestStatus(detailRequest.status);
                       return (
                         <>
-                          <Badge className={getClassRequestStatusColor(statusNum)}>
-                            {getClassRequestStatusText(statusNum)}
-                          </Badge>
+                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getClassRequestStatusColor(statusNum)}`}>
+                            <span>{getClassRequestStatusText(statusNum)}</span>
+                          </div>
                           {selectedApplication && (
-                            <Badge className={getApplicationStatusBadge(parseApplicationStatus(selectedApplication.tutorApplicationStatus))}>
-                              {getApplicationStatusText(parseApplicationStatus(selectedApplication.tutorApplicationStatus))}
-                            </Badge>
+                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getApplicationStatusBadge(parseApplicationStatus(selectedApplication.tutorApplicationStatus))}`}>
+                              {getApplicationStatusIcon(parseApplicationStatus(selectedApplication.tutorApplicationStatus))}
+                              <span>{getApplicationStatusText(parseApplicationStatus(selectedApplication.tutorApplicationStatus))}</span>
+                            </div>
                           )}
                         </>
                       );
@@ -694,9 +704,9 @@ export function TutorApplicationsTab() {
                   )}
                   <div className="min-w-0">
                     <p className="text-sm text-gray-600">Hình thức</p>
-                    <Badge variant="secondary" className="bg-[#F2E5BF] text-[#257180] border-[#257180]/20 mt-1">
-                      {getModeLabel(detailRequest.mode)}
-                    </Badge>
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-[#F2E5BF] text-[#257180] border border-gray-300 mt-1">
+                      <span>{getModeLabel(detailRequest.mode)}</span>
+                    </div>
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm text-gray-600">Số buổi học</p>
@@ -784,7 +794,7 @@ export function TutorApplicationsTab() {
                 </h4>
 
                 {selectedApplication?.message ? (
-                  <Card className="border border-[#257180]/20 bg-white hover:border-[#257180]/50 hover:shadow-md transition-all">
+                  <Card className="border border-gray-300 bg-white hover:shadow-md transition-all">
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -823,7 +833,7 @@ export function TutorApplicationsTab() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle>Cập nhật tin nhắn ứng tuyển</DialogTitle>
           </DialogHeader>
@@ -839,6 +849,7 @@ export function TutorApplicationsTab() {
                 variant="outline"
                 onClick={() => setEditDialogOpen(false)}
                 disabled={editLoading}
+                className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
               >
                 Hủy
               </Button>

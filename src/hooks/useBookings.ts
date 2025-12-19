@@ -8,7 +8,7 @@ import {
 } from '@/services';
 import { BookingDto } from '@/types/backend';
 import { BookingStatus, PaymentStatus } from '@/types/enums';
-import { useCustomToast } from './useCustomToast';
+import { toast } from 'sonner';
 
 /**
  * Custom hook để quản lý việc load và cache bookings
@@ -36,17 +36,11 @@ export function useBookings() {
   const tutorIdRef = useRef<number | null>(null);
   const lastLoadedEmailRef = useRef<string | null>(null);
   const isLoadingTutorProfileRef = useRef(false);
-  const { showError } = useCustomToast();
-  const showErrorRef = useRef(showError);
 
   // Cập nhật refs
   useEffect(() => {
     tutorIdRef.current = tutorId;
   }, [tutorId]);
-
-  useEffect(() => {
-    showErrorRef.current = showError;
-  }, [showError]);
 
   // Refs cho learner bookings helper
   const learnerEmailRef = useRef<string | null>(null);
@@ -587,7 +581,7 @@ export function useBookings() {
 
         await getAllByLearnerEmailNoPaging(learnerEmail, params);
       } catch (error: any) {
-        showErrorRef.current('Lỗi khi tải danh sách lớp học', error.message);
+        toast.error(`Lỗi khi tải danh sách lớp học: ${error.message}`);
         setBookings([]);
         lastLoadLearnerParamsRef.current = ''; // Reset để có thể retry
       } finally {
@@ -637,16 +631,13 @@ export function useBookings() {
         setTutorId(null);
         tutorIdRef.current = null;
         lastLoadedEmailRef.current = userEmail; // Vẫn set để tránh load lại
-        showErrorRef.current(
-          'Không thể tải thông tin gia sư',
-          response.error?.message
-        );
+        toast.error(response.error?.message || 'Không thể tải thông tin gia sư');
       }
     } catch (error: any) {
       setTutorId(null);
       tutorIdRef.current = null;
       lastLoadedEmailRef.current = userEmail; // Vẫn set để tránh load lại
-      showErrorRef.current('Không thể tải thông tin gia sư', error.message);
+      toast.error(`Không thể tải thông tin gia sư: ${error.message}`);
     } finally {
       isLoadingTutorProfileRef.current = false;
       setLoadingTutorId(false);
@@ -687,7 +678,7 @@ export function useBookings() {
 
         await getAllByTutorIdNoPaging(currentTutorId, params);
       } catch (error: any) {
-        showErrorRef.current('Lỗi khi tải danh sách đặt lịch', error.message);
+        toast.error(`Lỗi khi tải danh sách đặt lịch: ${error.message}`);
         setBookings([]);
         lastLoadTutorParamsRef.current = ''; // Reset để có thể retry
       } finally {

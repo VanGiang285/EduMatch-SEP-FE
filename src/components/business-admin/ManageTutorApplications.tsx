@@ -69,14 +69,20 @@ import {
   Globe,
   Users,
   Maximize2,
+  Clock,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { TutorVerificationRequestService, TutorService } from '@/services';
 import { TutorVerificationRequestDto, TutorProfileDto } from '@/types/backend';
 import { TutorVerificationRequestStatus, TeachingMode, VerifyStatus, EnumHelpers, TutorStatus } from '@/types/enums';
 import { RejectTutorRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { formatCurrency } from '@/data/mockBusinessAdminData';
 import { UserProfileService } from '@/services/userProfileService';
+import { FeedbackService } from '@/services/feedbackService';
+import { TutorRatingSummary } from '@/types/backend';
+import { BookOpen } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -105,6 +111,7 @@ export interface DetailTutorProfile {
   status: number;
   teachingModes: number;
   bio?: string;
+  teachingExp?: string;
   rating: number;
   totalReviews: number;
   totalStudents: number;
@@ -159,6 +166,7 @@ export const mapTutorProfileToDetail = (
     status: statusValue,
     teachingModes: teachingModeValue,
     bio: tutor.bio,
+    teachingExp: tutor.teachingExp,
     rating: (tutor as any)?.rating ?? 0,
     totalReviews: (tutor as any)?.totalReviews ?? 0,
     totalStudents: (tutor as any)?.totalStudents ?? 0,
@@ -168,6 +176,254 @@ export const mapTutorProfileToDetail = (
     availabilities: tutor.tutorAvailabilities || [],
   };
 };
+
+function formatLevels(levels: string[]): string {
+  if (levels.length === 0) return '';
+  
+  if (levels.some(level => level.toLowerCase().includes('tất cả') || level.toLowerCase().includes('all'))) {
+    return 'Tất cả cấp';
+  }
+  
+  const hasTHPT = levels.some(level => level.toUpperCase().includes('THPT'));
+  if (hasTHPT && levels.length === 1) {
+    return 'THPT';
+  }
+  
+  const numbers = levels
+    .map(level => {
+      const num = parseInt(level.replace(/\D/g, ''));
+      return isNaN(num) ? null : num;
+    })
+    .filter((num): num is number => num !== null)
+    .sort((a, b) => a - b);
+  
+  if (numbers.length === 0) {
+    return levels.join(', ');
+  }
+  
+  if (numbers.length > 1) {
+    let isConsecutive = true;
+    for (let i = 1; i < numbers.length; i++) {
+      if (numbers[i] !== numbers[i - 1] + 1) {
+        isConsecutive = false;
+        break;
+      }
+    }
+    
+    if (isConsecutive) {
+      return `Lớp ${numbers[0]}-${numbers[numbers.length - 1]}`;
+    }
+  }
+  
+  return `Lớp ${numbers.join(', ')}`;
+}
+
+function groupSubjectsBySubjectName(tutorSubjects: any[]): Array<{ subjectName: string; levelText: string; hourlyRate?: number; minRate?: number; maxRate?: number }> {
+  if (!tutorSubjects || tutorSubjects.length === 0) return [];
+  
+  const grouped = new Map<string, { levels: Set<string>; hourlyRates: number[] }>();
+  
+  tutorSubjects.forEach((ts) => {
+    const subjectName = ts.subject?.subjectName || `Subject ${ts.id}`;
+    const levelName = ts.level?.name || '';
+    const hourlyRate = ts.hourlyRate || 0;
+    
+    if (!grouped.has(subjectName)) {
+      grouped.set(subjectName, { levels: new Set(), hourlyRates: [] });
+    }
+    
+    const group = grouped.get(subjectName)!;
+    if (levelName) {
+      group.levels.add(levelName);
+    }
+    if (hourlyRate > 0) {
+      group.hourlyRates.push(hourlyRate);
+    }
+  });
+  
+  return Array.from(grouped.entries()).map(([subjectName, { levels, hourlyRates }]) => {
+    const levelsArray = Array.from(levels).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, '')) || 0;
+      const numB = parseInt(b.replace(/\D/g, '')) || 0;
+      return numA - numB;
+    });
+    
+    const levelText = formatLevels(levelsArray);
+    const minRate = hourlyRates.length > 0 ? Math.min(...hourlyRates) : undefined;
+    const maxRate = hourlyRates.length > 0 ? Math.max(...hourlyRates) : undefined;
+    const hourlyRate = minRate && maxRate && minRate === maxRate ? minRate : undefined;
+    
+    return {
+      subjectName,
+      levelText,
+      hourlyRate,
+      minRate,
+      maxRate
+    };
+  });
+}
+
+function groupConsecutiveSlots(slots: string[]): string[] {
+  if (!slots || slots.length === 0) return [];
+  
+  // Parse slots to time ranges
+  const parseSlot = (slot: string): { start: number; end: number; original: string } | null => {
+    // Format: "08:00 - 09:00" or "8h - 9h"
+    const match = slot.match(/(\d{1,2})[h:](\d{0,2})\s*-\s*(\d{1,2})[h:](\d{0,2})/);
+    if (!match) return null;
+    
+    const startHour = parseInt(match[1]);
+    const startMin = match[2] ? parseInt(match[2]) : 0;
+    const endHour = parseInt(match[3]);
+    const endMin = match[4] ? parseInt(match[4]) : 0;
+    
+    const startTime = startHour * 60 + startMin; // Convert to minutes
+    const endTime = endHour * 60 + endMin;
+    
+    return { start: startTime, end: endTime, original: slot };
+  };
+  
+  // Format time back to string
+  const formatTime = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}:${mins.toString().padStart(2, '0')}` : `${hours}h`;
+  };
+  
+  const parsedSlots = slots
+    .map(parseSlot)
+    .filter((slot): slot is { start: number; end: number; original: string } => slot !== null)
+    .sort((a, b) => a.start - b.start);
+  
+  if (parsedSlots.length === 0) return slots;
+  
+  // Group consecutive slots
+  const ranges: Array<{ start: number; end: number }> = [];
+  let currentRange: { start: number; end: number } | null = null;
+  
+  for (const slot of parsedSlots) {
+    if (!currentRange) {
+      currentRange = { start: slot.start, end: slot.end };
+    } else if (currentRange.end === slot.start) {
+      // Consecutive slot, extend range
+      currentRange.end = slot.end;
+    } else {
+      // Not consecutive, save current range and start new one
+      ranges.push(currentRange);
+      currentRange = { start: slot.start, end: slot.end };
+    }
+  }
+  
+  if (currentRange) {
+    ranges.push(currentRange);
+  }
+  
+  // Format ranges back to strings
+  return ranges.map(range => {
+    const startStr = formatTime(range.start);
+    const endStr = formatTime(range.end);
+    return `${startStr} - ${endStr}`;
+  });
+}
+
+function groupAvailabilitiesByWeek(availabilities: any[], weeksToShow: number = 4): Array<{
+  weekOffset: number;
+  weekStart: Date;
+  weekEnd: Date;
+  weekDays: Array<{
+    day: string;
+    dayOfWeek: number;
+    date: Date;
+    slots: string[];
+  }>;
+  totalSlots: number;
+}> {
+  if (!availabilities || availabilities.length === 0) return [];
+  
+  const formatTime = (timeStr?: string) => {
+    if (!timeStr) return '';
+    const parts = timeStr.split(':');
+    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
+  };
+  
+  const dayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+  
+  const weeks: Array<{
+    weekOffset: number;
+    weekStart: Date;
+    weekEnd: Date;
+    weekDays: Map<number, { day: string; dayOfWeek: number; date: Date; slots: Set<string> }>;
+    totalSlots: number;
+  }> = [];
+  
+  // Initialize weeks
+  for (let weekOffset = 0; weekOffset < weeksToShow; weekOffset++) {
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() + (weekOffset * 7) - today.getDay() + 1); // Monday
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6); // Sunday
+    
+    weeks.push({
+      weekOffset,
+      weekStart,
+      weekEnd,
+      weekDays: new Map(),
+      totalSlots: 0
+    });
+  }
+  
+  // Group availabilities by week
+  availabilities.forEach((avail) => {
+    if (!avail.startDate) return;
+    const availDate = new Date(avail.startDate);
+    if (isNaN(availDate.getTime())) return;
+    
+    const dayOfWeek = avail.slot?.dayOfWeek !== undefined
+      ? avail.slot.dayOfWeek
+      : availDate.getDay();
+    
+    const timeSlot = avail.slot?.startTime && avail.slot?.endTime
+      ? `${formatTime(avail.slot.startTime)} - ${formatTime(avail.slot.endTime)}`
+      : '';
+    
+    if (!timeSlot) return;
+    
+    // Find which week this availability belongs to
+    for (const week of weeks) {
+      if (availDate >= week.weekStart && availDate <= week.weekEnd) {
+        if (!week.weekDays.has(dayOfWeek)) {
+          week.weekDays.set(dayOfWeek, {
+            day: dayNames[dayOfWeek] || '',
+            dayOfWeek,
+            date: availDate,
+            slots: new Set()
+          });
+        }
+        week.weekDays.get(dayOfWeek)!.slots.add(timeSlot);
+        week.totalSlots++;
+        break;
+      }
+    }
+  });
+  
+  return weeks
+    .filter(week => week.weekDays.size > 0)
+    .map(week => ({
+      weekOffset: week.weekOffset,
+      weekStart: week.weekStart,
+      weekEnd: week.weekEnd,
+      weekDays: Array.from(week.weekDays.values())
+        .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+        .map(dayInfo => ({
+          day: dayInfo.day,
+          dayOfWeek: dayInfo.dayOfWeek,
+          date: dayInfo.date,
+          slots: groupConsecutiveSlots(Array.from(dayInfo.slots).sort())
+        })),
+      totalSlots: week.totalSlots
+    }));
+}
 
 const getStatusLabel = (status: TutorVerificationRequestStatus | number | string | null | undefined): string => {
   const parsedStatus = EnumHelpers.parseTutorVerificationRequestStatus(status);
@@ -180,20 +436,6 @@ const getStatusLabel = (status: TutorVerificationRequestStatus | number | string
       return 'Đã từ chối';
     default:
       return 'Không xác định';
-  }
-};
-
-const getStatusColor = (status: TutorVerificationRequestStatus | number | string | null | undefined): string => {
-  const parsedStatus = EnumHelpers.parseTutorVerificationRequestStatus(status);
-  switch (parsedStatus) {
-    case TutorVerificationRequestStatus.Pending:
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case TutorVerificationRequestStatus.Approved:
-      return 'bg-green-100 text-green-800 border-green-200';
-    case TutorVerificationRequestStatus.Rejected:
-      return 'bg-red-100 text-red-800 border-red-200';
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
   }
 };
 
@@ -243,11 +485,6 @@ const getVerifyStatusColor = (status: VerifyStatus | number): string => {
 };
 
 export function ManageTutorApplications() {
-  const { showSuccess, showError } = useCustomToast();
-  const showErrorRef = useRef(showError);
-  useEffect(() => {
-    showErrorRef.current = showError;
-  }, [showError]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<TutorVerificationRequestStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -266,6 +503,9 @@ export function ManageTutorApplications() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [avatarCache, setAvatarCache] = useState<Record<string, string>>({});
   const avatarCacheRef = useRef<Record<string, string>>({});
+  const [tutorRating, setTutorRating] = useState<TutorRatingSummary | null>(null);
+  const [loadingRating, setLoadingRating] = useState(false);
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([0]));
 
   const detailTutor = useMemo(() => {
     if (!selectedRequest || !selectedTutor) return null;
@@ -332,7 +572,7 @@ export function ManageTutorApplications() {
       }
     } catch (error) {
       console.error('Error fetching requests:', error);
-      showErrorRef.current?.('Lỗi', 'Không thể tải danh sách đơn đăng ký');
+      toast.error('Không thể tải danh sách đơn đăng ký');
       setRequests([]);
     } finally {
       setLoading(false);
@@ -342,6 +582,12 @@ export function ManageTutorApplications() {
   useEffect(() => {
     fetchRequests();
   }, [fetchRequests]);
+
+  useEffect(() => {
+    if (!showDetailDialog) {
+      setTutorRating(null);
+    }
+  }, [showDetailDialog]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -408,12 +654,25 @@ export function ManageTutorApplications() {
         const response = await TutorService.getTutorById(request.tutorId);
         if (response.success && response.data) {
           setSelectedTutor(response.data);
+          
+          // Load rating
+          setLoadingRating(true);
+          try {
+            const ratingResponse = await FeedbackService.getTutorRatingSummary(request.tutorId);
+            if (ratingResponse.success && ratingResponse.data) {
+              setTutorRating(ratingResponse.data);
+            }
+          } catch (error) {
+            console.error('Error loading rating:', error);
+          } finally {
+            setLoadingRating(false);
+          }
         } else {
-          showError('Lỗi', 'Không thể tải thông tin gia sư');
+          toast.error('Không thể tải thông tin gia sư');
         }
       } catch (error) {
         console.error('Error fetching tutor:', error);
-        showError('Lỗi', 'Không thể tải thông tin gia sư');
+        toast.error('Không thể tải thông tin gia sư');
       } finally {
         setLoadingTutor(false);
       }
@@ -422,7 +681,7 @@ export function ManageTutorApplications() {
 
   const handleApproveApplication = async () => {
     if (!selectedRequest?.tutorId) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư');
+      toast.error('Không tìm thấy thông tin gia sư');
       return;
     }
 
@@ -430,15 +689,15 @@ export function ManageTutorApplications() {
       setIsProcessing(true);
       const response = await TutorService.approveAndVerifyAll(selectedRequest.tutorId);
       if (response.success) {
-        showSuccess('Thành công', 'Đã duyệt đơn đăng ký và xác minh tất cả chứng chỉ, bằng cấp');
+        toast.success('Đã duyệt đơn đăng ký và xác minh tất cả chứng chỉ, bằng cấp');
         setShowDetailDialog(false);
         fetchRequests();
       } else {
-        showError('Lỗi', response.message || 'Không thể duyệt đơn đăng ký');
+        toast.error('Lỗi', response.message || 'Không thể duyệt đơn đăng ký');
       }
     } catch (error) {
       console.error('Error approving application:', error);
-      showError('Lỗi', 'Không thể duyệt đơn đăng ký');
+      toast.error('Không thể duyệt đơn đăng ký');
     } finally {
       setIsProcessing(false);
     }
@@ -446,12 +705,12 @@ export function ManageTutorApplications() {
 
   const handleRejectApplication = async () => {
     if (!rejectReason.trim()) {
-      showError('Lỗi', 'Vui lòng nhập lý do từ chối');
+      toast.error('Vui lòng nhập lý do từ chối');
       return;
     }
 
     if (!selectedRequest?.tutorId) {
-      showError('Lỗi', 'Không tìm thấy thông tin gia sư');
+      toast.error('Không tìm thấy thông tin gia sư');
       return;
     }
 
@@ -460,17 +719,17 @@ export function ManageTutorApplications() {
       const request: RejectTutorRequest = { reason: rejectReason.trim() };
       const response = await TutorService.rejectAll(selectedRequest.tutorId, request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã từ chối đơn đăng ký');
+        toast.success('Đã từ chối đơn đăng ký');
         setShowRejectDialog(false);
         setShowDetailDialog(false);
         setRejectReason('');
         fetchRequests();
       } else {
-        showError('Lỗi', response.message || 'Không thể từ chối đơn đăng ký');
+        toast.error('Lỗi', response.message || 'Không thể từ chối đơn đăng ký');
       }
     } catch (error) {
       console.error('Error rejecting application:', error);
-      showError('Lỗi', 'Không thể từ chối đơn đăng ký');
+      toast.error('Không thể từ chối đơn đăng ký');
     } finally {
       setIsProcessing(false);
     }
@@ -483,7 +742,7 @@ export function ManageTutorApplications() {
         <p className="text-gray-600 mt-1">Duyệt đơn đăng ký trở thành gia sư</p>
       </div>
 
-      <Card className="bg-white">
+      <Card className="bg-white border-gray-300">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -529,11 +788,14 @@ export function ManageTutorApplications() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white">
+      <Card className="bg-white border-gray-300">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách đơn đăng ký</CardTitle>
-            <Badge variant="outline">{filteredRequests.length} đơn</Badge>
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-gray-600" />
+              <span className="font-medium text-gray-900">{filteredRequests.length} đơn</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -605,9 +867,24 @@ export function ManageTutorApplications() {
                             </TableCell>
                             <TableCell className="text-sm text-gray-600 text-left">{req.userEmail}</TableCell>
                             <TableCell className="text-left">
-                              <Badge className={getStatusColor(req.status)}>
-                                {getStatusLabel(req.status)}
-                              </Badge>
+                              {(() => {
+                                const status = EnumHelpers.parseTutorVerificationRequestStatus(req.status);
+                                let IconComponent = Clock;
+                                let iconColor = 'text-yellow-600';
+                                if (status === TutorVerificationRequestStatus.Approved) {
+                                  IconComponent = CheckCircle;
+                                  iconColor = 'text-green-600';
+                                } else if (status === TutorVerificationRequestStatus.Rejected) {
+                                  IconComponent = XCircle;
+                                  iconColor = 'text-red-600';
+                                }
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <IconComponent className={`h-4 w-4 ${iconColor}`} />
+                                    <span className="font-medium text-gray-900">{getStatusLabel(req.status)}</span>
+                                  </div>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell className="text-sm text-gray-600 text-left">
                               {new Date(req.createdAt).toLocaleDateString('vi-VN')}
@@ -669,8 +946,8 @@ export function ManageTutorApplications() {
       </Card>
 
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="!max-w-7xl sm:!max-w-7xl max-h-[95vh] overflow-y-auto" aria-describedby={undefined}>
-          <DialogHeader className="border-b pb-4">
+        <DialogContent className="!max-w-7xl sm:!max-w-7xl max-h-[95vh] overflow-y-auto border-gray-300 shadow-lg" aria-describedby={undefined}>
+          <DialogHeader className="border-b border-[#257180]/20 pb-4">
             <DialogTitle className="text-2xl font-bold text-gray-900">Hồ sơ gia sư</DialogTitle>
           </DialogHeader>
 
@@ -682,7 +959,7 @@ export function ManageTutorApplications() {
             <div className="pt-4">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
-                  <Card className="border border-gray-200">
+                  <Card className="border border-gray-300">
                     <CardContent className="p-6">
                       <div className="flex items-start gap-6 flex-col sm:flex-row">
                         <div className="relative flex-shrink-0">
@@ -709,20 +986,47 @@ export function ManageTutorApplications() {
                               <div className="flex items-center gap-3 flex-wrap text-sm text-gray-600">
                                 <div className="flex items-center gap-1.5">
                                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                  <span className="text-gray-900">{detailTutor.rating.toFixed(1)}</span>
-                                  <span className="text-gray-500">({detailTutor.totalReviews} đánh giá)</span>
+                                  {loadingRating ? (
+                                    <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                                  ) : (
+                                    <>
+                                      <span className="text-gray-900">{tutorRating?.averageRating.toFixed(1) || '0.0'}</span>
+                                      <span className="text-gray-500">({tutorRating?.totalFeedbackCount || 0} đánh giá)</span>
+                                    </>
+                                  )}
                                 </div>
                                 <span className="text-gray-400">•</span>
                                 <span>{detailTutor.totalStudents} học viên</span>
                               </div>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                              <Badge variant="secondary" className={getStatusColor(selectedRequest.status)}>
-                                Trạng thái đơn: {getStatusLabel(selectedRequest.status)}
-                              </Badge>
+                              {(() => {
+                                const status = EnumHelpers.parseTutorVerificationRequestStatus(selectedRequest.status);
+                                let IconComponent = Clock;
+                                let iconColor = 'text-yellow-600';
+                                if (status === TutorVerificationRequestStatus.Approved) {
+                                  IconComponent = CheckCircle;
+                                  iconColor = 'text-green-600';
+                                } else if (status === TutorVerificationRequestStatus.Rejected) {
+                                  IconComponent = XCircle;
+                                  iconColor = 'text-red-600';
+                                }
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <IconComponent className={`h-4 w-4 ${iconColor}`} />
+                                    <span className="font-medium text-gray-900">Trạng thái đơn: {getStatusLabel(selectedRequest.status)}</span>
+                                  </div>
+                                );
+                              })()}
+                              {(() => {
+                                const teachingModeText = getTeachingModeText(detailTutor.teachingModes);
+                                if (!teachingModeText || teachingModeText === 'Chưa cập nhật') return null;
+                                return (
                               <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                                {getTeachingModeText(detailTutor.teachingModes)}
+                                    {teachingModeText}
                               </Badge>
+                                );
+                              })()}
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                               <div className="flex items-center gap-2 text-gray-600 min-w-0">
@@ -754,20 +1058,26 @@ export function ManageTutorApplications() {
                   </Card>
 
                   <Tabs defaultValue="about" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-2 bg-[#F2E5BF]">
-                      <TabsTrigger value="about" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">
+                    <TabsList className="grid w-full grid-cols-3 bg-[#F2E5BF]">
+                      <TabsTrigger value="about" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">
                         Giới thiệu
                       </TabsTrigger>
                       <TabsTrigger
                         value="education"
-                        className="data-[state=active]:bg-white data-[state=active]:text-[#257180]"
+                        className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
                       >
                         Học vấn & Chứng chỉ
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="availability"
+                        className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]"
+                      >
+                        Lịch khả dụng
                       </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="about" className="space-y-6">
-                      <Card className="border border-gray-200">
+                      <Card className="border border-gray-300">
                         <CardHeader>
                           <CardTitle className="font-bold">Về tôi</CardTitle>
                         </CardHeader>
@@ -777,19 +1087,35 @@ export function ManageTutorApplications() {
                               {detailTutor.bio || 'Chưa có thông tin giới thiệu.'}
                             </p>
                           </div>
-                          <Separator className="bg-gray-200" />
+                          <Separator className="border-[#257180]/20" />
+                          <div>
+                            <h3 className="text-gray-900 mb-3 font-bold">Kinh nghiệm giảng dạy</h3>
+                            <p className="text-gray-700 leading-relaxed whitespace-pre-line break-words">
+                              {detailTutor.teachingExp && detailTutor.teachingExp.trim()
+                                ? detailTutor.teachingExp
+                                : 'Chưa cập nhật.'}
+                            </p>
+                          </div>
+                          <Separator className="border-[#257180]/20" />
                           <div>
                             <h3 className="text-gray-900 mb-3 font-bold">Môn học đăng ký</h3>
                             {detailTutor.subjects.length > 0 ? (
-                              <div className="space-y-3">
-                                {detailTutor.subjects.map((subject) => (
-                                  <div key={subject.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div className="space-y-2">
+                                {groupSubjectsBySubjectName(detailTutor.subjects).map((grouped, idx) => (
+                                  <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                      <BookOpen className="w-4 h-4 text-[#257180] flex-shrink-0" />
                                     <div>
-                              <p className="font-medium text-gray-900">{subject.subject?.subjectName || 'Chưa có tên'}</p>
-                                      {subject.level && <p className="text-sm text-gray-600">{subject.level.name}</p>}
+                                        <p className="font-medium text-gray-900">{grouped.subjectName}</p>
+                                        <p className="text-sm text-gray-600">{grouped.levelText || 'Chưa có thông tin'}</p>
+                                      </div>
                                     </div>
                                     <p className="font-semibold text-[#257180]">
-                                      {subject.hourlyRate ? formatCurrency(subject.hourlyRate) : 'Chưa cập nhật'}/giờ
+                                      {grouped.hourlyRate 
+                                        ? `${formatCurrency(grouped.hourlyRate)}/giờ`
+                                        : grouped.minRate && grouped.maxRate
+                                        ? `${formatCurrency(grouped.minRate)} - ${formatCurrency(grouped.maxRate)}/giờ`
+                                        : 'Chưa cập nhật'}
                                     </p>
                                   </div>
                                 ))}
@@ -798,61 +1124,13 @@ export function ManageTutorApplications() {
                               <p className="text-gray-500">Chưa có môn học nào.</p>
                             )}
                           </div>
-                          <Separator className="bg-gray-200" />
-                          {detailTutor.availabilities.length > 0 ? (
-                            <div>
-                              <h3 className="text-gray-900 mb-3 font-bold">Lịch khả dụng</h3>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {detailTutor.availabilities.map((avail) => {
-                                  const startDate = avail.startDate ? new Date(avail.startDate) : null;
-                                  const dayOfWeek = avail.slot?.dayOfWeek !== undefined
-                                    ? avail.slot.dayOfWeek
-                                    : startDate
-                                    ? startDate.getDay()
-                                    : null;
-                                  const dayOfWeekText = dayOfWeek !== null
-                                    ? ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][dayOfWeek]
-                                    : '';
-                                  const formatTime = (timeStr?: string) => {
-                                    if (!timeStr) return '';
-                                    const parts = timeStr.split(':');
-                                    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
-                                  };
-                                  const dateText = startDate
-                                    ? startDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                                    : '';
-                                  return (
-                                    <div key={avail.id} className="p-3 bg-gray-50 rounded-lg space-y-1">
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-sm font-medium text-gray-900">
-                                          {dayOfWeekText}
-                                        </span>
-                                        {avail.slot?.startTime && avail.slot?.endTime && (
-                                          <span className="text-sm text-gray-600">
-                                            {formatTime(avail.slot.startTime)} - {formatTime(avail.slot.endTime)}
-                                          </span>
-                                        )}
-                                      </div>
-                                      {dateText && (
-                                        <p className="text-xs text-gray-500">{dateText}</p>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ) : (
-                            <div>
-                              <h3 className="text-gray-900 mb-3 font-bold">Lịch khả dụng</h3>
-                              <p className="text-gray-500">Chưa cập nhật lịch khả dụng.</p>
-                            </div>
-                          )}
+                          <Separator className="border-[#257180]/20" />
                         </CardContent>
                       </Card>
                     </TabsContent>
 
                     <TabsContent value="education" className="space-y-6">
-                      <Card className="border border-gray-200">
+                      <Card className="border border-gray-300">
                         <CardHeader>
                           <CardTitle className="font-bold">Học vấn</CardTitle>
                         </CardHeader>
@@ -914,7 +1192,7 @@ export function ManageTutorApplications() {
                         </CardContent>
                       </Card>
 
-                      <Card className="border border-gray-200">
+                      <Card className="border border-gray-300">
                         <CardHeader>
                           <CardTitle className="font-bold">Chứng chỉ</CardTitle>
                         </CardHeader>
@@ -978,11 +1256,95 @@ export function ManageTutorApplications() {
                         </CardContent>
                       </Card>
                     </TabsContent>
+
+                    <TabsContent value="availability" className="space-y-6">
+                      {detailTutor.availabilities.length > 0 ? (
+                        <Card className="border border-gray-300">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 font-bold">
+                              <Calendar className="h-5 w-5 text-[#257180]" />
+                              Lịch khả dụng 4 tuần tới
+                            </CardTitle>
+                            <p className="text-xs text-gray-500 mt-1">Click để xem chi tiết từng tuần</p>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            {groupAvailabilitiesByWeek(detailTutor.availabilities, 4).map((week) => {
+                              const isExpanded = expandedWeeks.has(week.weekOffset);
+                              
+                              return (
+                                <div key={week.weekOffset} className="border border-gray-300 rounded-lg overflow-hidden">
+                                  <button
+                                    onClick={() => {
+                                      const newExpanded = new Set(expandedWeeks);
+                                      if (isExpanded) {
+                                        newExpanded.delete(week.weekOffset);
+                                      } else {
+                                        newExpanded.add(week.weekOffset);
+                                      }
+                                      setExpandedWeeks(newExpanded);
+                                    }}
+                                    className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      {isExpanded ? (
+                                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                                      ) : (
+                                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                                      )}
+                                      <div className="text-left">
+                                        <p className="text-sm font-medium text-gray-900">
+                                          {week.weekStart.getDate()}/{week.weekStart.getMonth() + 1} - {week.weekEnd.getDate()}/{week.weekEnd.getMonth() + 1}/{week.weekEnd.getFullYear()}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                          {week.weekDays.length} ngày
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </button>
+                                  
+                                  {isExpanded && (
+                                    <div className="p-3 space-y-2 border-t border-[#257180]/20 bg-white">
+                                      {week.weekDays.map((dayInfo, idx) => (
+                                        <div key={idx} className="space-y-1.5">
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-sm font-medium text-gray-700">
+                                              {dayInfo.day}, {dayInfo.date.getDate()}/{dayInfo.date.getMonth() + 1}
+                                            </span>
+                                          </div>
+                                          <div className="flex flex-wrap gap-1.5">
+                                            {dayInfo.slots.map((slot, slotIdx) => (
+                                              <div
+                                                key={slotIdx}
+                                                className="text-xs bg-gray-50 text-gray-700 border border-gray-300 rounded px-2 py-1 flex items-center gap-1"
+                                              >
+                                                <Clock className="h-3 w-3 text-[#257180]" />
+                                                {slot}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        <Card className="border border-gray-300">
+                          <CardContent className="p-6">
+                            <p className="text-gray-500 text-center">Chưa cập nhật lịch khả dụng.</p>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </TabsContent>
                   </Tabs>
                 </div>
 
                 <div className="lg:col-span-1 space-y-6">
-                  <Card className="border border-gray-200">
+
+                  <Card className="border border-gray-300">
                     <CardHeader>
                       <CardTitle className="text-base font-bold">Thông tin nhanh</CardTitle>
                     </CardHeader>
@@ -996,17 +1358,36 @@ export function ManageTutorApplications() {
                           <span className="text-gray-600">Số điện thoại:</span>
                           <span className="font-medium">{detailTutor.phone || 'Chưa cập nhật'}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Môn học:</span>
-                          <span className="font-medium">{detailTutor.subjects.length}</span>
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="text-gray-600">Môn dạy:</span>
+                          <span className="font-medium text-right flex-1">
+                            {detailTutor.subjects && detailTutor.subjects.length > 0
+                              ? Array.from(
+                                  new Set(
+                                    detailTutor.subjects
+                                      .map((s) => s.subject?.subjectName)
+                                      .filter(Boolean) as string[]
+                                  )
+                                ).join(', ')
+                              : 'Chưa có môn dạy'}
+                          </span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex items-start justify-between gap-3">
                           <span className="text-gray-600">Chứng chỉ:</span>
-                          <span className="font-medium">{detailTutor.certificates.length}</span>
+                          <span className="font-medium text-right flex-1">
+                            {detailTutor.certificates && detailTutor.certificates.length > 0
+                              ? detailTutor.certificates
+                                  .map((c) => c.certificateType?.name || c.typeName)
+                                  .filter(Boolean)
+                                  .join(', ')
+                              : 'Không có chứng chỉ'}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Hình thức:</span>
-                          <span className="font-medium truncate">{getTeachingModeText(detailTutor.teachingModes)}</span>
+                          <span className="font-medium truncate">
+                            {getTeachingModeText(detailTutor.teachingModes)}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Đơn đăng ký:</span>
@@ -1016,21 +1397,15 @@ export function ManageTutorApplications() {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-[#257180]/20 shadow-lg">
+                  {EnumHelpers.parseTutorVerificationRequestStatus(selectedRequest.status) === TutorVerificationRequestStatus.Pending && (
+                    <Card className="border-gray-300 shadow-lg">
                     <CardContent className="p-6">
                       <div className="space-y-3">
-                        <Button variant="outline" className="w-full" onClick={() => setShowDetailDialog(false)}>
-                          Đóng
-                        </Button>
                         <Button
                           variant="outline"
-                          className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            className="w-full border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                           onClick={() => setShowRejectDialog(true)}
-                          disabled={
-                            isProcessing ||
-                            EnumHelpers.parseTutorVerificationRequestStatus(selectedRequest.status) !==
-                              TutorVerificationRequestStatus.Pending
-                          }
+                            disabled={isProcessing}
                         >
                           {isProcessing ? (
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1042,22 +1417,19 @@ export function ManageTutorApplications() {
                         <Button
                           className="w-full bg-[#257180] hover:bg-[#257180]/90 text-white"
                           onClick={handleApproveApplication}
-                          disabled={
-                            isProcessing ||
-                            EnumHelpers.parseTutorVerificationRequestStatus(selectedRequest.status) !==
-                              TutorVerificationRequestStatus.Pending
-                          }
+                            disabled={isProcessing}
                         >
                           {isProcessing ? (
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           ) : (
                             <CheckCircle className="h-4 w-4 mr-2" />
                           )}
-                          Kích hoạt tài khoản
+                            Phê duyệt yêu cầu
                         </Button>
                       </div>
                     </CardContent>
                   </Card>
+                  )}
                 </div>
               </div>
             </div>
@@ -1068,7 +1440,7 @@ export function ManageTutorApplications() {
       </Dialog>
 
       <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
-        <DialogContent className="max-w-3xl bg-transparent border-none shadow-none p-0" aria-describedby={undefined}>
+        <DialogContent className="max-w-3xl bg-transparent border-gray-300 shadow-lg p-0" aria-describedby={undefined}>
           {previewImage && (
             <div className="relative">
               <img src={previewImage} alt="Preview" className="w-full max-h-[80vh] object-contain rounded-lg bg-white" />
@@ -1078,7 +1450,7 @@ export function ManageTutorApplications() {
       </Dialog>
 
       <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border-gray-300 shadow-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Từ chối đơn đăng ký</AlertDialogTitle>
             <AlertDialogDescription>

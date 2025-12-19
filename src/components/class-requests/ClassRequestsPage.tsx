@@ -45,7 +45,7 @@ import { CreateClassRequestDialog } from './CreateClassRequestDialog';
 import { ClassRequestService, ClassRequestItemDto, ClassRequestDetailDto } from '@/services/classRequestService';
 import { TutorApplicationService } from '@/services/tutorApplicationService';
 import { TutorApplicationItemDto, TutorProfileDto } from '@/types/backend';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { TeachingMode, ClassRequestStatus } from '@/types/enums';
 import { TutorService } from '@/services/tutorService';
 
@@ -79,9 +79,7 @@ const formatSlotTime = (time?: string | null): string => {
 export function ClassRequestsPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { showSuccess, showError } = useCustomToast();
-  
-  // States
+    // States
   const [classRequests, setClassRequests] = useState<ClassRequestItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -178,7 +176,7 @@ export function ClassRequestsPage() {
             }
           }
         } catch (err: any) {
-          showError('Lỗi', 'Không thể tải thông tin chi tiết');
+          toast.error('Không thể tải thông tin chi tiết');
         } finally {
           setLoadingDetail(false);
           setLoadingApplicants(false);
@@ -224,7 +222,7 @@ export function ClassRequestsPage() {
         });
       } catch (error) {
         if (isMounted) {
-          showError('Lỗi', 'Không thể tải thông tin gia sư');
+          toast.error('Không thể tải thông tin gia sư');
         }
       } finally {
         if (isMounted) {
@@ -236,7 +234,7 @@ export function ClassRequestsPage() {
     return () => {
       isMounted = false;
     };
-  }, [applicants, showDetailDialog, tutorDetails, showError]);
+  }, [applicants, showDetailDialog, tutorDetails]);
 
   // Filter và sort requests
   const filteredRequests = useMemo(() => {
@@ -360,11 +358,11 @@ export function ClassRequestsPage() {
 
   const handleApplyClick = (requestId: number) => {
     if (!user) {
-      showError('Lỗi', 'Vui lòng đăng nhập để ứng tuyển');
+      toast.error('Vui lòng đăng nhập để ứng tuyển');
       return;
     }
     if (user.role !== USER_ROLES.TUTOR) {
-      showError('Lỗi', 'Chỉ gia sư mới có thể ứng tuyển');
+      toast.error('Chỉ gia sư mới có thể ứng tuyển');
       return;
     }
     setApplyingRequestId(requestId);
@@ -374,7 +372,7 @@ export function ClassRequestsPage() {
 
   const handleSubmitApply = async () => {
     if (!applyingRequestId || !applyMessage.trim()) {
-      showError('Lỗi', 'Vui lòng nhập thư ứng tuyển');
+      toast.error('Vui lòng nhập thư ứng tuyển');
       return;
     }
 
@@ -386,7 +384,7 @@ export function ClassRequestsPage() {
       });
 
       if (response.success) {
-        showSuccess('Thành công', 'Ứng tuyển thành công!');
+        toast.success('Ứng tuyển thành công!');
         setShowApplyDialog(false);
         setApplyMessage('');
         const appliedId = applyingRequestId;
@@ -404,7 +402,7 @@ export function ClassRequestsPage() {
         throw new Error(response.message || 'Ứng tuyển thất bại');
       }
     } catch (err: any) {
-      showError('Lỗi', err.message || 'Không thể ứng tuyển. Vui lòng thử lại.');
+      toast.error('Lỗi', err.message || 'Không thể ứng tuyển. Vui lòng thử lại.');
     } finally {
       setIsApplying(false);
     }

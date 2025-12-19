@@ -14,7 +14,7 @@ import { Star } from 'lucide-react';
 import { FeedbackService } from '@/services/feedbackService';
 import { FeedbackCriterion } from '@/types/backend';
 import { CreateTutorFeedbackRequest, CreateTutorFeedbackDetailRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 interface CreateFeedbackDialogProps {
@@ -68,20 +68,14 @@ export function CreateFeedbackDialog({
   bookingId,
   onSuccess,
 }: CreateFeedbackDialogProps) {
-  const { showSuccess, showError } = useCustomToast();
-  const showErrorRef = useRef(showError);
-  const [criteria, setCriteria] = useState<FeedbackCriterion[]>([]);
+      const [criteria, setCriteria] = useState<FeedbackCriterion[]>([]);
   const [loadingCriteria, setLoadingCriteria] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [comment, setComment] = useState('');
   const [ratings, setRatings] = useState<{ [criterionId: number]: number }>({});
   const [hoveredRating, setHoveredRating] = useState<{ [criterionId: number]: number }>({});
 
-  useEffect(() => {
-    showErrorRef.current = showError;
-  }, [showError]);
-
-  const loadCriteria = useCallback(async () => {
+    const loadCriteria = useCallback(async () => {
     setLoadingCriteria(true);
     try {
       const response = await FeedbackService.getAllCriteria();
@@ -93,10 +87,10 @@ export function CreateFeedbackDialog({
         });
         setRatings(initialRatings);
       } else {
-        showErrorRef.current('Lỗi', 'Không thể tải danh sách tiêu chí đánh giá');
+        toast.error('Không thể tải danh sách tiêu chí đánh giá');
       }
     } catch (error) {
-      showErrorRef.current('Lỗi', 'Không thể tải danh sách tiêu chí đánh giá');
+      toast.error('Không thể tải danh sách tiêu chí đánh giá');
     } finally {
       setLoadingCriteria(false);
     }
@@ -128,7 +122,7 @@ export function CreateFeedbackDialog({
       }));
 
     if (feedbackDetails.length !== criteria.length) {
-      showError('Lỗi', 'Vui lòng đánh giá đầy đủ tất cả các tiêu chí');
+      toast.error('Vui lòng đánh giá đầy đủ tất cả các tiêu chí');
       return;
     }
 
@@ -143,16 +137,16 @@ export function CreateFeedbackDialog({
 
       const response = await FeedbackService.createFeedback(request);
       if (response.success) {
-        showSuccess('Thành công', 'Đánh giá đã được gửi thành công');
+        toast.success('Đánh giá đã được gửi thành công');
         onOpenChange(false);
         if (onSuccess) {
           onSuccess();
         }
       } else {
-        showError('Lỗi', response.message || 'Không thể gửi đánh giá');
+        toast.error('Lỗi', response.message || 'Không thể gửi đánh giá');
       }
     } catch (error: any) {
-      showError('Lỗi', error.message || 'Không thể gửi đánh giá');
+      toast.error('Lỗi', error.message || 'Không thể gửi đánh giá');
     } finally {
       setSubmitting(false);
     }

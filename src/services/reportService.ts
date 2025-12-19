@@ -161,6 +161,16 @@ export class ReportService {
     return apiClient.get<boolean>(url);
   }
 
+  // Check if a report has been resolved
+  static async isReportResolved(
+    reportId: number
+  ): Promise<ApiResponse<string>> {
+    const url = replaceUrlParams(API_ENDPOINTS.REPORTS.IS_RESOLVED, {
+      id: reportId.toString(),
+    });
+    return apiClient.get<string>(url);
+  }
+
   // Update defense (owner tutor or admin)
   static async updateDefense(
     reportId: number,

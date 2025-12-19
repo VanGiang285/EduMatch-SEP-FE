@@ -207,7 +207,7 @@ export function NotificationDropdown({
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-96 p-0 bg-white border border-[#FD8B51]">
+      <DropdownMenuContent align="end" className="w-96 p-0 bg-white border border-gray-300 shadow-lg">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <h3 className="font-medium text-gray-900">Thông báo</h3>

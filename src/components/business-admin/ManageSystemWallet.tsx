@@ -71,15 +71,13 @@ import { SystemFeeService } from '@/services/systemFeeService';
 import { WalletDto, WalletTransactionDto, SystemWalletDashboardDto, SystemFeeDto } from '@/types/backend';
 import { WalletTransactionType, WalletTransactionReason } from '@/types/backend';
 import { SystemFeeCreateRequest, SystemFeeUpdateRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 
 const ITEMS_PER_PAGE = 10;
 const SYSTEM_FEE_ITEMS_PER_PAGE = 10;
 
 export function ManageSystemWallet() {
-  const { showSuccess, showError } = useCustomToast();
-  
-  // Wallet states
+    // Wallet states
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -117,11 +115,11 @@ export function ManageSystemWallet() {
         if (response.success && response.data) {
           setSystemWallet(response.data);
         } else {
-          showError('Lỗi', response.message || 'Không thể tải thông tin ví hệ thống');
+          toast.error('Lỗi', response.message || 'Không thể tải thông tin ví hệ thống');
         }
       } catch (error: any) {
         console.error('Error loading system wallet:', error);
-        showError('Lỗi', 'Không thể tải thông tin ví hệ thống. Vui lòng thử lại.');
+        toast.error('Không thể tải thông tin ví hệ thống. Vui lòng thử lại.');
       } finally {
         setIsLoadingWallet(false);
       }
@@ -149,11 +147,11 @@ export function ManageSystemWallet() {
           }));
           setTransactions(normalized);
         } else {
-          showError('Lỗi', response.message || 'Không thể tải lịch sử giao dịch');
+          toast.error('Lỗi', response.message || 'Không thể tải lịch sử giao dịch');
         }
       } catch (error: any) {
         console.error('Error loading transactions:', error);
-        showError('Lỗi', 'Không thể tải lịch sử giao dịch. Vui lòng thử lại.');
+        toast.error('Không thể tải lịch sử giao dịch. Vui lòng thử lại.');
       } finally {
         setIsLoadingTransactions(false);
       }
@@ -172,11 +170,11 @@ export function ManageSystemWallet() {
         if (response.success && response.data) {
           setDashboard(response.data);
         } else {
-          showError('Lỗi', response.message || 'Không thể tải dữ liệu dashboard');
+          toast.error('Lỗi', response.message || 'Không thể tải dữ liệu dashboard');
         }
       } catch (error: any) {
         console.error('Error loading dashboard:', error);
-        showError('Lỗi', 'Không thể tải dữ liệu dashboard. Vui lòng thử lại.');
+        toast.error('Không thể tải dữ liệu dashboard. Vui lòng thử lại.');
       } finally {
         setIsLoadingDashboard(false);
       }
@@ -199,11 +197,11 @@ export function ManageSystemWallet() {
           setSystemFees(response.data.items || []);
           setSystemFeeTotalPages(Math.ceil((response.data.totalCount || 0) / SYSTEM_FEE_ITEMS_PER_PAGE));
         } else {
-          showError('Lỗi', response.message || 'Không thể tải danh sách phí hệ thống');
+          toast.error('Lỗi', response.message || 'Không thể tải danh sách phí hệ thống');
         }
       } catch (error: any) {
         console.error('Error loading system fees:', error);
-        showError('Lỗi', 'Không thể tải danh sách phí hệ thống. Vui lòng thử lại.');
+        toast.error('Không thể tải danh sách phí hệ thống. Vui lòng thử lại.');
       } finally {
         setIsLoadingSystemFees(false);
       }
@@ -293,12 +291,12 @@ export function ManageSystemWallet() {
 
   const handleSaveSystemFee = async () => {
     if (!systemFeeForm.name.trim()) {
-      showError('Lỗi', 'Vui lòng nhập tên phí hệ thống');
+      toast.error('Vui lòng nhập tên phí hệ thống');
       return;
     }
 
     if (!systemFeeForm.percentage && !systemFeeForm.fixedAmount) {
-      showError('Lỗi', 'Vui lòng nhập phần trăm hoặc số tiền cố định');
+      toast.error('Vui lòng nhập phần trăm hoặc số tiền cố định');
       return;
     }
 
@@ -312,7 +310,7 @@ export function ManageSystemWallet() {
         };
         const response = await SystemFeeService.updateSystemFee(request);
         if (response.success) {
-          showSuccess('Thành công', 'Cập nhật phí hệ thống thành công');
+          toast.success('Cập nhật phí hệ thống thành công');
           setShowSystemFeeDialog(false);
           // Reload system fees
           const reloadResponse = await SystemFeeService.getAllPaging({
@@ -323,13 +321,13 @@ export function ManageSystemWallet() {
             setSystemFees(reloadResponse.data.items || []);
           }
         } else {
-          showError('Lỗi', response.message || 'Không thể cập nhật phí hệ thống');
+          toast.error('Lỗi', response.message || 'Không thể cập nhật phí hệ thống');
         }
       } else {
         // Create
         const response = await SystemFeeService.createSystemFee(systemFeeForm);
         if (response.success) {
-          showSuccess('Thành công', 'Tạo phí hệ thống thành công');
+          toast.success('Tạo phí hệ thống thành công');
           setShowSystemFeeDialog(false);
           // Reload system fees
           const reloadResponse = await SystemFeeService.getAllPaging({
@@ -341,12 +339,12 @@ export function ManageSystemWallet() {
             setSystemFeeTotalPages(Math.ceil((reloadResponse.data.totalCount || 0) / SYSTEM_FEE_ITEMS_PER_PAGE));
           }
         } else {
-          showError('Lỗi', response.message || 'Không thể tạo phí hệ thống');
+          toast.error('Lỗi', response.message || 'Không thể tạo phí hệ thống');
         }
       }
     } catch (error: any) {
       console.error('Error saving system fee:', error);
-      showError('Lỗi', 'Không thể lưu phí hệ thống. Vui lòng thử lại.');
+      toast.error('Không thể lưu phí hệ thống. Vui lòng thử lại.');
     } finally {
       setIsSavingSystemFee(false);
     }
@@ -363,11 +361,11 @@ export function ManageSystemWallet() {
       {/* Tabs */}
       <Tabs defaultValue="wallet" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2 bg-[#F2E5BF]">
-          <TabsTrigger value="wallet" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">
+          <TabsTrigger value="wallet" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">
             <Wallet className="h-4 w-4 mr-2" />
             Ví hệ thống
           </TabsTrigger>
-          <TabsTrigger value="system-fee" className="data-[state=active]:bg-white data-[state=active]:text-[#257180]">
+          <TabsTrigger value="system-fee" className="data-[state=active]:bg-[#257180] data-[state=active]:text-white data-[state=active]:border-[#257180]">
             <Settings className="h-4 w-4 mr-2" />
             Phí hệ thống
           </TabsTrigger>
@@ -378,7 +376,7 @@ export function ManageSystemWallet() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-white">
+            <Card className="bg-white border border-gray-300">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 rounded-lg bg-blue-50">
@@ -408,7 +406,7 @@ export function ManageSystemWallet() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white">
+            <Card className="bg-white border border-gray-300">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 rounded-lg bg-green-50">
@@ -436,7 +434,7 @@ export function ManageSystemWallet() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white">
+            <Card className="bg-white border border-gray-300">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 rounded-lg bg-red-50">
@@ -468,7 +466,7 @@ export function ManageSystemWallet() {
           {/* Dashboard Info */}
           {dashboard && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-white">
+              <Card className="bg-white border border-gray-300">
                 <CardHeader>
                   <CardTitle className="text-lg">Thông tin ví hệ thống</CardTitle>
                 </CardHeader>
@@ -489,7 +487,7 @@ export function ManageSystemWallet() {
           )}
 
       {/* Filters */}
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
@@ -527,7 +525,7 @@ export function ManageSystemWallet() {
       </Card>
 
       {/* Transactions Table */}
-      <Card className="bg-white">
+      <Card className="bg-white border border-gray-300">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Lịch sử giao dịch</CardTitle>
@@ -682,7 +680,7 @@ export function ManageSystemWallet() {
           </div>
 
           {/* System Fees Table */}
-          <Card className="bg-white">
+          <Card className="bg-white border border-gray-300">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Danh sách phí hệ thống</CardTitle>
@@ -814,7 +812,7 @@ export function ManageSystemWallet() {
 
       {/* System Fee Dialog */}
       <Dialog open={showSystemFeeDialog} onOpenChange={setShowSystemFeeDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl border-gray-300 shadow-lg">
           <DialogHeader>
             <DialogTitle>{editingSystemFee ? 'Chỉnh sửa Phí hệ thống' : 'Thêm Phí hệ thống'}</DialogTitle>
           </DialogHeader>

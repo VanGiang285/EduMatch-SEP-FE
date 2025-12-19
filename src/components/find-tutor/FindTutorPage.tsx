@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '../ui/layout/card';
 import { Button } from '../ui/basic/button';
 import { Input } from '../ui/form/input';
-import { Badge } from '../ui/basic/badge';
 import {
   Search,
   Star,
@@ -17,7 +16,8 @@ import {
   Clock,
   Video,
   Send,
-  Loader2
+  Loader2,
+  BookOpen
 } from 'lucide-react';
 import { SelectWithSearch, SelectWithSearchItem } from '../ui/form/select-with-search';
 import { Separator } from '../ui/layout/separator';
@@ -33,19 +33,17 @@ import {
   PaginationPrevious,
 } from '../ui/navigation/pagination';
 import { useFindTutor } from '@/hooks/useFindTutor';
-import { EnumHelpers, TeachingMode } from '@/types/enums';
+import { TeachingMode } from '@/types/enums';
 import { FavoriteTutorService } from '@/services/favoriteTutorService';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { useChatContext } from '@/contexts/ChatContext';
 import { LocationService, ProvinceDto } from '@/services/locationService';
 import { FeedbackService } from '@/services/feedbackService';
 import { TutorRatingSummary } from '@/types/backend';
-import { useLearnerTrialLessons } from '@/hooks/useLearnerTrialLessons';
 import { USER_ROLES } from '@/constants';
 import type { TrialLessonSubjectStatusDto } from '@/services/learnerTrialLessonService';
 
-// Helper function để convert string enum từ API sang TeachingMode enum
 function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMode {
   if (typeof mode === 'number') {
     return mode as TeachingMode;
@@ -61,12 +59,99 @@ function getTeachingModeValue(mode: string | number | TeachingMode): TeachingMod
   return mode as TeachingMode;
 }
 
+function getTeachingModeDisplayLabel(mode: string | number | TeachingMode): string {
+  const modeValue = getTeachingModeValue(mode);
+  switch (modeValue) {
+    case TeachingMode.Offline:
+      return 'Dạy trực tiếp';
+    case TeachingMode.Online:
+      return 'Dạy online';
+    case TeachingMode.Hybrid:
+      return 'Online và Offline';
+    default:
+      return 'Không xác định';
+  }
+}
+
+function formatLevels(levels: string[]): string {
+  if (levels.length === 0) return '';
+  
+  if (levels.some(level => level.toLowerCase().includes('tất cả') || level.toLowerCase().includes('all'))) {
+    return 'Tất cả cấp';
+  }
+  
+  const hasTHPT = levels.some(level => level.toUpperCase().includes('THPT'));
+  if (hasTHPT && levels.length === 1) {
+    return 'THPT';
+  }
+  
+  const numbers = levels
+    .map(level => {
+      const num = parseInt(level.replace(/\D/g, ''));
+      return isNaN(num) ? null : num;
+    })
+    .filter((num): num is number => num !== null)
+    .sort((a, b) => a - b);
+  
+  if (numbers.length === 0) {
+    return levels.join(', ');
+  }
+  
+  if (numbers.length > 1) {
+    let isConsecutive = true;
+    for (let i = 1; i < numbers.length; i++) {
+      if (numbers[i] !== numbers[i - 1] + 1) {
+        isConsecutive = false;
+        break;
+      }
+    }
+    
+    if (isConsecutive) {
+      return `Lớp ${numbers[0]}-${numbers[numbers.length - 1]}`;
+    }
+  }
+  
+  return `Lớp ${numbers.join(', ')}`;
+}
+
+function groupSubjectsBySubjectName(tutorSubjects: any[]): Array<{ subjectName: string; levelText: string }> {
+  if (!tutorSubjects || tutorSubjects.length === 0) return [];
+  
+  const grouped = new Map<string, Set<string>>();
+  
+  tutorSubjects.forEach((ts) => {
+    const subjectName = ts.subject?.subjectName || `Subject ${ts.id}`;
+    const levelName = ts.level?.name || '';
+    
+    if (!grouped.has(subjectName)) {
+      grouped.set(subjectName, new Set());
+    }
+    
+    if (levelName) {
+      grouped.get(subjectName)!.add(levelName);
+    }
+  });
+  
+  return Array.from(grouped.entries()).map(([subjectName, levelsSet]) => {
+    const levels = Array.from(levelsSet).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, '')) || 0;
+      const numB = parseInt(b.replace(/\D/g, '')) || 0;
+      return numA - numB;
+    });
+    
+    const levelText = formatLevels(levels);
+    
+    return {
+      subjectName,
+      levelText
+    };
+  });
+}
+
 export function FindTutorPage() {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
-  const { showWarning } = useCustomToast();
-  const { loadSubjectTrialStatuses } = useLearnerTrialLessons();
-  const {
+    const {
     tutors,
     subjects,
     levels,
@@ -102,14 +187,8 @@ export function FindTutorPage() {
     [provinces]
   );
 
-  // Note: Using client-side filtering instead of API filtering
-  // because backend API doesn't support filter parameters yet
-
-  // Client-side filtering and sorting
   const filteredAndSortedTutors = React.useMemo(() => {
     let filtered = [...tutors];
-
-    // Filter by keyword (search)
     if (searchQuery.trim()) {
       const keyword = searchQuery.trim().toLowerCase();
       filtered = filtered.filter(tutor => {
@@ -123,7 +202,6 @@ export function FindTutorPage() {
       });
     }
 
-    // Filter by subject
     if (selectedSubject !== 'all') {
       filtered = filtered.filter(tutor =>
         tutor.tutorSubjects?.some(tutorSubject =>
@@ -132,34 +210,35 @@ export function FindTutorPage() {
       );
     }
 
-    // Filter by certificate type
     if (selectedCertificate !== 'all') {
       filtered = filtered.filter(tutor =>
         tutor.tutorCertificates?.some(cert => cert.certificateType?.id?.toString() === selectedCertificate)
       );
     }
 
-    // Filter by level
     if (selectedLevel !== 'all') {
       filtered = filtered.filter(tutor =>
         tutor.tutorSubjects?.some(ts => ts.level?.id?.toString() === selectedLevel)
       );
     }
 
-    // Filter by city (using province)
     if (selectedCity !== 'all') {
       filtered = filtered.filter(tutor => tutor.province?.id?.toString() === selectedCity);
     }
 
-    // Filter by teaching mode
     if (selectedTeachingMode !== 'all') {
       filtered = filtered.filter(tutor => {
         const modeValue = getTeachingModeValue(tutor.teachingModes);
+        const selectedMode = parseInt(selectedTeachingMode);
+        if (selectedMode === TeachingMode.Online) {
+          return modeValue === TeachingMode.Online || modeValue === TeachingMode.Hybrid;
+        } else if (selectedMode === TeachingMode.Offline) {
+          return modeValue === TeachingMode.Offline || modeValue === TeachingMode.Hybrid;
+        }
         return modeValue.toString() === selectedTeachingMode;
       });
     }
 
-    // Filter by price range
     if (priceRange[0] > 0 || priceRange[1] < 1000000) {
       const [minRange, maxRange] = priceRange;
       filtered = filtered.filter(tutor => {
@@ -169,12 +248,9 @@ export function FindTutorPage() {
         const tutorMinPrice = Math.min(...prices);
         const tutorMaxPrice = Math.max(...prices);
 
-        // Filter if any price in the tutor's range overlaps with the selected range
         return tutorMinPrice <= maxRange && tutorMaxPrice >= minRange;
       });
     }
-
-    // Sort tutors
     if (selectedSort !== 'recommended') {
       filtered.sort((a, b) => {
         switch (selectedSort) {
@@ -269,10 +345,8 @@ export function FindTutorPage() {
   const currentTutors = filteredAndSortedTutors.slice(indexOfFirstTutor, indexOfLastTutor);
   const currentTutor = filteredAndSortedTutors.find(t => t.id === hoveredTutor) || filteredAndSortedTutors[0];
 
-  // Check favorite status for all tutors when they load (only if authenticated)
   useEffect(() => {
     const checkFavoriteStatuses = async () => {
-      // Reset favorites when not authenticated or no tutors
       if (tutors.length === 0 || !isAuthenticated) {
         setFavoriteTutors(new Set());
         return;
@@ -281,7 +355,6 @@ export function FindTutorPage() {
       const favoriteChecks = tutors.map(async (tutor) => {
         try {
           const response = await FavoriteTutorService.isFavorite(tutor.id);
-          // Ensure response.data is a boolean - check for explicit true
           const isFavorite = response.data === true;
           if (process.env.NODE_ENV === 'development') {
             console.log(`Tutor ${tutor.id} favorite status:`, response.data, '→ isFavorite:', isFavorite);
@@ -296,7 +369,6 @@ export function FindTutorPage() {
       const results = await Promise.all(favoriteChecks);
       const favoriteSet = new Set<number>();
       results.forEach(({ tutorId, isFavorite }) => {
-        // Only add if explicitly true
         if (isFavorite === true) {
           favoriteSet.add(tutorId);
         }
@@ -306,8 +378,6 @@ export function FindTutorPage() {
 
     checkFavoriteStatuses();
   }, [tutors, isAuthenticated]);
-
-  // Load rating summaries for all tutors
   useEffect(() => {
     const loadRatings = async () => {
       if (tutors.length === 0) {
@@ -341,7 +411,6 @@ export function FindTutorPage() {
     loadRatings();
   }, [tutors]);
 
-  // Load trial statuses for all tutors (only if authenticated and is learner)
   useEffect(() => {
     const loadTrialStatuses = async () => {
       if (tutors.length === 0 || !isAuthenticated || user?.role !== USER_ROLES.LEARNER) {
@@ -351,18 +420,15 @@ export function FindTutorPage() {
 
       const trialStatusPromises = tutors.map(async (tutor) => {
         try {
-          // Sử dụng service trực tiếp để load cho từng tutor
           const { LearnerTrialLessonService } = await import('@/services');
           const response = await LearnerTrialLessonService.getSubjectTrialStatuses(tutor.id);
 
           if (response.success && response.data) {
             return { tutorId: tutor.id, statuses: response.data };
           }
-          // Nếu không load được, trả về mảng rỗng
           return { tutorId: tutor.id, statuses: [] };
         } catch (error) {
           console.error(`Error loading trial status for tutor ${tutor.id}:`, error);
-          // Nếu lỗi, trả về mảng rỗng
           return { tutorId: tutor.id, statuses: [] };
         }
       });
@@ -378,18 +444,13 @@ export function FindTutorPage() {
     loadTrialStatuses();
   }, [tutors, isAuthenticated, user?.role]);
 
-  // Helper function để kiểm tra tutor có còn có thể đặt học thử không
   const hasAnyTrialLeft = useCallback((tutorId: number): boolean => {
     const statuses = tutorTrialStatuses.get(tutorId);
     if (!statuses || statuses.length === 0) {
-      // Chưa load được hoặc không có môn nào, coi như còn (để hiển thị nút)
       return true;
     }
-    // Kiểm tra xem có môn nào có hasTrialed === false không
     return statuses.some(s => !s.hasTrialed);
   }, [tutorTrialStatuses]);
-
-  // Reset video when currentTutor changes
   useEffect(() => {
     setVideoKey(prev => prev + 1);
   }, [currentTutor?.id]);
@@ -399,11 +460,10 @@ export function FindTutorPage() {
   };
 
   const handleToggleFavorite = async (tutorId: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
+    e.stopPropagation();
 
-    // Check if user is authenticated
     if (!isAuthenticated) {
-      showWarning(
+      toast.warning(
         'Vui lòng đăng nhập',
         'Bạn cần đăng nhập để thêm gia sư vào danh sách yêu thích.'
       );
@@ -411,7 +471,6 @@ export function FindTutorPage() {
       return;
     }
 
-    // Optimistic update
     const isCurrentlyFavorite = favoriteTutors.has(tutorId);
     setFavoriteTutors(prev => {
       const newFavorites = new Set(prev);
@@ -423,18 +482,16 @@ export function FindTutorPage() {
       return newFavorites;
     });
 
-    // Set loading state
     setLoadingFavorite(prev => new Set(prev).add(tutorId));
 
     try {
-      if (isCurrentlyFavorite) {
+      if (isCurrentlyFavorite) {            
         await FavoriteTutorService.removeFromFavorite(tutorId);
       } else {
         await FavoriteTutorService.addToFavorite(tutorId);
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      // Revert optimistic update on error
       setFavoriteTutors(prev => {
         const newFavorites = new Set(prev);
         if (isCurrentlyFavorite) {
@@ -454,19 +511,16 @@ export function FindTutorPage() {
   };
 
   const handleOpenChat = async (tutor: typeof currentTutors[0], e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
+    e.stopPropagation();
 
-    // Check if user is authenticated
     if (!isAuthenticated) {
-      showWarning(
+      toast.warning(
         'Vui lòng đăng nhập',
         'Bạn cần đăng nhập để nhắn tin với gia sư.'
       );
       router.push('/login');
       return;
     }
-
-    // Open floating chat with tutor
     await openChatWithTutor(
       tutor.id,
       tutor.userEmail || "",
@@ -565,8 +619,8 @@ export function FindTutorPage() {
                 placeholder="Hình thức"
               >
                 <SelectWithSearchItem value="all">Tất cả hình thức</SelectWithSearchItem>
-                <SelectWithSearchItem value="1">Trực tuyến</SelectWithSearchItem>
-                <SelectWithSearchItem value="0">Tại nhà</SelectWithSearchItem>
+                <SelectWithSearchItem value="1">Dạy Online</SelectWithSearchItem>
+                <SelectWithSearchItem value="0">Dạy Offline</SelectWithSearchItem>
               </SelectWithSearch>
             </div>
 
@@ -700,7 +754,7 @@ export function FindTutorPage() {
                                 </div>
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                                   <div className="flex items-center gap-1.5">
-                                    <Star className="w-4 h-4 fill-[#FD8B51] text-[#FD8B51]" />
+                                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                                     <span className="text-sm text-black font-medium">
                                       {tutorRatings.get(tutor.id)?.averageRating.toFixed(1) || '0.0'}
                                     </span>
@@ -729,11 +783,13 @@ export function FindTutorPage() {
                               </Button>
                             </div>
                             {/* Subjects */}
-                            <div className="flex flex-wrap gap-2">
-                              {tutor.tutorSubjects?.map((tutorSubject, idx) => (
-                                <Badge key={idx} variant="secondary" className="text-sm px-3 py-1 bg-[#F2E5BF] text-black border-[#257180]/20">
-                                  {tutorSubject.subject?.subjectName || `Subject ${tutorSubject.id}`}
-                                </Badge>
+                            <div className="space-y-1.5">
+                              {groupSubjectsBySubjectName(tutor.tutorSubjects || []).map((grouped, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-sm">
+                                  <BookOpen className="w-4 h-4 text-[#257180] flex-shrink-0" />
+                                  <span className="font-medium text-black">{grouped.subjectName}:</span>
+                                  <span className="text-gray-600">{grouped.levelText || 'Chưa có thông tin'}</span>
+                                </div>
                               ))}
                             </div>
                           </div>
@@ -757,7 +813,7 @@ export function FindTutorPage() {
                           </div>
                           <Separator orientation="vertical" className="h-4" />
                           <span>
-                            {EnumHelpers.getTeachingModeLabel(getTeachingModeValue(tutor.teachingModes))}
+                            {getTeachingModeDisplayLabel(tutor.teachingModes)}
                           </span>
                           {tutor.tutorEducations && tutor.tutorEducations.length > 0 && (
                             <>
@@ -803,7 +859,7 @@ export function FindTutorPage() {
                             <Button
                               variant="outline"
                               size="lg"
-                              className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                              className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                               onClick={(e) => handleOpenChat(tutor, e)}
                             >
                               <MessageCircle className="w-4 h-4 mr-2" />
@@ -816,7 +872,7 @@ export function FindTutorPage() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (!isAuthenticated) {
-                                    showWarning('Vui lòng đăng nhập', 'Bạn cần đăng nhập để đặt buổi học thử.');
+                                    toast.warning('Bạn cần đăng nhập để đặt buổi học thử.');
                                     router.push('/login');
                                     return;
                                   }
@@ -942,7 +998,7 @@ export function FindTutorPage() {
                     <div className="space-y-3">
                       <Button
                         variant="outline"
-                        className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                        className="w-full border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                         size="lg"
                         onClick={() => {
                           const targetId = currentTutor?.id ?? currentTutors[0]?.id;
@@ -955,7 +1011,7 @@ export function FindTutorPage() {
                       </Button>
                       <Button
                         variant="outline"
-                        className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                        className="w-full border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                         size="lg"
                         onClick={() => {
                           if (!currentTutor) return;
@@ -968,7 +1024,7 @@ export function FindTutorPage() {
                       </Button>
                       <Button
                         variant="outline"
-                        className="w-full hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
+                        className="w-full border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]"
                         size="lg"
                         onClick={() => handleViewTutorProfile(currentTutor?.id ?? currentTutors[0]?.id)}
                       >

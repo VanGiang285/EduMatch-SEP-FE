@@ -74,19 +74,72 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const storedUser = AuthService.getStoredUser();
-        const isAuthenticated = AuthService.isAuthenticated();
-        if (isAuthenticated && storedUser) {
-          setUser(storedUser);
+        const currentToken = TokenManager.getCurrentToken();
+        
+        if (!currentToken) {
+          AuthService.clearStoredData();
+          setUser(null);
+          setLoading(false);
+          return;
+        }
 
-          const currentToken = TokenManager.getCurrentToken();
-          if (currentToken) {
-            TokenManager.saveTokenAndUpdateTimer(
-              currentToken,
-              handleTokenRefresh,
-              handleTokenRefreshFailed
-            );
+        const isTokenExpired = TokenManager.isTokenExpired(currentToken);
+        
+        if (isTokenExpired) {
+          try {
+            console.log('🔄 Token expired, attempting refresh...');
+            const refreshResponse = await AuthService.refreshToken();
+            if (refreshResponse.success && refreshResponse.data) {
+              const newToken = refreshResponse.data.accessToken;
+              localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, newToken);
+              
+              TokenManager.saveTokenAndUpdateTimer(
+                newToken,
+                handleTokenRefresh,
+                handleTokenRefreshFailed
+              );
+
+              const userResponse = await AuthService.getCurrentUser();
+              if (userResponse.success && userResponse.data) {
+                const role = determineRoleFromResponse(userResponse.data);
+
+                const userData: User = {
+                  id: userResponse.data.email,
+                  email: userResponse.data.email,
+                  name: userResponse.data.name || userResponse.data.email,
+                  fullName: userResponse.data.name,
+                  role: role,
+                  avatar: userResponse.data.avatarUrl || undefined,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                };
+                setUser(userData);
+                AuthService.storeUserData(userData, newToken);
+
+                document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}`;
+              } else {
+                AuthService.clearStoredData();
+                setUser(null);
+              }
+            } else {
+              throw new Error('Token refresh failed');
+            }
+          } catch (refreshError: any) {
+            console.error('❌ Token refresh failed during initialization:', refreshError);
+            const isUnauthorized = refreshError?.status === 401 || refreshError?.error?.status === 401;
+            if (isUnauthorized) {
+              console.log('🚪 Refresh token expired or invalid, clearing auth...');
+            }
+            AuthService.clearStoredData();
+            setUser(null);
+            TokenManager.stopTokenRefreshTimer();
           }
+        } else {
+          TokenManager.saveTokenAndUpdateTimer(
+            currentToken,
+            handleTokenRefresh,
+            handleTokenRefreshFailed
+          );
 
           try {
             const response = await AuthService.getCurrentUser();
@@ -104,11 +157,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 updatedAt: new Date(),
               };
               setUser(userData);
-              AuthService.storeUserData(userData, localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) || '');
+              AuthService.storeUserData(userData, currentToken);
 
               document.cookie = `userRole=${userData.role}; path=/; max-age=${7 * 24 * 60 * 60}`;
+            } else {
+              AuthService.clearStoredData();
+              setUser(null);
             }
           } catch (error) {
+            console.error('❌ Failed to get current user:', error);
             AuthService.clearStoredData();
             setUser(null);
             TokenManager.stopTokenRefreshTimer();

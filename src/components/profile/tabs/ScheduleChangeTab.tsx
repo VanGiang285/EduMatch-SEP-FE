@@ -5,11 +5,11 @@ import { Card, CardContent } from "@/components/ui/layout/card";
 import { Badge } from "@/components/ui/basic/badge";
 import { Button } from "@/components/ui/basic/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/feedback/dialog";
-import { Loader2 } from "lucide-react";
+import { Loader2, Clock, CheckCircle, XCircle, X } from "lucide-react";
 import { ScheduleChangeRequestStatus } from "@/types/enums";
 import { EnumHelpers } from "@/types/enums";
 import { useAuth } from "@/hooks/useAuth";
-import { useCustomToast } from "@/hooks/useCustomToast";
+import { toast } from "sonner";
 import { useBookings } from "@/hooks/useBookings";
 import { useTutorProfiles } from "@/hooks/useTutorProfiles";
 import { useScheduleChangeRequests } from "@/hooks/useScheduleChangeRequests";
@@ -26,7 +26,6 @@ import {
 
 export function ScheduleChangeTab() {
     const { user } = useAuth();
-    const { showError, showSuccess } = useCustomToast();
     const { loadBookingDetails, getBooking } = useBookings();
     const { getTutorProfile, loadTutorProfiles } = useTutorProfiles();
     const {
@@ -176,15 +175,31 @@ export function ScheduleChangeTab() {
         const parsed = EnumHelpers.parseScheduleChangeRequestStatus(status);
         switch (parsed) {
             case ScheduleChangeRequestStatus.Pending:
-                return "bg-yellow-100 text-yellow-800 border-yellow-200";
+                return "bg-yellow-100 text-yellow-800 border-gray-300";
             case ScheduleChangeRequestStatus.Approved:
-                return "bg-green-100 text-green-800 border-green-200";
+                return "bg-green-100 text-green-800 border-gray-300";
             case ScheduleChangeRequestStatus.Rejected:
-                return "bg-red-100 text-red-800 border-red-200";
+                return "bg-red-100 text-red-800 border-gray-300";
             case ScheduleChangeRequestStatus.Cancelled:
-                return "bg-gray-100 text-gray-800 border-gray-200";
+                return "bg-gray-100 text-gray-800 border-gray-300";
             default:
-                return "bg-gray-100 text-gray-800 border-gray-200";
+                return "bg-gray-100 text-gray-800 border-gray-300";
+        }
+    };
+
+    const getChangeRequestStatusIcon = (status: ScheduleChangeRequestStatus | string) => {
+        const parsed = EnumHelpers.parseScheduleChangeRequestStatus(status);
+        switch (parsed) {
+            case ScheduleChangeRequestStatus.Pending:
+                return <Clock className="h-3 w-3" />;
+            case ScheduleChangeRequestStatus.Approved:
+                return <CheckCircle className="h-3 w-3" />;
+            case ScheduleChangeRequestStatus.Rejected:
+                return <XCircle className="h-3 w-3" />;
+            case ScheduleChangeRequestStatus.Cancelled:
+                return <X className="h-3 w-3" />;
+            default:
+                return null;
         }
     };
 
@@ -230,7 +245,7 @@ export function ScheduleChangeTab() {
     const renderRequestRows = (items: any[], isIncoming: boolean) => {
         if (!items || items.length === 0) {
             return (
-                <tr className="border-b border-gray-100">
+                <tr className="border-b border-gray-200">
                     <td colSpan={7} className="py-4 text-center text-gray-600 text-sm">
                         Không có yêu cầu
                     </td>
@@ -254,7 +269,7 @@ export function ScheduleChangeTab() {
             const level = tutorSubject?.level;
             const statusLabel = EnumHelpers.getScheduleChangeRequestStatusLabel?.(item.status) ?? item.status;
             return (
-                <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <tr key={item.id} className="border-b border-gray-200 hover:bg-gray-50">
                     <td className="py-2 px-3 text-sm text-gray-700">{item.id}</td>
                     <td className="py-2 px-3 text-sm text-gray-900 font-medium">
                         <div className="flex flex-col gap-1">
@@ -287,9 +302,10 @@ export function ScheduleChangeTab() {
                             : 'N/A'}
                     </td>
                     <td className="py-2 px-3 text-sm">
-                        <Badge className={`${getChangeRequestStatusColor(item.status)} border`}>
-                            {statusLabel}
-                        </Badge>
+                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getChangeRequestStatusColor(item.status)}`}>
+                            {getChangeRequestStatusIcon(item.status)}
+                            <span>{statusLabel}</span>
+                        </div>
                     </td>
                     <td className="py-2 px-3 text-sm text-gray-700">
                         <div className="text-xs text-gray-500">
@@ -316,7 +332,7 @@ export function ScheduleChangeTab() {
                                     <Button
                                         size="sm"
                                         variant="outline"
-                                        className="border-red-300 text-red-700 hover:bg-red-50"
+                                        className="border-gray-300 bg-white text-red-700 hover:bg-red-50 hover:border-red-300"
                                         disabled={loadingChangeRequest}
                                         onClick={() =>
                                             setConfirmDialog({ open: true, requestId: item.id, action: 'reject' })
@@ -352,7 +368,7 @@ export function ScheduleChangeTab() {
                         className={
                             view === 'from'
                                 ? 'bg-[#257180] text-white hover:bg-[#1f616f]'
-                                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                : 'border-gray-300 bg-white text-gray-700 hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]'
                         }
                         onClick={() => setView('from')}
                     >
@@ -363,7 +379,7 @@ export function ScheduleChangeTab() {
                         className={
                             view === 'to'
                                 ? 'bg-[#257180] text-white hover:bg-[#1f616f]'
-                                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                : 'border-gray-300 bg-white text-gray-700 hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]'
                         }
                         onClick={() => setView('to')}
                     >
@@ -392,7 +408,7 @@ export function ScheduleChangeTab() {
             </div>
 
             {/* Danh sách yêu cầu theo lựa chọn */}
-            <Card className="border border-[#257180]/20 bg-white">
+            <Card className="border border-gray-300 bg-white">
                 <CardContent className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
                         <div className="font-semibold text-gray-900">
@@ -400,7 +416,7 @@ export function ScheduleChangeTab() {
                         </div>
                         {loadingRequests && <Loader2 className="h-4 w-4 animate-spin text-[#257180]" />}
                     </div>
-                    <div className="overflow-x-auto border border-gray-100 rounded-md">
+                    <div className="overflow-x-auto border border-gray-300 rounded-md">
                         <table className="min-w-full text-sm">
                             <thead className="bg-gray-50 text-gray-700">
                                 <tr>
@@ -427,7 +443,7 @@ export function ScheduleChangeTab() {
                 open={confirmDialog.open}
                 onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
             >
-                <DialogContent>
+                <DialogContent className="border-gray-300 shadow-lg">
                     <DialogHeader>
                         <DialogTitle>Xác nhận xử lý</DialogTitle>
                         <DialogDescription>
@@ -457,9 +473,9 @@ export function ScheduleChangeTab() {
                                 if (res) {
                                     // Reload lại toàn bộ requests để cập nhật trạng thái
                                     await loadRequests();
-                                    showSuccess('Đã cập nhật trạng thái yêu cầu.');
+                                    toast.success('Đã cập nhật trạng thái yêu cầu.');
                                 } else {
-                                    showError('Cập nhật trạng thái thất bại.');
+                                    toast.error('Cập nhật trạng thái thất bại.');
                                 }
                                 setConfirmDialog({ open: false });
                             }}

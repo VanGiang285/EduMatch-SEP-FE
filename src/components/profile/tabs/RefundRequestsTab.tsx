@@ -30,12 +30,12 @@ import {
   PaginationPrevious,
 } from '@/components/ui/navigation/pagination';
 import { Label } from '@/components/ui/form/label';
-import { Search, Plus, Eye, Loader2, ArrowUpDown, Upload, X, Image as ImageIcon, Video } from 'lucide-react';
+import { Search, Plus, Eye, Loader2, ArrowUpDown, Upload, X, Image as ImageIcon, Video, Receipt } from 'lucide-react';
 import { BookingRefundRequestService, RefundPolicyService, BookingService, MediaService } from '@/services';
 import { BookingRefundRequestDto, RefundPolicyDto, BookingDto } from '@/types/backend';
 import { BookingRefundRequestStatus } from '@/types/enums';
 import { BookingRefundRequestCreateRequest } from '@/types/requests';
-import { useCustomToast } from '@/hooks/useCustomToast';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/data/mockLearnerData';
 import {
@@ -79,7 +79,6 @@ const getStatusColor = (status: BookingRefundRequestStatus): string => {
 
 export function RefundRequestsTab() {
   const { user } = useAuth();
-  const { showSuccess, showError } = useCustomToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingRefundRequestStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -143,7 +142,7 @@ export function RefundRequestsTab() {
       }
     } catch (error) {
       console.error('Error fetching requests:', error);
-      showError('Lỗi', 'Không thể tải danh sách yêu cầu hoàn tiền');
+      toast.error('Không thể tải danh sách yêu cầu hoàn tiền');
       setRequests([]);
     } finally {
       setLoading(false);
@@ -175,7 +174,7 @@ export function RefundRequestsTab() {
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
-      showError('Lỗi', 'Không thể tải danh sách booking');
+      toast.error('Không thể tải danh sách booking');
     } finally {
       setLoadingBookings(false);
     }
@@ -232,11 +231,11 @@ export function RefundRequestsTab() {
         setSelectedRequest(response.data);
         setShowDetailDialog(true);
       } else {
-        showError('Lỗi', 'Không thể tải chi tiết yêu cầu hoàn tiền');
+        toast.error('Không thể tải chi tiết yêu cầu hoàn tiền');
       }
     } catch (error) {
       console.error('Error fetching request detail:', error);
-      showError('Lỗi', 'Không thể tải chi tiết yêu cầu hoàn tiền');
+      toast.error('Không thể tải chi tiết yêu cầu hoàn tiền');
     }
   };
 
@@ -258,12 +257,12 @@ export function RefundRequestsTab() {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
       if (!isImage && !isVideo) {
-        showError('Lỗi', 'Chỉ chấp nhận file ảnh hoặc video');
+        toast.error('Chỉ chấp nhận file ảnh hoặc video');
         return false;
       }
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (file.size > maxSize) {
-        showError('Lỗi', `File ${file.name} vượt quá 10MB`);
+        toast.error(`File ${file.name} vượt quá 10MB`);
         return false;
       }
       return true;
@@ -291,10 +290,10 @@ export function RefundRequestsTab() {
       const urls = await Promise.all(uploadPromises);
       setUploadedUrls(prev => [...prev, ...urls]);
       setUploadingFiles(prev => [...prev, ...validFiles]);
-      showSuccess('Thành công', `Đã upload ${urls.length} file thành công`);
+      toast.success(`Đã upload ${urls.length} file thành công`);
     } catch (error: any) {
       console.error('Error uploading files:', error);
-      showError('Lỗi', error.message || 'Không thể upload file');
+      toast.error(error.message || 'Không thể upload file');
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -308,11 +307,11 @@ export function RefundRequestsTab() {
 
   const handleSubmitCreate = async () => {
     if (!user?.email) {
-      showError('Lỗi', 'Vui lòng đăng nhập');
+      toast.error('Vui lòng đăng nhập');
       return;
     }
     if (!formData.bookingId || !formData.refundPolicyId) {
-      showError('Lỗi', 'Vui lòng chọn booking và chính sách hoàn tiền');
+      toast.error('Vui lòng chọn booking và chính sách hoàn tiền');
       return;
     }
 
@@ -328,18 +327,18 @@ export function RefundRequestsTab() {
       };
       const response = await BookingRefundRequestService.create(request);
       if (response.success) {
-        showSuccess('Thành công', 'Đã tạo yêu cầu hoàn tiền');
+        toast.success('Đã tạo yêu cầu hoàn tiền');
         setShowCreateDialog(false);
         setFormData({ bookingId: 0, refundPolicyId: 0, reason: '', fileUrls: [] });
         setUploadingFiles([]);
         setUploadedUrls([]);
         fetchRequests();
       } else {
-        showError('Lỗi', response.message || 'Không thể tạo yêu cầu hoàn tiền');
+        toast.error(response.message || 'Không thể tạo yêu cầu hoàn tiền');
       }
     } catch (error) {
       console.error('Error creating request:', error);
-      showError('Lỗi', 'Không thể tạo yêu cầu hoàn tiền');
+      toast.error('Không thể tạo yêu cầu hoàn tiền');
     } finally {
       setIsProcessing(false);
     }
@@ -358,7 +357,7 @@ export function RefundRequestsTab() {
         </Button>
       </div>
 
-      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+      <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -404,11 +403,14 @@ export function RefundRequestsTab() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white border border-[#257180]/20 transition-shadow hover:shadow-md">
+      <Card className="bg-white border border-gray-300 transition-shadow hover:shadow-md">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh sách yêu cầu hoàn tiền</CardTitle>
-            <Badge variant="outline">{filteredRequests.length} yêu cầu</Badge>
+            <div className="flex items-center gap-2 text-gray-600">
+              <Receipt className="h-4 w-4" />
+              <span className="font-medium">{filteredRequests.length} yêu cầu</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -536,7 +538,7 @@ export function RefundRequestsTab() {
       </Card>
 
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Chi tiết yêu cầu hoàn tiền</DialogTitle>
           </DialogHeader>
@@ -630,7 +632,7 @@ export function RefundRequestsTab() {
       </Dialog>
 
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl" aria-describedby={undefined}>
+        <DialogContent className="max-w-2xl border-gray-300 shadow-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Tạo yêu cầu hoàn tiền mới</DialogTitle>
           </DialogHeader>
@@ -764,7 +766,7 @@ export function RefundRequestsTab() {
               setFormData({ bookingId: 0, refundPolicyId: 0, reason: '', fileUrls: [] });
               setUploadingFiles([]);
               setUploadedUrls([]);
-            }} className="hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
+            }} className="border-gray-300 bg-white hover:bg-[#FD8B51] hover:text-white hover:border-[#FD8B51]">
               Hủy
             </Button>
             <Button onClick={handleSubmitCreate} disabled={isProcessing || uploading} className="bg-[#257180] hover:bg-[#257180]/90 text-white">
